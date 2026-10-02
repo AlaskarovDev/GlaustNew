@@ -13,7 +13,7 @@ rm -rf dist && mkdir -p dist/_releases
 APP_ZIP="app-${SHA}.zip"
 zip -rq "dist/_releases/${APP_ZIP}" . \
   -x 'vendor/*' 'node_modules/*' '.git/*' 'tests/*' 'dist/*' 'storage/*' '.env' '.env.*' \
-     'database/*.sqlite' '.github/*' '*.log' 'server.env' 'deploy.json' 'artisan.json' 'public/hot'
+     'database/*.sqlite' '.github/*' 'tools/*' '*.log' 'server.env' 'deploy.json' 'artisan.json' 'public/hot'
 
 LOCK="$(sha1sum composer.lock | cut -c1-16)"
 VENDOR_ZIP="vendor-${LOCK}.zip"

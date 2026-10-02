@@ -1,32 +1,35 @@
 #!/usr/bin/env bash
-# Uploads dist/ to the hosting over FTP (FTPS when the server offers it).
+# Uploads dist/ to the hosting over FTPS (explicit TLS), falling back to plain FTP.
 # Only 2-3 files per deploy: the agent, the app zip, and the vendor zip when composer.lock changed.
+# curl is used because it was verified against this host; lftp failed to connect from CI.
 set -euo pipefail
-
-sudo apt-get -qq install -y lftp >/dev/null
 
 APP_ZIP="$(cat dist/release.txt)"
 VENDOR_ZIP="$(cat dist/vendor.txt)"
+BASE="ftp://${FTP_HOST}"
+TLS=(--ssl-reqd -k)
 
-lf() {
-  lftp -c "set net:timeout 40; set net:max-retries 4; set net:reconnect-interval-base 5;
-           set ftp:ssl-allow yes; set ssl:verify-certificate no; set ftp:passive-mode yes;
-           open -u \"${FTP_USER}\",\"${FTP_PASSWORD}\" \"${FTP_HOST}\"; $1"
-}
+ftp() { curl -sS --fail --retry 3 --retry-delay 5 --connect-timeout 30 --user "${FTP_USER}:${FTP_PASSWORD}" "${TLS[@]}" "$@"; }
 
-# The FTP account may land in the site folder or in public_html itself.
-ROOT_LIST="$(lf 'cls -1' || true)"
-if printf '%s\n' "$ROOT_LIST" | grep -qx 'public_html/\?'; then DIR='public_html'; else DIR='.'; fi
-echo "FTP web root: ${DIR}"
+if ! ROOT_LIST="$(ftp -l "${BASE}/")"; then
+  echo "FTPS failed, trying plain FTP"
+  TLS=()
+  ROOT_LIST="$(ftp -l "${BASE}/")"
+fi
 
-EXISTING="$(lf "cd ${DIR}; cls -1 _releases/" 2>/dev/null || true)"
-CMDS="cd ${DIR}; mkdir -p _releases; put -O _releases dist/_releases/${APP_ZIP};"
-if printf '%s\n' "$EXISTING" | grep -q "${VENDOR_ZIP}"; then
+# The account may land in the site folder or directly in public_html.
+if printf '%s\n' "$ROOT_LIST" | grep -qx 'public_html'; then DIR='public_html/'; else DIR=''; fi
+echo "FTP web root: /${DIR}"
+
+EXISTING="$(ftp -l "${BASE}/${DIR}_releases/" 2>/dev/null || true)"
+
+time ftp --ftp-create-dirs -T "dist/_releases/${APP_ZIP}" "${BASE}/${DIR}_releases/${APP_ZIP}"
+if printf '%s\n' "$EXISTING" | grep -qx "${VENDOR_ZIP}"; then
   echo "vendor archive already on the server"
 else
-  CMDS="${CMDS} put -O _releases dist/_releases/${VENDOR_ZIP};"
+  time ftp --ftp-create-dirs -T "dist/_releases/${VENDOR_ZIP}" "${BASE}/${DIR}_releases/${VENDOR_ZIP}"
 fi
-CMDS="${CMDS} put dist/_deploy.php -o _deploy.php;"
+ftp -T dist/_deploy.php "${BASE}/${DIR}_deploy.php"
 
-time lf "${CMDS}"
-lf "cd ${DIR}; cls -l _releases/ _deploy.php"
+echo "--- on the server:"
+ftp -l "${BASE}/${DIR}_releases/"

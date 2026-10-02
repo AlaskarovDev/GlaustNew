@@ -159,6 +159,7 @@ function publishPublic(array $paths, string $root): void
     }
     copydir($paths['app'].'/public/build', $root.'/build');
     deny($paths['app']);
+    @unlink($root.'/default.php'); // hosting placeholder page
 }
 
 /* ---------- actions ---------- */

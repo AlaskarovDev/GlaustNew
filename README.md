@@ -61,7 +61,7 @@ Testlər: `php artisan test` (SQLite yaddaşda, CBAR HTTP-si `tests/Fixtures/cba
 
 ## Deploy (Hostinger shared, GitHub Actions)
 
-`main`-ə push → test → build → `deploy/package.sh` (app zip + vendor zip + agent) → `deploy/upload.sh` (FTP, hər dəfə 2-3 fayl) → `_deploy.php` agenti (açma, `.env`, migrasiya, atomik dəyişmə) → `deploy/check.sh` (canlı yoxlamalar) → uğursuz olsa avtomatik rollback.
+`main`-ə push → test → build → `deploy/package.sh` (app zip + vendor zip + agent) → FTP-Deploy-Action (sinxron vəziyyət faylı ilə, hər dəfə 2-3 fayl) → `_deploy.php` agenti (açma, `.env`, migrasiya, atomik dəyişmə) → `deploy/check.sh` (canlı yoxlamalar) → uğursuz olsa avtomatik rollback.
 
 Serverdə (`public_html/`):
 

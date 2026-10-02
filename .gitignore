@@ -35,3 +35,5 @@ body.html
 headers.txt
 /database/*.sqlite
 /AGENTS.md
+
+/PRODUCTION-SECRETS.local.json

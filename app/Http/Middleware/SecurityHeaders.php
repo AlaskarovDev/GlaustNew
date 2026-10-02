@@ -19,19 +19,7 @@ class SecurityHeaders
     {
         $response = $next($request);
 
-        $nonce = Vite::cspNonce();
-        $csp = implode('; ', [
-            "default-src 'self'",
-            "script-src 'self' 'nonce-{$nonce}' 'unsafe-eval'",
-            "style-src 'self' 'unsafe-inline'",
-            "img-src 'self' data: blob:",
-            "font-src 'self' data:",
-            "connect-src 'self'",
-            "object-src 'none'",
-            "frame-ancestors 'self'",
-            "form-action 'self'",
-            "base-uri 'self'",
-        ]);
+        $csp = \App\Support\Csp::policy();
 
         $headers = [
             'Content-Security-Policy' => $csp,

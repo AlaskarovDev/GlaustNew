@@ -18,8 +18,9 @@ check_body() { # url needle
   if grep -q -- "$2" body.html; then echo "ok   contains '$2'  $1"; else echo "FAIL missing '$2'  $1"; head -c 600 body.html; echo; fail=1; fi
 }
 
-# The app boots and renders.
-for i in 1 2 3; do [ "$(status "$SITE/up")" = "200" ] && break; sleep 5; done
+# The app boots and renders. Right after a deploy LiteSpeed may serve the first
+# requests through its 404 handler until it re-reads .htaccess: wait for a real 200.
+for i in $(seq 1 18); do [ "$(status "$SITE/login")" = "200" ] && [ "$(status "$SITE/up")" = "200" ] && break; sleep 5; done
 check_status "$SITE/up" 200
 check_status "$SITE/login" 200
 check_body "$SITE/login" "Glaust"
@@ -40,9 +41,15 @@ for p in _app/.env _app/composer.json _app_shared/.env _app_storage/logs/laravel
   if [ "$got" = "200" ]; then echo "FAIL $p is publicly readable"; fail=1; else echo "ok   $got  /$p blocked"; fi
 done
 
-# Security headers.
-curl -s -D headers.txt -o /dev/null "$SITE/login"
-for h in content-security-policy x-content-type-options x-frame-options; do
+# Security headers. The hosting CDN replaces our CSP header with its own, so the
+# policy must reach the browser through the <meta http-equiv> tag.
+curl -s -D headers.txt -o body.html "$SITE/login"
+if grep -qi "content-security-policy:.*script-src" headers.txt || grep -q 'http-equiv="Content-Security-Policy" content="[^"]*script-src' body.html; then
+  echo "ok   CSP with script-src reaches the browser"
+else
+  echo "FAIL no effective CSP (neither header nor meta)"; fail=1
+fi
+for h in x-content-type-options x-frame-options; do
   if grep -qi "^$h:" headers.txt; then echo "ok   header $h"; else echo "FAIL missing header $h"; fail=1; fi
 done
 

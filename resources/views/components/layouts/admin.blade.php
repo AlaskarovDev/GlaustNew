@@ -6,7 +6,7 @@
 <!DOCTYPE html>
 <html lang="az">
 <head>
-    <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="csrf-token" content="{{ csrf_token() }}"><meta name="robots" content="noindex, nofollow">
+    <meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="{{ \App\Support\Csp::policy(true) }}"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="csrf-token" content="{{ csrf_token() }}"><meta name="robots" content="noindex, nofollow">
     <title>{{ $title ? $title.' · ' : '' }}Glaust Admin</title>
     <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
     <script nonce="{{ Vite::cspNonce() }}">(() => { let m = 'system'; try { m = localStorage.getItem('glaust-theme') || m } catch (e) {} document.documentElement.classList.toggle('dark', m === 'dark' || (m === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)); })();</script>

@@ -1,0 +1,147 @@
+name: Test & deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      artisan:
+        description: 'Run an allowed artisan command on the server after deploy (e.g. glaust:demo)'
+        required: false
+        default: ''
+      artisan_args:
+        description: 'JSON arguments, e.g. {"--companies":2}'
+        required: false
+        default: '{}'
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, intl, pdo_sqlite, sqlite3, zip, gd, bcmath
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - run: npm ci && npm run build
+      - run: cp .env.example .env && php artisan key:generate
+      - run: php artisan test
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      SITE_URL: ${{ secrets.SITE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, intl, zip, gd, bcmath
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Build production bundle
+        run: |
+          composer install --no-dev --no-interaction --prefer-dist --no-progress --optimize-autoloader
+          npm ci && npm run build
+          rm -rf node_modules
+
+      - name: Package release
+        env:
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+        run: bash deploy/package.sh "${GITHUB_SHA::12}" "$(printf '%s' "$DEPLOY_TOKEN" | sha256sum | cut -d' ' -f1)"
+
+      - name: Write server .env
+        env:
+          APP_KEY: ${{ secrets.APP_KEY }}
+          DB_ENV: ${{ secrets.DB_ENV }}
+          MAIL_ENV: ${{ secrets.MAIL_ENV }}
+          ADMIN_ENV: ${{ secrets.ADMIN_ENV }}
+        run: |
+          {
+            echo 'APP_NAME="Glaust MS"'
+            echo 'APP_ENV=production'
+            echo "APP_KEY=${APP_KEY}"
+            echo 'APP_DEBUG=false'
+            echo "APP_URL=${SITE_URL}"
+            echo 'APP_TIMEZONE=Asia/Baku'
+            echo 'APP_LOCALE=az'
+            echo 'APP_FALLBACK_LOCALE=az'
+            echo 'LOG_CHANNEL=daily'
+            echo 'LOG_LEVEL=warning'
+            echo 'SESSION_DRIVER=database'
+            echo 'SESSION_LIFETIME=120'
+            echo 'SESSION_SECURE_COOKIE=true'
+            echo 'CACHE_STORE=database'
+            echo 'QUEUE_CONNECTION=database'
+            echo 'FILESYSTEM_DISK=local'
+            echo 'GLAUST_WEB_SCHEDULER=true'
+            echo 'GLAUST_REGISTRATION_OPEN=true'
+            printf '%s\n' "${DB_ENV:-DB_CONNECTION=sqlite
+          DB_DATABASE=%STORAGE%/database.sqlite}"
+            printf '%s\n' "${MAIL_ENV:-MAIL_MAILER=log
+          MAIL_FROM_ADDRESS=noreply@glaust.az
+          MAIL_FROM_NAME=\"Glaust MS\"}"
+            printf '%s\n' "${ADMIN_ENV:-}"
+          } | sed 's/^ *//' > server.env
+          grep -c . server.env
+
+      - name: Upload over FTP
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: bash deploy/upload.sh
+
+      - name: Install on the server
+        env:
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -sS --max-time 900 -X POST "${SITE_URL}/_deploy.php" -H "X-Deploy-Token: ${DEPLOY_TOKEN}" \
+            --data-urlencode action=deploy \
+            --data-urlencode "release=$(cat dist/release.txt)" \
+            --data-urlencode "vendor=$(cat dist/vendor.txt)" \
+            --data-urlencode env@server.env -o deploy.json
+          cat deploy.json | jq 'del(.artisan[]?.output)' || cat deploy.json
+          test "$(jq -r .ok deploy.json)" = "true"
+
+      - name: Live checks
+        id: live
+        run: bash deploy/check.sh "${SITE_URL}"
+
+      - name: Roll back on failed live checks
+        if: failure() && steps.live.outcome == 'failure'
+        env:
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+        run: |
+          curl -sS -X POST "${SITE_URL}/_deploy.php" -H "X-Deploy-Token: ${DEPLOY_TOKEN}" --data-urlencode action=log | jq -r .tail | tail -n 40 || true
+          curl -sS -X POST "${SITE_URL}/_deploy.php" -H "X-Deploy-Token: ${DEPLOY_TOKEN}" --data-urlencode action=rollback
+
+      - name: Optional artisan command
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.artisan != ''
+        env:
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -sS --max-time 900 -X POST "${SITE_URL}/_deploy.php" -H "X-Deploy-Token: ${DEPLOY_TOKEN}" \
+            --data-urlencode action=artisan \
+            --data-urlencode "command=${{ github.event.inputs.artisan }}" \
+            --data-urlencode 'args=${{ github.event.inputs.artisan_args }}' -o artisan.json
+          jq . artisan.json
+          test "$(jq -r .ok artisan.json)" = "true"

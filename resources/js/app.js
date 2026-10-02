@@ -41,6 +41,12 @@ async function api(url, { method = 'GET', body = null } = {}) {
 }
 window.glaustApi = api;
 
+// localStorage can throw (private mode, blocked storage); Alpine expressions cannot hold try/catch.
+window.glaustPref = {
+    get(key) { try { return localStorage.getItem(key); } catch { return null; } },
+    set(key, value) { try { localStorage.setItem(key, value); } catch { /* ignore */ } },
+};
+
 const fmt = (value, decimals = 2) => new Intl.NumberFormat('az-Latn-AZ', {
     minimumFractionDigits: decimals, maximumFractionDigits: decimals,
 }).format(value).replace(/ /g, ' ');

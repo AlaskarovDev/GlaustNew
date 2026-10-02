@@ -29,7 +29,7 @@
     </script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body x-data="{ nav: false, collapsed: false }" x-init="try { collapsed = localStorage.getItem('glaust-nav') === '1' } catch (e) {}" class="overflow-x-hidden">
+<body x-data="{ nav: false, collapsed: false }" x-init="collapsed = glaustPref.get('glaust-nav') === '1'" class="overflow-x-hidden">
 <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] btn btn-primary">Əsas məzmuna keç</a>
 
 {{-- Mobile backdrop --}}
@@ -83,7 +83,7 @@
                 <div class="mt-1 text-slate-400">{{ max(0, (int) now()->startOfDay()->diffInDays($company->trial_ends_at, false)) }} gün qalıb · {{ $company->plan?->name }}</div>
             </div>
         @endif
-        <button type="button" class="hidden lg:flex nav-link w-full" @click="collapsed = !collapsed; try { localStorage.setItem('glaust-nav', collapsed ? '1' : '0') } catch (e) {}"
+        <button type="button" class="hidden lg:flex nav-link w-full" @click="collapsed = !collapsed; glaustPref.set('glaust-nav', collapsed ? '1' : '0')"
                 :class="collapsed && 'lg:justify-center lg:px-0'" :aria-label="collapsed ? 'Menyunu genişləndir' : 'Menyunu daralt'">
             <x-icon name="chevrons-left" class="size-[19px] shrink-0 transition-transform duration-300" ::class="collapsed && 'rotate-180'"/>
             <span :class="collapsed && 'lg:hidden'">Daralt</span>

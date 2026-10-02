@@ -143,6 +143,8 @@ def main() -> int:
             elif e.get("method") == "Runtime.exceptionThrown":
                 d = e["params"].get("exceptionDetails", {})
                 out.append((d.get("exception", {}).get("description") or d.get("text", "exception"))[:160])
+            elif e.get("method") == "Runtime.consoleAPICalled" and e["params"].get("type") == "warning" and "Alpine" in json.dumps(e["params"].get("args", [])):
+                out.append(" ".join(str(a.get("value", a.get("description", ""))) for a in e["params"].get("args", []))[:400])
             elif e.get("method") == "Runtime.consoleAPICalled" and e["params"].get("type") == "error":
                 out.append(" ".join(str(a.get("value", a.get("description", ""))) for a in e["params"].get("args", []))[:160])
         return out

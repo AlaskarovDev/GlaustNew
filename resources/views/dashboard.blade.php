@@ -92,7 +92,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 stagger">
 
         {{-- KPIs --}}
-        <section class="{{ $span['kpis'] }}" x-show="visible('kpis')" :style="{ order: pos(\'kpis\') }" style="--i:0" aria-label="Əsas göstəricilər">
+        <section class="{{ $span['kpis'] }}" x-show="visible('kpis')" :style="{ order: pos('kpis') }" style="--i:0" aria-label="Əsas göstəricilər">
             <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 gap-4">
                 @foreach($kpis as $i => $kpi)
                     <a href="{{ $kpi['url'] }}" class="card card-hover p-5 group rise" style="--i:{{ $i }}">
@@ -115,7 +115,7 @@
         </section>
 
         {{-- Shortcuts --}}
-        <section class="{{ $span['shortcuts'] }}" x-show="visible('shortcuts')" :style="{ order: pos(\'shortcuts\') }" style="--i:1" aria-label="Qısa yollar">
+        <section class="{{ $span['shortcuts'] }}" x-show="visible('shortcuts')" :style="{ order: pos('shortcuts') }" style="--i:1" aria-label="Qısa yollar">
             <div class="card p-2.5">
                 <div class="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-1.5">
                     @foreach($shortcuts as [$label, $icon, $route, $params, $ability, $keys])
@@ -133,7 +133,7 @@
 
         {{-- Cashflow --}}
         @isset($cashflow)
-        <section class="{{ $span['cashflow'] }} card p-5 lg:p-6" x-show="visible('cashflow')" :style="{ order: pos(\'cashflow\') }" style="--i:2">
+        <section class="{{ $span['cashflow'] }} card p-5 lg:p-6" x-show="visible('cashflow')" :style="{ order: pos('cashflow') }" style="--i:2">
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <div>
                     <h2 class="text-base font-semibold">Gəlir və xərc</h2>
@@ -150,7 +150,7 @@
 
         {{-- Project status --}}
         @isset($projectStatus)
-        <section class="{{ $span['projects'] }} card p-5 lg:p-6" x-show="visible('projects')" :style="{ order: pos(\'projects\') }" style="--i:3">
+        <section class="{{ $span['projects'] }} card p-5 lg:p-6" x-show="visible('projects')" :style="{ order: pos('projects') }" style="--i:3">
             <div class="flex items-center justify-between">
                 <h2 class="text-base font-semibold">Layihələrin statusu</h2>
                 <a href="{{ route('projects.index') }}" class="text-xs font-medium text-brand-ink hover:underline">Hamısı</a>
@@ -166,7 +166,7 @@
         @endisset
 
         {{-- My tasks --}}
-        <section class="{{ $span['my_tasks'] }} card p-5 lg:p-6 flex flex-col" x-show="visible('my_tasks')" :style="{ order: pos(\'my_tasks\') }" style="--i:4">
+        <section class="{{ $span['my_tasks'] }} card p-5 lg:p-6 flex flex-col" x-show="visible('my_tasks')" :style="{ order: pos('my_tasks') }" style="--i:4">
             <div class="flex items-center justify-between">
                 <h2 class="text-base font-semibold">Bugünkü işlərim</h2>
                 <a href="{{ route('my-work') }}" class="text-xs font-medium text-brand-ink hover:underline">Hamısı</a>
@@ -194,7 +194,7 @@
 
         {{-- Budget vs actual --}}
         @isset($budget)
-        <section class="{{ $span['budget'] }} card p-5 lg:p-6" x-show="visible('budget')" :style="{ order: pos(\'budget\') }" style="--i:5">
+        <section class="{{ $span['budget'] }} card p-5 lg:p-6" x-show="visible('budget')" :style="{ order: pos('budget') }" style="--i:5">
             <h2 class="text-base font-semibold">Büdcə və faktiki xərc</h2>
             <p class="text-xs text-muted mt-0.5">Aktiv layihələr · AZN · faktiki = layihəyə bağlı bank məxarici + logistika xərcləri</p>
             @if(count($budget['categories']))
@@ -210,7 +210,7 @@
 
         {{-- Bank balances --}}
         @isset($balances)
-        <section class="{{ $span['balances'] }} card p-5 lg:p-6" x-show="visible('balances')" :style="{ order: pos(\'balances\') }" style="--i:6">
+        <section class="{{ $span['balances'] }} card p-5 lg:p-6" x-show="visible('balances')" :style="{ order: pos('balances') }" style="--i:6">
             <div class="flex items-start justify-between gap-3">
                 <div>
                     <h2 class="text-base font-semibold">Bank hesabları</h2>
@@ -247,7 +247,7 @@
 
         {{-- Top counterparties --}}
         @isset($top)
-        <section class="{{ $span['top'] }} card p-5 lg:p-6" x-show="visible('top')" :style="{ order: pos(\'top\') }" style="--i:7">
+        <section class="{{ $span['top'] }} card p-5 lg:p-6" x-show="visible('top')" :style="{ order: pos('top') }" style="--i:7">
             <h2 class="text-base font-semibold">TOP-5 kontragent</h2>
             <p class="text-xs text-muted mt-0.5">Son 12 ayda dövriyyə (daxilolma + məxaric), AZN</p>
             @if(count($top['labels']))
@@ -260,7 +260,7 @@
 
         {{-- Logistics --}}
         @isset($logistics)
-        <section class="{{ $span['logistics'] }} card p-5 lg:p-6" x-show="visible('logistics')" :style="{ order: pos(\'logistics\') }" style="--i:8">
+        <section class="{{ $span['logistics'] }} card p-5 lg:p-6" x-show="visible('logistics')" :style="{ order: pos('logistics') }" style="--i:8">
             <div class="flex items-center justify-between">
                 <h2 class="text-base font-semibold">Logistika</h2>
                 <a href="{{ route('shipments.index') }}" class="text-xs font-medium text-brand-ink hover:underline">Yüklər</a>
@@ -284,7 +284,7 @@
         @endisset
 
         {{-- Rates --}}
-        <section class="{{ $span['rates'] }} card p-5 lg:p-6" x-show="visible('rates')" :style="{ order: pos(\'rates\') }" style="--i:9">
+        <section class="{{ $span['rates'] }} card p-5 lg:p-6" x-show="visible('rates')" :style="{ order: pos('rates') }" style="--i:9">
             <div class="flex items-center justify-between">
                 <div>
                     <h2 class="text-base font-semibold">Məzənnə dinamikası</h2>
@@ -322,7 +322,7 @@
         </section>
 
         {{-- Activity --}}
-        <section class="{{ $span['activity'] }} card" x-show="visible('activity')" :style="{ order: pos(\'activity\') }" style="--i:10">
+        <section class="{{ $span['activity'] }} card" x-show="visible('activity')" :style="{ order: pos('activity') }" style="--i:10">
             <div class="flex items-center justify-between px-5 lg:px-6 pt-5">
                 <h2 class="text-base font-semibold">Son fəaliyyətlər</h2>
                 @can('logs.view')<a href="{{ route('settings.logs.audit') }}" class="text-xs font-medium text-brand-ink hover:underline">Audit jurnalı</a>@endcan

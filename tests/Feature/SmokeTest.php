@@ -143,7 +143,10 @@ class SmokeTest extends TestCase
             ->assertSee('Yeni müqavilə')
             ->assertSee('x-chart', false)
             ->assertSee('x-countup', false)
-            ->assertSee('glaust-shortcuts', false);
+            ->assertSee('glaust-shortcuts', false)
+            ->assertSee("pos('kpis')", false)
+            // A backslash-escaped quote inside an Alpine attribute is a JS syntax error in the browser.
+            ->assertDontSee("pos(\\'", false);
     }
 
     public function test_super_admin_area(): void

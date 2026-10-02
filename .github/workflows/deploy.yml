@@ -87,7 +87,7 @@ jobs:
             echo 'SESSION_DRIVER=database'
             echo 'SESSION_LIFETIME=120'
             echo 'SESSION_SECURE_COOKIE=true'
-            echo 'CACHE_STORE=database'
+            echo 'CACHE_STORE=file'
             echo 'QUEUE_CONNECTION=database'
             echo 'FILESYSTEM_DISK=local'
             echo 'GLAUST_WEB_SCHEDULER=true'

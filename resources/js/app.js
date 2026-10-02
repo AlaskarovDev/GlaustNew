@@ -47,9 +47,14 @@ window.glaustPref = {
     set(key, value) { try { localStorage.setItem(key, value); } catch { /* ignore */ } },
 };
 
-const fmt = (value, decimals = 2) => new Intl.NumberFormat('az-Latn-AZ', {
-    minimumFractionDigits: decimals, maximumFractionDigits: decimals,
-}).format(value).replace(/ /g, ' ');
+// Same output as the PHP num() helper: "1 234 567,50" (NBSP grouping, comma decimals),
+// independent of the browser's Intl locale data.
+const fmt = (value, decimals = 2) => {
+    const n = Number(value) || 0;
+    const [int, frac] = Math.abs(n).toFixed(decimals).split('.');
+    const grouped = int.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    return (n < 0 && Number(Math.abs(n).toFixed(decimals)) !== 0 ? '-' : '') + grouped + (frac ? ',' + frac : '');
+};
 
 const fmtRate = (rate) => {
     const s = Number(rate).toFixed(8).replace(/0+$/, '');

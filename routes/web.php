@@ -159,6 +159,7 @@ Route::middleware(['auth', 'tenant'])->group(function () {
     Route::middleware('can:bank.view')->prefix('bank')->name('bank.')->group(function () {
         Route::get('/transactions/export', [BankTransactionController::class, 'export'])->middleware('can:bank.export')->name('transactions.export');
         Route::resource('transactions', BankTransactionController::class);
+        Route::get('/accounts/{account}/statement', [BankAccountController::class, 'statement'])->name('accounts.statement');
         Route::resource('accounts', BankAccountController::class)->except(['show']);
     });
 

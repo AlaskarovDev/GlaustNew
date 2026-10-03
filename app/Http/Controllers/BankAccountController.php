@@ -24,6 +24,62 @@ class BankAccountController extends Controller
         return view('bank.accounts.index', compact('accounts'));
     }
 
+    /**
+     * Hesab çıxarışı: every movement of one account in a period, with the balance before it,
+     * money in / out, the running balance after each line and the closing balance.
+     */
+    public function statement(Request $request, BankAccount $account): View|\Symfony\Component\HttpFoundation\Response
+    {
+        $data = $request->validate(['from' => ['nullable', 'date'], 'to' => ['nullable', 'date', 'after_or_equal:from'], 'format' => ['nullable', 'in:xlsx,pdf']]);
+        $from = isset($data['from']) ? \Carbon\CarbonImmutable::parse($data['from']) : null;
+        $to = isset($data['to']) ? \Carbon\CarbonImmutable::parse($data['to']) : null;
+
+        $signed = "COALESCE(SUM(CASE WHEN direction = 'in' THEN amount ELSE -amount END), 0)";
+        $before = $from ? (float) $account->transactions()->where('transaction_date', '<', $from->toDateString())->selectRaw($signed.' as s')->value('s') : 0.0;
+        $opening = round((float) $account->opening_balance + $before, 2);
+
+        $rows = $account->transactions()
+            ->with(['counterparty:id,name', 'deal:id,code', 'project:id,code', 'category:id,name'])
+            ->when($from, fn ($q) => $q->where('transaction_date', '>=', $from->toDateString()))
+            ->when($to, fn ($q) => $q->where('transaction_date', '<=', $to->toDateString()))
+            ->orderBy('transaction_date')->orderBy('id')->get();
+        $running = $opening;
+        foreach ($rows as $tx) {
+            $running = round($running + ($tx->direction === 'in' ? 1 : -1) * (float) $tx->amount, 2);
+            $tx->setAttribute('running_balance', $running);
+        }
+        $in = round($rows->where('direction', 'in')->sum('amount'), 2);
+        $out = round($rows->where('direction', 'out')->sum('amount'), 2);
+        $period = ($from ? azdate($from) : 'əvvəldən').' — '.($to ? azdate($to) : 'bu günə');
+
+        if ($format = $data['format'] ?? null) {
+            $cur = $account->currency;
+            $cols = [
+                \App\Tables\Column::make('Tarix', 'transaction_date', 'date'),
+                \App\Tables\Column::make('Qarşı tərəf', fn ($t) => $t->counterparty?->name ?? ($t->kind !== 'regular' ? 'Daxili köçürmə' : '—')),
+                \App\Tables\Column::make('Təyinat', fn ($t) => trim(($t->purpose ?? '').($t->deal ? ' · '.$t->deal->code : ''))),
+                \App\Tables\Column::make('İstinad', 'reference'),
+                \App\Tables\Column::make('Mədaxil ('.$cur.')', fn ($t) => $t->direction === 'in' ? (float) $t->amount : null, 'money', total: true),
+                \App\Tables\Column::make('Məxaric ('.$cur.')', fn ($t) => $t->direction === 'out' ? (float) $t->amount : null, 'money', total: true),
+                \App\Tables\Column::make('Qalıq ('.$cur.')', 'running_balance', 'money'),
+                \App\Tables\Column::make('Kurs', 'applied_rate', 'rate'),
+                \App\Tables\Column::make('AZN', 'amount_azn', 'money'),
+            ];
+            $title = 'Hesab çıxarışı — '.$account->name.' ('.$cur.')';
+            $filters = [$account->bank_name.($account->iban ? ' · '.$account->iban : ''), 'Dövr: '.$period, 'Əvvəlki qalıq: '.money($opening, $cur).' · Son qalıq: '.money($running, $cur)];
+            $name = 'cixaris-'.\Illuminate\Support\Str::slug($account->name.'-'.$cur).'-'.now()->format('Y-m-d');
+
+            return $format === 'pdf'
+                ? app(\App\Support\Export\PdfExporter::class)->download($title, $cols, $rows, $name.'.pdf', $filters)
+                : app(\App\Support\Export\SpreadsheetExporter::class)->download($title, $cols, $rows, $name.'.xlsx', $filters);
+        }
+
+        return view('bank.accounts.statement', [
+            'account' => $account, 'rows' => $rows, 'opening' => $opening, 'closing' => $running,
+            'in' => $in, 'out' => $out, 'from' => $from, 'to' => $to, 'period' => $period,
+        ]);
+    }
+
     public function create(): View
     {
         $this->authorize('bank.create');

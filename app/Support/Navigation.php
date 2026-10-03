@@ -20,6 +20,7 @@ class Navigation
                 ['label' => 'Müqavilələr', 'route' => 'contracts.index', 'active' => 'contracts.*', 'icon' => 'signature', 'can' => 'contracts.view'],
             ]],
             ['label' => 'Maliyyə və təchizat', 'items' => [
+                ['label' => 'Xərclər', 'route' => 'expenses.index', 'active' => 'expenses.*', 'icon' => 'receipt', 'can' => 'expenses.view'],
                 ['label' => 'Bank hesabları', 'route' => 'bank.accounts.index', 'active' => 'bank.accounts.*', 'icon' => 'wallet', 'can' => 'bank.view'],
                 ['label' => 'Bank əməliyyatları', 'route' => 'bank.transactions.index', 'active' => 'bank.transactions.*', 'icon' => 'bank', 'can' => 'bank.view'],
                 ['label' => 'Logistika', 'route' => 'shipments.index', 'active' => 'shipments.*', 'icon' => 'truck', 'can' => 'logistics.view'],
@@ -52,6 +53,8 @@ class Navigation
             ['g q', 'Müqavilələr', 'contracts.index', 'contracts.view'],
             ['g b', 'Bank əməliyyatları', 'bank.transactions.index', 'bank.view'],
             ['g a', 'Bank hesabları', 'bank.accounts.index', 'bank.view'],
+            ['g x', 'Xərclər', 'expenses.index', 'expenses.view'],
+            ['n e', 'Yeni xərc', 'expenses.create', 'expenses.create'],
             ['g l', 'Logistika', 'shipments.index', 'logistics.view'],
             ['g h', 'Hesabatlar', 'reports.index', 'reports.view'],
             ['g v', 'Valyuta məzənnələri', 'currency.index', 'currency.view'],

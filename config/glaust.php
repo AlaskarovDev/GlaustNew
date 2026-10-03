@@ -31,6 +31,7 @@ return [
         'contracts' => ['label' => 'Müqavilələr', 'actions' => ['view', 'create', 'update', 'delete', 'export']],
         'bank' => ['label' => 'Bank əməliyyatları', 'actions' => ['view', 'create', 'update', 'delete', 'export', 'import']],
         'logistics' => ['label' => 'Logistika', 'actions' => ['view', 'create', 'update', 'delete', 'export', 'import']],
+        'expenses' => ['label' => 'Xərclər', 'actions' => ['view', 'create', 'update', 'delete', 'export']],
         'reports' => ['label' => 'Hesabatlar', 'actions' => ['view', 'export']],
         'currency' => ['label' => 'Valyuta məzənnələri', 'actions' => ['view']],
         'settings' => ['label' => 'Tənzimləmələr', 'actions' => ['view', 'update']],
@@ -50,10 +51,10 @@ return [
         'admin' => ['name' => 'Admin', 'is_admin' => true, 'permissions' => ['*']],
         'manager' => ['name' => 'Menecer', 'permissions' => [
             'dashboard.*', 'projects.*', 'crm.*', 'contracts.*', 'logistics.view', 'logistics.create', 'logistics.update',
-            'reports.*', 'currency.view', 'bank.view',
+            'reports.*', 'currency.view', 'bank.view', 'expenses.view', 'expenses.create', 'expenses.update',
         ]],
         'accountant' => ['name' => 'Mühasib', 'permissions' => [
-            'dashboard.*', 'bank.*', 'contracts.view', 'contracts.export', 'crm.view', 'crm.create', 'crm.update', 'crm.export',
+            'dashboard.*', 'bank.*', 'expenses.*', 'contracts.view', 'contracts.export', 'crm.view', 'crm.create', 'crm.update', 'crm.export',
             'reports.*', 'currency.view', 'projects.view',
         ]],
         'logistician' => ['name' => 'Logist', 'permissions' => [
@@ -133,6 +134,7 @@ return [
         'contract_payment' => 'Ödəniş tarixi',
         'task_due' => 'Tapşırığın son tarixi',
         'shipment_delay' => 'Gecikən yük',
+        'approval' => 'Təsdiq',
     ],
 
     // Defaults for company settings (merged with companies.settings JSON).

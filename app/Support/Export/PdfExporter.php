@@ -48,7 +48,7 @@ class PdfExporter
     {
         $pdf = Pdf::loadView($view, $data + ['company' => tenant()])
             ->setPaper('a4', $landscape ? 'landscape' : 'portrait')
-            ->setOption(['defaultFont' => 'DejaVu Sans', 'isRemoteEnabled' => false, 'isPhpEnabled' => true, 'dpi' => 96]);
+            ->setOption(['defaultFont' => 'DejaVu Sans', 'isRemoteEnabled' => false, 'isPhpEnabled' => true, 'isFontSubsettingEnabled' => true, 'dpi' => 96]);
 
         return $inline ? $pdf->stream($filename) : $pdf->download($filename);
     }

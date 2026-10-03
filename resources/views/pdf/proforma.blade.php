@@ -70,7 +70,7 @@
     <thead>
     <tr>
         <th style="width: 7%;">Item #</th><th>Description</th><th style="width: 11%;">Custom Code</th><th style="width: 7%;">QTY</th>
-        <th style="width: 8%;">UOM</th><th style="width: 11%;">Unit Price {{ $cur }}</th><th style="width: 13%;">Total Price {{ $cur }}</th>
+        <th style="width: 7%;">UOM</th><th style="width: 13%; white-space: nowrap;">Unit Price {{ $cur }}</th><th style="width: 14%; white-space: nowrap;">Total Price {{ $cur }}</th>
     </tr>
     </thead>
     <tbody>

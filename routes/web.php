@@ -12,6 +12,7 @@ use App\Http\Controllers\CurrencyController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DealController;
 use App\Http\Controllers\DealPaymentController;
+use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\InvoiceApprovalController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\ImportController;
@@ -160,6 +161,14 @@ Route::middleware(['auth', 'tenant'])->group(function () {
     });
 
     /* Bank */
+    Route::middleware('can:expenses.view')->group(function () {
+        Route::get('/expenses/categories', [ExpenseController::class, 'categories'])->name('expenses.categories');
+        Route::post('/expenses/categories', [ExpenseController::class, 'storeCategory'])->name('expenses.categories.store');
+        Route::put('/expenses/categories/{category}', [ExpenseController::class, 'updateCategory'])->name('expenses.categories.update');
+        Route::delete('/expenses/categories/{category}', [ExpenseController::class, 'destroyCategory'])->name('expenses.categories.destroy');
+        Route::resource('expenses', ExpenseController::class)->except(['show']);
+    });
+
     Route::middleware('can:bank.view')->prefix('bank')->name('bank.')->group(function () {
         Route::get('/transactions/export', [BankTransactionController::class, 'export'])->middleware('can:bank.export')->name('transactions.export');
         Route::resource('transactions', BankTransactionController::class);

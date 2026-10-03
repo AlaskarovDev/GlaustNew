@@ -110,6 +110,8 @@ Route::middleware(['auth', 'tenant'])->group(function () {
         Route::get('/invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show');
         Route::get('/invoices/{invoice}/export', [InvoiceController::class, 'export'])->name('invoices.export');
         Route::put('/invoices/{invoice}/status', [InvoiceController::class, 'status'])->name('invoices.status');
+        Route::post('/invoices/{invoice}/logistics', [InvoiceController::class, 'logistics'])->name('invoices.logistics');
+        Route::delete('/invoices/{invoice}/logistics', [InvoiceController::class, 'clearLogistics'])->name('invoices.logistics.clear');
         Route::delete('/invoices/{invoice}', [InvoiceController::class, 'destroy'])->name('invoices.destroy');
 
         Route::get('/tasks/export', [TaskController::class, 'export'])->middleware('can:projects.export')->name('tasks.export');

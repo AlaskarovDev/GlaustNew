@@ -26,7 +26,8 @@ class Invoice extends Model
 
     protected function casts(): array
     {
-        return ['invoice_date' => 'date', 'total' => 'decimal:2', 'total_azn' => 'decimal:2', 'cbar_rate' => 'decimal:8'];
+        return ['invoice_date' => 'date', 'total' => 'decimal:2', 'total_azn' => 'decimal:2', 'cbar_rate' => 'decimal:8',
+            'logistics_amount' => 'decimal:2', 'logistics_rate' => 'decimal:8', 'logistics_total' => 'decimal:2', 'logistics_updated_at' => 'datetime'];
     }
 
     public function deal(): BelongsTo
@@ -57,6 +58,15 @@ class Invoice extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public const LOGISTICS_MODES = ['forecast' => 'Proqnoz', 'actual' => 'Dəqiq'];
+
+    public const LOGISTICS_METHODS = ['total' => 'Ümumi məbləğ (Total/EUR payına görə bölünür)', 'per_item' => 'Hər məhsul üzrə ayrıca'];
+
+    public function hasLogistics(): bool
+    {
+        return $this->logistics_method !== null;
     }
 
     public function typeLabel(): string

@@ -12,7 +12,7 @@ class InvoiceItem extends Model
 
     protected function casts(): array
     {
-        return ['quantity' => 'decimal:3', 'unit_price' => 'decimal:4', 'total' => 'decimal:2', 'extra' => 'array'];
+        return ['quantity' => 'decimal:3', 'unit_price' => 'decimal:4', 'total' => 'decimal:2', 'logistics_original' => 'decimal:2', 'logistics' => 'decimal:2', 'extra' => 'array'];
     }
 
     public function invoice(): BelongsTo

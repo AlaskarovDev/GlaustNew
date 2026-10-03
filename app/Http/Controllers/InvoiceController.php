@@ -122,6 +122,58 @@ class InvoiceController extends Controller
         return back()->with('success', 'Status: '.Invoice::STATUSES[$data['status']][0]);
     }
 
+    /**
+     * Logistics cost after the import: forecast or actual; one amount split by Total share,
+     * or an amount per line — all lines in one currency.
+     */
+    public function logistics(Request $request, Invoice $invoice, \App\Support\Invoices\LogisticsAllocator $allocator): RedirectResponse
+    {
+        $this->authorize('projects.update');
+        if ($invoice->status === 'cancelled') {
+            return back()->with('error', 'Ləğv edilmiş fakturaya xərc əlavə olunmur.');
+        }
+        $request->merge([
+            'logistics_amount' => parse_number($request->input('logistics_amount')),
+            'items' => array_map(fn ($v) => $v === null || $v === '' ? null : parse_number($v), (array) $request->input('items', [])),
+        ]);
+        $currencies = Rule::in(config('glaust.currencies'));
+        $data = $request->validate([
+            'logistics_mode' => ['required', Rule::in(array_keys(Invoice::LOGISTICS_MODES))],
+            'logistics_method' => ['required', Rule::in(array_keys(Invoice::LOGISTICS_METHODS))],
+            'logistics_currency' => ['required_if:logistics_method,total', 'nullable', $currencies],
+            'logistics_amount' => ['required_if:logistics_method,total', 'nullable', 'numeric', 'min:0', 'max:999999999'],
+            'items' => ['required_if:logistics_method,per_item', 'array'],
+            'items.*' => ['nullable', 'numeric', 'min:0', 'max:999999999'],
+            'item_currency' => ['required_if:logistics_method,per_item', 'array'],
+            'item_currency.*' => ['nullable', $currencies],
+        ], [], ['logistics_mode' => 'Xərcin növü', 'logistics_method' => 'Bölüşdürmə üsulu', 'logistics_currency' => 'Valyuta', 'logistics_amount' => 'Logistika xərci']);
+
+        $currency = $data['logistics_currency'] ?? null;
+        if ($data['logistics_method'] === 'per_item') {
+            $used = array_values(array_unique(array_filter((array) ($data['item_currency'] ?? []))));
+            if (count($used) !== 1) {
+                return back()->withInput()->withErrors(['item_currency' => count($used) ? 'Bütün məhsullar üzrə xərc eyni valyutada olmalıdır (seçilib: '.implode(', ', $used).').' : 'Valyutanı seçin.']);
+            }
+            $currency = $used[0];
+        }
+
+        $allocator->apply($invoice, $data['logistics_mode'], $data['logistics_method'], $currency,
+            isset($data['logistics_amount']) ? (float) $data['logistics_amount'] : null, $data['items'] ?? []);
+        $invoice->refresh();
+
+        return back()->with('success', 'Logistika xərci ('.Invoice::LOGISTICS_MODES[$invoice->logistics_mode].') bölüşdürüldü: '
+            .money($invoice->logistics_amount, $invoice->logistics_currency)
+            .($invoice->logistics_currency !== $invoice->currency ? ' = '.money($invoice->logistics_total, $invoice->currency) : '').'.');
+    }
+
+    public function clearLogistics(Invoice $invoice, \App\Support\Invoices\LogisticsAllocator $allocator): RedirectResponse
+    {
+        $this->authorize('projects.update');
+        $allocator->clear($invoice);
+
+        return back()->with('success', 'Logistika xərci silindi.');
+    }
+
     public function destroy(Invoice $invoice): RedirectResponse
     {
         $this->authorize('projects.delete');
@@ -136,6 +188,11 @@ class InvoiceController extends Controller
         $invoice->load('items', 'deal', 'counterparty');
         $cols = [];
         foreach (SupplierInvoiceSheet::COLUMNS as $key => [$label, $fillable]) {
+            if ($key === 'logistics' && $invoice->hasLogistics()) {
+                $cols[] = Column::make($label.' ('.$invoice->currency.')', 'logistics', 'money', total: true);
+
+                continue;
+            }
             if (! $fillable) {
                 continue; // later-stage columns: rules not defined yet
             }

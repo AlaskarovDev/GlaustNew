@@ -28,13 +28,18 @@
         </div>
     </div>
 
+    @if($invoice->type === 'supplier')
+        @include('invoices._logistics')
+    @endif
+
     <section class="card overflow-hidden mb-6">
         <div class="overflow-x-auto">
             <table class="table-g text-[13px]">
                 <thead lang="en">
                 <tr>
                     @foreach($columns as $key => [$label, $fillable])
-                        <th @class(['!text-right' => in_array($key, ['quantity', 'unit_price', 'total']) || ! $fillable, '!bg-surface-2 !text-faint' => ! $fillable]) title="{{ $fillable ? '' : 'Hesablama qaydası sonra əlavə olunacaq' }}">{{ $label }}</th>
+                        @php $live = $fillable || ($key === 'logistics' && $invoice->hasLogistics()); @endphp
+                        <th @class(['!text-right' => in_array($key, ['quantity', 'unit_price', 'total']) || ! $fillable, '!bg-surface-2 !text-faint' => ! $live, '!bg-saffron-soft' => $key === 'logistics' && $live]) title="{{ $live ? '' : 'Hesablama qaydası sonra əlavə olunacaq' }}">{{ $label }}</th>
                     @endforeach
                 </tr>
                 </thead>
@@ -50,7 +55,13 @@
                         <td class="num">{{ rtrim(rtrim(num($it->unit_price, 4), '0'), ',') }}</td>
                         <td class="num font-medium text-ink">{{ num($it->total) }}</td>
                         @foreach($later as $k => $c)
-                            <td class="num text-faint bg-surface-2/60">{{ isset($it->extra[$k]) ? num($it->extra[$k]) : '—' }}</td>
+                            @if($k === 'logistics' && $invoice->hasLogistics())
+                                <td class="num font-medium text-ink bg-saffron-soft/40">{{ num($it->logistics) }}
+                                    @if($invoice->logistics_currency !== $invoice->currency)<div class="text-[11px] text-faint">{{ num($it->logistics_original) }} {{ $invoice->logistics_currency }}</div>@endif
+                                </td>
+                            @else
+                                <td class="num text-faint bg-surface-2/60">{{ isset($it->extra[$k]) ? num($it->extra[$k]) : '—' }}</td>
+                            @endif
                         @endforeach
                     </tr>
                 @endforeach
@@ -61,7 +72,12 @@
                     <td class="px-4 py-3 text-right font-mono">{{ num($invoice->items->sum('quantity'), 2) }}</td>
                     <td colspan="2"></td>
                     <td class="px-4 py-3 text-right font-mono">{{ num($invoice->items->sum('total')) }}</td>
-                    <td colspan="{{ count($later) }}" class="px-4 py-3 text-xs font-normal text-muted">Boz sütunlar növbəti mərhələdə (alıcıya faktura) hesablanacaq.</td>
+                    @if($invoice->hasLogistics())
+                        <td class="px-4 py-3 text-right font-mono bg-saffron-soft/40">{{ num($invoice->items->sum('logistics')) }}</td>
+                        <td colspan="{{ count($later) - 1 }}" class="px-4 py-3 text-xs font-normal text-muted">Qalan boz sütunlar növbəti addımlarda hesablanacaq.</td>
+                    @else
+                        <td colspan="{{ count($later) }}" class="px-4 py-3 text-xs font-normal text-muted">Boz sütunlar sonrakı addımlarda hesablanacaq. Əvvəlcə logistika xərcini daxil edin.</td>
+                    @endif
                 </tr>
                 </tfoot>
             </table>

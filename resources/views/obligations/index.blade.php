@@ -3,7 +3,7 @@
         $fmt = fn (array $byCur, string $empty = '0') => $byCur ? collect($byCur)->map(fn ($v, $c) => money($v, $c))->implode(' · ') : $empty;
         $first = collect($groups)->search(fn ($g) => $g['total']) ?: 'pay';
     @endphp
-    <x-page-header title="Öhdəliklərim" icon="transfer" subtitle="Bütün tədarüklər üzrə: kimə nə qədər ödəməliyəm, kimi məhsulla təmin etməliyəm, kimdən nə qədər ödəniş gəlməlidir — hər valyutada ayrıca"/>
+    <x-page-header title="Öhdəliklərim" icon="scale" subtitle="Bütün tədarüklər üzrə: kimə nə qədər ödəməliyəm, kimi məhsulla təmin etməliyəm, kimdən nə qədər ödəniş gəlməlidir — hər valyutada ayrıca"/>
 
     <div x-data="{ sel: @js(request('group', $first)) }">
         <div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6" role="tablist" aria-label="Öhdəlik növləri">

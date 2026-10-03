@@ -15,7 +15,7 @@ class Navigation
                 ['label' => 'Mənim işlərim', 'route' => 'my-work', 'active' => 'my-work', 'icon' => 'calendar-check', 'can' => null],
             ]],
             ['label' => 'İş', 'items' => [
-                ['label' => 'Öhdəliklərim', 'route' => 'obligations.index', 'active' => 'obligations.*', 'icon' => 'transfer', 'can' => 'projects.view'],
+                ['label' => 'Öhdəliklərim', 'route' => 'obligations.index', 'active' => 'obligations.*', 'icon' => 'scale', 'can' => 'projects.view'],
                 ['label' => 'Layihələr', 'route' => 'projects.index', 'active' => 'projects.*|tasks.*', 'icon' => 'folder', 'can' => 'projects.view'],
                 ['label' => 'CRM', 'route' => 'counterparties.index', 'active' => 'counterparties.*', 'icon' => 'users', 'can' => 'crm.view'],
                 ['label' => 'Müqavilələr', 'route' => 'contracts.index', 'active' => 'contracts.*', 'icon' => 'signature', 'can' => 'contracts.view'],
@@ -23,6 +23,7 @@ class Navigation
             ['label' => 'Maliyyə və təchizat', 'items' => [
                 ['label' => 'Xərclər', 'route' => 'expenses.index', 'active' => 'expenses.*', 'icon' => 'receipt', 'can' => 'expenses.view'],
                 ['label' => 'Bank hesabları', 'route' => 'bank.accounts.index', 'active' => 'bank.accounts.*', 'icon' => 'wallet', 'can' => 'bank.view'],
+                ['label' => 'Valyuta alış-satışı', 'route' => 'bank.exchanges.index', 'active' => 'bank.exchanges.*', 'icon' => 'transfer', 'can' => 'bank.view'],
                 ['label' => 'Bank əməliyyatları', 'route' => 'bank.transactions.index', 'active' => 'bank.transactions.*', 'icon' => 'bank', 'can' => 'bank.view'],
                 ['label' => 'Logistika', 'route' => 'shipments.index', 'active' => 'shipments.*', 'icon' => 'truck', 'can' => 'logistics.view'],
                 ['label' => 'Valyuta məzənnələri', 'route' => 'currency.index', 'active' => 'currency.*', 'icon' => 'coins', 'can' => 'currency.view'],

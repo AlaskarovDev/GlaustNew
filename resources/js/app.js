@@ -271,8 +271,9 @@ function themed(config) {
         },
         theme: { mode: dark ? 'dark' : 'light' },
         series: config.series,
-        labels: config.labels,
-        xaxis: { categories: config.categories, axisBorder: { show: false }, axisTicks: { show: false }, labels: { style: { fontSize: '12px' } }, ...(config.xaxis || {}) },
+        // Only pass labels / categories that exist: undefined keys broke ApexCharts' redraw on resize.
+        ...(config.labels ? { labels: config.labels } : {}),
+        xaxis: { ...(config.categories ? { categories: config.categories } : {}), axisBorder: { show: false }, axisTicks: { show: false }, labels: { style: { fontSize: '12px' } }, ...(config.xaxis || {}) },
         yaxis: config.yaxis || { labels: { formatter: yFmt, style: { fontSize: '12px' } } },
         grid: { borderColor: line, strokeDashArray: 4, padding: { left: 6, right: 6 } },
         dataLabels: { enabled: false },

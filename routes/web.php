@@ -8,6 +8,7 @@ use App\Http\Controllers\BankAccountController;
 use App\Http\Controllers\BankTransactionController;
 use App\Http\Controllers\ContractController;
 use App\Http\Controllers\CounterpartyController;
+use App\Http\Controllers\CurrencyExchangeController;
 use App\Http\Controllers\CurrencyController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DealController;
@@ -175,6 +176,9 @@ Route::middleware(['auth', 'tenant'])->group(function () {
         Route::get('/transactions/export', [BankTransactionController::class, 'export'])->middleware('can:bank.export')->name('transactions.export');
         Route::resource('transactions', BankTransactionController::class);
         Route::get('/accounts/{account}/statement', [BankAccountController::class, 'statement'])->name('accounts.statement');
+        Route::get('/exchanges', [CurrencyExchangeController::class, 'index'])->name('exchanges.index');
+        Route::post('/exchanges', [CurrencyExchangeController::class, 'store'])->name('exchanges.store');
+        Route::delete('/exchanges/{exchange}', [CurrencyExchangeController::class, 'destroy'])->name('exchanges.destroy');
         Route::resource('accounts', BankAccountController::class)->except(['show']);
     });
 

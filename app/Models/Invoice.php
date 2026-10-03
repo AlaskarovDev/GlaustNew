@@ -27,7 +27,8 @@ class Invoice extends Model
     protected function casts(): array
     {
         return ['invoice_date' => 'date', 'total' => 'decimal:2', 'total_azn' => 'decimal:2', 'cbar_rate' => 'decimal:8',
-            'logistics_amount' => 'decimal:2', 'logistics_rate' => 'decimal:8', 'logistics_total' => 'decimal:2', 'logistics_updated_at' => 'datetime'];
+            'logistics_amount' => 'decimal:2', 'logistics_rate' => 'decimal:8', 'logistics_total' => 'decimal:2', 'logistics_updated_at' => 'datetime',
+            'commission_rate' => 'decimal:4', 'commission_total' => 'decimal:2', 'commission_updated_at' => 'datetime'];
     }
 
     public function deal(): BelongsTo
@@ -67,6 +68,17 @@ class Invoice extends Model
     public function hasLogistics(): bool
     {
         return $this->logistics_method !== null;
+    }
+
+    public function hasCommission(): bool
+    {
+        return $this->commission_rate !== null;
+    }
+
+    /** "3.5" from 3.5000 — for labels such as "Commission 3.5%" */
+    public function commissionLabel(): string
+    {
+        return $this->hasCommission() ? rtrim(rtrim(number_format((float) $this->commission_rate, 4, ',', ''), '0'), ',') : '';
     }
 
     public function typeLabel(): string

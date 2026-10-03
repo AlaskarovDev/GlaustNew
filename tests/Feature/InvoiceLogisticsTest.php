@@ -21,6 +21,9 @@ class InvoiceLogisticsTest extends TestCase
 
     private const SHEET_LOGISTICS = [832, 1884, 4358, 471, 942, 311, 952, 166, 284];
 
+    /** Quantity (E) of the same nine lines. */
+    private const QTY = [3200, 3200, 7400, 800, 1600, 400, 800, 200, 800];
+
     private function invoice(): array
     {
         $this->fakeCbar();
@@ -33,7 +36,7 @@ class InvoiceLogisticsTest extends TestCase
             $inv = $deal->invoices()->create(['project_id' => $p->id, 'type' => 'supplier', 'number' => '221619', 'invoice_date' => today()->subDays(3),
                 'counterparty_id' => $seller->id, 'contract_id' => $c->id, 'currency' => 'EUR', 'total' => array_sum(self::TOTALS), 'status' => 'draft']);
             foreach (self::TOTALS as $i => $t) {
-                $inv->items()->create(['line_no' => $i + 1, 'description' => 'Məhsul '.($i + 1), 'quantity' => 100, 'uom' => 'kg', 'unit_price' => $t / 100, 'total' => $t]);
+                $inv->items()->create(['line_no' => $i + 1, 'description' => 'Məhsul '.($i + 1), 'quantity' => self::QTY[$i], 'uom' => 'kg', 'unit_price' => round($t / self::QTY[$i], 4), 'total' => $t]);
             }
 
             return $inv;
@@ -113,5 +116,46 @@ class InvoiceLogisticsTest extends TestCase
         $this->actingAs($admin)->get(route('invoices.show', $inv))->assertOk()
             ->assertSee('Logistika xərci')->assertSee('Ümumi məbləğ')->assertSee('Hər məhsul üzrə')
             ->assertSee('Siz daha öncəki məhsulda', false);
+    }
+
+    /**
+     * The company's sheet with logistics 10 200 € and a 3.5% commission:
+     * J = (I+H)/E, K = H×3.5%, L = (H+I+K)/E, M = H+I+K — values read off the sheet.
+     */
+    public function test_commission_and_ccl_columns_match_the_sheet(): void
+    {
+        [$admin, $inv] = $this->invoice();
+        $this->actingAs($admin);
+
+        // Commission first (allowed before logistics): K is there, CCL is not yet.
+        $this->post(route('invoices.commission', $inv), ['commission_rate' => '3,5'])->assertSessionHasNoErrors();
+        $inv = $this->inTenant($admin, fn () => Invoice::with('items')->find($inv->id));
+        $this->assertSame([547.68, 1240.96, 2869.72, 310.24, 620.48, 204.68, 627.2, 109.55, 186.76], $inv->items->map(fn ($i) => (float) $i->commission)->all());
+        $this->assertSame(6717.27, (float) $inv->commission_total);
+        $this->assertNull($inv->items[0]->totalCcl());
+        $this->get(route('invoices.show', $inv))->assertOk()->assertSee('Commission 3,5%')->assertSee('UNIT PRICE+LOG və CCL sütunları üçün logistika');
+
+        $this->post(route('invoices.logistics', $inv), ['logistics_mode' => 'actual', 'logistics_method' => 'total', 'logistics_amount' => '10200', 'logistics_currency' => 'EUR'])
+            ->assertSessionHasNoErrors();
+        $inv = $this->inTenant($admin, fn () => Invoice::with('items')->find($inv->id));
+        $r2 = fn ($v) => round($v, 2);
+        $this->assertSame([5.15, 11.67, 11.67, 11.67, 11.67, 15.4, 23.59, 16.48, 7.02], $inv->items->map(fn ($i) => $r2($i->unitPriceLog()))->all(), 'J');
+        $this->assertSame([5.32, 12.06, 12.06, 12.06, 12.06, 15.91, 24.37, 17.03], array_slice($inv->items->map(fn ($i) => $r2($i->unitPriceCcl()))->all(), 0, 8), 'L');
+        $this->assertSame(17027.32, $inv->items[0]->totalCcl(), 'M of line 1');
+        $this->assertSame(208839.27, round($inv->items->sum(fn ($i) => $i->totalCcl()), 2), 'M total = 208 839.27 as on the sheet');
+
+        $this->get(route('invoices.show', $inv))->assertOk()->assertSee(num(208839.27))->assertSee('RUR sütunlarının');
+        $this->get(route('invoices.export', [$inv, 'format' => 'xlsx']))->assertOk();
+        $this->get(route('invoices.export', [$inv, 'format' => 'pdf']))->assertOk();
+
+        // Another rate re-applies to every line; bad input is refused; clear removes it.
+        $this->post(route('invoices.commission', $inv), ['commission_rate' => '2'])->assertSessionHasNoErrors();
+        $this->assertSame(3838.44, (float) $this->inTenant($admin, fn () => Invoice::find($inv->id)->commission_total));
+        $this->post(route('invoices.commission', $inv), ['commission_rate' => '150'])->assertSessionHasErrors('commission_rate');
+        $this->post(route('invoices.commission', $inv), ['commission_rate' => 'abc'])->assertSessionHasErrors('commission_rate');
+        $this->delete(route('invoices.commission.clear', $inv))->assertRedirect();
+        $inv = $this->inTenant($admin, fn () => Invoice::with('items')->find($inv->id));
+        $this->assertFalse($inv->hasCommission());
+        $this->assertNull($inv->items[0]->commission);
     }
 }

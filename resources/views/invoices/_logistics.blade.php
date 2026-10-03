@@ -9,7 +9,7 @@
     ])->values();
     $grand = (float) $invoice->items->sum('total');
 @endphp
-<section class="card mb-6" x-data="{
+<section class="card min-w-0" x-data="{
         method: @js(old('logistics_method', $invoice->logistics_method ?? 'total')),
         mode: @js(old('logistics_mode', $invoice->logistics_mode ?? 'forecast')),
         amount: @js((string) old('logistics_amount', $invoice->logistics_method === 'total' ? $invoice->logistics_amount : '')),

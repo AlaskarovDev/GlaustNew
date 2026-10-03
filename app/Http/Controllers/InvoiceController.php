@@ -175,6 +175,32 @@ class InvoiceController extends Controller
         return back()->with('success', 'Logistika xərci silindi.');
     }
 
+    /** Our commission %: applied to every line (Total × %), before or after the logistics cost. */
+    public function commission(Request $request, Invoice $invoice, \App\Support\Invoices\CommissionCalculator $calculator): RedirectResponse
+    {
+        $this->authorize('projects.update');
+        if ($invoice->status === 'cancelled') {
+            return back()->with('error', 'Ləğv edilmiş fakturaya komissiya tətbiq olunmur.');
+        }
+        $request->merge(['commission_rate' => parse_number(str_replace('%', '', (string) $request->input('commission_rate')))]);
+        $data = $request->validate([
+            'commission_rate' => ['required', 'numeric', 'min:0', 'max:100', 'decimal:0,4'],
+        ], [], ['commission_rate' => 'Komissiya faizi']);
+
+        $calculator->apply($invoice, (float) $data['commission_rate']);
+        $invoice->refresh();
+
+        return back()->with('success', 'Komissiya '.$invoice->commissionLabel().'% tətbiq olundu: '.money($invoice->commission_total, $invoice->currency).'.');
+    }
+
+    public function clearCommission(Invoice $invoice, \App\Support\Invoices\CommissionCalculator $calculator): RedirectResponse
+    {
+        $this->authorize('projects.update');
+        $calculator->clear($invoice);
+
+        return back()->with('success', 'Komissiya silindi.');
+    }
+
     public function destroy(Invoice $invoice): RedirectResponse
     {
         $this->authorize('projects.delete');
@@ -189,13 +215,22 @@ class InvoiceController extends Controller
         $invoice->load('items', 'deal', 'counterparty');
         $cols = [];
         foreach (SupplierInvoiceSheet::COLUMNS as $key => [$label, $fillable]) {
-            if ($key === 'logistics' && $invoice->hasLogistics()) {
-                $cols[] = Column::make($label.' ('.$invoice->currency.')', 'logistics', 'money', total: true);
+            $both = $invoice->hasLogistics() && $invoice->hasCommission();
+            $computed = match (true) {
+                $key === 'logistics' && $invoice->hasLogistics() => Column::make($label.' ('.$invoice->currency.')', 'logistics', 'money', total: true),
+                $key === 'unit_price_log' && $invoice->hasLogistics() => Column::make($label, fn ($it) => $it->unitPriceLog(), 'money'),
+                $key === 'fee' && $invoice->hasCommission() => Column::make('Commission '.$invoice->commissionLabel().'%', 'commission', 'money', total: true),
+                $key === 'unit_price_ccl_eur' && $both => Column::make($label, fn ($it) => $it->unitPriceCcl(), 'money'),
+                $key === 'total_ccl_eur' && $both => Column::make($label, fn ($it) => $it->totalCcl(), 'money', total: true),
+                default => null,
+            };
+            if ($computed) {
+                $cols[] = $computed;
 
                 continue;
             }
             if (! $fillable) {
-                continue; // later-stage columns: rules not defined yet
+                continue; // columns whose inputs are not entered yet, or whose rules are not defined yet (RUR)
             }
             $cols[] = match ($key) {
                 'proforma' => Column::make($label, fn () => $invoice->number),

@@ -142,7 +142,7 @@
 
     <section class="card p-5 mb-6 border-dashed">
         <h2 class="text-sm font-semibold">Alıcıya faktura <span class="badge badge-amber ml-1">Növbəti mərhələ</span></h2>
-        <p class="mt-1 text-sm text-muted">Satıcının fakturası əsasında bizim xərclər (logistika, 3,5%, CCL, RUB çevirməsi) əlavə olunaraq alıcı üçün yeni faktura yaradılacaq və satış müqaviləsinə ({{ $deal->saleContract?->number ?? 'seçilməyib' }}) bağlanacaq. Hesablama qaydaları təsdiqləndikdən sonra aktivləşəcək.</p>
+        <p class="mt-1 text-sm text-muted">Satıcının fakturası əsasında bizim xərclər (logistika, komissiya faizi, CCL, RUB çevirməsi) əlavə olunaraq alıcı üçün yeni faktura yaradılacaq və satış müqaviləsinə ({{ $deal->saleContract?->number ?? 'seçilməyib' }}) bağlanacaq. Hesablama qaydaları təsdiqləndikdən sonra aktivləşəcək.</p>
     </section>
 
     <div class="grid lg:grid-cols-[minmax(0,1fr)_380px] gap-6 items-start">

@@ -29,17 +29,44 @@
     </div>
 
     @if($invoice->type === 'supplier')
-        @include('invoices._logistics')
+        <div class="grid xl:grid-cols-[minmax(0,1fr)_340px] gap-6 items-start mb-6">
+            @include('invoices._logistics')
+            @include('invoices._commission')
+        </div>
     @endif
+
+    @php
+        // Computed columns of the company's sheet; a column is live once its inputs exist.
+        $liveCols = [
+            'logistics' => $invoice->hasLogistics(),
+            'unit_price_log' => $invoice->hasLogistics(),
+            'fee' => $invoice->hasCommission(),
+            'unit_price_ccl_eur' => $invoice->hasLogistics() && $invoice->hasCommission(),
+            'total_ccl_eur' => $invoice->hasLogistics() && $invoice->hasCommission(),
+        ];
+        $hints = [
+            'logistics' => 'Logistika xərcini daxil edin', 'unit_price_log' => '(Total + Logistics) / Quantity — logistika lazımdır',
+            'fee' => 'Total × komissiya faizi — faizi sağdakı paneldə tətbiq edin',
+            'unit_price_ccl_eur' => 'Total price CCL / Quantity — logistika və komissiya lazımdır', 'total_ccl_eur' => 'Total + Logistics + Komissiya — logistika və komissiya lazımdır',
+        ];
+        $cell = fn ($it, $k) => match ($k) {
+            'logistics' => $it->logistics, 'unit_price_log' => $it->unitPriceLog(), 'fee' => $it->commission,
+            'unit_price_ccl_eur' => $it->unitPriceCcl(), 'total_ccl_eur' => $it->totalCcl(), default => $it->extra[$k] ?? null,
+        };
+        $summable = ['logistics', 'fee', 'total_ccl_eur'];
+        $label = fn ($k, $l) => $k === 'fee' && $invoice->hasCommission() ? 'Commission '.$invoice->commissionLabel().'%' : $l;
+        $pending = collect($later)->keys()->reject(fn ($k) => $liveCols[$k] ?? false)->count();
+    @endphp
 
     <section class="card overflow-hidden mb-6">
         <div class="overflow-x-auto">
             <table class="table-g text-[13px]">
                 <thead lang="en">
                 <tr>
-                    @foreach($columns as $key => [$label, $fillable])
-                        @php $live = $fillable || ($key === 'logistics' && $invoice->hasLogistics()); @endphp
-                        <th @class(['!text-right' => in_array($key, ['quantity', 'unit_price', 'total']) || ! $fillable, '!bg-surface-2 !text-faint' => ! $live, '!bg-saffron-soft' => $key === 'logistics' && $live]) title="{{ $live ? '' : 'Hesablama qaydası sonra əlavə olunacaq' }}">{{ $label }}</th>
+                    @foreach($columns as $key => [$colLabel, $fillable])
+                        @php $live = $fillable || ($liveCols[$key] ?? false); @endphp
+                        <th @class(['!text-right' => in_array($key, ['quantity', 'unit_price', 'total']) || ! $fillable, '!bg-surface-2 !text-faint' => ! $live, '!bg-saffron-soft' => $key === 'logistics' && $live, '!bg-brand-soft' => $key === 'fee' && $live])
+                            title="{{ $fillable ? '' : ($live ? ($hints[$key] ?? '') : ($hints[$key] ?? 'Hesablama qaydası sonra əlavə olunacaq')) }}">{{ $label($key, $colLabel) }}</th>
                     @endforeach
                 </tr>
                 </thead>
@@ -55,12 +82,13 @@
                         <td class="num">{{ rtrim(rtrim(num($it->unit_price, 4), '0'), ',') }}</td>
                         <td class="num font-medium text-ink">{{ num($it->total) }}</td>
                         @foreach($later as $k => $c)
-                            @if($k === 'logistics' && $invoice->hasLogistics())
-                                <td class="num font-medium text-ink bg-saffron-soft/40">{{ num($it->logistics) }}
-                                    @if($invoice->logistics_currency !== $invoice->currency)<div class="text-[11px] text-faint">{{ num($it->logistics_original) }} {{ $invoice->logistics_currency }}</div>@endif
+                            @php $v = ($liveCols[$k] ?? false) ? $cell($it, $k) : ($it->extra[$k] ?? null); @endphp
+                            @if($liveCols[$k] ?? false)
+                                <td @class(['num font-medium text-ink', 'bg-saffron-soft/40' => $k === 'logistics', 'bg-brand-soft/40' => $k === 'fee'])>{{ $v === null ? '—' : num($v) }}
+                                    @if($k === 'logistics' && $invoice->logistics_currency !== $invoice->currency)<div class="text-[11px] text-faint">{{ num($it->logistics_original) }} {{ $invoice->logistics_currency }}</div>@endif
                                 </td>
                             @else
-                                <td class="num text-faint bg-surface-2/60">{{ isset($it->extra[$k]) ? num($it->extra[$k]) : '—' }}</td>
+                                <td class="num text-faint bg-surface-2/60">{{ $v === null ? '—' : num($v) }}</td>
                             @endif
                         @endforeach
                     </tr>
@@ -72,16 +100,26 @@
                     <td class="px-4 py-3 text-right font-mono">{{ num($invoice->items->sum('quantity'), 2) }}</td>
                     <td colspan="2"></td>
                     <td class="px-4 py-3 text-right font-mono">{{ num($invoice->items->sum('total')) }}</td>
-                    @if($invoice->hasLogistics())
-                        <td class="px-4 py-3 text-right font-mono bg-saffron-soft/40">{{ num($invoice->items->sum('logistics')) }}</td>
-                        <td colspan="{{ count($later) - 1 }}" class="px-4 py-3 text-xs font-normal text-muted">Qalan boz sütunlar növbəti addımlarda hesablanacaq.</td>
-                    @else
-                        <td colspan="{{ count($later) }}" class="px-4 py-3 text-xs font-normal text-muted">Boz sütunlar sonrakı addımlarda hesablanacaq. Əvvəlcə logistika xərcini daxil edin.</td>
-                    @endif
+                    @foreach($later as $k => $c)
+                        @if(($liveCols[$k] ?? false) && in_array($k, $summable, true))
+                            <td @class(['px-4 py-3 text-right font-mono', 'bg-saffron-soft/40' => $k === 'logistics', 'bg-brand-soft/40' => $k === 'fee'])>{{ num($invoice->items->sum(fn ($it) => (float) $cell($it, $k))) }}</td>
+                        @else
+                            <td></td>
+                        @endif
+                    @endforeach
                 </tr>
                 </tfoot>
             </table>
         </div>
+        @if($pending)
+            <p class="px-5 py-3 border-t border-line text-xs text-muted">
+                @if(! $invoice->hasLogistics() && ! $invoice->hasCommission()) Boz sütunlar logistika xərci və komissiya faizi daxil edildikdən sonra hesablanır.
+                @elseif(! $invoice->hasLogistics()) UNIT PRICE+LOG və CCL sütunları üçün logistika xərcini daxil edin.
+                @elseif(! $invoice->hasCommission()) Commission və CCL sütunları üçün sağdakı paneldə komissiya faizini tətbiq edin.
+                @else RUR sütunlarının hesablama qaydası növbəti addımda əlavə olunacaq.
+                @endif
+            </p>
+        @endif
     </section>
 
     <div class="grid lg:grid-cols-[minmax(0,1fr)_380px] gap-6 items-start">

@@ -16,7 +16,7 @@ use PhpOffice\PhpSpreadsheet\Style\Protection;
  *
  * Layout follows the company's own working sheet. The seller fills only the first
  * eight columns (Proforma N … Total/EUR); the rest are computed by Glaust later
- * (logistics, 3.5%, CCL, RUR — rules still to be specified), so in the template they
+ * (logistics, our commission %, CCL; RUR rules still to be specified), so in the template they
  * are grey, locked and marked "DOLDURMAYIN".
  */
 class SupplierInvoiceSheet
@@ -33,7 +33,7 @@ class SupplierInvoiceSheet
         'total' => ['Total/EUR', true, 14],
         'logistics' => ['Logistics', false, 12],
         'unit_price_log' => ['UNIT PRICE+LOG', false, 14],
-        'fee' => ['3.5%', false, 11],
+        'fee' => ['Commission %', false, 12],
         'unit_price_ccl_eur' => ['UNIT PRICE CCL EUR', false, 14],
         'total_ccl_eur' => ['TOTAL PRICE CCL EUR', false, 15],
         'unit_price_rur' => ['UNIT PRICE RUR', false, 14],

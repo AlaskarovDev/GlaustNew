@@ -1,49 +1,58 @@
-{{-- Our commission %: line Total × % (the sheet's =H*0.035, with our own rate). Independent of the logistics cost. --}}
-@php $grand = (float) $invoice->items->sum('total'); @endphp
-<section class="card flex flex-col" x-data="{
+{{-- Step 2 — our commission %: line Total × % (the sheet's =H*0.035, with our own rate). Independent of the logistics cost. --}}
+@php
+    $grand = (float) $invoice->items->sum('total');
+    $failed = $errors->has('commission_rate');
+@endphp
+<section class="card step-card" x-data="{
         rate: @js((string) old('commission_rate', $invoice->hasCommission() ? $invoice->commissionLabel() : '')),
         grand: {{ $grand }},
+        editing: {{ ! $invoice->hasCommission() || $failed ? 'true' : 'false' }},
         num(v) { return parseFloat(String(v ?? '').replace(/[\s%]/g, '').replace(',', '.')); },
         valid() { const r = this.num(this.rate); return !isNaN(r) && r >= 0 && r <= 100; },
         preview() { return this.valid() ? this.grand * this.num(this.rate) / 100 : 0; },
         fmt: (v) => glaustFmt.fmt(v, 2),
      }">
-    <header class="px-5 py-4 border-b border-line">
-        <h2 class="text-base font-semibold flex items-center gap-2"><x-icon name="percent" class="size-5 text-brand"/> Komissiya faizi</h2>
-        <p class="text-xs text-muted">Hər sətir: Total/{{ $invoice->currency }} × faiz. Logistikadan əvvəl və ya sonra tətbiq etmək olar.</p>
+    <header class="step-head">
+        <span class="step-no">2</span>
+        <div class="min-w-0">
+            <h2 class="step-title">Komissiya faizi</h2>
+            <p class="step-sub">Hər sətir: Total × faiz</p>
+        </div>
+        <span @class(['badge ml-auto shrink-0', 'badge-green' => $invoice->hasCommission(), 'badge-slate' => ! $invoice->hasCommission()])>{{ $invoice->hasCommission() ? 'Tətbiq olunub' : 'Gözləyir' }}</span>
     </header>
 
-    <div class="p-5 space-y-4 flex-1">
-        @if($invoice->hasCommission())
-            <div class="flex items-baseline justify-between gap-3">
-                <span class="badge badge-green">Tətbiq olunub: {{ $invoice->commissionLabel() }}%</span>
-                <span class="font-mono font-semibold">{{ money($invoice->commission_total, $invoice->currency) }}</span>
-            </div>
-        @endif
+    @if($invoice->hasCommission())
+        <div class="step-summary">
+            <div class="step-value">{{ $invoice->commissionLabel() }}%</div>
+            <div class="step-meta">Cəmi komissiya: <span class="font-mono text-ink">{{ money($invoice->commission_total, $invoice->currency) }}</span></div>
+        </div>
+    @endif
 
-        @can('projects.update')
-            <form method="POST" action="{{ route('invoices.commission', $invoice) }}" class="space-y-3">
-                @csrf
-                <x-field label="Bizim komissiya faizimiz" name="commission_rate" required>
-                    <div class="relative">
-                        <input name="commission_rate" x-model="rate" inputmode="decimal" placeholder="Məs: 3,5" autocomplete="off"
-                               class="input font-mono text-right !pr-9 @error('commission_rate') is-invalid @enderror">
-                        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-muted font-mono pointer-events-none">%</span>
-                    </div>
-                </x-field>
-                <p class="text-xs text-muted" x-show="valid()">
-                    Cəmi komissiya: <span class="font-mono text-ink" x-text="fmt(preview()) + ' {{ $invoice->currency }}'"></span>
-                </p>
-                <button class="btn btn-primary w-full" :disabled="!valid()"><x-icon name="check" class="size-4"/> Tətbiq et</button>
-            </form>
-            @if($invoice->hasCommission())
+    @can('projects.update')
+        <form method="POST" action="{{ route('invoices.commission', $invoice) }}" x-show="editing" x-collapse {{ $invoice->hasCommission() && ! $failed ? 'x-cloak' : '' }} class="step-form">
+            @csrf
+            <div class="space-y-1.5">
+                <label class="field-label" for="cm-rate">Bizim komissiya faizimiz <span class="text-danger">*</span></label>
+                <div class="relative">
+                    <input id="cm-rate" name="commission_rate" x-model="rate" inputmode="decimal" placeholder="3,5" autocomplete="off"
+                           class="input font-mono text-right !pr-9 @error('commission_rate') is-invalid @enderror">
+                    <span class="absolute right-3 top-1/2 -translate-y-1/2 text-muted font-mono pointer-events-none">%</span>
+                </div>
+                @error('commission_rate')<p class="field-error">{{ $message }}</p>@enderror
+                <p class="text-[11px] text-muted" x-show="valid() && rate !== ''">Cəmi komissiya: <span class="font-mono text-ink" x-text="fmt(preview()) + ' {{ $invoice->currency }}'"></span></p>
+            </div>
+            <button class="btn btn-primary w-full" :disabled="!valid() || rate === ''"><x-icon name="check" class="size-4"/> Tətbiq et</button>
+        </form>
+
+        @if($invoice->hasCommission())
+            <footer class="step-foot">
+                <button type="button" class="btn btn-secondary btn-sm" @click="editing = !editing"><x-icon name="pencil" class="size-3.5"/> <span x-text="editing ? 'Bağla' : 'Dəyiş'"></span></button>
+                <span class="text-[11px] text-faint ml-auto">{{ azdate($invoice->commission_updated_at, true) }}</span>
                 <form method="POST" action="{{ route('invoices.commission.clear', $invoice) }}" data-confirm="Komissiya bütün sətirlərdən silinsin?" data-confirm-action="Sil">
                     @csrf @method('DELETE')
-                    <button class="text-xs text-danger hover:underline">Komissiyanı sil</button>
+                    <button class="btn btn-ghost btn-icon btn-sm text-danger hover:!bg-danger-soft" aria-label="Komissiyanı sil" title="Sil"><x-icon name="trash" class="size-4"/></button>
                 </form>
-            @endif
-        @elseif(! $invoice->hasCommission())
-            <p class="text-sm text-muted">Komissiya hələ tətbiq olunmayıb.</p>
-        @endcan
-    </div>
+            </footer>
+        @endif
+    @endcan
 </section>

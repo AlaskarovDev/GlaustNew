@@ -109,6 +109,7 @@ class InvoiceController extends Controller
     public function show(Invoice $invoice): View
     {
         $invoice->load(['deal', 'project', 'counterparty', 'contract', 'items', 'creator', 'attachments.uploader']);
+        $invoice->items->each->setRelation('invoice', $invoice);
         $history = AuditLog::with('user')->where('auditable_type', 'invoice')->where('auditable_id', $invoice->id)->latest('created_at')->limit(15)->get();
 
         return view('invoices.show', ['invoice' => $invoice, 'history' => $history, 'columns' => SupplierInvoiceSheet::COLUMNS]);
@@ -201,6 +202,40 @@ class InvoiceController extends Controller
         return back()->with('success', 'Komissiya silindi.');
     }
 
+    /** Invoice currency -> RUB for the RUR columns: CBAR of a chosen date, or two rates typed in (D18 / D19). */
+    public function rub(Request $request, Invoice $invoice, \App\Support\Invoices\RubConverter $converter): RedirectResponse
+    {
+        $this->authorize('projects.update');
+        if ($invoice->status === 'cancelled') {
+            return back()->with('error', 'Ləğv edilmiş fakturada çevirmə edilmir.');
+        }
+        $request->merge([
+            'fx_base_azn' => parse_number($request->input('fx_base_azn')),
+            'fx_target_azn' => parse_number($request->input('fx_target_azn')),
+        ]);
+        $data = $request->validate([
+            'fx_source' => ['required', Rule::in(array_keys(\App\Support\Invoices\RubConverter::SOURCES))],
+            'fx_date' => ['required_if:fx_source,cbar', 'nullable', 'date', 'before_or_equal:today'],
+            'fx_base_azn' => ['required_if:fx_source,manual', 'nullable', 'numeric', 'gt:0', 'max:1000000'],
+            'fx_target_azn' => ['required_if:fx_source,manual', 'nullable', 'numeric', 'gt:0', 'max:1000000'],
+        ], [], ['fx_source' => 'Məzənnə mənbəyi', 'fx_date' => 'Məzənnə tarixi', 'fx_base_azn' => '1 '.$invoice->currency.' = AZN', 'fx_target_azn' => '1 RUB = AZN']);
+
+        $manual = $data['fx_source'] === 'manual';
+        $converter->apply($invoice, $data['fx_source'], $data['fx_date'] ?? null,
+            $manual ? (float) $data['fx_base_azn'] : null, $manual ? (float) $data['fx_target_azn'] : null);
+        $invoice->refresh();
+
+        return back()->with('success', '1 '.$invoice->currency.' = '.rate_fmt($invoice->fx_rate).' RUB tətbiq olundu.');
+    }
+
+    public function clearRub(Invoice $invoice, \App\Support\Invoices\RubConverter $converter): RedirectResponse
+    {
+        $this->authorize('projects.update');
+        $converter->clear($invoice);
+
+        return back()->with('success', 'RUB çevirməsi silindi.');
+    }
+
     public function destroy(Invoice $invoice): RedirectResponse
     {
         $this->authorize('projects.delete');
@@ -213,6 +248,8 @@ class InvoiceController extends Controller
     public function export(Request $request, Invoice $invoice): Response
     {
         $invoice->load('items', 'deal', 'counterparty');
+        $invoice->items->each->setRelation('invoice', $invoice);
+        $rub = $invoice->rubReady();
         $cols = [];
         foreach (SupplierInvoiceSheet::COLUMNS as $key => [$label, $fillable]) {
             $both = $invoice->hasLogistics() && $invoice->hasCommission();
@@ -222,6 +259,10 @@ class InvoiceController extends Controller
                 $key === 'fee' && $invoice->hasCommission() => Column::make('Commission '.$invoice->commissionLabel().'%', 'commission', 'money', total: true),
                 $key === 'unit_price_ccl_eur' && $both => Column::make($label, fn ($it) => $it->unitPriceCcl(), 'money'),
                 $key === 'total_ccl_eur' && $both => Column::make($label, fn ($it) => $it->totalCcl(), 'money', total: true),
+                $key === 'unit_price_rur' && $rub => Column::make($label, fn ($it) => $it->unitPriceRub(), 'money'),
+                $key === 'total_rur' && $rub => Column::make($label, fn ($it) => $it->totalRub(), 'money', total: true),
+                $key === 'unit_price_rur_rounded' && $rub => Column::make($label.' (yuvarlaq)', fn ($it) => $it->unitPriceRubRounded(), 'money'),
+                $key === 'total_rur_rounded' && $rub => Column::make($label.' (yuvarlaq)', fn ($it) => $it->totalRubRounded(), 'money', total: true),
                 default => null,
             };
             if ($computed) {
@@ -230,7 +271,7 @@ class InvoiceController extends Controller
                 continue;
             }
             if (! $fillable) {
-                continue; // columns whose inputs are not entered yet, or whose rules are not defined yet (RUR)
+                continue; // computed columns whose inputs are not entered yet
             }
             $cols[] = match ($key) {
                 'proforma' => Column::make($label, fn () => $invoice->number),

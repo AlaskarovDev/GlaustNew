@@ -1,4 +1,4 @@
-{{-- Logistics cost of a seller's invoice: forecast/actual, one amount split by Total share, or per line in ONE currency. --}}
+{{-- Step 1 — logistics cost: forecast/actual, one amount split by Total share, or per line in ONE currency. --}}
 @php
     $currencies = config('glaust.currencies');
     $rowsData = $invoice->items->map(fn ($it) => [
@@ -8,8 +8,9 @@
         'currency' => old('item_currency.'.$it->id, $invoice->logistics_method === 'per_item' ? $invoice->logistics_currency : ''),
     ])->values();
     $grand = (float) $invoice->items->sum('total');
+    $failed = $errors->hasAny(['logistics_mode', 'logistics_method', 'logistics_amount', 'logistics_currency', 'item_currency', 'logistics']) || $errors->has('items.*');
 @endphp
-<section class="card min-w-0" x-data="{
+<section class="card step-card" x-data="{
         method: @js(old('logistics_method', $invoice->logistics_method ?? 'total')),
         mode: @js(old('logistics_mode', $invoice->logistics_mode ?? 'forecast')),
         amount: @js((string) old('logistics_amount', $invoice->logistics_method === 'total' ? $invoice->logistics_amount : '')),
@@ -17,7 +18,7 @@
         grand: {{ $grand }},
         rows: @js($rowsData),
         modal: false,
-        editing: {{ $invoice->hasLogistics() ? 'false' : 'true' }},
+        editing: {{ ! $invoice->hasLogistics() || $failed ? 'true' : 'false' }},
         lockedCurrency() { const r = this.rows.find(r => r.currency); return r ? r.currency : null; },
         pickCurrency(row, value, el) {
             const locked = this.rows.find(r => r !== row && r.currency && r.currency !== value);
@@ -30,94 +31,71 @@
         },
         fillCurrency() { const c = this.lockedCurrency(); if (c) this.rows.forEach(r => r.currency = c); },
         num(v) { return parseFloat(String(v ?? '').replace(/\s/g, '').replace(',', '.')) || 0; },
-        share(row) { return this.grand ? row.total * this.num(this.amount) / this.grand : 0; },
         perItemTotal() { return this.rows.reduce((s, r) => s + this.num(r.amount), 0); },
         complete() { return this.rows.every(r => r.amount !== '' && r.amount !== null && r.currency); },
         fmt: (v) => glaustFmt.fmt(v, 2),
      }">
-    <header class="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-line">
-        <div>
-            <h2 class="text-base font-semibold flex items-center gap-2"><x-icon name="truck" class="size-5 text-saffron"/> Logistika xərci</h2>
-            <p class="text-xs text-muted">Məhsullar üzrə bölünür: sətrin Total/EUR payı × ümumi logistika (Excel-dəki =H*$I$cəm/$H$cəm düsturu)</p>
+    <header class="step-head">
+        <span class="step-no">1</span>
+        <div class="min-w-0">
+            <h2 class="step-title">Logistika xərci</h2>
+            <p class="step-sub">Total/{{ $invoice->currency }} payına görə bölünür</p>
         </div>
         @if($invoice->hasLogistics())
-            <div class="flex flex-wrap items-center gap-2">
-                <span @class(['badge', 'badge-amber' => $invoice->logistics_mode === 'forecast', 'badge-green' => $invoice->logistics_mode === 'actual'])>{{ \App\Models\Invoice::LOGISTICS_MODES[$invoice->logistics_mode] }}</span>
-                <span class="font-mono font-semibold">{{ money($invoice->logistics_amount, $invoice->logistics_currency) }}</span>
-                @if($invoice->logistics_currency !== $invoice->currency)
-                    <span class="text-sm text-muted font-mono">= {{ money($invoice->logistics_total, $invoice->currency) }}</span>
-                @endif
-                @can('projects.update')
-                    <button type="button" class="btn btn-secondary btn-sm" @click="editing = !editing" x-text="editing ? 'Bağla' : 'Dəyiş'"></button>
-                @endcan
-            </div>
+            <span @class(['badge ml-auto shrink-0', 'badge-amber' => $invoice->logistics_mode === 'forecast', 'badge-green' => $invoice->logistics_mode === 'actual'])>{{ \App\Models\Invoice::LOGISTICS_MODES[$invoice->logistics_mode] }}</span>
+        @else
+            <span class="badge badge-slate ml-auto shrink-0">Gözləyir</span>
         @endif
     </header>
 
     @if($invoice->hasLogistics())
-        <p class="px-5 pt-3 text-xs text-muted">
-            {{ $invoice->logistics_method === 'total' ? 'Ümumi məbləğ Total/EUR payına görə bölünüb.' : 'Hər məhsul üzrə ayrıca daxil edilib.' }}
-            @if($invoice->logistics_currency !== $invoice->currency)
-                {{ $invoice->logistics_currency }} → {{ $invoice->currency }}: CBAR {{ azdate($invoice->invoice_date) }}, 1 {{ $invoice->logistics_currency }} = {{ rate_fmt($invoice->logistics_rate) }} {{ $invoice->currency }}.
-            @endif
-            Son dəyişiklik: {{ azdate($invoice->logistics_updated_at, true) }}.
-        </p>
+        <div class="step-summary">
+            <div class="step-value">{{ money($invoice->logistics_amount, $invoice->logistics_currency) }}</div>
+            <div class="step-meta">
+                {{ $invoice->logistics_method === 'total' ? 'Ümumi məbləğ, paya görə bölünüb' : 'Hər məhsul üzrə ayrıca' }}
+                @if($invoice->logistics_currency !== $invoice->currency)
+                    <br>= {{ money($invoice->logistics_total, $invoice->currency) }} · CBAR {{ azdate($invoice->invoice_date) }}, 1 {{ $invoice->logistics_currency }} = {{ rate_fmt($invoice->logistics_rate) }} {{ $invoice->currency }}
+                @endif
+            </div>
+        </div>
     @endif
 
     @can('projects.update')
-        <form method="POST" action="{{ route('invoices.logistics', $invoice) }}" x-show="editing" x-collapse {{ $invoice->hasLogistics() ? 'x-cloak' : '' }} class="p-5 space-y-5">
+        <form method="POST" action="{{ route('invoices.logistics', $invoice) }}" x-show="editing" x-collapse {{ $invoice->hasLogistics() && ! $failed ? 'x-cloak' : '' }} class="step-form">
             @csrf
             <input type="hidden" name="logistics_method" :value="method">
-            <div class="grid md:grid-cols-2 gap-5">
-                <fieldset>
-                    <legend class="field-label">Xərcin növü <span class="text-danger">*</span></legend>
-                    <div class="grid grid-cols-2 gap-2">
-                        @foreach(\App\Models\Invoice::LOGISTICS_MODES as $k => $l)
-                            <label class="flex items-center justify-center gap-2 h-10 rounded-lg border text-sm font-medium cursor-pointer transition-colors"
-                                   :class="mode === '{{ $k }}' ? 'border-brand bg-brand-soft text-brand-ink' : 'border-line text-ink-2 hover:border-line-strong'">
-                                <input type="radio" name="logistics_mode" value="{{ $k }}" x-model="mode" class="sr-only"> {{ $l }}
-                            </label>
-                        @endforeach
-                    </div>
-                </fieldset>
-                <fieldset>
-                    <legend class="field-label">Necə daxil edilsin? <span class="text-danger">*</span></legend>
-                    <div class="grid grid-cols-2 gap-2">
-                        <label class="flex items-center justify-center h-10 rounded-lg border text-sm font-medium cursor-pointer transition-colors" :class="method === 'total' ? 'border-brand bg-brand-soft text-brand-ink' : 'border-line text-ink-2 hover:border-line-strong'">
-                            <input type="radio" value="total" x-model="method" class="sr-only"> Ümumi məbləğ
-                        </label>
-                        <label class="flex items-center justify-center h-10 rounded-lg border text-sm font-medium cursor-pointer transition-colors" :class="method === 'per_item' ? 'border-brand bg-brand-soft text-brand-ink' : 'border-line text-ink-2 hover:border-line-strong'">
-                            <input type="radio" value="per_item" x-model="method" class="sr-only"> Hər məhsul üzrə
-                        </label>
-                    </div>
-                </fieldset>
+            <div class="segmented" role="radiogroup" aria-label="Xərcin növü">
+                @foreach(\App\Models\Invoice::LOGISTICS_MODES as $k => $l)
+                    <label :class="mode === '{{ $k }}' && 'is-on'"><input type="radio" name="logistics_mode" value="{{ $k }}" x-model="mode" class="sr-only"> {{ $l }}</label>
+                @endforeach
+            </div>
+            <div class="segmented" role="radiogroup" aria-label="Necə daxil edilsin">
+                <label :class="method === 'total' && 'is-on'"><input type="radio" value="total" x-model="method" class="sr-only"> Ümumi məbləğ</label>
+                <label :class="method === 'per_item' && 'is-on'"><input type="radio" value="per_item" x-model="method" class="sr-only"> Hər məhsul üzrə</label>
             </div>
 
-            {{-- One amount --}}
-            <div x-show="method === 'total'" class="grid sm:grid-cols-[1fr_140px_auto] gap-3 items-end">
-                <x-field label="Ümumi logistika xərci" name="logistics_amount">
-                    <input name="logistics_amount" x-model="amount" :disabled="method !== 'total'" inputmode="decimal" placeholder="Məs: 10 200" class="input font-mono text-right @error('logistics_amount') is-invalid @enderror">
-                </x-field>
-                <x-field label="Valyuta" name="logistics_currency">
-                    <select name="logistics_currency" x-model="currency" :disabled="method !== 'total'" class="input">
+            <div x-show="method === 'total'" class="space-y-1.5">
+                <label class="field-label" for="lg-amount">Ümumi logistika xərci</label>
+                <div class="flex gap-2">
+                    <input id="lg-amount" name="logistics_amount" x-model="amount" :disabled="method !== 'total'" inputmode="decimal" placeholder="10 200" class="input flex-1 min-w-0 font-mono text-right @error('logistics_amount') is-invalid @enderror">
+                    <select name="logistics_currency" x-model="currency" :disabled="method !== 'total'" class="input !w-24 shrink-0" aria-label="Valyuta">
                         @foreach($currencies as $c)<option value="{{ $c }}">{{ $c }}</option>@endforeach
                     </select>
-                </x-field>
-                <button class="btn btn-primary"><x-icon name="check" class="size-4"/> Bölüşdür və yadda saxla</button>
+                </div>
+                @error('logistics_amount')<p class="field-error">{{ $message }}</p>@enderror
+                @error('logistics_currency')<p class="field-error">{{ $message }}</p>@enderror
+                <p x-show="currency !== @js($invoice->currency)" class="text-[11px] text-muted">{{ $invoice->currency }}-a {{ azdate($invoice->invoice_date) }} CBAR məzənnəsi ilə çevriləcək.</p>
             </div>
-            <p x-show="method === 'total' && currency !== @js($invoice->currency)" class="text-xs text-muted -mt-2">
-                {{ $invoice->currency }}-a faktura tarixinin ({{ azdate($invoice->invoice_date) }}) CBAR məzənnələri ilə çevriləcək.
-            </p>
 
-            {{-- Per line: popup --}}
-            <div x-show="method === 'per_item'" class="flex flex-wrap items-center gap-3">
-                <button type="button" class="btn btn-secondary" @click="modal = true"><x-icon name="list" class="size-4"/> Məhsullar üzrə xərcləri daxil et ({{ $invoice->items->count() }})</button>
-                <span class="text-sm text-muted" x-show="perItemTotal() > 0">Cəmi: <span class="font-mono text-ink" x-text="fmt(perItemTotal()) + ' ' + (lockedCurrency() || '')"></span></span>
-                <button class="btn btn-primary" :disabled="!complete()"><x-icon name="check" class="size-4"/> Yadda saxla</button>
-                <span class="text-xs text-saffron" x-show="!complete()">Bütün sətirlər üçün məbləğ və valyuta daxil edin.</span>
+            <div x-show="method === 'per_item'" x-cloak class="space-y-1.5">
+                <button type="button" class="btn btn-secondary w-full" @click="modal = true"><x-icon name="list" class="size-4"/> Məhsullar üzrə daxil et ({{ $invoice->items->count() }})</button>
+                <p class="text-xs text-muted text-center" x-show="perItemTotal() > 0">Cəmi: <span class="font-mono text-ink" x-text="fmt(perItemTotal()) + ' ' + (lockedCurrency() || '')"></span></p>
+                <p class="text-xs text-saffron text-center" x-show="!complete()">Bütün sətirlər üçün məbləğ və valyuta daxil edin.</p>
             </div>
             @error('item_currency')<p class="field-error">{{ $message }}</p>@enderror
             @foreach($errors->get('items.*') as $msgs)<p class="field-error">{{ $msgs[0] }}</p>@endforeach
+
+            <button class="btn btn-primary w-full" :disabled="method === 'per_item' && !complete()"><x-icon name="check" class="size-4"/> Bölüşdür və yadda saxla</button>
 
             {{-- Modal (inside the form: its inputs are submitted) --}}
             <div x-cloak x-show="modal" class="fixed inset-0 z-[75] grid place-items-center p-4" role="dialog" aria-modal="true" aria-labelledby="lg-title" @keydown.escape.window="modal = false">
@@ -163,11 +141,16 @@
                 </div>
             </div>
         </form>
+
         @if($invoice->hasLogistics())
-            <form method="POST" action="{{ route('invoices.logistics.clear', $invoice) }}" x-show="editing" x-cloak class="px-5 pb-5 -mt-2" data-confirm="Logistika xərci bütün sətirlərdən silinsin?" data-confirm-action="Sil">
-                @csrf @method('DELETE')
-                <button class="text-xs text-danger hover:underline">Logistika xərcini sil</button>
-            </form>
+            <footer class="step-foot">
+                <button type="button" class="btn btn-secondary btn-sm" @click="editing = !editing"><x-icon name="pencil" class="size-3.5"/> <span x-text="editing ? 'Bağla' : 'Dəyiş'"></span></button>
+                <span class="text-[11px] text-faint ml-auto">{{ azdate($invoice->logistics_updated_at, true) }}</span>
+                <form method="POST" action="{{ route('invoices.logistics.clear', $invoice) }}" data-confirm="Logistika xərci bütün sətirlərdən silinsin?" data-confirm-action="Sil">
+                    @csrf @method('DELETE')
+                    <button class="btn btn-ghost btn-icon btn-sm text-danger hover:!bg-danger-soft" aria-label="Logistika xərcini sil" title="Sil"><x-icon name="trash" class="size-4"/></button>
+                </form>
+            </footer>
         @endif
     @endcan
 </section>

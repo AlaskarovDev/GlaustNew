@@ -141,10 +141,34 @@ class InvoiceLogisticsTest extends TestCase
         $r2 = fn ($v) => round($v, 2);
         $this->assertSame([5.15, 11.67, 11.67, 11.67, 11.67, 15.4, 23.59, 16.48, 7.02], $inv->items->map(fn ($i) => $r2($i->unitPriceLog()))->all(), 'J');
         $this->assertSame([5.32, 12.06, 12.06, 12.06, 12.06, 15.91, 24.37, 17.03], array_slice($inv->items->map(fn ($i) => $r2($i->unitPriceCcl()))->all(), 0, 8), 'L');
-        $this->assertSame(17027.32, $inv->items[0]->totalCcl(), 'M of line 1');
+        $this->assertSame(17027.32, round($inv->items[0]->totalCcl(), 2), 'M of line 1');
         $this->assertSame(208839.27, round($inv->items->sum(fn ($i) => $i->totalCcl()), 2), 'M total = 208 839.27 as on the sheet');
 
-        $this->get(route('invoices.show', $inv))->assertOk()->assertSee(num(208839.27))->assertSee('RUR sütunlarının');
+        $this->get(route('invoices.show', $inv))->assertOk()->assertSee(num(208839.27))->assertSee('RUB-a çevirmə');
+
+        // RUR columns: N = L × D18/D19 with the sheet's D18 = 2.0005 (EUR), D19 = 0.0211 (RUB).
+        $this->post(route('invoices.rub', $inv), ['fx_source' => 'manual', 'fx_base_azn' => '2,0005', 'fx_target_azn' => '0,0211'])->assertSessionHasNoErrors();
+        $inv = $this->inTenant($admin, fn () => Invoice::with('items')->find($inv->id));
+        $this->assertSame([504.49, 1143.1, 1143.1, 1143.1, 1143.1, 1508.31, 2310.96, 1614.57, 688.13], $inv->items->map(fn ($i) => $i->unitPriceRubRounded())->all(), 'N / P');
+        $this->assertSame([1614367.27, 3657911.93, 8458921.34, 914477.98, 1828955.96, 603324.37, 1848764.15, 322914.72, 550502.54],
+            $inv->items->map(fn ($i) => round($i->totalRub(), 2))->all(), 'O, every line as on the sheet');
+        $this->assertSame(1614368.0, $inv->items[0]->totalRubRounded(), 'Q of line 1');
+        $this->assertSame(19800140.27, round($inv->items->sum(fn ($i) => $i->totalRub()), 2), 'O total as on the sheet');
+        $this->assertSame(19800178.0, round($inv->items->sum(fn ($i) => $i->totalRubRounded()), 2), 'Q total as on the sheet');
+        $this->get(route('invoices.show', $inv))->assertOk()->assertSee(num(19800178))->assertSee(num(19800140.27));
+        $this->get(route('invoices.export', [$inv, 'format' => 'xlsx']))->assertOk();
+        $this->get(route('invoices.export', [$inv, 'format' => 'pdf']))->assertOk();
+
+        // From CBAR: both rates of the chosen day's bulletin; future dates refused.
+        $day = $inv->invoice_date->toDateString();
+        $this->post(route('invoices.rub', $inv), ['fx_source' => 'cbar', 'fx_date' => $day])->assertSessionHasNoErrors();
+        $inv = $this->inTenant($admin, fn () => Invoice::find($inv->id));
+        $rates = app(CurrencyRates::class);
+        $this->assertEqualsWithDelta($rates->rate('EUR', $day) / $rates->rate('RUB', $day), (float) $inv->fx_rate, 1e-9);
+        $this->post(route('invoices.rub', $inv), ['fx_source' => 'cbar', 'fx_date' => today()->addDay()->toDateString()])->assertSessionHasErrors('fx_date');
+        $this->post(route('invoices.rub', $inv), ['fx_source' => 'manual', 'fx_base_azn' => '2', 'fx_target_azn' => '0'])->assertSessionHasErrors('fx_target_azn');
+        $this->delete(route('invoices.rub.clear', $inv))->assertRedirect();
+        $this->assertFalse($this->inTenant($admin, fn () => Invoice::find($inv->id))->hasRub());
         $this->get(route('invoices.export', [$inv, 'format' => 'xlsx']))->assertOk();
         $this->get(route('invoices.export', [$inv, 'format' => 'pdf']))->assertOk();
 

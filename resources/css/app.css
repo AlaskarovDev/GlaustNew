@@ -124,6 +124,23 @@
         @apply bg-surface border border-line rounded-[var(--radius-card)];
         box-shadow: var(--shadow-card);
     }
+    /* Invoice calculation steps (logistics → commission → RUB): equal cards, summary on top, form below. */
+    .step-card { @apply flex flex-col min-w-0; }
+    .step-head { @apply flex items-start gap-3 px-5 pt-5 pb-4; }
+    .step-no { @apply grid place-items-center size-7 shrink-0 rounded-full bg-brand-soft text-brand-ink text-[13px] font-semibold font-mono; }
+    .step-title { @apply text-[15px] font-semibold leading-tight; }
+    .step-sub { @apply text-xs text-muted mt-0.5; }
+    .step-summary { @apply mx-5 mb-4 rounded-xl bg-surface-2 px-4 py-3; }
+    .step-value { @apply font-mono text-xl font-semibold tabular-nums; }
+    .step-meta { @apply text-xs text-muted mt-1 leading-relaxed; }
+    .step-form { @apply px-5 pb-5 space-y-4; }
+    .step-foot { @apply mt-auto flex items-center gap-2 px-5 py-3 border-t border-line; }
+    .segmented { @apply grid grid-cols-2 gap-1 p-1 rounded-[10px] bg-surface-2; }
+    .segmented > label { @apply flex items-center justify-center h-8 rounded-lg text-[13px] font-medium text-ink-2 cursor-pointer select-none; transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease; }
+    .segmented > label:hover { @apply text-ink; }
+    .segmented > label.is-on { @apply bg-surface text-brand-ink; box-shadow: var(--shadow-card); }
+    .segmented > label:has(:focus-visible) { @apply ring-2 ring-brand/40; }
+
     .card-hover { transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease; }
     .card-hover:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); border-color: var(--g-line-strong); }
 

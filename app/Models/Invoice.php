@@ -28,7 +28,8 @@ class Invoice extends Model
     {
         return ['invoice_date' => 'date', 'total' => 'decimal:2', 'total_azn' => 'decimal:2', 'cbar_rate' => 'decimal:8',
             'logistics_amount' => 'decimal:2', 'logistics_rate' => 'decimal:8', 'logistics_total' => 'decimal:2', 'logistics_updated_at' => 'datetime',
-            'commission_rate' => 'decimal:4', 'commission_total' => 'decimal:2', 'commission_updated_at' => 'datetime'];
+            'commission_rate' => 'decimal:4', 'commission_total' => 'decimal:2', 'commission_updated_at' => 'datetime',
+            'fx_date' => 'date', 'fx_bulletin_date' => 'date', 'fx_base_azn' => 'decimal:8', 'fx_target_azn' => 'decimal:8', 'fx_rate' => 'decimal:12', 'fx_updated_at' => 'datetime'];
     }
 
     public function deal(): BelongsTo
@@ -79,6 +80,17 @@ class Invoice extends Model
     public function commissionLabel(): string
     {
         return $this->hasCommission() ? rtrim(rtrim(number_format((float) $this->commission_rate, 4, ',', ''), '0'), ',') : '';
+    }
+
+    public function hasRub(): bool
+    {
+        return $this->fx_rate !== null;
+    }
+
+    /** Every input of the RUR columns is in: logistics, commission and the RUB rate. */
+    public function rubReady(): bool
+    {
+        return $this->hasLogistics() && $this->hasCommission() && $this->hasRub();
     }
 
     public function typeLabel(): string

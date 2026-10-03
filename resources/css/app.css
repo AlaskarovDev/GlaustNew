@@ -50,9 +50,11 @@
     --shadow-lift: 0 10px 30px -12px rgb(16 24 40 / 0.18), 0 2px 6px rgb(16 24 40 / 0.06);
     --shadow-pop: 0 24px 60px -20px rgb(16 24 40 / 0.35), 0 8px 18px -10px rgb(16 24 40 / 0.18);
 
-    --animate-rise: rise 420ms cubic-bezier(.2, .7, .2, 1) both;
-    --animate-fade: fade 260ms ease-out both;
-    --animate-pop: pop 220ms cubic-bezier(.2, .9, .3, 1.2) both;
+    /* fill-mode backwards, not both: a finished animation must not keep transform/opacity applied —
+       that made every page a stacking context and trapped position:fixed modals under the sticky header. */
+    --animate-rise: rise 420ms cubic-bezier(.2, .7, .2, 1) backwards;
+    --animate-fade: fade 260ms ease-out backwards;
+    --animate-pop: pop 220ms cubic-bezier(.2, .9, .3, 1.2) backwards;
     --animate-ring: ring 900ms ease-in-out 2;
     --animate-ticker: ticker var(--ticker-duration, 60s) linear infinite;
     --animate-pulse-dot: pulse-dot 1.8s ease-out infinite;

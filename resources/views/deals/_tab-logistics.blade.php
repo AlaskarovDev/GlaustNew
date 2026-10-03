@@ -120,6 +120,7 @@
 
             {{-- Pay this act --}}
             @can('bank.create')
+                <template x-teleport="body">
                 <div x-cloak x-show="payOpen" class="fixed inset-0 z-[75] grid place-items-center p-4" role="dialog" aria-modal="true" @keydown.escape.window="payOpen = false">
                     <div class="absolute inset-0 bg-night/50 backdrop-blur-sm" @click="payOpen = false"></div>
                     <form method="POST" action="{{ route('deals.logistics-acts.pay', [$deal, $act]) }}" x-show="payOpen" x-transition.opacity
@@ -143,6 +144,7 @@
                         </footer>
                     </form>
                 </div>
+                </template>
             @endcan
         </article>
     @endforeach
@@ -157,6 +159,8 @@
     <div x-data="{ open: {{ $failedNew ? 'true' : 'false' }} }">
         <button type="button" class="btn btn-primary" @click="open = true"><x-icon name="plus" class="size-4"/> Logistika aktı əlavə et</button>
 
+        {{-- Teleported to <body>: an animated (transformed) ancestor would trap position:fixed under the sticky header. --}}
+        <template x-teleport="body">
         <div x-cloak x-show="open" class="fixed inset-0 z-[75] grid place-items-center p-4" role="dialog" aria-modal="true" aria-labelledby="la-title" @keydown.escape.window="open = false">
             <div class="absolute inset-0 bg-night/50 backdrop-blur-sm" @click="open = false"></div>
             <form method="POST" action="{{ route('deals.logistics-acts.store', $deal) }}" x-show="open" x-transition.opacity
@@ -203,7 +207,7 @@
                                 </template>
                             </dl>
                             <div class="px-4 pb-3 text-[11px] text-faint space-y-0.5">
-                                <div x-show="currency !== 'AZN'">1 <span x-text="currency"></span> = <span class="font-mono" x-text="rf(rate(currency, actDate))"></span> ₼</div>
+                                <div x-show="!['AZN', 'RUB', 'EUR'].includes(currency)">1 <span x-text="currency"></span> = <span class="font-mono" x-text="rf(rate(currency, actDate))"></span> ₼</div>
                                 <div>1 RUB = <span class="font-mono" x-text="rf(rate('RUB', actDate))"></span> ₼</div>
                                 <div>1 EUR = <span class="font-mono" x-text="rf(rate('EUR', actDate))"></span> ₼</div>
                                 <div class="text-danger" x-show="errors.rate" x-text="errors.rate"></div>
@@ -240,5 +244,6 @@
                 </footer>
             </form>
         </div>
+        </template>
     </div>
 @endcan

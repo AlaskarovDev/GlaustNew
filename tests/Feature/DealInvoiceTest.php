@@ -89,7 +89,9 @@ class DealInvoiceTest extends TestCase
         $this->assertMatchesRegularExpression('/^TD-\d{4}-0001$/', $deal->code);
         $this->assertSame($d['seller']->id, $deal->supplier_id);
         $this->assertSame(1, $this->inTenant($admin, fn () => $d['purchase']->attachments()->count()), 'signed PDF kept on the contract');
-        $this->get(route('deals.show', $deal))->assertOk()->assertSee('alis-imzali.pdf')->assertSee('Satıcının fakturaları');
+        // Opens on the invoices tab; the contracts (and their signed PDFs) are one tab away.
+        $this->get(route('deals.show', $deal))->assertOk()->assertSee('Satıcının fakturaları')->assertDontSee('alis-imzali.pdf');
+        $this->get(route('deals.show', [$deal, 'tab' => 'contracts']))->assertOk()->assertSee('alis-imzali.pdf')->assertSee('Alış müqaviləsi')->assertDontSee('Satıcının fakturaları');
         $this->get(route('projects.show', [$d['project'], 'tab' => 'deals']))->assertOk()->assertSee('Oktyabr partiyası');
     }
 

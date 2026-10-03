@@ -292,20 +292,23 @@ Alpine.directive('chart', (el, { expression }, { evaluate, cleanup }) => {
     const config = evaluate(expression);
     let chart = null;
     let disposed = false;
-    const draw = async () => {
+    let pending = null;
+    // Single-flight: the observer, the fallback timer and a theme switch can all ask for a draw while
+    // the lazy import is still loading; a second draw destroyed a chart mid-render (Uncaught in promise).
+    const draw = () => (pending ??= (async () => {
         const { default: ApexCharts } = await import('apexcharts');
         if (disposed) return;
         chart?.destroy();
         el.innerHTML = '';
         chart = new ApexCharts(el, themed(config));
-        chart.render();
-    };
+        await chart.render().catch(() => {});
+    })().finally(() => { pending = null; }));
     const io = new IntersectionObserver((entries) => {
         if (entries.some((e) => e.isIntersecting)) { io.disconnect(); draw(); }
     }, { rootMargin: '120px' });
     io.observe(el);
     // Elements already on screen are drawn even if the observer never fires (headless / print).
-    setTimeout(() => { if (!chart) { io.disconnect(); draw(); } }, 1200);
+    setTimeout(() => { if (!chart && !pending) { io.disconnect(); draw(); } }, 1200);
     const onTheme = () => chart && draw();
     window.addEventListener('glaust:theme', onTheme);
     cleanup(() => { disposed = true; io.disconnect(); window.removeEventListener('glaust:theme', onTheme); chart?.destroy(); });

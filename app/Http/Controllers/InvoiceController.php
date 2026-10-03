@@ -9,6 +9,7 @@ use App\Services\Cbar\CurrencyRates;
 use App\Services\Cbar\RateUnavailable;
 use App\Support\Export\PdfExporter;
 use App\Support\Export\SpreadsheetExporter;
+use App\Rules\SpreadsheetFile;
 use App\Support\Invoices\SupplierInvoiceSheet;
 use App\Tables\Column;
 use Illuminate\Http\RedirectResponse;
@@ -39,7 +40,7 @@ class InvoiceController extends Controller
     {
         $this->authorize('projects.create');
         $request->validate([
-            'file' => ['required', 'file', 'mimes:xlsx,xls,csv', 'max:10240'],
+            'file' => ['required', 'file', 'max:10240', new SpreadsheetFile],
             'invoice_date' => ['required', 'date', 'before_or_equal:today'],
         ], [], ['file' => 'Excel faylı', 'invoice_date' => 'Faktura tarixi']);
 

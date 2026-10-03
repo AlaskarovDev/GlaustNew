@@ -156,6 +156,40 @@ class DealInvoiceTest extends TestCase
         $this->assertSame(1, $this->inTenant($admin, fn () => Invoice::count()));
     }
 
+    /**
+     * The real flow: the template filled and saved in an office program (WPS here — the fixture
+     * was produced that way). Such files contain folder entries in the zip and libmagic reports
+     * them as application/octet-stream, so `mimes:xlsx` refused a correct file on live.
+     */
+    public function test_filled_template_resaved_by_another_program_is_accepted(): void
+    {
+        Storage::fake('local');
+        $this->fakeCbar();
+        [$admin, $d] = $this->world();
+        $deal = $this->deal($admin, $d);
+        $this->actingAs($admin);
+
+        $resaved = tempnam(sys_get_temp_dir(), 'wps');
+        copy(base_path('tests/Fixtures/supplier-invoice-office.xlsx'), $resaved);
+        $file = new UploadedFile($resaved, 'Faktura 221619.xlsx', 'application/octet-stream', null, true);
+        $this->assertNotSame('xlsx', $file->guessExtension(), 'reproduces the server: content sniffing does not say xlsx');
+
+        $this->post(route('invoices.import', $deal), ['file' => $file, 'invoice_date' => now()->subDays(2)->toDateString()])
+            ->assertSessionHasNoErrors()->assertSessionMissing('error');
+        $inv = $this->inTenant($admin, fn () => Invoice::with('items')->firstOrFail());
+        $this->assertSame('221619', $inv->number);
+        $this->assertSame(16448.0, (float) $inv->total);
+        $this->assertCount(2, $inv->items);
+
+        // A non-workbook renamed to .xlsx, and a wrong extension, are still refused.
+        $fake = tempnam(sys_get_temp_dir(), 'pdf');
+        file_put_contents($fake, "%PDF-1.4\n");
+        $this->post(route('invoices.import', $deal), ['file' => new UploadedFile($fake, 'x.xlsx', null, null, true), 'invoice_date' => today()->toDateString()])
+            ->assertSessionHasErrors('file');
+        $this->post(route('invoices.import', $deal), ['file' => new UploadedFile($resaved, 'x.pdf', null, null, true), 'invoice_date' => today()->toDateString()])
+            ->assertSessionHasErrors('file');
+    }
+
     public function test_bad_rows_block_the_whole_import(): void
     {
         $this->fakeCbar();

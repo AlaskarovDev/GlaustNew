@@ -7,6 +7,7 @@ use App\Imports\ImportRunner;
 use App\Jobs\ProcessImport;
 use App\Models\BankAccount;
 use App\Models\Import;
+use App\Rules\SpreadsheetFile;
 use App\Rules\TenantExists;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -46,7 +47,7 @@ class ImportController extends Controller
     {
         $data = $request->validate([
             'type' => ['required', 'string'],
-            'file' => ['required', 'file', 'max:10240', 'mimes:xlsx,xls,csv,txt'],
+            'file' => ['required', 'file', 'max:10240', new SpreadsheetFile(['xlsx', 'xls', 'csv', 'txt'])],
             'account_id' => ['nullable', 'integer', TenantExists::in('bank_accounts')],
         ], [], ['file' => 'Fayl', 'account_id' => 'Bank hesabı']);
         $class = $this->typeClass($data['type']);

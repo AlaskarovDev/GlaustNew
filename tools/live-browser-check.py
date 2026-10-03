@@ -262,6 +262,30 @@ def main() -> int:
                 time.sleep(1.0)
                 shot("10-" + title.replace(" ", "_").replace("(", "").replace(")", ""))
 
+        # --- detail pages (route-model binding + tenant scope): open the first record of each list
+        for title, path, pattern in [("Layihə", "/projects", r"/projects/\d+$"), ("Müqavilə", "/contracts", r"/contracts/\d+$"),
+                                     ("Kontragent", "/counterparties", r"/counterparties/\d+$"), ("Yük", "/shipments", r"/shipments/\d+$"),
+                                     ("Bank əməliyyatı", "/bank/transactions", r"/bank/transactions/\d+$")]:
+            send("Page.navigate", {"url": BASE + path})
+            wait_for("document.readyState === 'complete'", 10)
+            href = js(f"[...document.querySelectorAll('main a')].map(a => a.href).find(h => new RegExp({json.dumps(pattern)}).test(new URL(h).pathname)) || ''")
+            if not href:
+                bad(f"{title}: siyahıda keçid tapılmadı")
+                continue
+            state["events"].clear()
+            send("Page.navigate", {"url": href})
+            wait_for("document.readyState === 'complete'", 10)
+            time.sleep(0.6)
+            pump()
+            is404 = js("document.title.includes('Not Found') || document.body.innerText.trim().startsWith('404')")
+            errs = errors()
+            if is404:
+                bad(f"{title} səhifəsi 404: {href}")
+            elif errs:
+                bad(f"{title} səhifəsi konsol: {errs[0]}")
+            else:
+                ok(f"{title} səhifəsi açılır")
+
         # --- probe self-test: an injected console error must be caught
         state["events"].clear()
         js("console.error('glaust-selftest-error')")

@@ -23,6 +23,10 @@ $app = Application::configure(basePath: dirname(__DIR__))
             'superadmin' => SuperAdmin::class,
         ]);
         $middleware->web(append: [SecurityHeaders::class, RunScheduleFromWeb::class]);
+        // The tenant must be bound BEFORE route-model binding resolves {project}, {contract}...:
+        // tenant scopes are fail-closed, so binding first turns every show/edit page into a 404.
+        $middleware->appendToPriorityList(\Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests::class, SetTenant::class);
+        $middleware->appendToPriorityList(\Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests::class, SuperAdmin::class);
         $middleware->redirectGuestsTo(fn () => route('login'));
         $middleware->redirectUsersTo(fn () => route('dashboard'));
     })

@@ -14,6 +14,19 @@ use Illuminate\Support\Facades\Http;
 abstract class TestCase extends BaseTestCase
 {
     /**
+     * Every HTTP request starts without a tenant, exactly like production (a fresh PHP
+     * process). Otherwise the tenant set by an earlier request in the same test leaks into
+     * the next one and hides ordering bugs such as route-model binding running before
+     * SetTenant (which shipped once: every /projects/{id} page was a 404).
+     */
+    public function call($method, $uri, $parameters = [], $cookies = [], $files = [], $server = [], $content = null)
+    {
+        app(Tenant::class)->set(null);
+
+        return parent::call($method, $uri, $parameters, $cookies, $files, $server, $content);
+    }
+
+    /**
      * Fake cbar.az with the real bulletin in tests/Fixtures (downloaded from cbar.az),
      * stamped with the requested date. Dates in $fail answer HTTP 503.
      * Returns a counter of requests per date.

@@ -153,6 +153,19 @@
     .approval-step.is-now { @apply border-saffron/50 bg-saffron-soft/50; }
     .approval-step.is-now .approval-dot { @apply bg-saffron text-white; }
 
+    /* A deal opened from Öhdəliklərim (#deal-N) is outlined on the project page */
+    .deal-card:target { @apply border-brand; box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand) 25%, transparent); }
+
+    /* Öhdəliklərim: four selectable totals */
+    .ob-card { @apply p-4 cursor-pointer; transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease; }
+    .ob-card:hover { transform: translateY(-1px); }
+    .ob-card-icon { @apply grid place-items-center size-10 rounded-xl; }
+    .ob-card.tone-danger .ob-card-icon { @apply bg-danger-soft text-danger; }
+    .ob-card.tone-brand .ob-card-icon { @apply bg-brand-soft text-brand-ink; }
+    .ob-card.tone-success .ob-card-icon { @apply bg-success-soft text-success; }
+    .ob-card.tone-saffron .ob-card-icon { @apply bg-saffron-soft text-saffron; }
+    .ob-card.is-on { @apply border-brand; box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand) 18%, transparent); }
+
     /* Deal obligations */
     .ob-pill { @apply inline-flex items-center gap-1.5 h-8 px-3 rounded-full border text-[13px]; }
     .ob-pill.is-out { @apply border-danger/30 bg-danger-soft/50 text-danger; }

@@ -15,6 +15,7 @@ class Navigation
                 ['label' => 'Mənim işlərim', 'route' => 'my-work', 'active' => 'my-work', 'icon' => 'calendar-check', 'can' => null],
             ]],
             ['label' => 'İş', 'items' => [
+                ['label' => 'Öhdəliklərim', 'route' => 'obligations.index', 'active' => 'obligations.*', 'icon' => 'transfer', 'can' => 'projects.view'],
                 ['label' => 'Layihələr', 'route' => 'projects.index', 'active' => 'projects.*|tasks.*', 'icon' => 'folder', 'can' => 'projects.view'],
                 ['label' => 'CRM', 'route' => 'counterparties.index', 'active' => 'counterparties.*', 'icon' => 'users', 'can' => 'crm.view'],
                 ['label' => 'Müqavilələr', 'route' => 'contracts.index', 'active' => 'contracts.*', 'icon' => 'signature', 'can' => 'contracts.view'],
@@ -49,6 +50,7 @@ class Navigation
             ['g d', 'İdarə paneli', 'dashboard', 'dashboard.view'],
             ['g m', 'Mənim işlərim', 'my-work', null],
             ['g p', 'Layihələr', 'projects.index', 'projects.view'],
+            ['g o', 'Öhdəliklərim', 'obligations.index', 'projects.view'],
             ['g c', 'CRM', 'counterparties.index', 'crm.view'],
             ['g q', 'Müqavilələr', 'contracts.index', 'contracts.view'],
             ['g b', 'Bank əməliyyatları', 'bank.transactions.index', 'bank.view'],

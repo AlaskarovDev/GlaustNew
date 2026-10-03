@@ -15,6 +15,7 @@ use App\Http\Controllers\DealPaymentController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\InvoiceApprovalController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\ObligationController;
 use App\Http\Controllers\ImportController;
 use App\Http\Controllers\MyWorkController;
 use App\Http\Controllers\ProfileController;
@@ -97,6 +98,7 @@ Route::middleware(['auth', 'tenant'])->group(function () {
 
     /* Projects & tasks */
     Route::middleware('can:projects.view')->group(function () {
+        Route::get('/obligations', [ObligationController::class, 'index'])->name('obligations.index');
         Route::get('/projects/export', [ProjectController::class, 'export'])->middleware('can:projects.export')->name('projects.export');
         Route::resource('projects', ProjectController::class);
         Route::post('/projects/{project}/milestones', [ProjectController::class, 'storeMilestone'])->name('projects.milestones.store');

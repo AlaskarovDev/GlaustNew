@@ -142,7 +142,7 @@
         @else
             <div class="grid lg:grid-cols-2 gap-5 stagger">
                 @foreach($deals as $d)
-                    <a href="{{ route('deals.show', $d) }}" class="card card-hover p-5 group" style="--i:{{ $loop->index }}">
+                    <a href="{{ route('deals.show', $d) }}" id="deal-{{ $d->id }}" class="card card-hover p-5 group deal-card scroll-mt-24" style="--i:{{ $loop->index }}">
                         <div class="flex items-start justify-between gap-3">
                             <div class="min-w-0">
                                 <div class="text-xs font-mono text-muted">{{ $d->code }} · {{ azdate($d->deal_date) }}</div>

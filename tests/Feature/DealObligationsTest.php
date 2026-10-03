@@ -55,5 +55,13 @@ class DealObligationsTest extends TestCase
         $this->get(route('deals.show', $deal))->assertOk()->assertSee('Maliyyə öhdəlikləri')
             ->assertSee(money(102122, 'EUR'))->assertSee(money(14800178, 'RUB'))->assertSee('dəyərində məhsul göndərməliyik');
         $this->get(route('deals.show', [$deal, 'tab' => 'income']))->assertOk()->assertSee('Satıcıya ödənişlər')->assertSee(money(100000, 'EUR'));
+
+        // Öhdəliklərim: all deals added up, broken down by project and deal, linking to the project's deals tab.
+        $project = $this->inTenant($admin, fn () => Deal::find($deal->id)->project);
+        $this->get(route('obligations.index'))->assertOk()
+            ->assertSee('Ödəməli olduğum')->assertSee('Məhsulla təmin etməli olduğum')->assertSee('Mənə gəlməli ödənişlər')
+            ->assertSee(money(102122, 'EUR'))->assertSee(money(14800178, 'RUB'))->assertSee(money(5000000, 'RUB'))
+            ->assertSee($project->name)->assertSee('#deal-'.$deal->id, false);
+        $this->get(route('projects.show', [$project, 'tab' => 'deals']))->assertOk()->assertSee('id="deal-'.$deal->id.'"', false);
     }
 }

@@ -11,12 +11,14 @@ use App\Http\Controllers\CounterpartyController;
 use App\Http\Controllers\CurrencyController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DealController;
+use App\Http\Controllers\DealPaymentController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\ImportController;
 use App\Http\Controllers\MyWorkController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SalesDocumentController;
 use App\Http\Controllers\Settings;
 use App\Http\Controllers\ShipmentController;
 use App\Http\Controllers\TaskController;
@@ -106,6 +108,8 @@ Route::middleware(['auth', 'tenant'])->group(function () {
         Route::get('/deals/{deal}/edit', [DealController::class, 'edit'])->name('deals.edit');
         Route::put('/deals/{deal}', [DealController::class, 'update'])->name('deals.update');
         Route::delete('/deals/{deal}', [DealController::class, 'destroy'])->name('deals.destroy');
+        Route::post('/deals/{deal}/payments', [DealPaymentController::class, 'store'])->name('deals.payments.store');
+        Route::delete('/deals/{deal}/payments/{payment}', [DealPaymentController::class, 'destroy'])->name('deals.payments.destroy');
         Route::get('/invoices/template', [InvoiceController::class, 'template'])->name('invoices.template');
         Route::post('/deals/{deal}/invoices/import', [InvoiceController::class, 'import'])->name('invoices.import');
         Route::get('/invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show');
@@ -117,7 +121,15 @@ Route::middleware(['auth', 'tenant'])->group(function () {
         Route::delete('/invoices/{invoice}/commission', [InvoiceController::class, 'clearCommission'])->name('invoices.commission.clear');
         Route::post('/invoices/{invoice}/rub', [InvoiceController::class, 'rub'])->name('invoices.rub');
         Route::delete('/invoices/{invoice}/rub', [InvoiceController::class, 'clearRub'])->name('invoices.rub.clear');
+        Route::post('/invoices/{invoice}/documents', [InvoiceController::class, 'documents'])->name('invoices.documents');
         Route::delete('/invoices/{invoice}', [InvoiceController::class, 'destroy'])->name('invoices.destroy');
+
+        // Buyer's documents (proforma, specification): generated, then editable, PDF from the current state
+        Route::get('/sales-documents/{document}', [SalesDocumentController::class, 'show'])->name('sales-documents.show');
+        Route::put('/sales-documents/{document}', [SalesDocumentController::class, 'update'])->name('sales-documents.update');
+        Route::post('/sales-documents/{document}/refresh', [SalesDocumentController::class, 'refresh'])->name('sales-documents.refresh');
+        Route::get('/sales-documents/{document}/pdf', [SalesDocumentController::class, 'pdf'])->name('sales-documents.pdf');
+        Route::delete('/sales-documents/{document}', [SalesDocumentController::class, 'destroy'])->name('sales-documents.destroy');
 
         Route::get('/tasks/export', [TaskController::class, 'export'])->middleware('can:projects.export')->name('tasks.export');
         Route::resource('tasks', TaskController::class);

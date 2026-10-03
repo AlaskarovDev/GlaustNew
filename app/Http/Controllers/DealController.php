@@ -57,16 +57,24 @@ class DealController extends Controller
         return redirect()->route('deals.show', $deal)->with('success', "Tədarük {$deal->code} yaradıldı. İndi təchizatçı fakturasını Excel-dən import edin.");
     }
 
-    public function show(Deal $deal): View
+    /** Tabs follow the order of the work: invoices (buy, calculate, documents) -> income (buyer pays) -> logistics. */
+    public const TABS = ['invoices', 'income', 'logistics'];
+
+    public function show(Request $request, Deal $deal): View
     {
         $deal->load([
             'project', 'counterparty', 'supplier', 'responsible',
             'saleContract.attachments.uploader', 'purchaseContract.attachments.uploader',
             'invoices' => fn ($q) => $q->withCount('items'), 'attachments.uploader',
+            'salesDocuments', 'payments.account',
         ]);
+        $tab = in_array($request->query('tab'), self::TABS, true) ? $request->query('tab') : 'invoices';
         $history = AuditLog::with('user')->where('auditable_type', 'deal')->where('auditable_id', $deal->id)->latest('created_at')->limit(15)->get();
+        $accounts = $request->user()->can('bank.create')
+            ? \App\Models\BankAccount::where('is_active', true)->orderBy('currency')->orderBy('name')->get(['id', 'name', 'bank_name', 'currency'])
+            : collect();
 
-        return view('deals.show', compact('deal', 'history'));
+        return view('deals.show', compact('deal', 'history', 'tab', 'accounts'));
     }
 
     public function edit(Deal $deal): View

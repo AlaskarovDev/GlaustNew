@@ -57,6 +57,11 @@ class Invoice extends Model
         return $this->hasMany(InvoiceItem::class)->orderBy('line_no')->orderBy('id');
     }
 
+    public function salesDocuments(): HasMany
+    {
+        return $this->hasMany(SalesDocument::class, 'source_invoice_id')->orderBy('kind');
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

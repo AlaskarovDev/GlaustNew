@@ -141,6 +141,10 @@
         @endif
     </section>
 
+    @if($invoice->type === 'supplier')
+        @include('invoices._documents')
+    @endif
+
     <div class="grid lg:grid-cols-[minmax(0,1fr)_380px] gap-6 items-start">
         @include('partials.history', ['history' => $history])
         <div class="space-y-6">

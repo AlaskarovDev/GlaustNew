@@ -74,4 +74,9 @@ class BankTransaction extends Model
     {
         return ($this->direction === 'in' ? '+' : '-').$this->amount.' '.$this->currency.' '.$this->transaction_date?->format('d.m.Y');
     }
+
+    public function deal(): BelongsTo
+    {
+        return $this->belongsTo(Deal::class)->withTrashed();
+    }
 }

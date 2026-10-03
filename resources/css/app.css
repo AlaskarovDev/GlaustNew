@@ -135,6 +135,15 @@
     .step-meta { @apply text-xs text-muted mt-1 leading-relaxed; }
     .step-form { @apply px-5 pb-5 space-y-4; }
     .step-foot { @apply mt-auto flex items-center gap-2 px-5 py-3 border-t border-line; }
+    /* Deal page: numbered tabs in the order of the work (invoices -> income -> logistics) */
+    .deal-steps { @apply flex items-center gap-2 overflow-x-auto pb-1; }
+    .deal-step { @apply flex items-center gap-2.5 h-11 pl-1.5 pr-4 rounded-full border border-line bg-surface text-sm text-ink-2 whitespace-nowrap; transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease, box-shadow 150ms ease; }
+    .deal-step:hover { @apply border-line-strong text-ink; }
+    .deal-step-no { @apply grid place-items-center size-8 rounded-full bg-surface-2 text-[13px] font-semibold font-mono text-muted; transition: background-color 150ms ease, color 150ms ease; }
+    .deal-step-count { @apply font-mono text-xs text-muted; }
+    .deal-step.is-active { @apply border-brand/40 bg-brand-soft/60 text-brand-ink; box-shadow: var(--shadow-card); }
+    .deal-step.is-active .deal-step-no { @apply bg-brand text-white; }
+
     /* Rates block shaped like the company's sheet: date | CB EUR / Proq RUB | AZN per unit */
     .rate-table { @apply w-full text-[13px] border-separate border-spacing-0; }
     .rate-table td { @apply py-1 px-2 border-b border-line text-ink-2; }

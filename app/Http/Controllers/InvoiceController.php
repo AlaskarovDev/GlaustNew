@@ -108,7 +108,7 @@ class InvoiceController extends Controller
 
     public function show(Invoice $invoice): View
     {
-        $invoice->load(['deal', 'project', 'counterparty', 'contract', 'items', 'creator', 'attachments.uploader']);
+        $invoice->load(['deal', 'project', 'counterparty', 'contract', 'items', 'creator', 'attachments.uploader', 'salesDocuments']);
         $invoice->items->each->setRelation('invoice', $invoice);
         $history = AuditLog::with('user')->where('auditable_type', 'invoice')->where('auditable_id', $invoice->id)->latest('created_at')->limit(15)->get();
 
@@ -162,6 +162,7 @@ class InvoiceController extends Controller
         $allocator->apply($invoice, $data['logistics_mode'], $data['logistics_method'], $currency,
             isset($data['logistics_amount']) ? (float) $data['logistics_amount'] : null, $data['items'] ?? []);
         $invoice->refresh();
+        $this->documentsReady($invoice);
 
         return back()->with('success', 'Logistika xərci ('.Invoice::LOGISTICS_MODES[$invoice->logistics_mode].') bölüşdürüldü: '
             .money($invoice->logistics_amount, $invoice->logistics_currency)
@@ -190,6 +191,7 @@ class InvoiceController extends Controller
 
         $calculator->apply($invoice, (float) $data['commission_rate']);
         $invoice->refresh();
+        $this->documentsReady($invoice);
 
         return back()->with('success', 'Komissiya '.$invoice->commissionLabel().'% tətbiq olundu: '.money($invoice->commission_total, $invoice->currency).'.');
     }
@@ -225,6 +227,7 @@ class InvoiceController extends Controller
         $converter->apply($invoice, $data['fx_source'], $data['fx_date'],
             $forecast ? (float) $data['fx_base_azn'] : null, $forecast ? (float) $data['fx_target_azn'] : null);
         $invoice->refresh();
+        $this->documentsReady($invoice);
 
         return back()->with('success', \App\Support\Invoices\RubConverter::SOURCES[$invoice->fx_source].' tətbiq olundu: 1 '.$invoice->currency.' = '.num($invoice->fx_rate, 4).' RUB ('.azdate($invoice->fx_date).').');
     }
@@ -235,6 +238,27 @@ class InvoiceController extends Controller
         $converter->clear($invoice);
 
         return back()->with('success', 'RUB çevirməsi silindi.');
+    }
+
+    /** Create the buyer's proforma + specification the first time the calculation is complete. */
+    private function documentsReady(Invoice $invoice): void
+    {
+        $created = app(\App\Support\Invoices\SalesDocumentBuilder::class)->ensureFor($invoice);
+        if ($created) {
+            session()->flash('documents_created', collect($created)->map(fn ($d) => $d->title().' '.$d->number)->all());
+        }
+    }
+
+    /** Recreate a deleted proforma/specification from the current calculation. */
+    public function documents(Invoice $invoice, \App\Support\Invoices\SalesDocumentBuilder $builder): RedirectResponse
+    {
+        $this->authorize('projects.update');
+        if (! $invoice->rubReady()) {
+            return back()->with('error', 'Əvvəlcə 3 addımı tamamlayın: logistika, komissiya, RUB konvertasiyası.');
+        }
+        $created = $builder->ensureFor($invoice);
+
+        return back()->with('success', $created ? 'Yaradıldı: '.collect($created)->map(fn ($d) => $d->title().' '.$d->number)->implode(', ').'.' : 'Sənədlər artıq mövcuddur.');
     }
 
     public function destroy(Invoice $invoice): RedirectResponse

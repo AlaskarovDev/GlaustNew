@@ -54,6 +54,17 @@ class Deal extends Model
         return $this->belongsTo(User::class, 'responsible_id');
     }
 
+    /** Incoming payments from the buyer (bank movements linked to this deal). */
+    public function payments(): HasMany
+    {
+        return $this->hasMany(BankTransaction::class)->where('direction', 'in')->orderByDesc('transaction_date')->orderByDesc('id');
+    }
+
+    public function salesDocuments(): HasMany
+    {
+        return $this->hasMany(SalesDocument::class)->orderBy('source_invoice_id')->orderBy('kind');
+    }
+
     public function invoices(): HasMany
     {
         return $this->hasMany(Invoice::class)->orderBy('invoice_date')->orderBy('id');

@@ -81,6 +81,7 @@ Route::middleware(['auth', 'tenant'])->group(function () {
         Route::get('/my-day', [AjaxController::class, 'myDay'])->name('my-day');
         Route::get('/search', [AjaxController::class, 'search'])->name('search');
         Route::get('/rate', [AjaxController::class, 'rate'])->name('rate');
+        Route::get('/cross-rate', [AjaxController::class, 'cross'])->name('cross-rate');
         Route::get('/lookup/{type}', [AjaxController::class, 'lookup'])->whereIn('type', ['counterparties', 'contracts', 'projects', 'users'])->name('lookup');
         Route::post('/counterparties', [AjaxController::class, 'storeCounterparty'])->name('counterparties.store');
         Route::post('/tasks/{task}/complete', [AjaxController::class, 'completeTask'])->name('tasks.complete');

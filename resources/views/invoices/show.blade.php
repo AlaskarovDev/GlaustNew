@@ -70,7 +70,7 @@
         $formulas = [
             'logistics' => 'H × logistika / H cəm', 'unit_price_log' => '(I + H) / E', 'fee' => 'H × faiz',
             'unit_price_ccl_eur' => '(K + I + H) / E', 'total_ccl_eur' => 'L × E',
-            'unit_price_rur' => 'L × '.$invoice->currency.'/RUB', 'total_rur' => 'N × E',
+            'unit_price_rur' => 'L × '.$invoice->currency.'/RUB'.($invoice->fx_source === 'forecast' ? ' (proqnoz)' : ''), 'total_rur' => 'N × E',
             'unit_price_rur_rounded' => 'ROUND(N; 2)', 'total_rur_rounded' => 'P × E',
         ];
         $label = fn ($k, $l) => $k === 'fee' && $invoice->hasCommission() ? 'Commission '.$invoice->commissionLabel().'%' : $l;
@@ -135,7 +135,7 @@
                 @if(! $invoice->hasLogistics() && ! $invoice->hasCommission()) Boz sütunlar logistika xərci və komissiya faizi daxil edildikdən sonra hesablanır.
                 @elseif(! $invoice->hasLogistics()) UNIT PRICE+LOG və CCL sütunları üçün logistika xərcini daxil edin.
                 @elseif(! $invoice->hasCommission()) Commission və CCL sütunları üçün sağdakı paneldə komissiya faizini tətbiq edin.
-                @elseif(! $invoice->hasRub()) RUR sütunları üçün sağdakı «RUB-a çevirmə» panelində məzənnəni tətbiq edin.
+                @elseif(! $invoice->hasRub()) RUR sütunları üçün «{{ $invoice->currency }} → RUB konvertasiya» addımında tarixi və kursu (CBAR və ya proqnoz) tətbiq edin.
                 @endif
             </p>
         @endif

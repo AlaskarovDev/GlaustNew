@@ -94,6 +94,7 @@ Alpine.store('toasts', {
     },
     remove(id) { this.items = this.items.filter((t) => t.id !== id); },
 });
+window.glaustApi = api;
 window.toast = (type, message) => Alpine.store('toasts').push(type, message);
 
 /* ---------- confirm dialog for destructive forms ---------- */

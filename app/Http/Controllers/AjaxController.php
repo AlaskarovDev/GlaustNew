@@ -58,6 +58,24 @@ class AjaxController extends Controller
         }
     }
 
+    /** CBAR cross rate of a day for the invoice conversion panel: 1 {from} = ? RUB. */
+    public function cross(Request $request, \App\Support\Invoices\RubConverter $converter): JsonResponse
+    {
+        $from = strtoupper((string) $request->query('from'));
+        if (! in_array($from, config('glaust.currencies'), true)) {
+            return response()->json(['ok' => false, 'message' => 'Naməlum valyuta.']);
+        }
+        try {
+            $c = $converter->cbar($from, (string) $request->query('date'));
+
+            return response()->json(['ok' => true] + $c);
+        } catch (RateUnavailable $e) {
+            return response()->json(['ok' => false, 'message' => $e->getMessage()]);
+        } catch (\InvalidArgumentException) {
+            return response()->json(['ok' => false, 'message' => 'Tarix düzgün deyil.']);
+        }
+    }
+
     public function search(Request $request): JsonResponse
     {
         $q = trim((string) $request->query('q'));

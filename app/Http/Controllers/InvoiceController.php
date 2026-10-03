@@ -202,30 +202,28 @@ class InvoiceController extends Controller
         return back()->with('success', 'Komissiya silindi.');
     }
 
-    /** Invoice currency -> RUB for the RUR columns: CBAR of a chosen date, or two rates typed in (D18 / D19). */
+    /**
+     * Invoice currency -> RUB for the RUR columns, for the date our invoice will be issued:
+     * the CBAR rate of that day, or a forecast rate for a day CBAR has not published yet.
+     */
     public function rub(Request $request, Invoice $invoice, \App\Support\Invoices\RubConverter $converter): RedirectResponse
     {
         $this->authorize('projects.update');
         if ($invoice->status === 'cancelled') {
             return back()->with('error', 'Ləğv edilmiş fakturada çevirmə edilmir.');
         }
-        $request->merge([
-            'fx_base_azn' => parse_number($request->input('fx_base_azn')),
-            'fx_target_azn' => parse_number($request->input('fx_target_azn')),
-        ]);
+        $request->merge(['fx_forecast' => parse_number($request->input('fx_forecast'))]);
         $data = $request->validate([
             'fx_source' => ['required', Rule::in(array_keys(\App\Support\Invoices\RubConverter::SOURCES))],
-            'fx_date' => ['required_if:fx_source,cbar', 'nullable', 'date', 'before_or_equal:today'],
-            'fx_base_azn' => ['required_if:fx_source,manual', 'nullable', 'numeric', 'gt:0', 'max:1000000'],
-            'fx_target_azn' => ['required_if:fx_source,manual', 'nullable', 'numeric', 'gt:0', 'max:1000000'],
-        ], [], ['fx_source' => 'Məzənnə mənbəyi', 'fx_date' => 'Məzənnə tarixi', 'fx_base_azn' => '1 '.$invoice->currency.' = AZN', 'fx_target_azn' => '1 RUB = AZN']);
+            'fx_date' => ['required', 'date', Rule::when($request->input('fx_source') === 'cbar', ['before_or_equal:today'])],
+            'fx_forecast' => ['required_if:fx_source,forecast', 'nullable', 'numeric', 'gt:0', 'max:1000000'],
+        ], ['fx_date.before_or_equal' => 'Gələcək tarix üçün CBAR kursu hələ dərc olunmayıb — «Proqnoz» seçin.'],
+            ['fx_source' => 'Kurs mənbəyi', 'fx_date' => 'Faktura tarixi', 'fx_forecast' => 'Proqnoz kursu']);
 
-        $manual = $data['fx_source'] === 'manual';
-        $converter->apply($invoice, $data['fx_source'], $data['fx_date'] ?? null,
-            $manual ? (float) $data['fx_base_azn'] : null, $manual ? (float) $data['fx_target_azn'] : null);
+        $converter->apply($invoice, $data['fx_source'], $data['fx_date'], isset($data['fx_forecast']) ? (float) $data['fx_forecast'] : null);
         $invoice->refresh();
 
-        return back()->with('success', '1 '.$invoice->currency.' = '.rate_fmt($invoice->fx_rate).' RUB tətbiq olundu.');
+        return back()->with('success', \App\Support\Invoices\RubConverter::SOURCES[$invoice->fx_source].' tətbiq olundu: 1 '.$invoice->currency.' = '.num($invoice->fx_rate, 4).' RUB ('.azdate($invoice->fx_date).').');
     }
 
     public function clearRub(Invoice $invoice, \App\Support\Invoices\RubConverter $converter): RedirectResponse

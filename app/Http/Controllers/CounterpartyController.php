@@ -68,7 +68,7 @@ class CounterpartyController extends Controller
     {
         $counterparty->load(['contacts', 'attachments.uploader']);
         $contracts = $counterparty->contracts()->latest('contract_date')->get();
-        $projects = $counterparty->projects()->withCount(['tasks', 'tasks as done_tasks_count' => fn ($q) => $q->where('status', 'done')])->latest()->get();
+        $projects = \App\Models\Project::where(fn ($w) => $w->where('counterparty_id', $counterparty->id)->orWhere('supplier_id', $counterparty->id))->withCount(['tasks', 'tasks as done_tasks_count' => fn ($q) => $q->where('status', 'done')])->latest()->get();
         $transactions = auth()->user()->can('bank.view')
             ? $counterparty->transactions()->with('account')->latest('transaction_date')->limit(15)->get()
             : collect();

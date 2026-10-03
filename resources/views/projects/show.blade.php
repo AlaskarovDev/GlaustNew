@@ -16,7 +16,7 @@
         <x-status group="project" :value="$project->status"/>
         <x-status group="priority" :value="$project->priority" :dot="false"/>
         @if($project->counterparty)<a href="{{ route('counterparties.show', $project->counterparty) }}" class="badge badge-teal">{{ $project->counterparty->name }}</a>@endif
-        @if($project->contract)<a href="{{ route('contracts.show', $project->contract) }}" class="badge badge-blue">Müqavilə {{ $project->contract->number }}</a>@endif
+        @if($project->supplier)<a href="{{ route('counterparties.show', $project->supplier) }}" class="badge badge-amber">{{ $project->supplier->name }}</a>@endif
         @if($project->isOverdue())<span class="badge badge-rose">Müddəti keçib</span>@endif
     </div>
 
@@ -39,6 +39,10 @@
             <div class="card p-5" style="--i:2"><div class="text-xs text-muted">Gecikmiş</div><div @class(['mt-1 text-2xl font-semibold font-mono', 'text-danger' => $stats['overdue']])>{{ $stats['overdue'] }}</div><div class="text-xs text-muted mt-1">tapşırıq</div></div>
             <div class="card p-5" style="--i:3"><div class="text-xs text-muted">Sərf olunan vaxt</div><div class="mt-1 text-2xl font-semibold font-mono">{{ num($stats['hours'], 1) }}</div><div class="text-xs text-muted mt-1">saat</div></div>
         </div>
+
+        @if(auth()->user()->can('contracts.view'))
+            <div class="mb-6">@include('projects._contracts')</div>
+        @endif
 
         <div class="grid lg:grid-cols-[minmax(0,1fr)_340px] gap-6 items-start">
             <div class="space-y-6 min-w-0">

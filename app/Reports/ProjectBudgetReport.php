@@ -25,7 +25,7 @@ class ProjectBudgetReport extends Report
 
     public static function description(): string
     {
-        return 'Layihələr üzrə büdcə (bugünkü CBAR ilə AZN), bank məxarici, logistika xərcləri, daxilolma və nəticə.';
+        return 'Layihələr üzrə alan və göndərən tərəflə müqavilələr (marja), büdcə, bank məxarici, logistika xərcləri, daxilolma və nəticə.';
     }
 
     public static function icon(): string
@@ -55,7 +55,7 @@ class ProjectBudgetReport extends Report
         }
         $rates = app(CurrencyRates::class);
         $today = $rates->today();
-        $projects = Project::with('counterparty:id,name')
+        $projects = Project::with(['counterparty:id,name', 'supplier:id,name', 'saleContract', 'purchaseContract'])
             ->when($this->request->filled('status'), fn ($q) => $q->where('status', $this->request->query('status')))
             ->orderBy('code')->get();
         $ids = $projects->pluck('id');
@@ -75,7 +75,8 @@ class ProjectBudgetReport extends Report
             $expense = $bank + $log;
 
             return [
-                'code' => $p->code, 'name' => $p->name, 'client' => $p->counterparty?->name, 'status' => status_label('project', $p->status),
+                'code' => $p->code, 'name' => $p->name, 'client' => $p->counterparty?->name, 'supplier' => $p->supplier?->name, 'status' => status_label('project', $p->status),
+                'sale_azn' => $p->contractMargin()['sale'], 'purchase_azn' => $p->contractMargin()['purchase'], 'contract_margin' => $p->contractMargin()['margin'],
                 'budget' => $budget, 'bank' => $bank, 'logistics' => $log, 'expense' => $expense, 'income' => $income,
                 'result' => round($income - $expense, 2),
                 'used' => $budget ? round($expense / $budget * 100, 1) : null,
@@ -88,8 +89,12 @@ class ProjectBudgetReport extends Report
         return [
             Column::make('Kod', 'code'),
             Column::make('Layihə', 'name', width: 32),
-            Column::make('Müştəri', 'client'),
+            Column::make('Alan tərəf', 'client'),
+            Column::make('Göndərən tərəf', 'supplier'),
             Column::make('Status', 'status'),
+            Column::make('Satış müqaviləsi (AZN)', 'sale_azn', 'money', total: true),
+            Column::make('Alış müqaviləsi (AZN)', 'purchase_azn', 'money', total: true),
+            Column::make('Müqavilə marjası', 'contract_margin', 'money', total: true),
             Column::make('Büdcə (AZN)', 'budget', 'money', total: true),
             Column::make('Bank məxarici', 'bank', 'money', total: true),
             Column::make('Logistika', 'logistics', 'money', total: true),
@@ -110,7 +115,7 @@ class ProjectBudgetReport extends Report
         $d = $this->data();
 
         return [
-            ['label' => 'Büdcə', 'value' => $d->sum('budget'), 'money' => true],
+            ['label' => 'Müqavilə marjası', 'value' => $d->sum('contract_margin'), 'money' => true, 'tone' => $d->sum('contract_margin') >= 0 ? 'success' : 'danger'],
             ['label' => 'Faktiki xərc', 'value' => $d->sum('expense'), 'money' => true, 'tone' => 'danger'],
             ['label' => 'Daxilolma', 'value' => $d->sum('income'), 'money' => true, 'tone' => 'success'],
             ['label' => 'Büdcəni aşan layihə', 'value' => $d->filter(fn ($r) => $r['used'] !== null && $r['used'] > 100)->count(), 'tone' => 'danger'],

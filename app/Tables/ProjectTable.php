@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 class ProjectTable extends Table
 {
-    protected array $searchable = ['code', 'name', 'counterparty.name'];
+    protected array $searchable = ['code', 'name', 'counterparty.name', 'supplier.name'];
 
     protected array $sortable = ['updated' => 'updated_at', 'code' => 'code', 'name' => 'name', 'end' => 'end_date', 'budget' => 'budget'];
 
@@ -20,7 +20,7 @@ class ProjectTable extends Table
     protected function baseQuery(): Builder
     {
         return Project::query()
-            ->with(['counterparty:id,name', 'manager:id,name,email', 'members:id,name,email'])
+            ->with(['counterparty:id,name', 'supplier:id,name', 'saleContract:id,number,amount_azn', 'purchaseContract:id,number,amount_azn', 'manager:id,name,email', 'members:id,name,email'])
             ->withCount(['tasks', 'tasks as done_tasks_count' => fn ($q) => $q->where('status', 'done'),
                 'tasks as overdue_tasks_count' => fn ($q) => $q->where('status', '!=', 'done')->where('due_date', '<', today()->toDateString())]);
     }
@@ -46,7 +46,8 @@ class ProjectTable extends Table
             $query->where('manager_id', $r->integer('manager_id'));
         }
         if ($r->filled('counterparty_id')) {
-            $query->where('counterparty_id', $r->integer('counterparty_id'));
+            $id = $r->integer('counterparty_id');
+            $query->where(fn ($w) => $w->where('counterparty_id', $id)->orWhere('supplier_id', $id));
         }
         if ($r->query('mine')) {
             $id = $r->user()->id;
@@ -59,7 +60,13 @@ class ProjectTable extends Table
         return [
             Column::make('Kod', 'code'),
             Column::make('Ad', 'name', width: 34),
-            Column::make('Müştəri', 'counterparty.name'),
+            Column::make('Alan tərəf', 'counterparty.name'),
+            Column::make('Satış müqaviləsi', 'saleContract.number'),
+            Column::make('Satış (AZN)', 'saleContract.amount_azn', 'money', total: true),
+            Column::make('Göndərən tərəf', 'supplier.name'),
+            Column::make('Alış müqaviləsi', 'purchaseContract.number'),
+            Column::make('Alış (AZN)', 'purchaseContract.amount_azn', 'money', total: true),
+            Column::make('Marja (AZN)', fn ($p) => $p->contractMargin()['margin'], 'money', total: true),
             Column::make('Menecer', 'manager.name'),
             Column::make('Status', fn ($p) => status_label('project', $p->status)),
             Column::make('Prioritet', fn ($p) => status_label('priority', $p->priority)),

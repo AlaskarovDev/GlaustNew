@@ -42,7 +42,13 @@
                         </div>
                         <x-status group="project" :value="$p->status"/>
                     </div>
-                    <div class="mt-1 text-sm text-muted truncate">{{ $p->counterparty?->name ?? 'Daxili layihə' }}</div>
+                    <div class="mt-1 text-sm text-muted truncate">
+                        @if($p->counterparty || $p->supplier)
+                            {{ $p->supplier?->name ?? '—' }} <span class="text-faint">→</span> {{ $p->counterparty?->name ?? '—' }}
+                        @else
+                            Daxili layihə
+                        @endif
+                    </div>
 
                     <div class="mt-5">
                         <div class="flex items-center justify-between text-xs mb-1.5">

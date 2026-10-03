@@ -186,12 +186,21 @@ class DemoCommand extends Command
                 'kind' => $sale ? 'sale' : 'purchase', 'subject' => $sale ? 'Xidmətlərin göstərilməsi — '.$projects[$i % 10]->name : 'Avadanlıq və materialların tədarükü',
                 'amount' => $amount, 'currency' => $currency, 'cbar_rate' => $rate, 'rate_date' => $date->toDateString(), 'amount_azn' => round($amount * $rate, 2),
                 'start_date' => $date->toDateString(), 'end_date' => $end->toDateString(), 'status' => $i === 14 ? 'draft' : ($i === 13 ? 'completed' : 'active'),
-                'project_id' => $sale ? $projects[$i % 10]->id : null, 'responsible_id' => $users[$sale ? 1 : 2]->id, 'payment_terms' => '30% avans, qalan hissə təhvildən sonra 15 gün ərzində',
+                'project_id' => $projects[$i % 10]->id, 'responsible_id' => $users[$sale ? 1 : 2]->id, 'payment_terms' => '30% avans, qalan hissə təhvildən sonra 15 gün ərzində',
                 'auto_renew' => $i % 5 === 0,
             ]);
             $contract->payments()->create(['due_date' => $date->addDays(5)->toDateString(), 'amount' => round($amount * 0.3, 2), 'note' => 'Avans', 'paid_at' => $date->addDays(5)->isPast() ? $date->addDays(5) : null]);
             $contract->payments()->create(['due_date' => $today->addDays(mt_rand(-5, 20))->toDateString(), 'amount' => round($amount * 0.7, 2), 'note' => 'Yekun ödəniş']);
             $contracts->push($contract);
+        }
+
+        // Each project's buyer side takes its first sale contract, supplier side its first purchase contract.
+        foreach ($contracts->where('status', '!=', 'draft')->sortBy('contract_date') as $c) {
+            $p = $projects->firstWhere('id', $c->project_id);
+            [$slot, $party] = $c->kind === 'sale' ? ['sale_contract_id', 'counterparty_id'] : ['purchase_contract_id', 'supplier_id'];
+            if ($p && ! $p->{$slot} && (! $p->{$party} || $p->{$party} === $c->counterparty_id)) {
+                $p->update([$slot => $c->id, $party => $c->counterparty_id]);
+            }
         }
 
         // Bank transactions (~200)

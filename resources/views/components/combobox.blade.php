@@ -1,10 +1,10 @@
-@props(['name', 'url', 'value' => null, 'display' => null, 'label' => null, 'placeholder' => 'Seçin…', 'required' => false, 'hint' => null, 'wrapper' => ''])
+@props(['name', 'url', 'value' => null, 'display' => null, 'label' => null, 'placeholder' => 'Seçin…', 'required' => false, 'hint' => null, 'wrapper' => '', 'depends' => null, 'partyId' => null])
 @php
     $errorKey = str_replace(['[', ']'], ['.', ''], $name);
     $value = old($errorKey, $value);
 @endphp
 <x-field :label="$label" :name="$name" :hint="$hint" :required="$required" :class="$wrapper" :for="$name.'-button'">
-    <div x-data="combobox({ name: @js($name), url: @js($url), value: @js($value), label: @js($display) })" class="relative" @keydown.escape="open = false" @click.outside="open = false" {{ $attributes }}>
+    <div x-data="combobox({ name: @js($name), url: @js($url), value: @js($value), label: @js($display), depends: @js($depends), partyId: @js($partyId) })" class="relative" @keydown.escape="open = false" @click.outside="open = false" {{ $attributes }}>
         <input type="hidden" name="{{ $name }}" :value="value">
         <div @class(['input flex items-center gap-1 !px-0', 'is-invalid' => $errors->has($errorKey)])>
             <button type="button" id="{{ $name }}-button" @click="open = !open" :aria-expanded="open" aria-haspopup="listbox"

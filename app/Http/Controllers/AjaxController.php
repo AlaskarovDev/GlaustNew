@@ -111,9 +111,18 @@ class AjaxController extends Controller
                 : collect(),
             'contracts' => Contract::with('counterparty')
                 ->when($request->integer('counterparty_id'), fn ($w, $id) => $w->where('counterparty_id', $id))
+                ->when(in_array($request->query('kind'), ['sale', 'purchase'], true), fn ($w) => $w->where('kind', $request->query('kind')))
                 ->when($q !== '', fn ($w) => $w->where(fn ($x) => $x->where('number', 'like', $like)->orWhere('subject', 'like', $like)))
-                ->latest('contract_date')->limit(15)->get()
-                ->map(fn ($c) => ['id' => $c->id, 'label' => $c->number, 'meta' => $c->counterparty?->name.' · '.$c->currency]),
+                ->whereNotIn('status', ['cancelled'])
+                ->latest('contract_date')->limit(20)->get()
+                ->map(fn ($c) => [
+                    'id' => $c->id,
+                    'label' => $c->number.' · '.$c->subject,
+                    'meta' => $c->counterparty?->name.' · '.money($c->amount, $c->currency).' · '.status_label('contract', $c->status),
+                    'party_id' => $c->counterparty_id,
+                    'party' => $c->counterparty?->name,
+                    'party_type' => $c->counterparty?->type,
+                ]),
             'projects' => Project::when($q !== '', fn ($w) => $w->where(fn ($x) => $x->where('name', 'like', $like)->orWhere('code', 'like', $like)))
                 ->whereNotIn('status', ['cancelled'])->latest()->limit(15)->get()
                 ->map(fn ($p) => ['id' => $p->id, 'label' => $p->name, 'meta' => $p->code]),

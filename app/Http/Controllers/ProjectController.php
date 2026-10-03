@@ -64,7 +64,7 @@ class ProjectController extends Controller
 
     public function show(Request $request, Project $project, CurrencyRates $rates): View
     {
-        $project->load(['counterparty', 'contract', 'manager', 'members', 'milestones' => fn ($q) => $q->withCount(['tasks', 'tasks as done_tasks_count' => fn ($t) => $t->where('status', 'done')]), 'attachments.uploader']);
+        $project->load(['counterparty', 'supplier', 'saleContract.payments', 'saleContract.counterparty', 'purchaseContract.payments', 'purchaseContract.counterparty', 'manager', 'members', 'milestones' => fn ($q) => $q->withCount(['tasks', 'tasks as done_tasks_count' => fn ($t) => $t->where('status', 'done')]), 'attachments.uploader']);
         $tab = in_array($request->query('tab'), ['overview', 'board', 'finance', 'files'], true) ? $request->query('tab') : 'overview';
 
         $tasks = $project->tasks()->with('assignee:id,name,email')
@@ -91,15 +91,21 @@ class ProjectController extends Controller
             ];
         }
 
+        // Money actually moved under each side's contract (bank, AZN).
+        $settled = [];
+        foreach (['sale' => $project->saleContract, 'purchase' => $project->purchaseContract] as $side => $c) {
+            $settled[$side] = $c ? $c->settledAzn() : 0.0;
+        }
+
         $history = AuditLog::with('user')->where('auditable_type', 'project')->where('auditable_id', $project->id)->latest('created_at')->limit(20)->get();
 
-        return view('projects.show', compact('project', 'tab', 'tasks', 'stats', 'finance', 'history'));
+        return view('projects.show', compact('project', 'tab', 'tasks', 'stats', 'finance', 'history', 'settled'));
     }
 
     public function edit(Project $project): View
     {
         $this->authorize('projects.update');
-        $project->load('counterparty', 'contract');
+        $project->load('counterparty', 'supplier', 'saleContract', 'purchaseContract');
 
         return view('projects.form', ['project' => $project, 'memberIds' => $project->members()->pluck('users.id')->all()]);
     }
@@ -159,7 +165,9 @@ class ProjectController extends Controller
             'code' => ['required', 'string', 'max:32', Rule::unique('projects', 'code')->where('company_id', tenant()->id)->ignore($project?->id)],
             'name' => ['required', 'string', 'max:190'],
             'counterparty_id' => ['nullable', 'integer', TenantExists::in('counterparties')],
-            'contract_id' => ['nullable', 'integer', TenantExists::in('contracts')],
+            'supplier_id' => ['nullable', 'integer', TenantExists::in('counterparties')],
+            'sale_contract_id' => ['nullable', 'integer', TenantExists::in('contracts')],
+            'purchase_contract_id' => ['nullable', 'integer', TenantExists::in('contracts')],
             'manager_id' => ['nullable', 'integer', TenantExists::plain('users')],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
@@ -170,7 +178,13 @@ class ProjectController extends Controller
             'description' => ['nullable', 'string', 'max:10000'],
             'members' => ['nullable', 'array'],
             'members.*' => ['integer', TenantExists::plain('users')],
-        ], ['code.unique' => 'Bu kodla layihə artıq var.'], ['code' => 'Layihə kodu', 'manager_id' => 'Menecer', 'members.*' => 'Komanda üzvü']);
+        ], ['code.unique' => 'Bu kodla layihə artıq var.'], [
+            'code' => 'Layihə kodu', 'manager_id' => 'Menecer', 'members.*' => 'Komanda üzvü',
+            'counterparty_id' => 'Məhsulu alan tərəf', 'supplier_id' => 'Məhsulu göndərən tərəf',
+            'sale_contract_id' => 'Alan tərəflə müqavilə', 'purchase_contract_id' => 'Göndərən tərəflə müqavilə',
+        ]);
+
+        $data = $this->checkSides($data);
 
         $members = array_map('intval', $data['members'] ?? []);
         if ($data['manager_id'] ?? null) {
@@ -179,6 +193,44 @@ class ProjectController extends Controller
         unset($data['members']);
 
         return [$data, array_values(array_unique($members))];
+    }
+
+    /**
+     * Buyer side takes a customer and one of ITS sale contracts; supplier side a supplier and
+     * one of ITS purchase contracts. A contract chosen without a party brings its party along.
+     */
+    private function checkSides(array $data): array
+    {
+        $sides = [
+            ['party' => 'counterparty_id', 'contract' => 'sale_contract_id', 'kind' => 'sale', 'role' => 'isCustomer',
+                'roleError' => 'Məhsulu alan tərəf CRM-də müştəri olmalıdır.',
+                'kindError' => 'Bu bölməyə yalnız satış müqaviləsi (müştəri ilə) seçilə bilər.'],
+            ['party' => 'supplier_id', 'contract' => 'purchase_contract_id', 'kind' => 'purchase', 'role' => 'isSupplier',
+                'roleError' => 'Məhsulu göndərən tərəf CRM-də təchizatçı olmalıdır.',
+                'kindError' => 'Bu bölməyə yalnız alış müqaviləsi (təchizatçı ilə) seçilə bilər.'],
+        ];
+
+        foreach ($sides as $s) {
+            if (! empty($data[$s['party']]) && ! \App\Models\Counterparty::find($data[$s['party']])?->{$s['role']}()) {
+                throw \Illuminate\Validation\ValidationException::withMessages([$s['party'] => $s['roleError']]);
+            }
+            if (empty($data[$s['contract']])) {
+                continue;
+            }
+            $contract = \App\Models\Contract::findOrFail($data[$s['contract']]);
+            if ($contract->kind !== $s['kind']) {
+                throw \Illuminate\Validation\ValidationException::withMessages([$s['contract'] => $s['kindError']]);
+            }
+            if (empty($data[$s['party']])) {
+                $data[$s['party']] = $contract->counterparty_id;
+            } elseif ((int) $data[$s['party']] !== $contract->counterparty_id) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    $s['contract'] => "Müqavilə {$contract->number} seçilmiş tərəfə deyil, «{$contract->counterparty?->name}» ilə bağlanıb.",
+                ]);
+            }
+        }
+
+        return $data;
     }
 
     public static function teamOptions(): array

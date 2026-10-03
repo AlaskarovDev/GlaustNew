@@ -53,6 +53,15 @@ class ContractController extends Controller
             $contract->setRelation('counterparty', $cp);
             $contract->kind = $cp->isCustomer() ? 'sale' : 'purchase';
         }
+        // Opened from a project's buyer / supplier section.
+        if ($project = \App\Models\Project::find($request->integer('project_id'))) {
+            $contract->project_id = $project->id;
+            $contract->setRelation('project', $project);
+            if (in_array($request->query('kind'), ['sale', 'purchase'], true)) {
+                $contract->kind = $request->query('kind');
+                $contract->subject = ($contract->kind === 'sale' ? 'Məhsulun satışı — ' : 'Məhsulun alışı — ').$project->name;
+            }
+        }
         if ($parent = Contract::find($request->integer('parent_id'))) {
             $contract->fill(['parent_id' => $parent->id, 'counterparty_id' => $parent->counterparty_id, 'kind' => $parent->kind, 'currency' => $parent->currency, 'project_id' => $parent->project_id]);
             $contract->setRelation('counterparty', $parent->counterparty);
@@ -69,6 +78,7 @@ class ContractController extends Controller
             [$data, $payments] = $this->validated($request);
             $contract = Contract::create($data);
             $this->syncPayments($contract, $payments);
+            $this->fillProjectSlot($contract);
 
             return $contract;
         });
@@ -106,6 +116,7 @@ class ContractController extends Controller
             [$data, $payments] = $this->validated($request, $contract);
             $contract->update($data);
             $this->syncPayments($contract, $payments);
+            $this->fillProjectSlot($contract);
         });
 
         return redirect()->route('contracts.show', $contract)->with('success', 'Müqavilə yeniləndi.');
@@ -135,6 +146,23 @@ class ContractController extends Controller
         $contract->load(['counterparty.contacts', 'project', 'responsible', 'payments', 'amendments']);
 
         return $pdf->render('contracts.pdf', ['contract' => $contract, 'title' => 'Müqavilə '.$contract->number], 'muqavile-'.$contract->number.'.pdf', false, true);
+    }
+
+    /**
+     * A contract tied to a project fills that project's empty buyer (sale) or supplier
+     * (purchase) slot, so creating it from the project page links it in one step.
+     */
+    private function fillProjectSlot(Contract $contract): void
+    {
+        $project = $contract->project_id ? \App\Models\Project::find($contract->project_id) : null;
+        if (! $project) {
+            return;
+        }
+        [$slot, $party] = $contract->kind === 'sale' ? ['sale_contract_id', 'counterparty_id'] : ['purchase_contract_id', 'supplier_id'];
+        if ($project->{$slot} || ($project->{$party} && $project->{$party} !== $contract->counterparty_id)) {
+            return; // slot taken, or the project names another party on that side
+        }
+        $project->update([$slot => $contract->id, $party => $contract->counterparty_id]);
     }
 
     /** @return array{0: array, 1: array} */

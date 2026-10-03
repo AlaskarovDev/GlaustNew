@@ -311,24 +311,45 @@ Alpine.directive('chart', (el, { expression }, { evaluate, cleanup }) => {
 });
 
 /* ---------- searchable remote select ---------- */
+// cfg.depends: name of another combobox (the party). Its value filters this list
+// (&counterparty_id=...); picking an item that carries party_id fills that combobox;
+// switching the party to someone else clears a now-foreign selection.
 Alpine.data('combobox', (cfg) => ({
     open: false, query: '', items: [], active: 0, loading: false, timer: null,
-    value: cfg.value ?? '', label: cfg.label ?? '',
-    init() { this.$watch('open', (o) => { if (o) { this.query = ''; this.fetch(); this.$nextTick(() => this.$refs.q?.focus()); } }); window.addEventListener('combobox:set:' + cfg.name, (e) => this.pick(e.detail)); },
+    value: cfg.value ?? '', label: cfg.label ?? '', partyId: cfg.partyId ?? null,
+    init() {
+        this.$watch('open', (o) => { if (o) { this.query = ''; this.fetch(); this.$nextTick(() => this.$refs.q?.focus()); } });
+        window.addEventListener('combobox:set:' + cfg.name, (e) => this.pick(e.detail));
+        if (cfg.depends) {
+            window.addEventListener('combobox-change', (e) => {
+                if (e.detail.name !== cfg.depends || !this.value) return;
+                const party = e.detail.item?.id ?? null;
+                if (party !== null && this.partyId !== null && String(party) !== String(this.partyId)) this.pick(null);
+            });
+        }
+    },
+    dependsValue() {
+        return cfg.depends ? (document.querySelector(`input[type=hidden][name="${cfg.depends}"]`)?.value || '') : '';
+    },
     fetch() {
         clearTimeout(this.timer);
         this.timer = setTimeout(async () => {
             this.loading = true;
             try {
                 const sep = cfg.url.includes('?') ? '&' : '?';
-                this.items = (await api(cfg.url + sep + 'q=' + encodeURIComponent(this.query))).results;
+                const party = this.dependsValue();
+                this.items = (await api(cfg.url + sep + 'q=' + encodeURIComponent(this.query) + (party ? '&counterparty_id=' + encodeURIComponent(party) : ''))).results;
                 this.active = 0;
             } catch { this.items = []; } finally { this.loading = false; }
         }, 180);
     },
     pick(item) {
         this.value = item ? item.id : ''; this.label = item ? item.label : ''; this.open = false;
+        this.partyId = item?.party_id ?? null;
         this.$dispatch('combobox-change', { name: cfg.name, item });
+        if (cfg.depends && item?.party_id && String(this.dependsValue()) !== String(item.party_id)) {
+            window.dispatchEvent(new CustomEvent('combobox:set:' + cfg.depends, { detail: { id: item.party_id, label: item.party, type: item.party_type } }));
+        }
     },
     move(d) { const n = this.items.length; if (n) this.active = (this.active + d + n) % n; },
 }));

@@ -27,9 +27,39 @@ class Project extends Model
         return $this->belongsTo(Counterparty::class)->withTrashed();
     }
 
-    public function contract(): BelongsTo
+    /** Buyer side ("məhsulu alan tərəf"): counterparty_id + its sale contract. */
+    public function saleContract(): BelongsTo
     {
-        return $this->belongsTo(Contract::class);
+        return $this->belongsTo(Contract::class, 'sale_contract_id')->withTrashed();
+    }
+
+    /** Supplier side ("məhsulu göndərən tərəf"). */
+    public function supplier(): BelongsTo
+    {
+        return $this->belongsTo(Counterparty::class, 'supplier_id')->withTrashed();
+    }
+
+    public function purchaseContract(): BelongsTo
+    {
+        return $this->belongsTo(Contract::class, 'purchase_contract_id')->withTrashed();
+    }
+
+    /**
+     * Gross margin from the two contracts, in AZN at each contract's CBAR rate:
+     * ['sale' => ?float, 'purchase' => ?float, 'margin' => ?float, 'percent' => ?float].
+     */
+    public function contractMargin(): array
+    {
+        $sale = $this->saleContract?->amount_azn !== null ? (float) $this->saleContract->amount_azn : null;
+        $purchase = $this->purchaseContract?->amount_azn !== null ? (float) $this->purchaseContract->amount_azn : null;
+        $margin = $sale !== null && $purchase !== null ? round($sale - $purchase, 2) : null;
+
+        return [
+            'sale' => $sale,
+            'purchase' => $purchase,
+            'margin' => $margin,
+            'percent' => $margin !== null && $sale > 0 ? round($margin / $sale * 100, 1) : null,
+        ];
     }
 
     public function manager(): BelongsTo

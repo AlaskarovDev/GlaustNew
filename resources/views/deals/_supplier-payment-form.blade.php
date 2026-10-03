@@ -56,7 +56,7 @@
         <input type="hidden" name="direction" value="out">
         <div class="grid xl:grid-cols-[minmax(0,1fr)_400px] gap-6">
             <div class="space-y-5 min-w-0">
-                <div class="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
+                <div class="grid md:grid-cols-2 gap-4">
                     <div>
                         <span class="field-label">Kimə</span>
                         <div class="input flex items-center gap-2 bg-surface-2 text-ink" aria-readonly="true"><x-icon name="building" class="size-4 text-muted shrink-0"/><span class="truncate">{{ $deal->supplier?->name ?? 'Satıcı seçilməyib' }}</span></div>
@@ -91,11 +91,12 @@
                 <div class="px-4 py-3 bg-surface-2/60 border-b border-line">
                     <div class="text-xs text-muted">CBAR kursu · <span x-text="date ? date.split('-').reverse().join('.') : '—'"></span></div>
                     <div class="font-mono font-semibold mt-0.5"><span x-show="loading" class="text-faint">yüklənir…</span>
-                        <span x-show="!loading && cross()">1 <span x-text="cur"></span> = <span x-text="rf(cross())"></span> <span x-text="accCur()"></span></span></div>
+                        <span x-show="!loading && cross() && !same()">1 <span x-text="cur"></span> = <span x-text="rf(cross())"></span> <span x-text="accCur()"></span></span>
+                        <span x-show="!loading && same()" class="font-sans text-sm font-normal text-muted">Hesab <span x-text="cur"></span> valyutasındadır — çevirmə yoxdur</span></div>
                     <div class="text-[11px] text-danger" x-show="error" x-text="error"></div>
                 </div>
                 <dl class="px-4 py-3 space-y-2 text-sm">
-                    <div class="flex justify-between gap-3"><dt class="text-muted">CBAR ilə hesabdan</dt><dd class="font-mono" x-text="accCbar() !== null ? fmt(accCbar()) + ' ' + accCur() : '—'"></dd></div>
+                    <div class="flex justify-between gap-3" x-show="!same()"><dt class="text-muted">CBAR ilə hesabdan</dt><dd class="font-mono" x-text="accCbar() !== null ? fmt(accCbar()) + ' ' + accCur() : '—'"></dd></div>
                 </dl>
                 <div class="px-4 pb-3" x-show="accCur() && !same()">
                     <label class="field-label" for="sp-rate">Bankın kursu: 1 <span x-text="cur"></span> = ? <span x-text="accCur()"></span> <span class="text-danger">*</span></label>

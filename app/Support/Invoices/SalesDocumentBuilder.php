@@ -39,7 +39,7 @@ class SalesDocumentBuilder
         $created = [];
         DB::transaction(function () use ($invoice, &$created) {
             $existing = SalesDocument::where('source_invoice_id', $invoice->id)->pluck('kind')->all();
-            foreach (array_keys(SalesDocument::KINDS) as $kind) {
+            foreach (SalesDocument::AUTO_KINDS as $kind) {
                 if (! in_array($kind, $existing, true)) {
                     $created[] = $this->create($invoice, $kind);
                 }
@@ -92,6 +92,61 @@ class SalesDocumentBuilder
         $key = fn (array $lines) => array_map(fn ($l) => [(int) $l['n'], round((float) $l['quantity'], 3), round((float) $l['unit_price'], 2)], $lines);
 
         return $key($this->computedLines($invoice, $doc->kind)) !== $key($doc->lines ?? []);
+    }
+
+    /**
+     * The commercial invoice (INVOICE sheet): issued once the invoice is approved. Lines come from
+     * the specification — the version adjusted by hand (units, quantities, prices) — in English
+     * units; header blocks and terms from the proforma. Read-only from then on.
+     */
+    public function issueCommercial(Invoice $invoice): SalesDocument
+    {
+        $existing = SalesDocument::where('source_invoice_id', $invoice->id)->where('kind', 'commercial')->first();
+        if ($existing) {
+            return $existing;
+        }
+        $docs = SalesDocument::where('source_invoice_id', $invoice->id)->get()->keyBy('kind');
+        $proforma = $docs->get('proforma');
+        $base = $docs->get('specification') ?? $proforma;
+        if (! $proforma || ! $base) {
+            throw new \RuntimeException('Proforma faktura tapılmadı.');
+        }
+        $lines = array_map(fn ($l) => ['uom' => $this->enUnit((string) ($l['uom'] ?? ''))] + $l, $base->lines);
+        $date = today();
+        $n = SalesDocument::withTrashed()->where('kind', 'commercial')->count() + 1;
+
+        return SalesDocument::create([
+            'deal_id' => $proforma->deal_id,
+            'project_id' => $proforma->project_id,
+            'source_invoice_id' => $invoice->id,
+            'kind' => 'commercial',
+            'number' => 'I'.$n.'/'.$date->format('dm'),
+            'doc_date' => $date,
+            'contract_number' => $proforma->contract_number,
+            'contract_date' => $proforma->contract_date,
+            'counterparty_id' => $proforma->counterparty_id,
+            'currency' => $proforma->currency,
+            'heading' => $proforma->heading,
+            'seller_block' => $proforma->seller_block,
+            'customer_block' => $proforma->customer_block,
+            'payment_terms' => $proforma->payment_terms,
+            'delivery_terms' => $proforma->delivery_terms,
+            'freight' => $proforma->freight,
+            'insurance' => $proforma->insurance,
+            'notes' => $proforma->notes,
+            'lines' => $lines,
+            'total' => $this->total($lines, $proforma->freight, $proforma->insurance),
+            'created_by' => auth()->id(),
+            'updated_by' => auth()->id(),
+        ]);
+    }
+
+    /** Russian unit back to the English one used on the invoice (кг -> kg, м2 -> qm). */
+    public function enUnit(string $uom): string
+    {
+        $map = ['кг' => 'kg', 'г' => 'g', 'т' => 't', 'м2' => 'qm', 'м²' => 'qm', 'м' => 'm', 'м3' => 'm3', 'л' => 'l', 'шт' => 'pcs', 'компл' => 'set', 'рул' => 'roll'];
+
+        return $map[mb_strtolower(trim($uom))] ?? $uom;
     }
 
     public function ruUnit(string $uom): string

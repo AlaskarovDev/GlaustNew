@@ -60,7 +60,7 @@
         </div>
     @endif
 
-    @can('projects.update')
+    @if(auth()->user()->can('projects.update') && ! $invoice->isLocked())
         <form method="POST" action="{{ route('invoices.logistics', $invoice) }}" x-show="editing" x-collapse {{ $invoice->hasLogistics() && ! $failed ? 'x-cloak' : '' }} class="step-form">
             @csrf
             <input type="hidden" name="logistics_method" :value="method">
@@ -152,5 +152,5 @@
                 </form>
             </footer>
         @endif
-    @endcan
+    @endif
 </section>

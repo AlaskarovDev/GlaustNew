@@ -28,7 +28,7 @@
         </div>
     @endif
 
-    @can('projects.update')
+    @if(auth()->user()->can('projects.update') && ! $invoice->isLocked())
         <form method="POST" action="{{ route('invoices.commission', $invoice) }}" x-show="editing" x-collapse {{ $invoice->hasCommission() && ! $failed ? 'x-cloak' : '' }} class="step-form">
             @csrf
             <div class="space-y-1.5">
@@ -54,5 +54,5 @@
                 </form>
             </footer>
         @endif
-    @endcan
+    @endif
 </section>

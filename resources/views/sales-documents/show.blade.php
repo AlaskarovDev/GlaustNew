@@ -1,6 +1,6 @@
 @php
     $pf = $doc->isProforma();
-    $canEdit = auth()->user()->can('projects.update');
+    $canEdit = auth()->user()->can('projects.update') && ! $doc->isLocked();
     $linesData = collect(old('lines', $doc->lines))->map(fn ($l) => [
         'description' => (string) ($l['description'] ?? ''), 'hs_code' => (string) ($l['hs_code'] ?? ''), 'uom' => (string) ($l['uom'] ?? ''),
         'quantity' => isset($l['quantity']) && $l['quantity'] !== '' ? (string) (is_numeric($l['quantity']) ? (float) $l['quantity'] : $l['quantity']) : '',
@@ -20,6 +20,16 @@
         </x-slot:actions>
     </x-page-header>
 
+    @if($doc->isLocked())
+        <div class="lock-banner mb-4" role="alert">
+            <span class="lock-pulse" aria-hidden="true"></span>
+            <x-icon name="lock" class="size-5 shrink-0"/>
+            <div class="flex-1 min-w-[220px]">
+                <div class="font-semibold">{{ $doc->kind === 'commercial' ? 'Kommersiya fakturası — təsdiqdən sonra yaradılıb, dəyişdirilmir' : 'Sənəddə düzəliş əməliyyatlarına icazə dayandırılıb' }}</div>
+                <div class="text-xs opacity-80">{{ $doc->sourceInvoice?->isApproved() ? 'Faktura '.$doc->sourceInvoice->number.' təsdiqlənib.' : 'Faktura '.$doc->sourceInvoice?->number.' təsdiqdədir.' }} PDF yükləmək mümkündür.</div>
+            </div>
+        </div>
+    @else
     <div class="rounded-xl border border-brand/25 bg-brand-soft/50 px-4 py-3 mb-4 flex flex-wrap items-start gap-3 text-sm">
         <x-icon name="pencil" class="size-4 text-brand-ink mt-0.5 shrink-0"/>
         <div class="flex-1 min-w-[220px]">
@@ -28,6 +38,7 @@
         </div>
         <span class="text-xs text-muted">Son dəyişiklik: {{ azdate($doc->updated_at, true) }}{{ $doc->editor ? ' · '.$doc->editor->name : '' }}</span>
     </div>
+    @endif
 
     @if($stale && $canEdit)
         <div class="rounded-xl border border-saffron/40 bg-saffron-soft/50 px-4 py-3 mb-4 flex flex-wrap items-center gap-3 text-sm" role="status">
@@ -220,9 +231,9 @@
                     <x-icon name="chevron-right" class="size-4 text-muted"/>
                 </a>
             @endif
-            @can('projects.delete')
+            @if(auth()->user()->can('projects.delete') && ! $doc->isLocked())
                 <x-delete-form :action="route('sales-documents.destroy', $doc)" :label="$doc->title().' sil'" button="btn btn-ghost w-full text-danger hover:!bg-danger-soft" :message="$doc->title().' '.$doc->number.' silinəcək. Fakturadan yenidən yaratmaq olar.'"/>
-            @endcan
+            @endif
         </div>
     </div>
 </x-layouts.app>

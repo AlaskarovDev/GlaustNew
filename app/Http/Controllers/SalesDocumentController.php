@@ -37,6 +37,9 @@ class SalesDocumentController extends Controller
     public function update(Request $request, SalesDocument $document, SalesDocumentBuilder $builder): RedirectResponse
     {
         $this->authorize('projects.update');
+        if ($document->isLocked()) {
+            return back()->with('error', $document->kind === 'commercial' ? 'Kommersiya fakturası təsdiqdən sonra yaradılıb və dəyişdirilmir.' : 'Faktura təsdiqdədir və ya təsdiqlənib — sənəddə düzəliş əməliyyatlarına icazə dayandırılıb.');
+        }
         $lines = array_values(array_filter((array) $request->input('lines', []), fn ($l) => is_array($l) && trim(implode('', array_map('strval', $l))) !== ''));
         foreach ($lines as &$l) {
             $l['quantity'] = parse_number($l['quantity'] ?? null);
@@ -91,6 +94,9 @@ class SalesDocumentController extends Controller
     public function refresh(SalesDocument $document, SalesDocumentBuilder $builder): RedirectResponse
     {
         $this->authorize('projects.update');
+        if ($document->isLocked()) {
+            return back()->with('error', $document->kind === 'commercial' ? 'Kommersiya fakturası təsdiqdən sonra yaradılıb və dəyişdirilmir.' : 'Faktura təsdiqdədir və ya təsdiqlənib — sənəddə düzəliş əməliyyatlarına icazə dayandırılıb.');
+        }
         try {
             $builder->refreshLines($document);
         } catch (\RuntimeException $e) {
@@ -111,7 +117,7 @@ class SalesDocumentController extends Controller
                 $logo = 'data:'.$mime.';base64,'.base64_encode(Storage::disk('local')->get($company->logo_path));
             }
         }
-        $name = ($document->isProforma() ? 'Proforma ' : 'Specification ').Str::slug($document->number).'.pdf';
+        $name = ['proforma' => 'Proforma ', 'specification' => 'Specification ', 'commercial' => 'Commercial Invoice '][$document->kind].Str::slug($document->number).'.pdf';
 
         return $pdf->render('pdf.'.$document->kind, ['doc' => $document, 'logo' => $logo], $name, false, $request->boolean('inline'));
     }
@@ -119,6 +125,9 @@ class SalesDocumentController extends Controller
     public function destroy(SalesDocument $document): RedirectResponse
     {
         $this->authorize('projects.delete');
+        if ($document->isLocked()) {
+            return back()->with('error', $document->kind === 'commercial' ? 'Kommersiya fakturası təsdiqdən sonra yaradılıb və dəyişdirilmir.' : 'Faktura təsdiqdədir və ya təsdiqlənib — sənəddə düzəliş əməliyyatlarına icazə dayandırılıb.');
+        }
         $deal = $document->deal_id;
         $document->delete();
 

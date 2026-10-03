@@ -65,6 +65,33 @@ class SettingsController extends Controller
         return back()->with('success', 'Şirkət məlumatları yeniləndi.');
     }
 
+    /** Təsdiq axını: who approves a calculated invoice, in which order. */
+    public function approvals(): View
+    {
+        return view('settings.approvals', [
+            'company' => tenant(),
+            'users' => \App\Models\User::forTenant()->where('is_active', true)->orderBy('name')->get(['id', 'name', 'position', 'email']),
+            'steps' => array_values((array) tenant()->setting('approval_flow', [])),
+        ]);
+    }
+
+    public function updateApprovals(Request $request): RedirectResponse
+    {
+        $steps = array_values(array_filter((array) $request->input('steps', []), fn ($s) => ! empty($s['user_id'])));
+        $request->merge(['steps' => $steps]);
+        $data = $request->validate([
+            'steps' => ['array', 'max:10'],
+            'steps.*.user_id' => ['required', 'integer', 'distinct', \App\Rules\TenantExists::plain('users')],
+            'steps.*.title' => ['nullable', 'string', 'max:80'],
+        ], ['steps.*.user_id.distinct' => 'Eyni şəxs axında iki dəfə ola bilməz.'], ['steps.*.user_id' => 'Təsdiqləyən şəxs']);
+
+        $company = tenant();
+        $company->putSetting('approval_flow', array_map(fn ($s) => ['user_id' => (int) $s['user_id'], 'title' => trim((string) ($s['title'] ?? ''))], $data['steps'] ?? []));
+        $company->save();
+
+        return back()->with('success', count($data['steps'] ?? []) ? 'Təsdiq axını yadda saxlanıldı ('.count($data['steps']).' addım).' : 'Təsdiq axını təmizləndi.');
+    }
+
     public function general(): View
     {
         return view('settings.general', ['company' => tenant()]);

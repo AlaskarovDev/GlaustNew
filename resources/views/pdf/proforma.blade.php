@@ -1,5 +1,7 @@
-{{-- Proforma Invoice (EN), laid out like the company's own PROFORMA sheet. Rendered from the document's current state. --}}
+{{-- Proforma Invoice (EN), laid out like the company's own PROFORMA sheet; the commercial invoice (INVOICE sheet) reuses it. --}}
 @php
+    $docTitle ??= 'PROFORMA INVOICE';
+    $prefix ??= 'Proforma Inv.';
     $fmt = fn ($v) => number_format((float) $v, 2, '.', ',');
     $qty = fn ($v) => rtrim(rtrim(number_format((float) $v, 3, '.', ''), '0'), '.');
     $price = fn ($v) => rtrim(rtrim(number_format((float) $v, 2, '.', ''), '0'), '.');
@@ -11,7 +13,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Proforma Invoice {{ $doc->number }}</title>
+<title>{{ $docTitle }} {{ $doc->number }}</title>
 <style>
     @page { margin: 34px 40px 40px; }
     * { font-family: 'DejaVu Sans', sans-serif; }
@@ -50,10 +52,10 @@
             @if($logo)<img src="{{ $logo }}" class="logo" alt="">@endif
         </td>
         <td>
-            <div class="doc-title">PROFORMA INVOICE</div>
+            <div class="doc-title">{{ $docTitle }}</div>
             <table class="meta" style="width: 100%;">
-                <tr><td style="width: 70%;">Proforma Inv. Number:</td><td>{{ $doc->number }}</td></tr>
-                <tr><td>Proforma Inv. Date:</td><td>{{ $doc->doc_date->format('d/m/Y') }}</td></tr>
+                <tr><td style="width: 70%;">{{ $prefix }} Number:</td><td>{{ $doc->number }}</td></tr>
+                <tr><td>{{ $prefix }} Date:</td><td>{{ $doc->doc_date->format('d/m/Y') }}</td></tr>
                 @if($doc->contract_number)<tr><td>Contract N:</td><td>{{ $doc->contract_number }}</td></tr>@endif
                 @if($doc->contract_date)<tr><td>Cont. Date:</td><td>{{ $doc->contract_date }}</td></tr>@endif
             </table>

@@ -12,6 +12,7 @@ use App\Http\Controllers\CurrencyController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DealController;
 use App\Http\Controllers\DealPaymentController;
+use App\Http\Controllers\InvoiceApprovalController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\ImportController;
 use App\Http\Controllers\MyWorkController;
@@ -122,6 +123,9 @@ Route::middleware(['auth', 'tenant'])->group(function () {
         Route::post('/invoices/{invoice}/rub', [InvoiceController::class, 'rub'])->name('invoices.rub');
         Route::delete('/invoices/{invoice}/rub', [InvoiceController::class, 'clearRub'])->name('invoices.rub.clear');
         Route::post('/invoices/{invoice}/documents', [InvoiceController::class, 'documents'])->name('invoices.documents');
+        Route::post('/invoices/{invoice}/approval', [InvoiceApprovalController::class, 'submit'])->name('invoices.approval.submit');
+        Route::post('/invoices/{invoice}/approval/decide', [InvoiceApprovalController::class, 'decide'])->name('invoices.approval.decide');
+        Route::post('/invoices/{invoice}/approval/withdraw', [InvoiceApprovalController::class, 'withdraw'])->name('invoices.approval.withdraw');
         Route::delete('/invoices/{invoice}', [InvoiceController::class, 'destroy'])->name('invoices.destroy');
 
         // Buyer's documents (proforma, specification): generated, then editable, PDF from the current state
@@ -203,6 +207,8 @@ Route::middleware(['auth', 'tenant'])->group(function () {
             Route::get('/mail', [Settings\SettingsController::class, 'mail'])->name('mail');
             Route::put('/mail', [Settings\SettingsController::class, 'updateMail'])->middleware('can:settings.update')->name('mail.update');
             Route::post('/mail/test', [Settings\SettingsController::class, 'testMail'])->middleware('can:settings.update')->name('mail.test');
+            Route::get('/approvals', [Settings\SettingsController::class, 'approvals'])->name('approvals');
+            Route::put('/approvals', [Settings\SettingsController::class, 'updateApprovals'])->middleware('can:settings.update')->name('approvals.update');
             Route::get('/categories', [Settings\SettingsController::class, 'categories'])->name('categories');
             Route::post('/categories', [Settings\SettingsController::class, 'storeCategory'])->middleware('can:settings.update')->name('categories.store');
             Route::delete('/categories/{category}', [Settings\SettingsController::class, 'destroyCategory'])->middleware('can:settings.update')->name('categories.destroy');

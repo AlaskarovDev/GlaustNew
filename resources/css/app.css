@@ -135,6 +135,24 @@
     .step-meta { @apply text-xs text-muted mt-1 leading-relaxed; }
     .step-form { @apply px-5 pb-5 space-y-4; }
     .step-foot { @apply mt-auto flex items-center gap-2 px-5 py-3 border-t border-line; }
+    /* Locked invoice: red notice with a pulsing beacon (reduced motion: static) */
+    .lock-banner { @apply relative flex flex-wrap items-center gap-3 rounded-xl border border-danger/40 bg-danger-soft px-4 py-3 text-sm text-danger overflow-hidden; animation: lock-glow 2.4s ease-in-out infinite; }
+    .lock-banner::before { content: ''; @apply absolute inset-y-0 left-0 w-1 bg-danger; }
+    .lock-pulse { @apply relative size-2.5 shrink-0 rounded-full bg-danger; }
+    .lock-pulse::after { content: ''; @apply absolute inset-0 rounded-full bg-danger; animation: lock-ping 1.6s cubic-bezier(0, 0, .2, 1) infinite; }
+    @keyframes lock-ping { 75%, 100% { transform: scale(2.6); opacity: 0; } }
+    @keyframes lock-glow { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-danger) 0%, transparent); } 50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-danger) 18%, transparent); } }
+    @media (prefers-reduced-motion: reduce) { .lock-banner, .lock-pulse::after { animation: none; } }
+
+    /* Approval flow progress */
+    .approval-steps { @apply grid gap-2 sm:grid-cols-2 xl:grid-cols-4; }
+    .approval-step { @apply flex items-center gap-3 rounded-xl border border-line px-3 py-2.5 min-w-0; }
+    .approval-dot { @apply grid place-items-center size-8 shrink-0 rounded-full bg-surface-2 text-muted font-mono text-sm font-semibold; }
+    .approval-step.is-done { @apply border-success/30 bg-success-soft/40; }
+    .approval-step.is-done .approval-dot { @apply bg-success text-white; }
+    .approval-step.is-now { @apply border-saffron/50 bg-saffron-soft/50; }
+    .approval-step.is-now .approval-dot { @apply bg-saffron text-white; }
+
     /* Deal page: numbered tabs in the order of the work (invoices -> income -> logistics) */
     .deal-steps { @apply flex items-center gap-2 overflow-x-auto pb-1; }
     .deal-step { @apply flex items-center gap-2.5 h-11 pl-1.5 pr-4 rounded-full border border-line bg-surface text-sm text-ink-2 whitespace-nowrap; transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease, box-shadow 150ms ease; }

@@ -19,7 +19,9 @@
                             <td data-label="Sətir" class="num">{{ $inv->items_count }}</td>
                             <td data-label="Məbləğ" class="num">{{ money($inv->total, $inv->currency) }}</td>
                             <td data-label="AZN" class="num">{{ money($inv->total_azn) }}<div class="text-[11px] text-faint">{{ rate_fmt($inv->cbar_rate) }}</div></td>
-                            <td data-label="Status"><x-status group="invoice" :value="$inv->status"/></td>
+                            <td data-label="Status"><x-status group="invoice" :value="$inv->status"/>
+                                @if($inv->approval_status)@php [$al, $at] = \App\Models\Invoice::APPROVAL_STATUSES[$inv->approval_status]; @endphp<span class="badge badge-{{ $at }} ml-1">{{ $al }}</span>@endif
+                            </td>
                         </tr>
                     @endforeach
                     </tbody>

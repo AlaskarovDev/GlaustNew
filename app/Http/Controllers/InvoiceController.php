@@ -118,6 +118,9 @@ class InvoiceController extends Controller
     public function status(Request $request, Invoice $invoice): RedirectResponse
     {
         $this->authorize('projects.update');
+        if ($invoice->isLocked()) {
+            return back()->with('error', $this->lockedMessage($invoice));
+        }
         $data = $request->validate(['status' => ['required', Rule::in(array_keys(Invoice::STATUSES))]]);
         $invoice->update($data);
 
@@ -131,6 +134,9 @@ class InvoiceController extends Controller
     public function logistics(Request $request, Invoice $invoice, \App\Support\Invoices\LogisticsAllocator $allocator): RedirectResponse
     {
         $this->authorize('projects.update');
+        if ($invoice->isLocked()) {
+            return back()->with('error', $this->lockedMessage($invoice));
+        }
         if ($invoice->status === 'cancelled') {
             return back()->with('error', 'Ləğv edilmiş fakturaya xərc əlavə olunmur.');
         }
@@ -172,6 +178,9 @@ class InvoiceController extends Controller
     public function clearLogistics(Invoice $invoice, \App\Support\Invoices\LogisticsAllocator $allocator): RedirectResponse
     {
         $this->authorize('projects.update');
+        if ($invoice->isLocked()) {
+            return back()->with('error', $this->lockedMessage($invoice));
+        }
         $allocator->clear($invoice);
 
         return back()->with('success', 'Logistika xərci silindi.');
@@ -181,6 +190,9 @@ class InvoiceController extends Controller
     public function commission(Request $request, Invoice $invoice, \App\Support\Invoices\CommissionCalculator $calculator): RedirectResponse
     {
         $this->authorize('projects.update');
+        if ($invoice->isLocked()) {
+            return back()->with('error', $this->lockedMessage($invoice));
+        }
         if ($invoice->status === 'cancelled') {
             return back()->with('error', 'Ləğv edilmiş fakturaya komissiya tətbiq olunmur.');
         }
@@ -199,6 +211,9 @@ class InvoiceController extends Controller
     public function clearCommission(Invoice $invoice, \App\Support\Invoices\CommissionCalculator $calculator): RedirectResponse
     {
         $this->authorize('projects.update');
+        if ($invoice->isLocked()) {
+            return back()->with('error', $this->lockedMessage($invoice));
+        }
         $calculator->clear($invoice);
 
         return back()->with('success', 'Komissiya silindi.');
@@ -211,6 +226,9 @@ class InvoiceController extends Controller
     public function rub(Request $request, Invoice $invoice, \App\Support\Invoices\RubConverter $converter): RedirectResponse
     {
         $this->authorize('projects.update');
+        if ($invoice->isLocked()) {
+            return back()->with('error', $this->lockedMessage($invoice));
+        }
         if ($invoice->status === 'cancelled') {
             return back()->with('error', 'Ləğv edilmiş fakturada çevirmə edilmir.');
         }
@@ -235,9 +253,19 @@ class InvoiceController extends Controller
     public function clearRub(Invoice $invoice, \App\Support\Invoices\RubConverter $converter): RedirectResponse
     {
         $this->authorize('projects.update');
+        if ($invoice->isLocked()) {
+            return back()->with('error', $this->lockedMessage($invoice));
+        }
         $converter->clear($invoice);
 
         return back()->with('success', 'RUB çevirməsi silindi.');
+    }
+
+    private function lockedMessage(Invoice $invoice): string
+    {
+        return $invoice->isApproved()
+            ? 'Faktura təsdiqlənib — düzəliş əməliyyatlarına icazə dayandırılıb.'
+            : 'Faktura təsdiqdədir — təsdiq bitənə və ya sorğu geri çəkilənə qədər düzəliş edilmir.';
     }
 
     /** Create the buyer's proforma + specification the first time the calculation is complete. */
@@ -253,6 +281,9 @@ class InvoiceController extends Controller
     public function documents(Invoice $invoice, \App\Support\Invoices\SalesDocumentBuilder $builder): RedirectResponse
     {
         $this->authorize('projects.update');
+        if ($invoice->isLocked()) {
+            return back()->with('error', $this->lockedMessage($invoice));
+        }
         if (! $invoice->rubReady()) {
             return back()->with('error', 'Əvvəlcə 3 addımı tamamlayın: logistika, komissiya, RUB konvertasiyası.');
         }
@@ -264,6 +295,9 @@ class InvoiceController extends Controller
     public function destroy(Invoice $invoice): RedirectResponse
     {
         $this->authorize('projects.delete');
+        if ($invoice->isLocked()) {
+            return back()->with('error', $this->lockedMessage($invoice));
+        }
         $deal = $invoice->deal_id;
         $invoice->delete();
 

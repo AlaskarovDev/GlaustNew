@@ -29,7 +29,8 @@ class Invoice extends Model
         return ['invoice_date' => 'date', 'total' => 'decimal:2', 'total_azn' => 'decimal:2', 'cbar_rate' => 'decimal:8',
             'logistics_amount' => 'decimal:2', 'logistics_rate' => 'decimal:8', 'logistics_total' => 'decimal:2', 'logistics_updated_at' => 'datetime',
             'commission_rate' => 'decimal:4', 'commission_total' => 'decimal:2', 'commission_updated_at' => 'datetime',
-            'fx_date' => 'date', 'fx_bulletin_date' => 'date', 'fx_base_azn' => 'decimal:8', 'fx_target_azn' => 'decimal:8', 'fx_rate' => 'decimal:12', 'fx_updated_at' => 'datetime'];
+            'fx_date' => 'date', 'fx_bulletin_date' => 'date', 'fx_base_azn' => 'decimal:8', 'fx_target_azn' => 'decimal:8', 'fx_rate' => 'decimal:12', 'fx_updated_at' => 'datetime',
+            'approval_flow' => 'array', 'submitted_at' => 'datetime', 'approved_at' => 'datetime'];
     }
 
     public function deal(): BelongsTo
@@ -96,6 +97,30 @@ class Invoice extends Model
     public function rubReady(): bool
     {
         return $this->hasLogistics() && $this->hasCommission() && $this->hasRub();
+    }
+
+    public const APPROVAL_STATUSES = ['pending' => ['Təsdiqdədir', 'amber'], 'approved' => ['Təsdiqlənib', 'green'], 'rejected' => ['Geri qaytarılıb', 'rose']];
+
+    public function approvals(): HasMany
+    {
+        return $this->hasMany(InvoiceApproval::class)->orderBy('id');
+    }
+
+    /** No edits while an approval is running or after it was approved. */
+    public function isLocked(): bool
+    {
+        return in_array($this->approval_status, ['pending', 'approved'], true);
+    }
+
+    public function isApproved(): bool
+    {
+        return $this->approval_status === 'approved';
+    }
+
+    /** User id of whoever has to decide now (null unless pending). */
+    public function currentApproverId(): ?int
+    {
+        return $this->approval_status === 'pending' ? ($this->approval_flow[$this->approval_step]['user_id'] ?? null) : null;
     }
 
     public function typeLabel(): string

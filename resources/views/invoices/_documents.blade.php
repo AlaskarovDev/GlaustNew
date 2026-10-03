@@ -29,15 +29,15 @@
         </div>
     @endif
 
-    @if($docs->count() < count(\App\Models\SalesDocument::KINDS))
+    @if($docs->whereIn('kind', \App\Models\SalesDocument::AUTO_KINDS)->count() < count(\App\Models\SalesDocument::AUTO_KINDS))
         <div class="px-5 py-4 {{ $docs->isNotEmpty() ? 'border-t border-line' : '' }} flex flex-wrap items-center gap-3 text-sm">
             @if($invoice->rubReady())
                 <span class="flex-1 text-muted">{{ $docs->isEmpty() ? 'Sənədlər hələ yaradılmayıb.' : 'Silinmiş sənəd var.' }}</span>
-                @can('projects.update')
+                @if(auth()->user()->can('projects.update') && ! $invoice->isLocked())
                     <form method="POST" action="{{ route('invoices.documents', $invoice) }}">@csrf
                         <button class="btn btn-primary btn-sm"><x-icon name="sparkles" class="size-4"/> Hesablamadan yarat</button>
                     </form>
-                @endcan
+                @endif
             @else
                 <span class="text-muted">Proforma faktura və spesifikasiya logistika, komissiya və RUB konvertasiyası tətbiq olunan kimi burada avtomatik yaranacaq.</span>
             @endif

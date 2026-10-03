@@ -21,7 +21,11 @@ class SalesDocument extends Model
     public const KINDS = [
         'proforma' => ['Proforma Invoice', 'Alıcıya proforma faktura (EN)'],
         'specification' => ['Спецификация', 'Müqaviləyə spesifikasiya (RU)'],
+        'commercial' => ['Commercial Invoice', 'Kommersiya fakturası (təsdiqdən sonra)'],
     ];
+
+    /** Created automatically when the calculation is complete; the commercial invoice comes from the approval. */
+    public const AUTO_KINDS = ['proforma', 'specification'];
 
     protected $guarded = ['id', 'company_id'];
 
@@ -58,6 +62,12 @@ class SalesDocument extends Model
     public function isProforma(): bool
     {
         return $this->kind === 'proforma';
+    }
+
+    /** The commercial invoice is final; the others freeze while their invoice is in approval or approved. */
+    public function isLocked(): bool
+    {
+        return $this->kind === 'commercial' || (bool) $this->sourceInvoice?->isLocked();
     }
 
     public function title(): string

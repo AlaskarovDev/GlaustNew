@@ -16,7 +16,7 @@
             @if($invoice->contract)<a href="{{ route('contracts.show', $invoice->contract) }}" class="block font-mono font-semibold hover:text-brand-ink">{{ $invoice->contract->number }}</a>@else<div>—</div>@endif
             <div class="text-[11px] text-faint">{{ $invoice->type === 'supplier' ? 'alış müqaviləsi' : 'satış müqaviləsi' }}</div></div>
         <div class="card p-4" style="--i:4"><div class="text-xs text-muted">Status</div>
-            @can('projects.update')
+            @if(auth()->user()->can('projects.update') && ! $invoice->isLocked())
                 <form method="POST" action="{{ route('invoices.status', $invoice) }}" x-data class="mt-1">@csrf @method('PUT')
                     <select name="status" class="input !h-8 text-sm" @change="$el.form.requestSubmit()" aria-label="Status">
                         @foreach(\App\Models\Invoice::STATUSES as $k => [$l])<option value="{{ $k }}" @selected($invoice->status === $k)>{{ $l }}</option>@endforeach
@@ -24,11 +24,12 @@
                 </form>
             @else
                 <x-status group="invoice" :value="$invoice->status"/>
-            @endcan
+            @endif
         </div>
     </div>
 
     @if($invoice->type === 'supplier')
+        @include('invoices._approval')
         <div class="flex items-baseline justify-between gap-3 mb-3">
             <h2 class="text-sm font-semibold text-ink-2">Hesablama addımları</h2>
             <p class="text-xs text-muted">Hər addım tətbiq olunduqca cədvəldəki uyğun sütunlar dolur</p>
@@ -149,9 +150,9 @@
         @include('partials.history', ['history' => $history])
         <div class="space-y-6">
             @include('partials.attachments', ['model' => $invoice, 'type' => 'invoice', 'ability' => 'projects.update'])
-            @can('projects.delete')
+            @if(auth()->user()->can('projects.delete') && ! $invoice->isLocked())
                 <x-delete-form :action="route('invoices.destroy', $invoice)" label="Fakturanı sil" button="btn btn-ghost w-full text-danger hover:!bg-danger-soft" :message="'Faktura '.$invoice->number.' və bütün sətirləri silinəcək.'"/>
-            @endcan
+            @endif
         </div>
     </div>
 </x-layouts.app>

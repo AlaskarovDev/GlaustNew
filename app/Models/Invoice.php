@@ -1,0 +1,71 @@
+<?php
+
+namespace App\Models;
+
+use App\Models\Concerns\Auditable;
+use App\Models\Concerns\HasAttachments;
+use App\Support\Tenancy\BelongsToCompany;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+/**
+ * supplier — the seller's proforma to us (imported from Excel), bound to the deal's purchase contract;
+ * customer — ours to the buyer (next stage), bound to the sale contract.
+ */
+class Invoice extends Model
+{
+    use Auditable, BelongsToCompany, HasAttachments, SoftDeletes;
+
+    public const TYPES = ['supplier' => 'Satıcının fakturası', 'customer' => 'Alıcıya faktura'];
+
+    public const STATUSES = ['draft' => ['Qaralama', 'slate'], 'confirmed' => ['Təsdiqlənib', 'blue'], 'paid' => ['Ödənilib', 'green'], 'cancelled' => ['Ləğv', 'rose']];
+
+    protected $guarded = ['id', 'company_id'];
+
+    protected function casts(): array
+    {
+        return ['invoice_date' => 'date', 'total' => 'decimal:2', 'total_azn' => 'decimal:2', 'cbar_rate' => 'decimal:8'];
+    }
+
+    public function deal(): BelongsTo
+    {
+        return $this->belongsTo(Deal::class)->withTrashed();
+    }
+
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class)->withTrashed();
+    }
+
+    public function counterparty(): BelongsTo
+    {
+        return $this->belongsTo(Counterparty::class)->withTrashed();
+    }
+
+    public function contract(): BelongsTo
+    {
+        return $this->belongsTo(Contract::class)->withTrashed();
+    }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(InvoiceItem::class)->orderBy('line_no')->orderBy('id');
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function typeLabel(): string
+    {
+        return self::TYPES[$this->type] ?? $this->type;
+    }
+
+    public function auditLabel(): string
+    {
+        return $this->typeLabel().' '.$this->number;
+    }
+}

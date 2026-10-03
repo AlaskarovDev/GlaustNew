@@ -139,7 +139,7 @@ class LogController extends Controller
     public static function types(): array
     {
         return ['project' => 'Layihə', 'task' => 'Tapşırıq', 'contract' => 'Müqavilə', 'counterparty' => 'Kontragent', 'bank_transaction' => 'Bank əməliyyatı',
-            'bank_account' => 'Bank hesabı', 'shipment' => 'Yük', 'shipment_cost' => 'Logistika xərci', 'user' => 'İstifadəçi', 'role' => 'Rol', 'company' => 'Şirkət'];
+            'bank_account' => 'Bank hesabı', 'shipment' => 'Yük', 'deal' => 'Tədarük', 'invoice' => 'Faktura', 'shipment_cost' => 'Logistika xərci', 'user' => 'İstifadəçi', 'role' => 'Rol', 'company' => 'Şirkət'];
     }
 
     public static function actions(): array

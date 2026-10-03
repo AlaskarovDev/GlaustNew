@@ -10,6 +10,8 @@ use App\Http\Controllers\ContractController;
 use App\Http\Controllers\CounterpartyController;
 use App\Http\Controllers\CurrencyController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DealController;
+use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\ImportController;
 use App\Http\Controllers\MyWorkController;
 use App\Http\Controllers\ProfileController;
@@ -95,6 +97,20 @@ Route::middleware(['auth', 'tenant'])->group(function () {
         Route::post('/projects/{project}/milestones', [ProjectController::class, 'storeMilestone'])->name('projects.milestones.store');
         Route::put('/projects/{project}/milestones/{milestone}', [ProjectController::class, 'updateMilestone'])->name('projects.milestones.update');
         Route::delete('/projects/{project}/milestones/{milestone}', [ProjectController::class, 'destroyMilestone'])->name('projects.milestones.destroy');
+
+        // Tədarüklər (deals) and their invoices
+        Route::get('/projects/{project}/deals/create', [DealController::class, 'create'])->name('deals.create');
+        Route::post('/projects/{project}/deals', [DealController::class, 'store'])->name('deals.store');
+        Route::get('/deals/{deal}', [DealController::class, 'show'])->name('deals.show');
+        Route::get('/deals/{deal}/edit', [DealController::class, 'edit'])->name('deals.edit');
+        Route::put('/deals/{deal}', [DealController::class, 'update'])->name('deals.update');
+        Route::delete('/deals/{deal}', [DealController::class, 'destroy'])->name('deals.destroy');
+        Route::get('/invoices/template', [InvoiceController::class, 'template'])->name('invoices.template');
+        Route::post('/deals/{deal}/invoices/import', [InvoiceController::class, 'import'])->name('invoices.import');
+        Route::get('/invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show');
+        Route::get('/invoices/{invoice}/export', [InvoiceController::class, 'export'])->name('invoices.export');
+        Route::put('/invoices/{invoice}/status', [InvoiceController::class, 'status'])->name('invoices.status');
+        Route::delete('/invoices/{invoice}', [InvoiceController::class, 'destroy'])->name('invoices.destroy');
 
         Route::get('/tasks/export', [TaskController::class, 'export'])->middleware('can:projects.export')->name('tasks.export');
         Route::resource('tasks', TaskController::class);

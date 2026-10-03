@@ -16,6 +16,7 @@ class NumberGenerator
         'project' => [Project::class, 'code'],
         'contract' => [Contract::class, 'number'],
         'shipment' => [Shipment::class, 'number'],
+        'deal' => [\App\Models\Deal::class, 'code'],
     ];
 
     public function next(string $type): string

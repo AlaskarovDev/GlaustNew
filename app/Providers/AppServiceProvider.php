@@ -46,6 +46,8 @@ class AppServiceProvider extends ServiceProvider
             'bank_transaction' => \App\Models\BankTransaction::class,
             'shipment' => \App\Models\Shipment::class,
             'shipment_cost' => \App\Models\ShipmentCost::class,
+            'deal' => \App\Models\Deal::class,
+            'invoice' => \App\Models\Invoice::class,
         ]);
 
         Password::defaults(fn () => Password::min(8)->letters()->numbers());

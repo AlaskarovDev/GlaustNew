@@ -25,7 +25,7 @@ class ProjectBudgetReport extends Report
 
     public static function description(): string
     {
-        return 'Layihələr üzrə alan və göndərən tərəflə müqavilələr (marja), büdcə, bank məxarici, logistika xərcləri, daxilolma və nəticə.';
+        return 'Layihələr üzrə alan və satan tərəflə müqavilələr (marja), büdcə, bank məxarici, logistika xərcləri, daxilolma və nəticə.';
     }
 
     public static function icon(): string
@@ -90,7 +90,7 @@ class ProjectBudgetReport extends Report
             Column::make('Kod', 'code'),
             Column::make('Layihə', 'name', width: 32),
             Column::make('Alan tərəf', 'client'),
-            Column::make('Göndərən tərəf', 'supplier'),
+            Column::make('Satan tərəf', 'supplier'),
             Column::make('Status', 'status'),
             Column::make('Satış müqaviləsi (AZN)', 'sale_azn', 'money', total: true),
             Column::make('Alış müqaviləsi (AZN)', 'purchase_azn', 'money', total: true),

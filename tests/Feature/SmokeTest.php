@@ -43,6 +43,8 @@ class SmokeTest extends TestCase
             'tx' => BankTransaction::first(),
             'transfer' => BankTransaction::whereNotNull('transfer_group')->first(),
             'shipment' => Shipment::first(),
+            'deal' => \App\Models\Deal::first(),
+            'invoice' => \App\Models\Invoice::first(),
         ]);
     }
 
@@ -80,6 +82,8 @@ class SmokeTest extends TestCase
             route('bank.transactions.create'), route('bank.transactions.create', ['direction' => 'out']), route('bank.transactions.create', ['mode' => 'transfer']),
             route('bank.transactions.show', $m['tx']), route('bank.transactions.show', $m['transfer']), route('bank.transactions.edit', $m['tx']),
             route('bank.accounts.index'), route('bank.accounts.create'),
+            route('projects.show', [$m['deal']->project_id, 'tab' => 'deals']), route('deals.create', $m['deal']->project_id), route('deals.show', $m['deal']), route('deals.edit', $m['deal']),
+            route('invoices.show', $m['invoice']), route('invoices.export', [$m['invoice'], 'format' => 'xlsx']), route('invoices.export', [$m['invoice'], 'format' => 'pdf']), route('invoices.template'),
             route('shipments.index'), route('shipments.index', ['status' => 'delayed']), route('shipments.create'), route('shipments.show', $m['shipment']), route('shipments.edit', $m['shipment']),
             route('reports.index'), route('imports.index'), route('imports.index', ['type' => 'bank_transactions']),
             route('settings.index'), route('settings.company'), route('settings.general'), route('settings.mail'), route('settings.categories'),
@@ -98,8 +102,12 @@ class SmokeTest extends TestCase
 
         foreach ($urls as $url) {
             $res = $this->get($url);
-            $this->assertSame(200, $res->getStatusCode(), "GET {$url} -> {$res->getStatusCode()}\n"
-                .($res->exception ? get_class($res->exception).': '.$res->exception->getMessage().' @ '.$res->exception->getFile().':'.$res->exception->getLine() : ''));
+            if ($res->getStatusCode() !== 200) {
+                $e = $res->baseResponse instanceof \Illuminate\Http\Response ? $res->exception : null;
+                $this->fail("GET {$url} -> {$res->getStatusCode()}
+".($e ? get_class($e).': '.$e->getMessage().' @ '.$e->getFile().':'.$e->getLine() : ''));
+            }
+            $this->addToAssertionCount(1);
         }
     }
 

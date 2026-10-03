@@ -63,7 +63,7 @@ class ProjectTable extends Table
             Column::make('Alan tərəf', 'counterparty.name'),
             Column::make('Satış müqaviləsi', 'saleContract.number'),
             Column::make('Satış (AZN)', 'saleContract.amount_azn', 'money', total: true),
-            Column::make('Göndərən tərəf', 'supplier.name'),
+            Column::make('Satan tərəf', 'supplier.name'),
             Column::make('Alış müqaviləsi', 'purchaseContract.number'),
             Column::make('Alış (AZN)', 'purchaseContract.amount_azn', 'money', total: true),
             Column::make('Marja (AZN)', fn ($p) => $p->contractMargin()['margin'], 'money', total: true),

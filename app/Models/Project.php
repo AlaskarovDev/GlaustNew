@@ -33,7 +33,7 @@ class Project extends Model
         return $this->belongsTo(Contract::class, 'sale_contract_id')->withTrashed();
     }
 
-    /** Supplier side ("məhsulu göndərən tərəf"). */
+    /** Supplier side ("məhsulu satan tərəf": the seller we buy from). */
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Counterparty::class, 'supplier_id')->withTrashed();
@@ -80,6 +80,17 @@ class Project extends Model
     public function milestones(): HasMany
     {
         return $this->hasMany(Milestone::class)->orderBy('due_date');
+    }
+
+    /** Tədarüklər: buy-and-resell lots of this project. */
+    public function deals(): HasMany
+    {
+        return $this->hasMany(Deal::class)->orderBy('deal_date')->orderBy('id');
+    }
+
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
     }
 
     public function transactions(): HasMany

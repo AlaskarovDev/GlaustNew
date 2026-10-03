@@ -24,6 +24,8 @@ class AttachmentController extends Controller
         'contract' => ['contracts.view', 'contracts.update'],
         'bank_transaction' => ['bank.view', 'bank.update'],
         'shipment' => ['logistics.view', 'logistics.update'],
+        'deal' => ['projects.view', 'projects.update'],
+        'invoice' => ['projects.view', 'projects.update'],
     ];
 
     public function store(Request $request): RedirectResponse

@@ -21,7 +21,7 @@
     </div>
 
     <nav class="flex gap-6 border-b border-line mb-6 overflow-x-auto" aria-label="Layihə bölmələri">
-        @foreach(['overview' => 'Ümumi', 'board' => 'Tapşırıqlar ('.$stats['total'].')', 'finance' => 'Maliyyə', 'files' => 'Fayllar və tarixçə'] as $key => $label)
+        @foreach(['overview' => 'Ümumi', 'deals' => 'Tədarüklər ('.$deals->count().')', 'board' => 'Tapşırıqlar ('.$stats['total'].')', 'finance' => 'Maliyyə', 'files' => 'Fayllar və tarixçə'] as $key => $label)
             @if($key !== 'finance' || $finance)
                 <a href="{{ route('projects.show', [$project, 'tab' => $key]) }}" @class(['tab-link', 'is-active' => $tab === $key])>{{ $label }}</a>
             @endif
@@ -127,6 +127,42 @@
                 </section>
             </aside>
         </div>
+
+    @elseif($tab === 'deals')
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+            <p class="text-sm text-muted max-w-2xl">Tədarük — məhsulun satıcıdan alınıb alıcıya satıldığı bir partiyadır: hər iki tərəflə müqavilələr, satıcının fakturaları və alıcıya faktura bir yerdə.</p>
+            @can('projects.create')
+                <a href="{{ route('deals.create', $project) }}" class="btn btn-primary"><x-icon name="plus" class="size-4"/> Yeni tədarük</a>
+            @endcan
+        </div>
+        @if($deals->isEmpty())
+            <div class="card"><x-empty icon="package" title="Hələ tədarük yoxdur" text="Yeni tədarük yaradın: tərəflər və müqavilələr layihədən avtomatik gələcək, sonra satıcının fakturasını Excel-dən import edəcəksiniz.">
+                @can('projects.create')<a href="{{ route('deals.create', $project) }}" class="btn btn-primary"><x-icon name="plus" class="size-4"/> Tədarük yarat</a>@endcan
+            </x-empty></div>
+        @else
+            <div class="grid lg:grid-cols-2 gap-5 stagger">
+                @foreach($deals as $d)
+                    <a href="{{ route('deals.show', $d) }}" class="card card-hover p-5 group" style="--i:{{ $loop->index }}">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <div class="text-xs font-mono text-muted">{{ $d->code }} · {{ azdate($d->deal_date) }}</div>
+                                <h3 class="mt-1 font-semibold group-hover:text-brand-ink truncate">{{ $d->title }}</h3>
+                            </div>
+                            <x-status group="deal" :value="$d->status"/>
+                        </div>
+                        <div class="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-sm">
+                            <div class="min-w-0"><div class="text-[11px] text-muted">Satıcı</div><div class="truncate">{{ $d->supplier?->name ?? '—' }}</div><div class="text-[11px] font-mono text-faint">{{ $d->purchaseContract?->number ?? 'müqavilə yoxdur' }}</div></div>
+                            <x-icon name="arrow-right" class="size-4 text-faint"/>
+                            <div class="min-w-0"><div class="text-[11px] text-muted">Alıcı</div><div class="truncate">{{ $d->counterparty?->name ?? '—' }}</div><div class="text-[11px] font-mono text-faint">{{ $d->saleContract?->number ?? 'müqavilə yoxdur' }}</div></div>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-line flex justify-between text-sm">
+                            <span class="text-muted">{{ $d->invoices_count }} faktura</span>
+                            <span class="font-mono">{{ $d->supplier_total_azn ? money($d->supplier_total_azn) : '—' }}</span>
+                        </div>
+                    </a>
+                @endforeach
+            </div>
+        @endif
 
     @elseif($tab === 'board')
         @include('tasks._board', ['columns' => $tasks->groupBy('status'), 'project' => $project])

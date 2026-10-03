@@ -99,6 +99,19 @@ return [
             'arrived' => ['Çatdı', 'teal'],
             'delivered' => ['Təhvil verildi', 'green'],
         ],
+        'deal' => [
+            'draft' => ['Hazırlanır', 'slate'],
+            'active' => ['İcrada', 'teal'],
+            'invoiced' => ['Fakturalanıb', 'blue'],
+            'completed' => ['Tamamlanıb', 'green'],
+            'cancelled' => ['Ləğv', 'rose'],
+        ],
+        'invoice' => [
+            'draft' => ['Qaralama', 'slate'],
+            'confirmed' => ['Təsdiqlənib', 'blue'],
+            'paid' => ['Ödənilib', 'green'],
+            'cancelled' => ['Ləğv', 'rose'],
+        ],
         'subscription' => [
             'trial' => ['Sınaq', 'amber'],
             'active' => ['Aktiv', 'green'],
@@ -133,6 +146,7 @@ return [
             'project' => 'PRJ-{Y}-{SEQ:4}',
             'contract' => 'MQ-{Y}-{SEQ:4}',
             'shipment' => 'YK-{Y}-{SEQ:4}',
+            'deal' => 'TD-{Y}-{SEQ:4}',
         ],
     ],
 

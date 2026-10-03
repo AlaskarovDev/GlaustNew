@@ -30,7 +30,7 @@ use Illuminate\Support\Str;
  */
 class DemoCommand extends Command
 {
-    protected $signature = 'glaust:demo {--companies=2} {--password=} {--days=90 : CBAR history to load first}';
+    protected $signature = 'glaust:demo {--companies=2} {--password=} {--days=90 : CBAR history to load first} {--deals-only : add demo deals (tədarüklər) to existing demo companies}';
 
     protected $description = 'Create demo companies with users, CRM, projects, contracts, bank and logistics data';
 
@@ -58,6 +58,15 @@ class DemoCommand extends Command
 
     public function handle(CompanyProvisioner $provisioner, CurrencyRates $rates, Tenant $tenant): int
     {
+        if ($this->option('deals-only')) {
+            foreach (Company::whereIn('name', self::COMPANY_NAMES)->get() as $company) {
+                $n = $tenant->runAs($company, fn () => $this->seedDeals());
+                $this->info("{$company->name}: {$n} tədarük");
+            }
+
+            return self::SUCCESS;
+        }
+
         $this->info('CBAR məzənnələri yüklənir (son '.$this->option('days').' gün)…');
         $loaded = $rates->backfill((int) $this->option('days'));
         $this->line("  {$loaded} gün yükləndi/yeniləndi.");
@@ -263,6 +272,51 @@ class DemoCommand extends Command
             }
         }
 
+        $this->seedDeals();
         app(ReminderService::class)->generate($company);
+    }
+
+    /**
+     * Tədarüklər for projects that have both contracts: one lot each, with a seller's
+     * proforma like the company's real working sheet (EUR, CBAR rate of a stored day).
+     */
+    private function seedDeals(): int
+    {
+        $rates = app(CurrencyRates::class);
+        $numbers = app(NumberGenerator::class);
+        $items = [
+            ['TD-Weiss Migrastar Gr.1/S/IPA', '32151900', 3200, 4.89], ['Supra EB Cyan Folie FCM', '32151900', 3200, 11.08],
+            ['Supra EB Gelb Folie FCM', '32151900', 7400, 11.08], ['Supra EB Schwarz Folie FCM', '32151100', 800, 11.08],
+            ['Supra EB Magenta Folie FCM', '32151900', 1600, 11.08], ['Supra EB PANTONE® Transparentweiss', '32151900', 400, 14.62],
+            ['Supra EB PANTONE® Reflexblau', '32151900', 800, 22.4], ['Supra EB Warmrot', '32151900', 200, 15.65],
+            ['HERMA PE weiss tc (852) 62Gpt / 517', '39199080', 800, 6.67],
+        ];
+        $made = 0;
+        $projects = \App\Models\Project::whereNotNull('sale_contract_id')->whereNotNull('purchase_contract_id')->doesntHave('deals')->limit(3)->get();
+        foreach ($projects as $k => $p) {
+            $deal = \App\Models\Deal::create([
+                'project_id' => $p->id, 'code' => $numbers->next('deal'), 'title' => 'Boya və etiket partiyası #'.($k + 1),
+                'deal_date' => today()->subDays(10 + $k * 7), 'currency' => 'EUR', 'status' => 'invoiced',
+                'counterparty_id' => $p->counterparty_id, 'sale_contract_id' => $p->sale_contract_id,
+                'supplier_id' => $p->supplier_id, 'purchase_contract_id' => $p->purchase_contract_id,
+            ]);
+            $date = today()->subDays(8 + $k * 7);
+            $rate = $rates->tryRate('EUR', $date);
+            $lines = [];
+            foreach ($items as $i => [$desc, $hs, $qty, $price]) {
+                $lines[] = ['line_no' => $i + 1, 'description' => $desc, 'hs_code' => $hs, 'quantity' => $qty, 'uom' => 'kg', 'unit_price' => $price, 'total' => round($qty * $price, 2)];
+            }
+            $total = array_sum(array_column($lines, 'total'));
+            $inv = $deal->invoices()->create([
+                'project_id' => $p->id, 'type' => 'supplier', 'number' => (string) (221619 + $k * 37), 'invoice_date' => $date,
+                'counterparty_id' => $p->supplier_id, 'contract_id' => $p->purchase_contract_id, 'currency' => 'EUR',
+                'total' => $total, 'cbar_rate' => $rate, 'total_azn' => $rate ? round($total * $rate, 2) : null, 'status' => 'confirmed',
+                'source_file' => 'proforma-demo.xlsx',
+            ]);
+            $inv->items()->createMany($lines);
+            $made++;
+        }
+
+        return $made;
     }
 }

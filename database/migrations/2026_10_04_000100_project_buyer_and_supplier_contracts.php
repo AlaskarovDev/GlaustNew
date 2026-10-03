@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Schema;
 /*
  * A project now has two sides, each with its own contract:
  *   buyer    (counterparty_id, sale_contract_id)     — "məhsulu alan tərəf"
- *   supplier (supplier_id, purchase_contract_id)      — "məhsulu göndərən tərəf"
+ *   supplier (supplier_id, purchase_contract_id)      — "məhsulu satan tərəf" (seller)
  * The single projects.contract_id is migrated into the matching slot and dropped.
  */
 return new class extends Migration

@@ -17,7 +17,7 @@ class ProjectContractsTest extends TestCase
     {
         return $this->inTenant($admin, function () {
             $buyer = Counterparty::create(['type' => 'customer', 'entity_type' => 'legal', 'name' => 'Alıcı MMC', 'country' => 'Azərbaycan']);
-            $seller = Counterparty::create(['type' => 'supplier', 'entity_type' => 'legal', 'name' => 'Göndərən MMC', 'country' => 'Azərbaycan']);
+            $seller = Counterparty::create(['type' => 'supplier', 'entity_type' => 'legal', 'name' => 'Satıcı MMC', 'country' => 'Azərbaycan']);
             $other = Counterparty::create(['type' => 'customer', 'entity_type' => 'legal', 'name' => 'Başqa Müştəri', 'country' => 'Azərbaycan']);
             $mk = fn ($cp, $kind, $n, $amount) => Contract::create(['number' => $n, 'contract_date' => today(), 'counterparty_id' => $cp->id, 'kind' => $kind,
                 'subject' => 'Məhsul', 'amount' => $amount, 'currency' => 'AZN', 'cbar_rate' => 1, 'amount_azn' => $amount, 'status' => 'active']);
@@ -51,7 +51,7 @@ class ProjectContractsTest extends TestCase
         $this->assertSame(25.0, $project->contractMargin()['percent']);
 
         $this->get(route('projects.show', $project))->assertOk()
-            ->assertSee('Məhsulu alan tərəf')->assertSee('Məhsulu göndərən tərəf')
+            ->assertSee('Məhsulu alan tərəf')->assertSee('Məhsulu satan tərəf')
             ->assertSee('S-1')->assertSee('P-1')->assertSee('Müqavilələr üzrə marja');
         $this->get(route('projects.edit', $project))->assertOk()->assertSee('S-1 · Məhsul');
     }

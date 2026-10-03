@@ -4,7 +4,7 @@
     $sides = [
         ['key' => 'sale', 'title' => 'Məhsulu alan tərəf', 'party' => $project->counterparty, 'contract' => $project->saleContract,
          'icon' => 'arrow-up-right', 'tone' => 'bg-brand-soft text-brand', 'bar' => 'bg-brand', 'kindLabel' => 'Satış müqaviləsi', 'flow' => 'Daxil olub'],
-        ['key' => 'purchase', 'title' => 'Məhsulu göndərən tərəf', 'party' => $project->supplier, 'contract' => $project->purchaseContract,
+        ['key' => 'purchase', 'title' => 'Məhsulu satan tərəf', 'party' => $project->supplier, 'contract' => $project->purchaseContract,
          'icon' => 'arrow-down-left', 'tone' => 'bg-saffron-soft text-saffron', 'bar' => 'bg-saffron', 'kindLabel' => 'Alış müqaviləsi', 'flow' => 'Ödənilib'],
     ];
 @endphp
@@ -31,6 +31,7 @@
                         $paid = $c->payments->whereNotNull('paid_at')->sum('amount');
                         $planned = $c->payments->sum('amount');
                         $pct = $c->amount_azn > 0 ? min(100, round($settled[$s['key']] / $c->amount_azn * 100)) : 0;
+                        $over = round($settled[$s['key']] - (float) $c->amount_azn, 2);
                         $left = $c->daysLeft();
                     @endphp
                     <div class="px-5 pt-4 pb-5 flex-1">
@@ -56,7 +57,10 @@
                         @can('bank.view')
                             <div class="mt-4">
                                 <div class="flex justify-between text-xs mb-1.5"><span class="text-muted">{{ $s['flow'] }} (bank)</span><span class="font-mono">{{ money($settled[$s['key']]) }} · {{ $pct }}%</span></div>
-                                <div class="h-1.5 rounded-full bg-surface-2 overflow-hidden"><div class="h-full rounded-full {{ $s['bar'] }}" style="width: {{ $pct }}%"></div></div>
+                                <div class="h-1.5 rounded-full bg-surface-2 overflow-hidden"><div class="h-full rounded-full {{ $over > 0.004 ? 'bg-danger' : $s['bar'] }}" style="width: {{ $pct }}%"></div></div>
+                                @if($over > 0.004)
+                                    <p class="mt-1.5 text-xs font-medium text-danger">Müqavilə məbləğindən {{ money($over) }} artıq {{ $s['key'] === 'sale' ? 'daxil olub' : 'ödənilib' }}</p>
+                                @endif
                             </div>
                         @endcan
                         @if($planned > 0)

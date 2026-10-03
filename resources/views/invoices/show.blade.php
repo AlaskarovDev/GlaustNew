@@ -31,7 +31,7 @@
     <section class="card overflow-hidden mb-6">
         <div class="overflow-x-auto">
             <table class="table-g text-[13px]">
-                <thead>
+                <thead lang="en">
                 <tr>
                     @foreach($columns as $key => [$label, $fillable])
                         <th @class(['!text-right' => in_array($key, ['quantity', 'unit_price', 'total']) || ! $fillable, '!bg-surface-2 !text-faint' => ! $fillable]) title="{{ $fillable ? '' : 'Hesablama qaydası sonra əlavə olunacaq' }}">{{ $label }}</th>

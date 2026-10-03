@@ -1,16 +1,23 @@
-{{-- Step 3 — EUR -> RUB for the RUR columns, on the date our invoice will be issued: CBAR rate of that day, or a forecast. --}}
+{{--
+    Step 3 — EUR -> RUB for the RUR columns, on the date our invoice will be issued. Laid out like the
+    company's sheet: CB EUR / CB RUB (CBAR, AZN per unit) and Proq EUR / Proq RUB (forecast, typed in);
+    rate = EUR / RUB of the chosen source.
+--}}
 @php
     $cur = $invoice->currency;
-    $failed = $errors->hasAny(['fx_source', 'fx_date', 'fx_forecast']);
+    $failed = $errors->hasAny(['fx_source', 'fx_date', 'fx_base_azn', 'fx_target_azn']);
     $actual = app(\App\Support\Invoices\RubConverter::class)->actualFor($invoice);
     $today = today()->toDateString();
     $date = old('fx_date', $invoice->fx_date?->toDateString() ?? $today);
+    $isForecast = $invoice->fx_source === 'forecast';
+    $r = fn ($v) => $v === null ? '—' : rate_fmt($v);
 @endphp
 <section class="card step-card" x-data="{
         source: @js(old('fx_source', $invoice->fx_source ?? 'cbar')),
         date: @js($date),
         today: @js($today),
-        forecast: @js((string) old('fx_forecast', $invoice->fx_source === 'forecast' ? num($invoice->fx_rate, 4) : '')),
+        base: @js((string) old('fx_base_azn', $isForecast ? rate_fmt($invoice->fx_base_azn) : '')),
+        rub: @js((string) old('fx_target_azn', $isForecast ? rate_fmt($invoice->fx_target_azn) : '')),
         editing: {{ ! $invoice->hasRub() || $failed ? 'true' : 'false' }},
         cbar: null, loading: false, error: '',
         future() { return this.date > this.today; },
@@ -26,7 +33,10 @@
             this.loading = false;
         },
         num(v) { return parseFloat(String(v ?? '').replace(/\s/g, '').replace(',', '.')); },
-        canApply() { return this.source === 'cbar' ? !this.future() && !!this.cbar : this.num(this.forecast) > 0; },
+        ratio() { const a = this.num(this.base), b = this.num(this.rub); return a > 0 && b > 0 ? a / b : null; },
+        canApply() { return this.source === 'cbar' ? !this.future() && !!this.cbar : !!this.ratio(); },
+        dmy() { const [y, m, d] = (this.date || '').split('-'); return d ? d + '.' + m + '.' + y : '—'; },
+        rf: (v) => glaustFmt.fmtRate(v),
         f4: (v) => glaustFmt.fmt(v, 4),
      }" x-init="load()">
     <header class="step-head">
@@ -36,28 +46,33 @@
             <p class="step-sub">Fakturanın kəsiləcəyi tarixə görə</p>
         </div>
         @if($invoice->hasRub())
-            <span @class(['badge ml-auto shrink-0', 'badge-green' => $invoice->fx_source === 'cbar', 'badge-amber' => $invoice->fx_source === 'forecast'])>{{ \App\Support\Invoices\RubConverter::SOURCES[$invoice->fx_source] }}</span>
+            <span @class(['badge ml-auto shrink-0', 'badge-green' => ! $isForecast, 'badge-amber' => $isForecast])>{{ \App\Support\Invoices\RubConverter::SOURCES[$invoice->fx_source] }}</span>
         @else
             <span class="badge badge-slate ml-auto shrink-0">Gözləyir</span>
         @endif
     </header>
 
     @if($invoice->hasRub())
+        @php
+            $cb = $isForecast ? $actual : ['base' => $invoice->fx_base_azn, 'rub' => $invoice->fx_target_azn];
+            $d = azdate($invoice->fx_date);
+        @endphp
         <div class="step-summary">
             <div class="step-value">1 {{ $cur }} = {{ num($invoice->fx_rate, 4) }} ₽</div>
-            <div class="step-meta">
-                Faktura tarixi: <span class="text-ink">{{ azdate($invoice->fx_date) }}</span>
-                @if($invoice->fx_source === 'cbar')
-                    <br>{{ $cur }} {{ rate_fmt($invoice->fx_base_azn) }} ₼ / RUB {{ rate_fmt($invoice->fx_target_azn) }} ₼
-                    @if($invoice->fx_bulletin_date && ! $invoice->fx_bulletin_date->equalTo($invoice->fx_date)) · bülleten {{ azdate($invoice->fx_bulletin_date) }}@endif
-                @elseif($actual)
-                    @php $diff = ($actual / (float) $invoice->fx_rate - 1) * 100; @endphp
-                    <br>CBAR faktiki: <span class="font-mono text-ink">{{ num($actual, 4) }}</span>
-                    <span @class(['font-mono', 'text-danger' => $diff > 0, 'text-success' => $diff <= 0])>({{ $diff >= 0 ? '+' : '' }}{{ num($diff, 2) }}%)</span>
-                @else
-                    <br>CBAR kursu bu tarix üçün hələ dərc olunmayıb.
+            <table class="rate-table mt-2">
+                <tr @class(['is-used' => ! $isForecast])><td>{{ $d }}</td><td>CB {{ $cur }}</td><td>{{ $cb ? $r($cb['base']) : 'dərc olunmayıb' }}</td></tr>
+                <tr @class(['is-used' => ! $isForecast])><td>{{ $d }}</td><td>CB RUB</td><td>{{ $cb ? $r($cb['rub']) : 'dərc olunmayıb' }}</td></tr>
+                @if($isForecast)
+                    <tr class="gap"><td colspan="3"></td></tr>
+                    <tr class="is-used"><td>{{ $d }}</td><td>Proq {{ $cur }}</td><td>{{ $r($invoice->fx_base_azn) }}</td></tr>
+                    <tr class="is-used"><td>{{ $d }}</td><td>Proq RUB</td><td>{{ $r($invoice->fx_target_azn) }}</td></tr>
                 @endif
-            </div>
+            </table>
+            @if($isForecast && $actual)
+                @php $diff = ($actual['rate'] / (float) $invoice->fx_rate - 1) * 100; @endphp
+                <div class="step-meta">CBAR ilə: 1 {{ $cur }} = {{ num($actual['rate'], 4) }} ₽
+                    <span @class(['font-mono', 'text-danger' => $diff > 0, 'text-success' => $diff <= 0])>({{ $diff >= 0 ? '+' : '' }}{{ num($diff, 2) }}%)</span></div>
+            @endif
         </div>
     @endif
 
@@ -76,32 +91,35 @@
                 <label :class="source === 'forecast' && 'is-on'"><input type="radio" value="forecast" x-model="source" class="sr-only"> Proqnoz</label>
             </div>
 
-            {{-- CBAR rate of the chosen day --}}
-            <div x-show="source === 'cbar'" class="rounded-xl border border-line px-4 py-3 text-sm">
-                <template x-if="future()"><p class="text-saffron text-xs">Gələcək tarix üçün CBAR kursu hələ yoxdur — <button type="button" class="underline font-medium" @click="source = 'forecast'">proqnoz daxil edin</button>.</p></template>
-                <template x-if="!future() && loading"><p class="text-muted text-xs">CBAR kursu yüklənir…</p></template>
-                <template x-if="!future() && error"><p class="text-danger text-xs" x-text="error"></p></template>
-                <template x-if="!future() && cbar">
-                    <div>
-                        <div class="font-mono font-semibold">1 {{ $cur }} = <span x-text="f4(cbar.rate)"></span> ₽</div>
-                        <div class="text-[11px] text-muted mt-0.5">{{ $cur }} <span x-text="f4(cbar.base)"></span> ₼ / RUB <span x-text="f4(cbar.rub)"></span> ₼ · CBAR</div>
-                    </div>
-                </template>
-            </div>
+            <table class="rate-table">
+                <tr :class="source === 'cbar' && 'is-used'">
+                    <td x-text="dmy()"></td><td>CB {{ $cur }}</td>
+                    <td><span x-show="cbar" x-text="cbar && rf(cbar.base)"></span><span x-show="!cbar" class="text-faint" x-text="loading ? '…' : '—'"></span></td>
+                </tr>
+                <tr :class="source === 'cbar' && 'is-used'">
+                    <td x-text="dmy()"></td><td>CB RUB</td>
+                    <td><span x-show="cbar" x-text="cbar && rf(cbar.rub)"></span><span x-show="!cbar" class="text-faint" x-text="loading ? '…' : '—'"></span></td>
+                </tr>
+                <tr class="gap"><td colspan="3"></td></tr>
+                <tr :class="source === 'forecast' && 'is-used'">
+                    <td x-text="dmy()"></td><td><label for="fx-base">Proq {{ $cur }}</label></td>
+                    <td><input id="fx-base" name="fx_base_azn" x-model="base" :disabled="source !== 'forecast'" @focus="source = 'forecast'" inputmode="decimal" placeholder="2,0005" class="input !h-8 font-mono text-right @error('fx_base_azn') is-invalid @enderror"></td>
+                </tr>
+                <tr :class="source === 'forecast' && 'is-used'">
+                    <td x-text="dmy()"></td><td><label for="fx-rub">Proq RUB</label></td>
+                    <td><input id="fx-rub" name="fx_target_azn" x-model="rub" :disabled="source !== 'forecast'" inputmode="decimal" placeholder="0,02110" class="input !h-8 font-mono text-right @error('fx_target_azn') is-invalid @enderror"></td>
+                </tr>
+            </table>
+            @error('fx_base_azn')<p class="field-error">{{ $message }}</p>@enderror
+            @error('fx_target_azn')<p class="field-error">{{ $message }}</p>@enderror
+            <p class="text-[11px] text-muted -mt-2">Kurslar: 1 vahid = ₼. Proqnoz seçilibsə RUR sütunları proqnoz üzərindən hesablanır.</p>
 
-            {{-- Forecast: its own section; the RUR columns are computed from it --}}
-            <div x-show="source === 'forecast'" x-cloak class="rounded-xl border border-dashed border-saffron/60 bg-saffron-soft/30 px-4 py-3 space-y-2">
-                <div class="flex items-center gap-2 text-[13px] font-semibold"><x-icon name="trending-up" class="size-4 text-saffron"/> Proqnoz kursu</div>
-                <label class="sr-only" for="fx-forecast">Proqnoz: 1 {{ $cur }} = RUB</label>
-                <div class="flex items-center gap-2">
-                    <span class="font-mono text-sm text-muted shrink-0">1 {{ $cur }} =</span>
-                    <input id="fx-forecast" name="fx_forecast" x-model="forecast" :disabled="source !== 'forecast'" inputmode="decimal" placeholder="94,8104" class="input flex-1 min-w-0 font-mono text-right @error('fx_forecast') is-invalid @enderror">
-                    <span class="font-mono text-sm text-muted shrink-0">₽</span>
-                </div>
-                @error('fx_forecast')<p class="field-error">{{ $message }}</p>@enderror
-                <p class="text-[11px] text-muted">RUR sütunları bu proqnoz üzərindən hesablanacaq.
-                    <template x-if="cbar"><span>Seçilən günün CBAR kursu: <button type="button" class="font-mono underline" @click="forecast = f4(cbar.rate)" x-text="f4(cbar.rate)"></button></span></template>
-                </p>
+            <template x-if="source === 'cbar' && future()"><p class="text-xs text-saffron">Gələcək tarix üçün CBAR kursu hələ yoxdur — proqnoz daxil edin.</p></template>
+            <template x-if="source === 'cbar' && error && !future()"><p class="text-xs text-danger" x-text="error"></p></template>
+
+            <div class="flex items-center justify-between rounded-lg bg-surface-2 px-3 py-2 text-sm">
+                <span class="text-muted">1 {{ $cur }} =</span>
+                <span class="font-mono font-semibold" x-text="(source === 'cbar' ? (cbar ? f4(cbar.rate) : '—') : (ratio() ? f4(ratio()) : '—')) + ' ₽'"></span>
             </div>
 
             <button class="btn btn-primary w-full" :disabled="!canApply()"><x-icon name="check" class="size-4"/> Tətbiq et</button>

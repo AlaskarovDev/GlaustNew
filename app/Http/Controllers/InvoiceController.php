@@ -212,15 +212,18 @@ class InvoiceController extends Controller
         if ($invoice->status === 'cancelled') {
             return back()->with('error', 'Ləğv edilmiş fakturada çevirmə edilmir.');
         }
-        $request->merge(['fx_forecast' => parse_number($request->input('fx_forecast'))]);
+        $request->merge(['fx_base_azn' => parse_number($request->input('fx_base_azn')), 'fx_target_azn' => parse_number($request->input('fx_target_azn'))]);
         $data = $request->validate([
             'fx_source' => ['required', Rule::in(array_keys(\App\Support\Invoices\RubConverter::SOURCES))],
             'fx_date' => ['required', 'date', Rule::when($request->input('fx_source') === 'cbar', ['before_or_equal:today'])],
-            'fx_forecast' => ['required_if:fx_source,forecast', 'nullable', 'numeric', 'gt:0', 'max:1000000'],
+            'fx_base_azn' => ['required_if:fx_source,forecast', 'nullable', 'numeric', 'gt:0', 'max:1000000'],
+            'fx_target_azn' => ['required_if:fx_source,forecast', 'nullable', 'numeric', 'gt:0', 'max:1000000'],
         ], ['fx_date.before_or_equal' => 'Gələcək tarix üçün CBAR kursu hələ dərc olunmayıb — «Proqnoz» seçin.'],
-            ['fx_source' => 'Kurs mənbəyi', 'fx_date' => 'Faktura tarixi', 'fx_forecast' => 'Proqnoz kursu']);
+            ['fx_source' => 'Kurs mənbəyi', 'fx_date' => 'Faktura tarixi', 'fx_base_azn' => 'Proq '.$invoice->currency, 'fx_target_azn' => 'Proq RUB']);
 
-        $converter->apply($invoice, $data['fx_source'], $data['fx_date'], isset($data['fx_forecast']) ? (float) $data['fx_forecast'] : null);
+        $forecast = $data['fx_source'] === 'forecast';
+        $converter->apply($invoice, $data['fx_source'], $data['fx_date'],
+            $forecast ? (float) $data['fx_base_azn'] : null, $forecast ? (float) $data['fx_target_azn'] : null);
         $invoice->refresh();
 
         return back()->with('success', \App\Support\Invoices\RubConverter::SOURCES[$invoice->fx_source].' tətbiq olundu: 1 '.$invoice->currency.' = '.num($invoice->fx_rate, 4).' RUB ('.azdate($invoice->fx_date).').');

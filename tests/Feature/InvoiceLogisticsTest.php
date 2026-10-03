@@ -149,7 +149,7 @@ class InvoiceLogisticsTest extends TestCase
         // RUR columns: N = L × D18/D19 with the sheet's D18 = 2.0005 (EUR), D19 = 0.0211 (RUB),
         // entered as a forecast for a date CBAR has not published yet.
         $issue = today()->addDays(10)->toDateString();
-        $this->post(route('invoices.rub', $inv), ['fx_source' => 'forecast', 'fx_date' => $issue, 'fx_forecast' => (string) (2.0005 / 0.0211)])->assertSessionHasNoErrors();
+        $this->post(route('invoices.rub', $inv), ['fx_source' => 'forecast', 'fx_date' => $issue, 'fx_base_azn' => '2,0005', 'fx_target_azn' => '0,02110'])->assertSessionHasNoErrors();
         $inv = $this->inTenant($admin, fn () => Invoice::with('items')->find($inv->id));
         $this->assertSame([504.49, 1143.1, 1143.1, 1143.1, 1143.1, 1508.31, 2310.96, 1614.57, 688.13], $inv->items->map(fn ($i) => $i->unitPriceRubRounded())->all(), 'N / P');
         $this->assertSame([1614367.27, 3657911.93, 8458921.34, 914477.98, 1828955.96, 603324.37, 1848764.15, 322914.72, 550502.54],
@@ -158,14 +158,14 @@ class InvoiceLogisticsTest extends TestCase
         $this->assertSame(19800140.27, round($inv->items->sum(fn ($i) => $i->totalRub()), 2), 'O total as on the sheet');
         $this->assertSame(19800178.0, round($inv->items->sum(fn ($i) => $i->totalRubRounded()), 2), 'Q total as on the sheet');
         $this->get(route('invoices.show', $inv))->assertOk()->assertSee(num(19800178))->assertSee(num(19800140.27))
-            ->assertSee('(proqnoz)')->assertSee('CBAR kursu bu tarix üçün hələ dərc olunmayıb');
+            ->assertSee('(proqnoz)')->assertSee('Proq EUR')->assertSee('2,0005')->assertSee('dərc olunmayıb');
         $this->get(route('invoices.export', [$inv, 'format' => 'xlsx']))->assertOk();
         $this->get(route('invoices.export', [$inv, 'format' => 'pdf']))->assertOk();
 
         // A forecast whose day has come shows what CBAR actually published.
         $day = $inv->invoice_date->toDateString();
-        $this->post(route('invoices.rub', $inv), ['fx_source' => 'forecast', 'fx_date' => $day, 'fx_forecast' => '90'])->assertSessionHasNoErrors();
-        $this->get(route('invoices.show', $inv))->assertOk()->assertSee('CBAR faktiki');
+        $this->post(route('invoices.rub', $inv), ['fx_source' => 'forecast', 'fx_date' => $day, 'fx_base_azn' => '2', 'fx_target_azn' => '0,0211'])->assertSessionHasNoErrors();
+        $this->get(route('invoices.show', $inv))->assertOk()->assertSee('CBAR ilə');
 
         // From CBAR: both rates of the chosen day's bulletin; future dates refused (no other day's rate).
         $this->post(route('invoices.rub', $inv), ['fx_source' => 'cbar', 'fx_date' => $day])->assertSessionHasNoErrors();
@@ -173,7 +173,7 @@ class InvoiceLogisticsTest extends TestCase
         $rates = app(CurrencyRates::class);
         $this->assertEqualsWithDelta($rates->rate('EUR', $day) / $rates->rate('RUB', $day), (float) $inv->fx_rate, 1e-9);
         $this->post(route('invoices.rub', $inv), ['fx_source' => 'cbar', 'fx_date' => today()->addDay()->toDateString()])->assertSessionHasErrors('fx_date');
-        $this->post(route('invoices.rub', $inv), ['fx_source' => 'forecast', 'fx_date' => $issue, 'fx_forecast' => '0'])->assertSessionHasErrors('fx_forecast');
+        $this->post(route('invoices.rub', $inv), ['fx_source' => 'forecast', 'fx_date' => $issue, 'fx_base_azn' => '2', 'fx_target_azn' => '0'])->assertSessionHasErrors('fx_target_azn');
         $this->getJson('/ajax/cross-rate?from=EUR&date='.$day)->assertOk()->assertJson(['ok' => true]);
         $this->getJson('/ajax/cross-rate?from=EUR&date='.$issue)->assertOk()->assertJson(['ok' => false]);
         $this->delete(route('invoices.rub.clear', $inv))->assertRedirect();

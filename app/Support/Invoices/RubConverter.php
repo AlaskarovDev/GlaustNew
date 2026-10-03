@@ -12,7 +12,7 @@ use Illuminate\Validation\ValidationException;
  * for the date our invoice to the buyer will be issued:
  *   cbar     — D18 / D19 from the CBAR bulletin of that date (AZN per unit of each currency);
  *              a future date has no bulletin yet, so it is refused, never filled with another day's rate;
- *   forecast — 1 unit of the invoice currency = X RUB, typed in for a date CBAR has not published.
+ *   forecast — the same two AZN rates typed in as a forecast ("Proq EUR" / "Proq RUB" in the sheet).
  */
 class RubConverter
 {
@@ -30,7 +30,7 @@ class RubConverter
         return ['rate' => $base / $rub, 'base' => $base, 'rub' => $rub, 'bulletin' => $snap['bulletin'] ?? null];
     }
 
-    public function apply(Invoice $invoice, string $source, string $date, ?float $forecast = null): void
+    public function apply(Invoice $invoice, string $source, string $date, ?float $baseAzn = null, ?float $rubAzn = null): void
     {
         if ($source === 'cbar') {
             try {
@@ -40,23 +40,27 @@ class RubConverter
             }
             $values = ['fx_bulletin_date' => $c['bulletin'], 'fx_base_azn' => $c['base'], 'fx_target_azn' => $c['rub'], 'fx_rate' => $c['rate']];
         } else {
-            if (! $forecast || $forecast <= 0) {
-                throw ValidationException::withMessages(['fx_forecast' => 'Proqnoz kursunu daxil edin.']);
+            if (! $baseAzn || ! $rubAzn || $baseAzn <= 0 || $rubAzn <= 0) {
+                throw ValidationException::withMessages(['fx_base_azn' => 'Hər iki proqnoz kursunu daxil edin.']);
             }
-            $values = ['fx_bulletin_date' => null, 'fx_base_azn' => null, 'fx_target_azn' => null, 'fx_rate' => $forecast];
+            $values = ['fx_bulletin_date' => null, 'fx_base_azn' => $baseAzn, 'fx_target_azn' => $rubAzn, 'fx_rate' => $baseAzn / $rubAzn];
         }
 
         $invoice->update(['fx_source' => $source, 'fx_date' => $date, 'fx_updated_at' => now()] + $values);
     }
 
-    /** For a forecast whose date has come: what CBAR actually published (null while it has not). */
-    public function actualFor(Invoice $invoice): ?float
+    /**
+     * For a forecast: what CBAR published for its date (null while it has not).
+     *
+     * @return array{rate: float, base: float, rub: float, bulletin: ?string}|null
+     */
+    public function actualFor(Invoice $invoice): ?array
     {
         if ($invoice->fx_source !== 'forecast' || ! $invoice->fx_date || $invoice->fx_date->isFuture()) {
             return null;
         }
         try {
-            return $this->cbar($invoice->currency, $invoice->fx_date->toDateString())['rate'];
+            return $this->cbar($invoice->currency, $invoice->fx_date->toDateString());
         } catch (RateUnavailable|\InvalidArgumentException) {
             return null;
         }

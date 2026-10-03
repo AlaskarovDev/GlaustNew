@@ -135,6 +135,15 @@
     .step-meta { @apply text-xs text-muted mt-1 leading-relaxed; }
     .step-form { @apply px-5 pb-5 space-y-4; }
     .step-foot { @apply mt-auto flex items-center gap-2 px-5 py-3 border-t border-line; }
+    /* Rates block shaped like the company's sheet: date | CB EUR / Proq RUB | AZN per unit */
+    .rate-table { @apply w-full text-[13px] border-separate border-spacing-0; }
+    .rate-table td { @apply py-1 px-2 border-b border-line text-ink-2; }
+    .rate-table td:first-child { @apply pl-0 font-mono text-[12px] text-muted whitespace-nowrap; }
+    .rate-table td:nth-child(2) { @apply whitespace-nowrap font-medium; }
+    .rate-table td:last-child { @apply pr-0 text-right font-mono w-[44%]; }
+    .rate-table tr.is-used td { @apply text-ink; }
+    .rate-table tr.is-used td:nth-child(2) { @apply text-brand-ink; }
+    .rate-table tr.gap td { @apply border-0 py-1; }
     .segmented { @apply grid grid-cols-2 gap-1 p-1 rounded-[10px] bg-surface-2; }
     .segmented > label { @apply flex items-center justify-center h-8 rounded-lg text-[13px] font-medium text-ink-2 cursor-pointer select-none; transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease; }
     .segmented > label:hover { @apply text-ink; }

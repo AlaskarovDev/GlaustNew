@@ -160,6 +160,7 @@
     .ob-rows > div { @apply flex items-baseline justify-between gap-3 py-0.5; }
     .ob-rows dt { @apply text-sm text-muted; }
     .ob-rows dd { @apply font-mono text-sm font-medium text-right; }
+    .ob-none { @apply font-sans text-xs font-normal text-muted; }
     .ob-goods { @apply flex items-start gap-2 rounded-lg bg-surface-2 px-3 py-2 text-xs text-muted; }
     .ob-goods.is-open { @apply bg-brand-soft/60 text-brand-ink; }
 

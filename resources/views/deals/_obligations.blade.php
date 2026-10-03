@@ -1,8 +1,11 @@
 {{-- Maliyyə öhdəlikləri: who owes whom how much (money and goods), per currency, above the work tabs. --}}
 @php
     $ob = \App\Support\DealObligations::for($deal);
+    // Amounts per currency; a placeholder (no amount) renders as plain muted text, not as a figure.
     $amounts = function (array $byCur, string $empty = '—') {
-        return $byCur ? collect($byCur)->map(fn ($v, $c) => money($v, $c))->implode(' · ') : $empty;
+        return $byCur
+            ? e(collect($byCur)->map(fn ($v, $c) => money($v, $c))->implode(' · '))
+            : '<span class="ob-none">'.e($empty).'</span>';
     };
     $pct = function (array $part, array $whole) {
         $w = array_sum($whole);
@@ -13,8 +16,8 @@
     <div class="flex flex-wrap items-end justify-between gap-3 mb-3">
         <h2 id="ob-title" class="text-sm font-semibold text-ink-2 flex items-center gap-2"><x-icon name="transfer" class="size-4 text-muted"/> Maliyyə öhdəlikləri</h2>
         <div class="flex flex-wrap gap-2 text-sm">
-            <span class="ob-pill is-out"><x-icon name="arrow-up-right" class="size-4"/> Ödəməliyik: <b class="font-mono">{{ $amounts($ob['payable'], '0') }}</b></span>
-            <span class="ob-pill is-in"><x-icon name="arrow-down-left" class="size-4"/> Bizə ödəniləcək: <b class="font-mono">{{ $amounts($ob['receivable'], '0') }}</b></span>
+            <span class="ob-pill is-out"><x-icon name="arrow-up-right" class="size-4"/> Ödəməliyik: <b class="font-mono">{!! $amounts($ob['payable'], '0') !!}</b></span>
+            <span class="ob-pill is-in"><x-icon name="arrow-down-left" class="size-4"/> Bizə ödəniləcək: <b class="font-mono">{!! $amounts($ob['receivable'], '0') !!}</b></span>
         </div>
     </div>
 
@@ -26,13 +29,13 @@
                 <span class="badge badge-teal shrink-0">bizə ödəyir</span>
             </header>
             <dl class="ob-rows">
-                <div><dt>Bizə ödəməlidir</dt><dd class="text-success">{{ $amounts($ob['buyer']['due'], $ob['buyer']['billed'] ? 'tam ödəyib' : 'proforma yoxdur') }}</dd></div>
-                <div><dt>Ödəyib</dt><dd>{{ $amounts($ob['buyer']['received'], '0') }}</dd></div>
+                <div><dt>Bizə ödəməlidir</dt><dd class="text-success">{!! $amounts($ob['buyer']['due'], $ob['buyer']['billed'] ? 'tam ödəyib' : 'proforma yoxdur') !!}</dd></div>
+                <div><dt>Ödəyib</dt><dd>{!! $amounts($ob['buyer']['received'], '0') !!}</dd></div>
             </dl>
             @if($ob['buyer']['billed'])<div class="h-1.5 rounded-full bg-surface-2 overflow-hidden" title="Ödənilib"><div class="h-full bg-success rounded-full" style="width: {{ $pct($ob['buyer']['received'], $ob['buyer']['billed']) }}%"></div></div>@endif
             <div class="ob-goods {{ $ob['buyer']['goods'] ? 'is-open' : '' }}">
                 <x-icon name="package" class="size-4 shrink-0"/>
-                <span>@if($ob['buyer']['goods'])Bizim öhdəliyimiz: <b class="font-mono">{{ $amounts($ob['buyer']['goods']) }}</b> dəyərində məhsul göndərməliyik @else Ödəniş gəlməyib — məhsul öhdəliyimiz yoxdur @endif</span>
+                <span>@if($ob['buyer']['goods'])Bizim öhdəliyimiz: <b class="font-mono">{!! $amounts($ob['buyer']['goods']) !!}</b> dəyərində məhsul göndərməliyik @else Ödəniş gəlməyib — məhsul öhdəliyimiz yoxdur @endif</span>
             </div>
         </article>
 
@@ -43,13 +46,13 @@
                 <span class="badge badge-amber shrink-0">ona ödəyirik</span>
             </header>
             <dl class="ob-rows">
-                <div><dt>Ödəməliyik</dt><dd class="text-danger">{{ $amounts($ob['seller']['due'], $ob['seller']['invoiced'] ? 'tam ödənilib' : 'faktura yoxdur') }}</dd></div>
-                <div><dt>Ödəmişik</dt><dd>{{ $amounts($ob['seller']['paid'], '0') }}</dd></div>
+                <div><dt>Ödəməliyik</dt><dd class="text-danger">{!! $amounts($ob['seller']['due'], $ob['seller']['invoiced'] ? 'tam ödənilib' : 'faktura yoxdur') !!}</dd></div>
+                <div><dt>Ödəmişik</dt><dd>{!! $amounts($ob['seller']['paid'], '0') !!}</dd></div>
             </dl>
             @if($ob['seller']['invoiced'])<div class="h-1.5 rounded-full bg-surface-2 overflow-hidden" title="Ödənilib"><div class="h-full bg-saffron rounded-full" style="width: {{ $pct($ob['seller']['paid'], $ob['seller']['invoiced']) }}%"></div></div>@endif
             <div class="ob-goods {{ $ob['seller']['goods'] ? 'is-open' : '' }}">
                 <x-icon name="package" class="size-4 shrink-0"/>
-                <span>@if($ob['seller']['goods'])Onun öhdəliyi: bizə <b class="font-mono">{{ $amounts($ob['seller']['goods']) }}</b> dəyərində məhsul təhvil verməlidir @else Satıcıya ödəniş edilməyib @endif</span>
+                <span>@if($ob['seller']['goods'])Onun öhdəliyi: bizə <b class="font-mono">{!! $amounts($ob['seller']['goods']) !!}</b> dəyərində məhsul təhvil verməlidir @else Satıcıya ödəniş edilməyib @endif</span>
             </div>
         </article>
 
@@ -61,7 +64,7 @@
             </header>
             @if($ob['logistics']['items'])
                 <dl class="ob-rows">
-                    <div><dt>Ödəməliyik</dt><dd class="text-danger">{{ $amounts($ob['logistics']['due']) }}</dd></div>
+                    <div><dt>Ödəməliyik</dt><dd class="text-danger">{!! $amounts($ob['logistics']['due']) !!}</dd></div>
                     @foreach($ob['logistics']['items'] as $l)
                         <div><dt class="text-xs">Faktura {{ $l['invoice'] }}</dt><dd class="text-xs">{{ money($l['amount'], $l['currency']) }}</dd></div>
                     @endforeach

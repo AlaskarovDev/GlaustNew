@@ -25,7 +25,7 @@
 
     <div class="grid xl:grid-cols-[minmax(0,1fr)_320px] gap-6 items-start">
         <div class="space-y-4 min-w-0">
-            <form method="GET" class="card p-4 grid sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
+            <form method="GET" class="card p-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-3 items-end">
                 <x-field label="Başlanğıc" name="from"><input type="date" name="from" value="{{ $from }}" class="input"></x-field>
                 <x-field label="Son" name="to"><input type="date" name="to" value="{{ $to }}" class="input"></x-field>
                 <x-field label="Kateqoriya" name="category_id">
@@ -37,7 +37,7 @@
                 <x-field label="Ödəniş üsulu" name="method">
                     <select name="method" class="input"><option value="">Hamısı</option>@foreach(\App\Models\Expense::METHODS as $k => $l)<option value="{{ $k }}" @selected(($filters['method'] ?? null) === $k)>{{ $l }}</option>@endforeach</select>
                 </x-field>
-                <div class="flex gap-2"><input name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Axtar…" class="input flex-1 min-w-0" aria-label="Axtar"><button class="btn btn-primary btn-icon" aria-label="Filtr"><x-icon name="filter" class="size-4"/></button></div>
+                <div class="flex gap-2 sm:col-span-2 lg:col-span-3"><input name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Axtar…" class="input flex-1 min-w-0" aria-label="Axtar"><button class="btn btn-primary btn-icon" aria-label="Filtr"><x-icon name="filter" class="size-4"/></button></div>
             </form>
 
             <section class="card overflow-hidden">

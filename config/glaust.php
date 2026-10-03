@@ -126,6 +126,12 @@ return [
     'shipment_directions' => ['import' => 'İdxal', 'export' => 'İxrac', 'domestic' => 'Daxili'],
     'transport_modes' => ['road' => 'Avto', 'rail' => 'Dəmir yolu', 'sea' => 'Dəniz', 'air' => 'Hava'],
     'cost_types' => ['freight' => 'Fraxt', 'customs' => 'Gömrük', 'insurance' => 'Sığorta', 'storage' => 'Anbar', 'other' => 'Digər'],
+    // The bank's fee on an outgoing payment to a seller, per payment currency: percent of the
+    // amount, kept between the minimum and the maximum (same currency). Editable on each payment.
+    'bank_fees' => [
+        'EUR' => ['percent' => 0.25, 'minimum' => 25, 'maximum' => 300],
+    ],
+
     'transaction_kinds' => ['regular' => 'Adi', 'transfer' => 'Hesablararası köçürmə', 'conversion' => 'Konvertasiya'],
 
     'reminder_sources' => [

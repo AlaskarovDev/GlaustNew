@@ -115,6 +115,7 @@ Route::middleware(['auth', 'tenant'])->group(function () {
         Route::delete('/deals/{deal}', [DealController::class, 'destroy'])->name('deals.destroy');
         Route::post('/deals/{deal}/payments', [DealPaymentController::class, 'store'])->name('deals.payments.store');
         Route::delete('/deals/{deal}/payments/{payment}', [DealPaymentController::class, 'destroy'])->name('deals.payments.destroy');
+        Route::delete('/deals/{deal}/supplier-payments/{supplierPayment}', [DealPaymentController::class, 'destroySupplierPayment'])->name('deals.supplier-payments.destroy');
         Route::get('/invoices/template', [InvoiceController::class, 'template'])->name('invoices.template');
         Route::post('/deals/{deal}/invoices/import', [InvoiceController::class, 'import'])->name('invoices.import');
         Route::get('/invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show');

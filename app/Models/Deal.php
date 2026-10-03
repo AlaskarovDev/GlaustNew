@@ -66,9 +66,10 @@ class Deal extends Model
         return $this->hasMany(BankTransaction::class)->where('direction', 'out')->orderByDesc('transaction_date')->orderByDesc('id');
     }
 
-    public function supplierPayments()
+    /** Our payments to the seller (amount in the invoice currency, debit + fee on the account). */
+    public function supplierPayments(): HasMany
     {
-        return $this->outgoing->where('counterparty_id', $this->supplier_id)->values();
+        return $this->hasMany(SupplierPayment::class)->orderByDesc('payment_date')->orderByDesc('id');
     }
 
     public function salesDocuments(): HasMany

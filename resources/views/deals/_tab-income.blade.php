@@ -26,5 +26,5 @@
 @include('deals._payment-list', ['dir' => 'in'])
 
 <h3 class="text-xs font-semibold uppercase tracking-wide text-muted mb-3 mt-8">Satıcıya ödənişlər</h3>
-@include('deals._payment-form', ['dir' => 'out'])
-@include('deals._payment-list', ['dir' => 'out'])
+@include('deals._supplier-payment-form')
+@include('deals._supplier-payment-list')

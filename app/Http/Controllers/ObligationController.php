@@ -22,7 +22,7 @@ class ObligationController extends Controller
 
     public function index(): View
     {
-        $deals = Deal::with(['project', 'counterparty', 'supplier', 'invoices', 'salesDocuments', 'payments', 'outgoing'])
+        $deals = Deal::with(['project', 'counterparty', 'supplier', 'invoices', 'salesDocuments', 'payments', 'supplierPayments'])
             ->where('status', '!=', 'cancelled')
             ->orderByDesc('deal_date')->get();
 

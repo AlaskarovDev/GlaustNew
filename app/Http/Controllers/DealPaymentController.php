@@ -25,8 +25,11 @@ class DealPaymentController extends Controller
     public function store(Request $request, Deal $deal): RedirectResponse
     {
         $this->authorize('bank.create');
-        // in: the buyer pays us; out: we pay the seller.
-        $out = $request->input('direction') === 'out';
+        if ($request->input('direction') === 'out') {
+            return $this->paySupplier($request, $deal);
+        }
+        // The buyer pays us.
+        $out = false;
         $partyId = $out ? $deal->supplier_id : $deal->counterparty_id;
         if (! $partyId) {
             return back()->with('error', $out ? 'Əvvəlcə tədarükdə satıcını seçin.' : 'Əvvəlcə tədarükdə alıcını (məhsulu satdığımız tərəfi) seçin.');
@@ -64,6 +67,40 @@ class DealPaymentController extends Controller
         }
 
         return redirect()->route('deals.show', [$deal, 'tab' => 'income'])->with('success', ($out ? 'Satıcıya ödəniş' : 'Mədaxil').' qeydə alındı: '.money($data['amount'], $data['currency']).'.');
+    }
+
+    /** We pay the seller: invoice currency, bank's rate when the account differs, bank fee as an expense. */
+    private function paySupplier(Request $request, Deal $deal): RedirectResponse
+    {
+        $request->merge([
+            'amount' => parse_number($request->input('amount')),
+            'bank_rate' => parse_number($request->input('bank_rate')),
+            'fee_amount' => parse_number($request->input('fee_amount')),
+        ]);
+        $data = $request->validate([
+            'payment_date' => ['required', 'date', 'before_or_equal:today'],
+            'currency' => ['required', Rule::in(config('glaust.currencies'))],
+            'amount' => ['required', 'numeric', 'gt:0', 'max:999999999999'],
+            'bank_account_id' => ['required', 'integer', TenantExists::in('bank_accounts')],
+            'bank_rate' => ['nullable', 'numeric', 'gt:0', 'max:10000000'],
+            'fee_amount' => ['nullable', 'numeric', 'min:0', 'max:999999999'],
+            'reference' => ['nullable', 'string', 'max:80'],
+            'purpose' => ['nullable', 'string', 'max:255'],
+        ], [], ['payment_date' => 'Tarix', 'currency' => 'Valyuta', 'amount' => 'Məbləğ', 'bank_account_id' => 'Bank hesabı', 'bank_rate' => 'Bankın kursu', 'fee_amount' => 'Bank komissiyası']);
+
+        $p = app(\App\Services\SupplierPaymentService::class)->pay($deal, $data);
+
+        return redirect()->route('deals.show', [$deal, 'tab' => 'income'])->with('success', 'Satıcıya ödəniş: '.money($p->amount, $p->currency)
+            .' · hesabdan silindi: '.money($p->totalDebit(), $p->account_currency).((float) $p->fee_account_amount ? ' (komissiya '.money($p->fee_account_amount, $p->account_currency).' daxil)' : '').'.');
+    }
+
+    public function destroySupplierPayment(Deal $deal, \App\Models\SupplierPayment $supplierPayment): RedirectResponse
+    {
+        $this->authorize('bank.delete');
+        abort_unless($supplierPayment->deal_id === $deal->id, 404);
+        app(\App\Services\SupplierPaymentService::class)->delete($supplierPayment);
+
+        return redirect()->route('deals.show', [$deal, 'tab' => 'income'])->with('success', 'Satıcıya ödəniş ləğv edildi; hesabdan silinmə və komissiya da silindi.');
     }
 
     public function destroy(Deal $deal, BankTransaction $payment): RedirectResponse

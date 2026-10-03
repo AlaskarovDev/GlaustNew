@@ -2,7 +2,7 @@
 @php
     $out = $dir === 'out';
     $mine = old('direction', 'in') === $dir;
-    $list = $out ? $deal->supplierPayments() : $deal->payments;
+    $list = $deal->payments;
     $party = $out ? $deal->supplier?->name : $deal->counterparty?->name;
     $override = $mine && old('applied_rate') !== null && old('applied_rate') !== '';
     $baseCurrency = $out ? ($deal->invoices->where('type', 'supplier')->first()?->currency ?? 'EUR') : ($deal->salesDocuments->where('kind', 'proforma')->first()?->currency ?? $accounts->first()?->currency ?? 'AZN');

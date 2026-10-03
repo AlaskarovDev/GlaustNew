@@ -19,7 +19,7 @@ class DealObligations
      */
     public static function for(Deal $deal): array
     {
-        $deal->loadMissing(['invoices', 'salesDocuments', 'payments', 'outgoing']);
+        $deal->loadMissing(['invoices', 'salesDocuments', 'payments', 'supplierPayments']);
         $sum = fn ($items, $amount = 'amount') => $items->groupBy('currency')->map(fn ($g) => round($g->sum($amount), 2))->all();
 
         // Buyer: proforma totals vs what came in.
@@ -30,7 +30,7 @@ class DealObligations
         // Seller: its invoices vs what we paid it.
         $supplierInvoices = $deal->invoices->where('type', 'supplier')->where('status', '!=', 'cancelled');
         $invoiced = $sum($supplierInvoices, 'total');
-        $paidSeller = $sum($deal->supplierPayments());
+        $paidSeller = $sum($deal->supplierPayments); // in the payment currency, whichever account paid
         $sellerDue = self::minus($invoiced, $paidSeller);
 
         // Logistics: from the moment the buyer's proforma is ready, in the entered currency.

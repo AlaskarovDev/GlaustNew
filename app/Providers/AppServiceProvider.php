@@ -51,6 +51,7 @@ class AppServiceProvider extends ServiceProvider
             'sales_document' => \App\Models\SalesDocument::class,
             'expense' => \App\Models\Expense::class,
             'currency_exchange' => \App\Models\CurrencyExchange::class,
+            'supplier_payment' => \App\Models\SupplierPayment::class,
         ]);
 
         Password::defaults(fn () => Password::min(8)->letters()->numbers());

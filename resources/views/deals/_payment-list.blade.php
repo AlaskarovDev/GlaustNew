@@ -1,7 +1,7 @@
 {{-- Payments of one direction: $dir = in (from the buyer) or out (to the seller). --}}
 @php
     $out = $dir === 'out';
-    $list = $out ? $deal->supplierPayments() : $deal->payments;
+    $list = $deal->payments;
     $party = $out ? $deal->supplier?->name : $deal->counterparty?->name;
 @endphp
 <section class="card overflow-hidden mb-6">

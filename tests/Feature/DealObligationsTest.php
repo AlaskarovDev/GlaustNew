@@ -38,9 +38,9 @@ class DealObligationsTest extends TestCase
         ]);
         $day = today()->subDay()->toDateString();
         $this->post(route('deals.payments.store', $deal), ['direction' => 'in', 'transaction_date' => $day, 'currency' => 'RUB', 'amount' => '5 000 000', 'bank_account_id' => $rub->id])->assertSessionHasNoErrors();
-        $this->post(route('deals.payments.store', $deal), ['direction' => 'out', 'transaction_date' => $day, 'currency' => 'EUR', 'amount' => '100 000', 'bank_account_id' => $eur->id])->assertSessionHasNoErrors();
+        $this->post(route('deals.payments.store', $deal), ['direction' => 'out', 'payment_date' => $day, 'currency' => 'EUR', 'amount' => '100 000', 'bank_account_id' => $eur->id])->assertSessionHasNoErrors();
 
-        $out = $this->inTenant($admin, fn () => BankTransaction::where('direction', 'out')->firstOrFail());
+        $out = $this->inTenant($admin, fn () => BankTransaction::where('direction', 'out')->where('counterparty_id', $deal->supplier_id)->firstOrFail());
         $this->assertSame($deal->supplier_id, $out->counterparty_id, 'paid to the seller automatically');
         $this->assertSame($deal->purchase_contract_id, $out->contract_id);
 

@@ -126,6 +126,24 @@ return [
     'shipment_directions' => ['import' => 'İdxal', 'export' => 'İxrac', 'domestic' => 'Daxili'],
     'transport_modes' => ['road' => 'Avto', 'rail' => 'Dəmir yolu', 'sea' => 'Dəniz', 'air' => 'Hava'],
     'cost_types' => ['freight' => 'Fraxt', 'customs' => 'Gömrük', 'insurance' => 'Sığorta', 'storage' => 'Anbar', 'other' => 'Digər'],
+    // Hesabatlar menu. The rules of each report are still to be agreed; until then a page shows what it will cover.
+    'analytics' => [
+        'cashflow' => ['Cashflow', 'trending-up', 'Pul axını: hesablar üzrə daxilolma və məxaric, dövrün əvvəlinə və sonuna qalıq.',
+            ['Bank hesabları üzrə mədaxil / məxaric', 'Valyutalar üzrə və AZN ekvivalentində', 'Dövr və hesab filtri, gözlənilən ödənişlər']],
+        'purchases' => ['Alış hesabatları', 'package', 'Satıcılardan alışlar: fakturalar, ödənişlər, qalıq borclar.',
+            ['Satıcı fakturaları (faktura valyutasında)', 'Satıcılara ödənişlər, bank komissiyaları', 'Satıcı üzrə qalıq borc və təhvil öhdəliyi']],
+        'projects' => ['Layihə hesabatları', 'folder', 'Layihə və tədarük üzrə gəlir, xərc və nəticə.',
+            ['Tədarüklər: alış, logistika, komissiya, satış', 'Alıcıdan daxilolma, satıcıya ödəniş', 'Layihə üzrə marja']],
+        'fx' => ['Kurs fərqləri', 'transfer', 'CBAR və bank kursları arasındakı fərqlər — bütün əməliyyatlar üzrə.',
+            ['Valyuta alış-satışı', 'Satıcıya ödənişlər və alıcıdan daxilolmalar', 'Valyutalar və dövr üzrə itki / qazanc (AZN)']],
+        'profit' => ['Mənfəət və zərər', 'chart', 'Gəlirlər, xərclər və nəticə.',
+            ['Satış gəliri və alış maya dəyəri', 'Logistika, komissiya, bank xərcləri, digər xərclər', 'Kurs fərqlərinin nəticəyə təsiri']],
+        'expenses' => ['Xərclər hesabatı', 'receipt', 'Xərclər kateqoriya, dövr, layihə və ödəniş üsulu üzrə.',
+            ['Kateqoriyalar üzrə cəm və pay', 'Ödənilmiş / ödənilməmiş', 'Nağd / bank köçürməsi']],
+        'summary' => ['Yekun hesabat', 'layers', 'Şirkətin ümumi vəziyyəti bir səhifədə.',
+            ['Pul qalıqları və öhdəliklər', 'Dövrün mənfəəti və kurs fərqləri', 'Açıq tədarüklər və layihələr']],
+    ],
+
     // The bank's fee on an outgoing payment to a seller, per payment currency: percent of the
     // amount, kept between the minimum and the maximum (same currency). Editable on each payment.
     'bank_fees' => [

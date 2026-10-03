@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin;
 use App\Http\Controllers\AjaxController;
+use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\Auth;
 use App\Http\Controllers\BankAccountController;
@@ -194,6 +195,7 @@ Route::middleware(['auth', 'tenant'])->group(function () {
 
     /* Reports */
     Route::middleware('can:reports.view')->group(function () {
+        Route::get('/analytics/{report}', [AnalyticsController::class, 'show'])->whereIn('report', array_keys(config('glaust.analytics')))->name('analytics.show');
         Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
         Route::get('/reports/{report}', [ReportController::class, 'show'])->name('reports.show');
         Route::get('/reports/{report}/export', [ReportController::class, 'export'])->middleware('can:reports.export')->name('reports.export');

@@ -29,7 +29,11 @@ class Navigation
                 ['label' => 'Valyuta məzənnələri', 'route' => 'currency.index', 'active' => 'currency.*', 'icon' => 'coins', 'can' => 'currency.view'],
             ]],
             ['label' => 'Analitika', 'items' => [
-                ['label' => 'Hesabatlar', 'route' => 'reports.index', 'active' => 'reports.*', 'icon' => 'chart', 'can' => 'reports.view'],
+                ['label' => 'Hesabatlar', 'route' => 'analytics.show', 'params' => ['report' => array_key_first(config('glaust.analytics'))], 'active' => 'analytics.*|reports.*', 'icon' => 'chart', 'can' => 'reports.view',
+                    'children' => array_merge(
+                        array_map(fn ($key, $a) => ['label' => $a[0], 'route' => 'analytics.show', 'params' => ['report' => $key], 'icon' => $a[1]], array_keys(config('glaust.analytics')), config('glaust.analytics')),
+                        [['label' => 'Digər hesabatlar', 'route' => 'reports.index', 'params' => [], 'icon' => 'list', 'active' => 'reports.*']],
+                    )],
                 ['label' => 'Importlar', 'route' => 'imports.index', 'active' => 'imports.*', 'icon' => 'upload', 'can' => ['crm.import', 'projects.import', 'bank.import', 'logistics.import']],
             ]],
             ['label' => 'Sistem', 'items' => [
@@ -88,7 +92,9 @@ class Navigation
         $commands = [];
         foreach (self::sidebar($user) as $section) {
             foreach ($section['items'] as $item) {
-                $commands[] = ['label' => $item['label'], 'group' => 'Keçid', 'icon' => $item['icon'], 'url' => route($item['route']), 'keywords' => ''];
+                foreach ($item['children'] ?? [$item] as $link) {
+                    $commands[] = ['label' => $link['label'], 'group' => isset($item['children']) ? $item['label'] : 'Keçid', 'icon' => $link['icon'], 'url' => route($link['route'], $link['params'] ?? []), 'keywords' => isset($item['children']) ? 'hesabat' : ''];
+                }
             }
         }
         foreach (self::shortcuts($user) as $s) {

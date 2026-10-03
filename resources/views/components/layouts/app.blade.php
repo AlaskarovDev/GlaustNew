@@ -63,13 +63,38 @@
                 <ul class="space-y-0.5">
                     @foreach($section['items'] as $item)
                         @php $active = request()->routeIs(...explode('|', $item['active'])); @endphp
-                        <li>
-                            <a href="{{ route($item['route']) }}" @class(['nav-link', 'is-active' => $active]) @if($active) aria-current="page" @endif
-                               :class="collapsed && 'lg:justify-center lg:px-0'" :title="collapsed ? @js($item['label']) : null">
-                                <x-icon :name="$item['icon']" class="size-[19px] shrink-0"/>
-                                <span class="truncate" :class="collapsed && 'lg:hidden'">{{ $item['label'] }}</span>
-                            </a>
-                        </li>
+                        @if(! empty($item['children']))
+                            {{-- Group with sub-items; opens by itself when one of them is the current page. --}}
+                            <li x-data="{ open: {{ $active ? 'true' : 'false' }} }">
+                                <button type="button" @click="collapsed ? (window.location = @js(route($item['route'], $item['params'] ?? []))) : (open = !open)"
+                                        @class(['nav-link w-full', 'is-active' => $active]) :aria-expanded="open" :class="collapsed && 'lg:justify-center lg:px-0'" :title="collapsed ? @js($item['label']) : null">
+                                    <x-icon :name="$item['icon']" class="size-[19px] shrink-0"/>
+                                    <span class="truncate flex-1 text-left" :class="collapsed && 'lg:hidden'">{{ $item['label'] }}</span>
+                                    <x-icon name="chevron-down" class="size-4 shrink-0 opacity-60 transition-transform duration-200" ::class="[open && 'rotate-180', collapsed && 'lg:hidden']"/>
+                                </button>
+                                <ul x-show="open && !collapsed" x-collapse @if(! $active) x-cloak @endif class="nav-sub">
+                                    @foreach($item['children'] as $child)
+                                        @php
+                                            $childActive = isset($child['active']) ? request()->routeIs($child['active'])
+                                                : (request()->routeIs($child['route']) && collect($child['params'] ?? [])->every(fn ($v, $k) => (string) request()->route($k) === (string) $v));
+                                        @endphp
+                                        <li>
+                                            <a href="{{ route($child['route'], $child['params'] ?? []) }}" @class(['nav-sublink', 'is-active' => $childActive]) @if($childActive) aria-current="page" @endif>
+                                                <x-icon :name="$child['icon']" class="size-4 shrink-0"/><span class="truncate">{{ $child['label'] }}</span>
+                                            </a>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </li>
+                        @else
+                            <li>
+                                <a href="{{ route($item['route'], $item['params'] ?? []) }}" @class(['nav-link', 'is-active' => $active]) @if($active) aria-current="page" @endif
+                                   :class="collapsed && 'lg:justify-center lg:px-0'" :title="collapsed ? @js($item['label']) : null">
+                                    <x-icon :name="$item['icon']" class="size-[19px] shrink-0"/>
+                                    <span class="truncate" :class="collapsed && 'lg:hidden'">{{ $item['label'] }}</span>
+                                </a>
+                            </li>
+                        @endif
                     @endforeach
                 </ul>
             </div>

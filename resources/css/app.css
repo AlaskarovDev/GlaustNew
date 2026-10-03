@@ -270,6 +270,14 @@
         background: #2dd4bf; box-shadow: 0 0 12px #2dd4bf;
     }
 
+    /* Sidebar group (Hesabatlar): sub-links on a guide line; the active marker sits on the sub-link */
+    button.nav-link.is-active::before { display: none; }
+    .nav-sub { @apply mt-0.5 ml-[21px] pl-3 border-l border-white/[0.08] space-y-0.5; }
+    .nav-sublink { @apply relative flex items-center gap-2.5 h-8 px-2.5 rounded-lg text-[13px] text-slate-400; transition: color 150ms ease, background-color 150ms ease; }
+    .nav-sublink:hover { @apply text-white bg-white/[0.04]; }
+    .nav-sublink.is-active { @apply text-white bg-white/[0.07]; }
+    .nav-sublink.is-active::before { content: ''; position: absolute; left: -13px; top: 8px; bottom: 8px; width: 2px; border-radius: 2px; background: #2dd4bf; box-shadow: 0 0 10px #2dd4bf; }
+
     .kbd { @apply inline-flex items-center justify-center min-w-5 h-5 px-1 rounded border border-line bg-surface-2 font-mono text-[11px] text-muted; }
 
     .skeleton { @apply rounded-md; background: linear-gradient(90deg, var(--g-surface-2) 25%, var(--g-line) 37%, var(--g-surface-2) 63%); background-size: 400% 100%; animation: var(--animate-shimmer); }

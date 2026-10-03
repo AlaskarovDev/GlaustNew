@@ -10,7 +10,7 @@
         @if($supplierInvoices->isNotEmpty())
             <div class="overflow-x-auto">
                 <table class="table-g table-stack">
-                    <thead><tr><th>Proforma №</th><th>Tarix</th><th class="!text-right">Sətir</th><th class="!text-right">Məbləğ</th><th class="!text-right">AZN (CBAR)</th><th>Status</th></tr></thead>
+                    <thead><tr><th>Proforma №</th><th>Tarix</th><th class="!text-right">Sətir</th><th class="!text-right">Məbləğ</th><th>Status</th></tr></thead>
                     <tbody>
                     @foreach($supplierInvoices as $inv)
                         <tr>
@@ -18,7 +18,6 @@
                             <td data-label="Tarix" class="font-mono text-xs">{{ azdate($inv->invoice_date) }}</td>
                             <td data-label="Sətir" class="num">{{ $inv->items_count }}</td>
                             <td data-label="Məbləğ" class="num">{{ money($inv->total, $inv->currency) }}</td>
-                            <td data-label="AZN" class="num">{{ money($inv->total_azn) }}<div class="text-[11px] text-faint">{{ rate_fmt($inv->cbar_rate) }}</div></td>
                             <td data-label="Status"><x-status group="invoice" :value="$inv->status"/>
                                 @if($inv->approval_status)@php [$al, $at] = \App\Models\Invoice::APPROVAL_STATUSES[$inv->approval_status]; @endphp<span class="badge badge-{{ $at }} ml-1">{{ $al }}</span>@endif
                             </td>
@@ -28,8 +27,8 @@
                     @if($supplierInvoices->count() > 1)
                         <tfoot class="hidden md:table-footer-group"><tr class="bg-surface-2 font-semibold">
                             <td class="px-4 py-3" colspan="3">Cəmi</td>
-                            <td class="px-4 py-3 text-right font-mono">{{ money($supplierInvoices->sum('total'), $supplierInvoices->first()->currency) }}</td>
-                            <td class="px-4 py-3 text-right font-mono">{{ money($supplierInvoices->sum('total_azn')) }}</td><td></td>
+                            {{-- per invoice currency, never converted --}}
+                            <td class="px-4 py-3 text-right font-mono">{!! $supplierInvoices->groupBy('currency')->map(fn ($g, $c) => e(money($g->sum('total'), $c)))->implode('<br>') !!}</td><td></td>
                         </tr></tfoot>
                     @endif
                 </table>

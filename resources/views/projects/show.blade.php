@@ -157,7 +157,7 @@
                         </div>
                         <div class="mt-4 pt-4 border-t border-line flex justify-between text-sm">
                             <span class="text-muted">{{ $d->invoices_count }} faktura</span>
-                            <span class="font-mono">{{ $d->supplier_total_azn ? money($d->supplier_total_azn) : '—' }}</span>
+                            <span class="font-mono text-right">{!! $d->invoices->isEmpty() ? '—' : $d->invoices->groupBy('currency')->map(fn ($g, $c) => e(money($g->sum('total'), $c)))->implode('<br>') !!}</span>
                         </div>
                     </a>
                 @endforeach

@@ -150,6 +150,9 @@ class DealInvoiceTest extends TestCase
         $this->assertSame('invoiced', $deal->fresh()->status);
 
         $this->get(route('invoices.show', $inv))->assertOk()->assertSee('TD-Weiss Migrastar')->assertSee('UNIT PRICE CCL EUR');
+        // The deal and project pages show the seller's invoice in its own currency, not in AZN.
+        $this->get(route('deals.show', $deal))->assertOk()->assertSee(money(56440, 'EUR'))->assertDontSee('AZN (CBAR)')->assertDontSee(money($inv->total_azn));
+        $this->get(route('projects.show', [$deal->project_id, 'tab' => 'deals']))->assertOk()->assertSee(money(56440, 'EUR'));
         $this->get(route('invoices.export', [$inv, 'format' => 'xlsx']))->assertOk();
         $this->get(route('invoices.export', [$inv, 'format' => 'pdf']))->assertOk();
 

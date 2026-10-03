@@ -92,7 +92,7 @@ class ProjectController extends Controller
         }
 
         $deals = $project->deals()->with(['counterparty:id,name', 'supplier:id,name', 'saleContract:id,number', 'purchaseContract:id,number'])
-            ->withCount('invoices')->withSum(['invoices as supplier_total_azn' => fn ($q) => $q->where('type', 'supplier')], 'total_azn')->get();
+            ->withCount('invoices')->with(['invoices' => fn ($q) => $q->where('type', 'supplier')->select('id', 'deal_id', 'type', 'total', 'currency')])->get();
 
         // Money actually moved under each side's contract (bank, AZN).
         $settled = [];

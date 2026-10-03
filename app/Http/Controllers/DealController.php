@@ -66,7 +66,7 @@ class DealController extends Controller
             'project', 'counterparty', 'supplier', 'responsible',
             'saleContract.attachments.uploader', 'purchaseContract.attachments.uploader',
             'invoices' => fn ($q) => $q->withCount('items'), 'attachments.uploader',
-            'salesDocuments', 'payments.account',
+            'salesDocuments', 'payments.account', 'outgoing.account',
         ]);
         $tab = in_array($request->query('tab'), self::TABS, true) ? $request->query('tab') : 'invoices';
         $history = AuditLog::with('user')->where('auditable_type', 'deal')->where('auditable_id', $deal->id)->latest('created_at')->limit(15)->get();

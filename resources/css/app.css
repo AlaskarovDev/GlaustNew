@@ -153,6 +153,16 @@
     .approval-step.is-now { @apply border-saffron/50 bg-saffron-soft/50; }
     .approval-step.is-now .approval-dot { @apply bg-saffron text-white; }
 
+    /* Deal obligations */
+    .ob-pill { @apply inline-flex items-center gap-1.5 h-8 px-3 rounded-full border text-[13px]; }
+    .ob-pill.is-out { @apply border-danger/30 bg-danger-soft/50 text-danger; }
+    .ob-pill.is-in { @apply border-success/30 bg-success-soft/60 text-success; }
+    .ob-rows > div { @apply flex items-baseline justify-between gap-3 py-0.5; }
+    .ob-rows dt { @apply text-sm text-muted; }
+    .ob-rows dd { @apply font-mono text-sm font-medium text-right; }
+    .ob-goods { @apply flex items-start gap-2 rounded-lg bg-surface-2 px-3 py-2 text-xs text-muted; }
+    .ob-goods.is-open { @apply bg-brand-soft/60 text-brand-ink; }
+
     /* Deal page: numbered tabs in the order of the work (invoices -> income -> logistics) */
     .deal-steps { @apply flex items-center gap-2 overflow-x-auto pb-1; }
     .deal-step { @apply flex items-center gap-2.5 h-11 pl-1.5 pr-4 rounded-full border border-line bg-surface text-sm text-ink-2 whitespace-nowrap; transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease, box-shadow 150ms ease; }

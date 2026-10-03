@@ -25,8 +25,11 @@ class DealPaymentController extends Controller
     public function store(Request $request, Deal $deal): RedirectResponse
     {
         $this->authorize('bank.create');
-        if (! $deal->counterparty_id) {
-            return back()->with('error', 'Əvvəlcə tədarükdə alıcını (məhsulu satdığımız tərəfi) seçin.');
+        // in: the buyer pays us; out: we pay the seller.
+        $out = $request->input('direction') === 'out';
+        $partyId = $out ? $deal->supplier_id : $deal->counterparty_id;
+        if (! $partyId) {
+            return back()->with('error', $out ? 'Əvvəlcə tədarükdə satıcını seçin.' : 'Əvvəlcə tədarükdə alıcını (məhsulu satdığımız tərəfi) seçin.');
         }
         $request->merge(['amount' => parse_number($request->input('amount')), 'applied_rate' => parse_number($request->input('applied_rate'))]);
         $data = $request->validate([
@@ -41,26 +44,26 @@ class DealPaymentController extends Controller
 
         $account = BankAccount::findOrFail($data['bank_account_id']);
         if ($account->currency !== $data['currency']) {
-            throw ValidationException::withMessages(['bank_account_id' => "Seçilən hesab {$account->currency} hesabıdır, ödəniş isə {$data['currency']} ilə gəlib. Eyni valyutalı hesab seçin."]);
+            throw ValidationException::withMessages(['bank_account_id' => "Seçilən hesab {$account->currency} hesabıdır, ödəniş isə {$data['currency']} ilədir. Eyni valyutalı hesab seçin."]);
         }
 
         try {
             $this->ledger->record($account, [
-                'direction' => 'in',
+                'direction' => $out ? 'out' : 'in',
                 'transaction_date' => $data['transaction_date'],
                 'amount' => $data['amount'],
-                'counterparty_id' => $deal->counterparty_id,
-                'contract_id' => $deal->sale_contract_id,
+                'counterparty_id' => $partyId,
+                'contract_id' => $out ? $deal->purchase_contract_id : $deal->sale_contract_id,
                 'project_id' => $deal->project_id,
                 'deal_id' => $deal->id,
-                'purpose' => ($data['purpose'] ?? null) ?: 'Tədarük '.$deal->code.' üzrə alıcının ödənişi',
+                'purpose' => ($data['purpose'] ?? null) ?: 'Tədarük '.$deal->code.($out ? ' üzrə satıcıya ödəniş' : ' üzrə alıcının ödənişi'),
                 'reference' => $data['reference'] ?? null,
             ], $data['applied_rate'] ?? null);
         } catch (RateUnavailable $e) {
             throw ValidationException::withMessages(['transaction_date' => $e->getMessage().' Mədaxil yadda saxlanmadı.']);
         }
 
-        return redirect()->route('deals.show', [$deal, 'tab' => 'income'])->with('success', 'Mədaxil qeydə alındı: '.money($data['amount'], $data['currency']).'.');
+        return redirect()->route('deals.show', [$deal, 'tab' => 'income'])->with('success', ($out ? 'Satıcıya ödəniş' : 'Mədaxil').' qeydə alındı: '.money($data['amount'], $data['currency']).'.');
     }
 
     public function destroy(Deal $deal, BankTransaction $payment): RedirectResponse

@@ -60,6 +60,17 @@ class Deal extends Model
         return $this->hasMany(BankTransaction::class)->where('direction', 'in')->orderByDesc('transaction_date')->orderByDesc('id');
     }
 
+    /** Outgoing bank movements of this deal; those to the seller are our payments for the goods. */
+    public function outgoing(): HasMany
+    {
+        return $this->hasMany(BankTransaction::class)->where('direction', 'out')->orderByDesc('transaction_date')->orderByDesc('id');
+    }
+
+    public function supplierPayments()
+    {
+        return $this->outgoing->where('counterparty_id', $this->supplier_id)->values();
+    }
+
     public function salesDocuments(): HasMany
     {
         return $this->hasMany(SalesDocument::class)->orderBy('source_invoice_id')->orderBy('kind');

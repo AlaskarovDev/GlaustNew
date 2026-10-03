@@ -83,6 +83,8 @@
             'logistics' => ['3', 'Logistika', null],
         ];
     @endphp
+    @include('deals._obligations')
+
     <nav class="deal-steps mb-6" aria-label="Tədarük bölmələri">
         @foreach($tabs as $key => [$no, $label, $count])
             <a href="{{ route('deals.show', [$deal, 'tab' => $key]) }}" @class(['deal-step', 'is-active' => $tab === $key]) @if($tab === $key) aria-current="page" @endif>

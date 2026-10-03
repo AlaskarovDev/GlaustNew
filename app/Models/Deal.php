@@ -72,6 +72,11 @@ class Deal extends Model
         return $this->hasMany(SupplierPayment::class)->orderByDesc('payment_date')->orderByDesc('id');
     }
 
+    public function logisticsActs(): HasMany
+    {
+        return $this->hasMany(LogisticsAct::class)->orderBy('act_date')->orderBy('id');
+    }
+
     public function salesDocuments(): HasMany
     {
         return $this->hasMany(SalesDocument::class)->orderBy('source_invoice_id')->orderBy('kind');

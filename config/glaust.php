@@ -159,6 +159,7 @@ return [
         'task_due' => 'Tapşırığın son tarixi',
         'shipment_delay' => 'Gecikən yük',
         'approval' => 'Təsdiq',
+        'logistics_payment' => 'Logistika ödənişi',
     ],
 
     // Defaults for company settings (merged with companies.settings JSON).

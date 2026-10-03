@@ -360,6 +360,123 @@ Alpine.data('combobox', (cfg) => ({
 }));
 
 /* ---------- official rate lookup for money forms ---------- */
+/* ---------- logistics act & its payment terms ----------
+ * One component for "add a logistics act" (mode new) and "pay an act" (mode pay).
+ * The act is valued at CBAR of its date in AZN / RUB / EUR. Payment terms: all RUB, all EUR or
+ * split into any number of parts; each part = a share of the act (act currency), its currency,
+ * an account in that currency, the bank's rate (act currency -> part currency), and the bank fee
+ * (glaust.bank_fees: own rule, or the EUR rule with its limits converted at CBAR) added on top.
+ */
+Alpine.data('logisticsPay', (cfg) => ({
+    mode: cfg.mode || 'new',
+    currency: cfg.currency || 'EUR',
+    amount: cfg.amount ?? '',
+    actDate: cfg.actDate || cfg.today,
+    payDate: cfg.today,
+    today: cfg.today,
+    plan: cfg.plan || 'today',
+    plannedDate: '',
+    remind: false,
+    terms: '',
+    parts: [],
+    accounts: cfg.accounts || [],
+    fees: cfg.fees || {},
+    rates: {},
+    errors: {},
+    init() {
+        this.$watch('actDate', () => this.load());
+        this.$watch('payDate', () => this.load());
+        this.$watch('currency', () => { this.load(); this.reflow(); });
+        this.$watch('amount', () => this.reflow());
+        this.load();
+        if (this.mode === 'pay') this.setTerms(this.currency === 'RUB' ? 'RUB' : 'EUR');
+    },
+    num(v) { const n = parseFloat(String(v ?? '').replace(/[\s ]/g, '').replace(',', '.')); return isNaN(n) ? 0 : n; },
+    r2: (v) => Math.round(v * 100) / 100,
+    fmt: (v) => fmt(v, 2),
+    rf: (v) => (v ? fmtRate(v) : '—'),
+    key: (cur, date) => cur + '@' + date,
+    rate(cur, date) { return cur === 'AZN' ? 1 : (this.rates[this.key(cur, date)] ?? null); },
+    async fetchRate(cur, date) {
+        if (cur === 'AZN' || !date || this.rates[this.key(cur, date)] !== undefined) return;
+        this.rates[this.key(cur, date)] = null;
+        try {
+            const d = await api(`/ajax/rate?currency=${encodeURIComponent(cur)}&date=${encodeURIComponent(date)}`);
+            this.rates = { ...this.rates, [this.key(cur, date)]: d.ok ? d.rate : null };
+            if (!d.ok) this.errors = { ...this.errors, rate: d.message };
+        } catch (e) { this.errors = { ...this.errors, rate: e.message }; }
+    },
+    load() {
+        this.errors = {};
+        const curs = new Set([this.currency, 'RUB', 'EUR', ...this.parts.map((p) => p.currency)]);
+        curs.forEach((c) => { this.fetchRate(c, this.actDate); this.fetchRate(c, this.payDate); });
+    },
+    // the act at CBAR of its date
+    actIn(cur) {
+        const a = this.rate(this.currency, this.actDate), b = this.rate(cur, this.actDate);
+        return a && b ? this.r2(this.num(this.amount) * a / b) : null;
+    },
+    total() { return this.num(this.amount); },
+    // payment terms
+    setTerms(t) {
+        this.terms = t;
+        const total = this.total();
+        if (t === 'split') {
+            const half = this.r2(total / 2);
+            this.parts = [this.part('RUB', half), this.part('EUR', this.r2(total - half))];
+        } else {
+            this.parts = [this.part(t, total)];
+        }
+        this.load();
+    },
+    part(currency, share) {
+        const acc = this.accounts.find((a) => a.currency === currency);
+        return { currency, share: share ? String(share) : '', account: acc ? String(acc.id) : '', bankRate: '', fee: '', feeTouched: false };
+    },
+    addPart() { this.parts.push(this.part(this.parts.at(-1)?.currency || 'RUB', this.r2(Math.max(0, this.unallocated())))); this.load(); },
+    removePart(i) { this.parts.splice(i, 1); if (!this.parts.length) this.terms = ''; },
+    reflow() { if (this.terms && this.terms !== 'split' && this.parts.length === 1) this.parts[0].share = String(this.total() || ''); },
+    changeCurrency(p) {
+        if (!this.options(p.currency).some((a) => String(a.id) === p.account)) p.account = this.options(p.currency)[0] ? String(this.options(p.currency)[0].id) : '';
+        p.bankRate = ''; p.feeTouched = false;
+        this.load();
+    },
+    options(cur) { return this.accounts.filter((a) => a.currency === cur); },
+    account(p) { return this.accounts.find((a) => String(a.id) === String(p.account)); },
+    allocated() { return this.r2(this.parts.reduce((s, p) => s + this.num(p.share), 0)); },
+    unallocated() { return this.r2(this.total() - this.allocated()); },
+    same(p) { return p.currency === this.currency; },
+    cross(p) { const a = this.rate(this.currency, this.payDate), b = this.rate(p.currency, this.payDate); return a && b ? a / b : null; },
+    applied(p) { return this.same(p) ? 1 : this.num(p.bankRate); },
+    pay(p) { return this.applied(p) ? this.r2(this.num(p.share) * this.applied(p)) : null; },
+    payCbar(p) { return this.cross(p) ? this.r2(this.num(p.share) * this.cross(p)) : null; },
+    diff(p) { return this.pay(p) !== null && this.payCbar(p) !== null ? this.r2(this.pay(p) - this.payCbar(p)) : null; },
+    rule(p) {
+        const own = this.fees[p.currency];
+        if (own) return { percent: own.percent, min: own.minimum, max: own.maximum ?? null };
+        const eur = this.fees.EUR, er = this.rate('EUR', this.payDate), cr = this.rate(p.currency, this.payDate);
+        if (!eur || !er || !cr) return null;
+        const f = er / cr;
+        return { percent: eur.percent, min: this.r2(eur.minimum * f), max: eur.maximum != null ? this.r2(eur.maximum * f) : null };
+    },
+    ruleFee(p) {
+        const r = this.rule(p), pay = this.pay(p);
+        if (!r || pay === null) return 0;
+        let fee = Math.max(pay * r.percent / 100, r.min);
+        if (r.max !== null) fee = Math.min(fee, r.max);
+        return this.r2(fee);
+    },
+    fee(p) { return p.feeTouched ? this.num(p.fee) : this.ruleFee(p); },
+    feeIn(p, cur) { const a = this.rate(p.currency, this.payDate), b = this.rate(cur, this.payDate); return a && b ? this.r2(this.fee(p) * a / b) : null; },
+    debit(p) { return this.pay(p) !== null ? this.r2(this.pay(p) + this.fee(p)) : null; },
+    partOk(p) { return this.num(p.share) > 0 && p.account && (this.same(p) || this.num(p.bankRate) > 0); },
+    canSubmit() {
+        if (this.mode === 'new' && (!this.total() || !this.currency)) return false;
+        if (this.mode === 'new' && this.plan === 'later') return !!this.plannedDate;
+        return this.parts.length > 0 && this.parts.every((p) => this.partOk(p)) && this.allocated() > 0 && this.unallocated() >= -0.009;
+    },
+}));
+
 Alpine.data('rateLookup', (cfg) => ({
     currency: cfg.currency || 'AZN', date: cfg.date || '', amount: cfg.amount || '',
     cbar: cfg.cbar || null, applied: cfg.applied || '', error: null, loading: false, override: !!cfg.override,

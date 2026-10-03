@@ -46,7 +46,7 @@
         $tabs = [
             'invoices' => ['1', 'Fakturalar', $supplierInvoices->count() + $deal->salesDocuments->count()],
             'income' => ['2', 'Mədaxillər', $deal->payments->count()],
-            'logistics' => ['3', 'Logistika', null],
+            'logistics' => ['3', 'Logistika', $deal->logisticsActs->count()],
             'contracts' => [null, 'Müqavilələr', collect([$deal->purchaseContract, $deal->saleContract])->filter()->count()],
         ];
     @endphp

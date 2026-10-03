@@ -22,7 +22,7 @@ class ObligationController extends Controller
 
     public function index(): View
     {
-        $deals = Deal::with(['project', 'counterparty', 'supplier', 'invoices', 'salesDocuments', 'payments', 'supplierPayments'])
+        $deals = Deal::with(['project', 'counterparty', 'supplier', 'invoices', 'salesDocuments', 'payments', 'supplierPayments', 'logisticsActs.payments', 'logisticsActs.counterparty'])
             ->where('status', '!=', 'cancelled')
             ->orderByDesc('deal_date')->get();
 
@@ -32,7 +32,7 @@ class ObligationController extends Controller
             $lines = [
                 'pay' => array_filter([
                     $ob['seller']['due'] ? ['who' => $deal->supplier?->name, 'what' => 'Satıcıya ödəniş', 'amounts' => $ob['seller']['due']] : null,
-                    $ob['logistics']['due'] ? ['who' => 'Logistika şirkəti', 'what' => 'Logistika xərci'.($ob['logistics']['forecast'] ? ' (proqnoz)' : ''), 'amounts' => $ob['logistics']['due']] : null,
+                    $ob['logistics']['due'] ? ['who' => $ob['logistics']['company'] ?? 'Logistika şirkəti', 'what' => 'Logistika xərci'.($ob['logistics']['forecast'] ? ' (proqnoz)' : ''), 'amounts' => $ob['logistics']['due']] : null,
                 ]),
                 'supply' => $ob['buyer']['goods'] ? [['who' => $deal->counterparty?->name, 'what' => 'Ödədiyi məbləğ qədər məhsul', 'amounts' => $ob['buyer']['goods']]] : [],
                 'receive' => $ob['buyer']['due'] ? [['who' => $deal->counterparty?->name, 'what' => 'Proforma üzrə qalıq', 'amounts' => $ob['buyer']['due']]] : [],

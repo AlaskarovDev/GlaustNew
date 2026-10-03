@@ -59,17 +59,18 @@
         {{-- Logistics --}}
         <article class="card p-4 space-y-3">
             <header class="flex items-start justify-between gap-2">
-                <div class="min-w-0"><div class="text-xs text-muted">Logistika</div><div class="font-semibold truncate">Logistika şirkəti</div></div>
-                @if($ob['logistics']['items'])<span class="badge {{ $ob['logistics']['forecast'] ? 'badge-amber' : 'badge-green' }} shrink-0">{{ $ob['logistics']['forecast'] ? 'proqnoz' : 'dəqiq' }}</span>@endif
+                <div class="min-w-0"><div class="text-xs text-muted">Logistika</div><div class="font-semibold truncate">{{ $ob['logistics']['company'] ?? 'Logistika şirkəti' }}</div></div>
+                @if($ob['logistics']['items'])<span class="badge {{ $ob['logistics']['forecast'] ? 'badge-amber' : 'badge-green' }} shrink-0">{{ $ob['logistics']['forecast'] ? 'proqnoz' : (collect($ob['logistics']['items'])->every(fn ($l) => $l['mode'] === 'act') ? 'akt üzrə' : 'dəqiq') }}</span>@endif
             </header>
             @if($ob['logistics']['items'])
                 <dl class="ob-rows">
                     <div><dt>Ödəməliyik</dt><dd class="text-danger">{!! $amounts($ob['logistics']['due']) !!}</dd></div>
                     @foreach($ob['logistics']['items'] as $l)
-                        <div><dt class="text-xs">Faktura {{ $l['invoice'] }}</dt><dd class="text-xs">{{ money($l['amount'], $l['currency']) }}</dd></div>
+                        <div><dt class="text-xs">{{ $l['mode'] === 'act' ? $l['invoice'] : 'Faktura '.$l['invoice'] }}</dt><dd class="text-xs">{{ money($l['amount'], $l['currency']) }}</dd></div>
                     @endforeach
                 </dl>
-                <p class="text-[11px] text-muted">Proforma hazır olduğu üçün öhdəlik yaranıb; ödəniş və logistika aktı «Logistika» addımında bağlanacaq.</p>
+                @if($ob['logistics']['paid'])<div class="text-[11px] text-muted">Aktlar üzrə ödənilib: <span class="font-mono">{!! collect($ob['logistics']['paid'])->map(fn ($v, $c) => e(money($v, $c)))->implode(' · ') !!}</span></div>@endif
+                <p class="text-[11px] text-muted">Akt və ödəniş «Logistika» addımında aparılır.</p>
             @else
                 <p class="text-sm text-muted">Alıcı üçün proforma hazır olanda logistika şirkəti qarşısında öhdəlik burada yaranacaq.</p>
             @endif

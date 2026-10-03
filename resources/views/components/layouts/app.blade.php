@@ -54,7 +54,7 @@
         </button>
     </div>
 
-    <nav class="flex-1 overflow-y-auto overscroll-contain px-3 py-4 space-y-5">
+    <nav class="flex-1 overflow-y-auto overscroll-contain px-3 py-4 space-y-5" x-init="$nextTick(() => setTimeout(() => $el.querySelector('.nav-sublink[aria-current=page], .nav-link[aria-current=page]')?.scrollIntoView({ block: 'nearest' }), 250))">
         @foreach($sidebar as $section)
             <div>
                 @if($section['label'])

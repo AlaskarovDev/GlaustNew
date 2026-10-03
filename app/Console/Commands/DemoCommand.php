@@ -292,8 +292,16 @@ class DemoCommand extends Command
             ['HERMA PE weiss tc (852) 62Gpt / 517', '39199080', 800, 6.67],
         ];
         $made = 0;
-        $projects = \App\Models\Project::whereNotNull('sale_contract_id')->whereNotNull('purchase_contract_id')->doesntHave('deals')->limit(3)->get();
+        $projects = \App\Models\Project::whereNotNull('sale_contract_id')->doesntHave('deals')->limit(3)->get();
+        $spare = \App\Models\Contract::where('kind', 'purchase')->where('status', '!=', 'draft')->orderBy('id')->get();
         foreach ($projects as $k => $p) {
+            // Older demo data left purchase contracts unattached: give the project one.
+            if (! $p->purchase_contract_id && ($c = $spare->get($k))) {
+                $p->update(['purchase_contract_id' => $c->id, 'supplier_id' => $c->counterparty_id]);
+            }
+            if (! $p->purchase_contract_id) {
+                continue;
+            }
             $deal = \App\Models\Deal::create([
                 'project_id' => $p->id, 'code' => $numbers->next('deal'), 'title' => 'Boya və etiket partiyası #'.($k + 1),
                 'deal_date' => today()->subDays(10 + $k * 7), 'currency' => 'EUR', 'status' => 'invoiced',

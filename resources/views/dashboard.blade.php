@@ -16,7 +16,6 @@
         ['Yeni təchizatçı', 'building', 'counterparties.create', ['type' => 'supplier'], 'crm.create', 'N S'],
         ['Yeni müqavilə', 'signature', 'contracts.create', [], 'contracts.create', 'N Q'],
         ['Bank əməliyyatı', 'bank', 'bank.transactions.create', [], 'bank.create', 'N B'],
-        ['Yeni yük', 'truck', 'shipments.create', [], 'logistics.create', 'N Y'],
         ['Excel import', 'upload', 'imports.index', [], null, null],
         ['Hesabat yarat', 'chart', 'reports.index', [], 'reports.view', 'G H'],
     ])->filter(fn ($s) => ! $s[4] || $user->can($s[4]));

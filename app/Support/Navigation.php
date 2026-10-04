@@ -25,7 +25,6 @@ class Navigation
                 ['label' => 'Bank hesabları', 'route' => 'bank.accounts.index', 'active' => 'bank.accounts.*', 'icon' => 'wallet', 'can' => 'bank.view'],
                 ['label' => 'Valyuta alış-satışı', 'route' => 'bank.exchanges.index', 'active' => 'bank.exchanges.*', 'icon' => 'transfer', 'can' => 'bank.view'],
                 ['label' => 'Bank əməliyyatları', 'route' => 'bank.transactions.index', 'active' => 'bank.transactions.*', 'icon' => 'bank', 'can' => 'bank.view'],
-                ['label' => 'Logistika', 'route' => 'shipments.index', 'active' => 'shipments.*', 'icon' => 'truck', 'can' => 'logistics.view'],
                 ['label' => 'Valyuta məzənnələri', 'route' => 'currency.index', 'active' => 'currency.*', 'icon' => 'coins', 'can' => 'currency.view'],
             ]],
             ['label' => 'Analitika', 'items' => [
@@ -62,7 +61,6 @@ class Navigation
             ['g a', 'Bank hesabları', 'bank.accounts.index', 'bank.view'],
             ['g x', 'Xərclər', 'expenses.index', 'expenses.view'],
             ['n e', 'Yeni xərc', 'expenses.create', 'expenses.create'],
-            ['g l', 'Logistika', 'shipments.index', 'logistics.view'],
             ['g h', 'Hesabatlar', 'reports.index', 'reports.view'],
             ['g v', 'Valyuta məzənnələri', 'currency.index', 'currency.view'],
             ['n p', 'Yeni layihə', 'projects.create', 'projects.create'],
@@ -71,7 +69,6 @@ class Navigation
             ['n s', 'Yeni təchizatçı', ['counterparties.create', ['type' => 'supplier']], 'crm.create'],
             ['n q', 'Yeni müqavilə', 'contracts.create', 'contracts.create'],
             ['n b', 'Bank əməliyyatı', 'bank.transactions.create', 'bank.create'],
-            ['n y', 'Yeni yük', 'shipments.create', 'logistics.create'],
             ['n x', 'Xatırlatma', 'my-work', null],
         ];
 

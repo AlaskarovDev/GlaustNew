@@ -1,4 +1,4 @@
-@props(['icon' => 'inbox', 'title' => 'Hələ heç nə yoxdur', 'text' => null])
+@props(['icon' => 'inbox', 'title' => __('Hələ heç nə yoxdur'), 'text' => null])
 <div {{ $attributes->merge(['class' => 'flex flex-col items-center justify-center text-center px-6 py-14']) }}>
     <div class="relative mb-5">
         <div class="absolute inset-0 -m-3 rounded-[22px] bg-brand-soft/60 rotate-6"></div>

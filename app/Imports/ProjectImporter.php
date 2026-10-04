@@ -17,7 +17,7 @@ class ProjectImporter extends Importer
 
     public static function title(): string
     {
-        return 'Layihələr';
+        return __('Layihələr');
     }
 
     public static function ability(): string
@@ -27,23 +27,23 @@ class ProjectImporter extends Importer
 
     public static function description(): string
     {
-        return 'Kod boşdursa avtomatik verilir. Müştəri adı və ya VÖEN-i CRM-də tapılmalıdır.';
+        return __('Kod boşdursa avtomatik verilir. Müştəri adı və ya VÖEN-i CRM-də tapılmalıdır.');
     }
 
     public function fields(): array
     {
         return [
-            'code' => ['label' => 'Kod', 'aliases' => ['layihə kodu', 'code'], 'example' => ''],
-            'name' => ['label' => 'Layihənin adı', 'required' => true, 'aliases' => ['ad', 'layihə', 'name'], 'example' => 'Anbar kompleksinin tikintisi'],
-            'counterparty' => ['label' => 'Müştəri', 'aliases' => ['müştəri voen', 'sifarişçi', 'client'], 'example' => '1234567891'],
-            'manager' => ['label' => 'Menecer (email)', 'aliases' => ['menecer', 'manager'], 'example' => ''],
+            'code' => ['label' => __('Kod'), 'aliases' => ['layihə kodu', 'code'], 'example' => ''],
+            'name' => ['label' => __('Layihənin adı'), 'required' => true, 'aliases' => ['ad', 'layihə', 'name'], 'example' => 'Anbar kompleksinin tikintisi'],
+            'counterparty' => ['label' => __('Müştəri'), 'aliases' => ['müştəri voen', 'sifarişçi', 'client'], 'example' => '1234567891'],
+            'manager' => ['label' => __('Menecer (email)'), 'aliases' => ['menecer', 'manager'], 'example' => ''],
             'status' => ['label' => 'Status', 'aliases' => ['vəziyyət'], 'example' => 'Aktiv'],
-            'priority' => ['label' => 'Prioritet', 'aliases' => ['priority'], 'example' => 'Orta'],
-            'start_date' => ['label' => 'Başlama', 'aliases' => ['başlama tarixi', 'start'], 'example' => '01.10.2026'],
-            'end_date' => ['label' => 'Bitmə', 'aliases' => ['bitmə tarixi', 'son tarix', 'end'], 'example' => '31.12.2026'],
-            'budget' => ['label' => 'Büdcə', 'aliases' => ['budget'], 'example' => '150000'],
-            'currency' => ['label' => 'Valyuta', 'aliases' => ['currency'], 'example' => 'AZN'],
-            'description' => ['label' => 'Təsvir', 'aliases' => ['qeyd', 'description'], 'example' => ''],
+            'priority' => ['label' => __('Prioritet'), 'aliases' => ['priority'], 'example' => 'Orta'],
+            'start_date' => ['label' => __('Başlama'), 'aliases' => ['başlama tarixi', 'start'], 'example' => '01.10.2026'],
+            'end_date' => ['label' => __('Bitmə'), 'aliases' => ['bitmə tarixi', 'son tarix', 'end'], 'example' => '31.12.2026'],
+            'budget' => ['label' => __('Büdcə'), 'aliases' => ['budget'], 'example' => '150000'],
+            'currency' => ['label' => __('Valyuta'), 'aliases' => ['currency'], 'example' => 'AZN'],
+            'description' => ['label' => __('Təsvir'), 'aliases' => ['qeyd', 'description'], 'example' => ''],
         ];
     }
 
@@ -86,12 +86,12 @@ class ProjectImporter extends Importer
         if (filled($row['counterparty'] ?? null)) {
             $v = (string) $row['counterparty'];
             $cp = Counterparty::where('voen', preg_replace('/\D/', '', $v) ?: '-')->orWhere('name', $v)->first()
-                ?? throw new RowError("Müştəri CRM-də tapılmadı: {$v}");
+                ?? throw new RowError(__('Müştəri CRM-də tapılmadı: :v1', ['v1' => $v]));
         }
         $manager = null;
         if (filled($row['manager'] ?? null)) {
             $manager = User::forTenant()->where('email', strtolower((string) $row['manager']))->first()
-                ?? throw new RowError("Menecer tapılmadı: {$row['manager']}");
+                ?? throw new RowError(__('Menecer tapılmadı: :v1', ['v1' => $row['manager']]));
         }
 
         return [$cp, $manager];

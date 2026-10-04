@@ -19,12 +19,12 @@ class UserActivityReport extends Report
 
     public static function title(): string
     {
-        return 'İstifadəçi fəaliyyəti';
+        return __('İstifadəçi fəaliyyəti');
     }
 
     public static function description(): string
     {
-        return 'Hər istifadəçi üzrə girişlər, uğursuz cəhdlər, sessiya müddəti və sistemdə etdiyi dəyişikliklər.';
+        return __('Hər istifadəçi üzrə girişlər, uğursuz cəhdlər, sessiya müddəti və sistemdə etdiyi dəyişikliklər.');
     }
 
     public static function icon(): string
@@ -52,7 +52,7 @@ class UserActivityReport extends Report
             $closed = $l->whereIn('event', ['logout', 'session_expired', 'forced_logout']);
 
             return [
-                'name' => $u->name, 'email' => $u->email, 'role' => $u->role?->name, 'active' => $u->is_active ? 'Aktiv' : 'Deaktiv',
+                'name' => $u->name, 'email' => $u->email, 'role' => $u->role?->name, 'active' => $u->is_active ? __('Aktiv') : __('Deaktiv'),
                 'logins' => (int) $l->where('event', 'login')->sum('n'),
                 'failed' => (int) $l->whereIn('event', ['failed', 'locked', 'two_factor_failed'])->sum('n'),
                 'hours' => round((float) $closed->sum('d') / 3600, 1),
@@ -67,17 +67,17 @@ class UserActivityReport extends Report
     public function columns(): array
     {
         return [
-            Column::make('İstifadəçi', 'name'),
+            Column::make(__('İstifadəçi'), 'name'),
             Column::make('Email', 'email'),
-            Column::make('Rol', 'role'),
+            Column::make(__('Rol'), 'role'),
             Column::make('Status', 'active'),
-            Column::make('Giriş', 'logins', 'number', total: true),
-            Column::make('Uğursuz cəhd', 'failed', 'number', total: true),
-            Column::make('Sessiya (saat)', 'hours', 'number', total: true),
-            Column::make('Yaratdı', 'created', 'number', total: true),
-            Column::make('Dəyişdi', 'updated', 'number', total: true),
+            Column::make(__('Giriş'), 'logins', 'number', total: true),
+            Column::make(__('Uğursuz cəhd'), 'failed', 'number', total: true),
+            Column::make(__('Sessiya (saat)'), 'hours', 'number', total: true),
+            Column::make(__('Yaratdı'), 'created', 'number', total: true),
+            Column::make(__('Dəyişdi'), 'updated', 'number', total: true),
             Column::make('Sildi', 'deleted', 'number', total: true),
-            Column::make('Son giriş', 'last', 'datetime'),
+            Column::make(__('Son giriş'), 'last', 'datetime'),
         ];
     }
 
@@ -91,9 +91,9 @@ class UserActivityReport extends Report
         $d = $this->data();
 
         return [
-            ['label' => 'Girişlər', 'value' => $d->sum('logins')],
-            ['label' => 'Uğursuz cəhdlər', 'value' => $d->sum('failed'), 'tone' => $d->sum('failed') ? 'danger' : null],
-            ['label' => 'Dəyişikliklər', 'value' => $d->sum('created') + $d->sum('updated') + $d->sum('deleted')],
+            ['label' => __('Girişlər'), 'value' => $d->sum('logins')],
+            ['label' => __('Uğursuz cəhdlər'), 'value' => $d->sum('failed'), 'tone' => $d->sum('failed') ? 'danger' : null],
+            ['label' => __('Dəyişikliklər'), 'value' => $d->sum('created') + $d->sum('updated') + $d->sum('deleted')],
         ];
     }
 
@@ -105,6 +105,6 @@ class UserActivityReport extends Report
         }
 
         return ['type' => 'bar', 'height' => 280, 'stacked' => true, 'colors' => ['#0f9d8a', '#6366f1', '#e9a23b'], 'categories' => $d->pluck('name')->values()->all(),
-            'series' => [['name' => 'Yaratdı', 'data' => $d->pluck('created')->values()->all()], ['name' => 'Dəyişdi', 'data' => $d->pluck('updated')->values()->all()], ['name' => 'Giriş', 'data' => $d->pluck('logins')->values()->all()]]];
+            'series' => [['name' => __('Yaratdı'), 'data' => $d->pluck('created')->values()->all()], ['name' => __('Dəyişdi'), 'data' => $d->pluck('updated')->values()->all()], ['name' => __('Giriş'), 'data' => $d->pluck('logins')->values()->all()]]];
     }
 }

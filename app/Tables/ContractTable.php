@@ -13,7 +13,7 @@ class ContractTable extends Table
 
     public function title(): string
     {
-        return 'Müqavilələr';
+        return __('Müqavilələr');
     }
 
     protected function baseQuery(): Builder
@@ -24,12 +24,12 @@ class ContractTable extends Table
     public function filters(): array
     {
         return [
-            'status' => ['label' => 'Status', 'type' => 'select', 'options' => status_options('contract') + ['open' => 'Açıq (imzalanmış + icrada)']],
-            'kind' => ['label' => 'Növ', 'type' => 'select', 'options' => ['sale' => 'Satış', 'purchase' => 'Alış']],
-            'currency' => ['label' => 'Valyuta', 'type' => 'select', 'options' => array_combine(config('glaust.currencies'), config('glaust.currencies'))],
-            'ending' => ['label' => 'Bitir', 'type' => 'select', 'options' => ['7' => '7 gün ərzində', '30' => '30 gün ərzində', '90' => '90 gün ərzində', 'expired' => 'Müddəti keçib']],
-            'from' => ['label' => 'Tarixdən', 'type' => 'date'],
-            'to' => ['label' => 'Tarixədək', 'type' => 'date'],
+            'status' => ['label' => 'Status', 'type' => 'select', 'options' => status_options('contract') + ['open' => __('Açıq (imzalanmış + icrada)')]],
+            'kind' => ['label' => __('Növ'), 'type' => 'select', 'options' => ['sale' => __('Satış'), 'purchase' => __('Alış')]],
+            'currency' => ['label' => __('Valyuta'), 'type' => 'select', 'options' => array_combine(config('glaust.currencies'), config('glaust.currencies'))],
+            'ending' => ['label' => __('Bitir'), 'type' => 'select', 'options' => ['7' => __('7 gün ərzində'), '30' => __('30 gün ərzində'), '90' => __('90 gün ərzində'), 'expired' => __('Müddəti keçib')]],
+            'from' => ['label' => __('Tarixdən'), 'type' => 'date'],
+            'to' => ['label' => __('Tarixədək'), 'type' => 'date'],
         ];
     }
 
@@ -68,21 +68,21 @@ class ContractTable extends Table
     public function columns(): array
     {
         return [
-            Column::make('Nömrə', 'number'),
-            Column::make('Tarix', 'contract_date', 'date'),
-            Column::make('Kontragent', 'counterparty.name', width: 30),
-            Column::make('VÖEN', 'counterparty.voen'),
-            Column::make('Növ', fn ($c) => $c->kind === 'sale' ? 'Satış' : 'Alış'),
-            Column::make('Mövzu', 'subject', width: 36),
-            Column::make('Məbləğ', 'amount', 'money'),
-            Column::make('Valyuta', 'currency'),
-            Column::make('CBAR məzənnəsi', 'cbar_rate', 'rate'),
-            Column::make('AZN ekvivalenti', 'amount_azn', 'money', total: true),
-            Column::make('Başlama', 'start_date', 'date'),
-            Column::make('Bitmə', 'end_date', 'date'),
+            Column::make(__('Nömrə'), 'number'),
+            Column::make(__('Tarix'), 'contract_date', 'date'),
+            Column::make(__('Kontragent'), 'counterparty.name', width: 30),
+            Column::make(__('VÖEN'), 'counterparty.voen'),
+            Column::make(__('Növ'), fn ($c) => $c->kind === 'sale' ? __('Satış') : __('Alış')),
+            Column::make(__('Mövzu'), 'subject', width: 36),
+            Column::make(__('Məbləğ'), 'amount', 'money'),
+            Column::make(__('Valyuta'), 'currency'),
+            Column::make(__('CBAR məzənnəsi'), 'cbar_rate', 'rate'),
+            Column::make(__('AZN ekvivalenti'), 'amount_azn', 'money', total: true),
+            Column::make(__('Başlama'), 'start_date', 'date'),
+            Column::make(__('Bitmə'), 'end_date', 'date'),
             Column::make('Status', fn ($c) => status_label('contract', $c->status)),
-            Column::make('Layihə', 'project.code'),
-            Column::make('Məsul', 'responsible.name'),
+            Column::make(__('Layihə'), 'project.code'),
+            Column::make(__('Məsul'), 'responsible.name'),
         ];
     }
 }

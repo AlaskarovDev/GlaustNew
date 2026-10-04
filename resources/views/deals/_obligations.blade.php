@@ -29,13 +29,13 @@
                 <span class="badge badge-teal shrink-0">{{ __('bizə ödəyir') }}</span>
             </header>
             <dl class="ob-rows">
-                <div><dt>{{ __('Bizə ödəməlidir') }}</dt><dd class="text-success">{!! $amounts($ob['buyer']['due'], $ob['buyer']['billed'] ? 'tam ödəyib' : 'proforma yoxdur') !!}</dd></div>
+                <div><dt>{{ __('Bizə ödəməlidir') }}</dt><dd class="text-success">{!! $amounts($ob['buyer']['due'], $ob['buyer']['billed'] ? __('tam ödəyib') : 'proforma yoxdur') !!}</dd></div>
                 <div><dt>{{ __('Ödəyib') }}</dt><dd>{!! $amounts($ob['buyer']['received'], '0') !!}</dd></div>
             </dl>
             @if($ob['buyer']['billed'])<div class="h-1.5 rounded-full bg-surface-2 overflow-hidden" title="{{ __('Ödənilib') }}"><div class="h-full bg-success rounded-full" style="width: {{ $pct($ob['buyer']['received'], $ob['buyer']['billed']) }}%"></div></div>@endif
             <div class="ob-goods {{ $ob['buyer']['goods'] ? 'is-open' : '' }}">
                 <x-icon name="package" class="size-4 shrink-0"/>
-                <span>@if($ob['buyer']['goods'])Bizim öhdəliyimiz: <b class="font-mono">{!! $amounts($ob['buyer']['goods']) !!}</b> dəyərində məhsul göndərməliyik @else Ödəniş gəlməyib — məhsul öhdəliyimiz yoxdur @endif</span>
+                <span>@if($ob['buyer']['goods']){{ __('Bizim öhdəliyimiz:') }} <b class="font-mono">{!! $amounts($ob['buyer']['goods']) !!}</b> {{ __('dəyərində məhsul göndərməliyik') }} @else {{ __('Ödəniş gəlməyib — məhsul öhdəliyimiz yoxdur') }} @endif</span>
             </div>
         </article>
 
@@ -46,21 +46,21 @@
                 <span class="badge badge-amber shrink-0">{{ __('ona ödəyirik') }}</span>
             </header>
             <dl class="ob-rows">
-                <div><dt>{{ __('Ödəməliyik') }}</dt><dd class="text-danger">{!! $amounts($ob['seller']['due'], $ob['seller']['invoiced'] ? 'tam ödənilib' : 'faktura yoxdur') !!}</dd></div>
+                <div><dt>{{ __('Ödəməliyik') }}</dt><dd class="text-danger">{!! $amounts($ob['seller']['due'], $ob['seller']['invoiced'] ? __('tam ödənilib') : __('faktura yoxdur')) !!}</dd></div>
                 <div><dt>{{ __('Ödəmişik') }}</dt><dd>{!! $amounts($ob['seller']['paid'], '0') !!}</dd></div>
             </dl>
             @if($ob['seller']['invoiced'])<div class="h-1.5 rounded-full bg-surface-2 overflow-hidden" title="{{ __('Ödənilib') }}"><div class="h-full bg-saffron rounded-full" style="width: {{ $pct($ob['seller']['paid'], $ob['seller']['invoiced']) }}%"></div></div>@endif
             <div class="ob-goods {{ $ob['seller']['goods'] ? 'is-open' : '' }}">
                 <x-icon name="package" class="size-4 shrink-0"/>
-                <span>@if($ob['seller']['goods'])Onun öhdəliyi: bizə <b class="font-mono">{!! $amounts($ob['seller']['goods']) !!}</b> dəyərində məhsul təhvil verməlidir @else Satıcıya ödəniş edilməyib @endif</span>
+                <span>@if($ob['seller']['goods']){{ __('Onun öhdəliyi: bizə') }} <b class="font-mono">{!! $amounts($ob['seller']['goods']) !!}</b> {{ __('dəyərində məhsul təhvil verməlidir') }} @else {{ __('Satıcıya ödəniş edilməyib') }} @endif</span>
             </div>
         </article>
 
         {{-- Logistics --}}
         <article class="card p-4 space-y-3">
             <header class="flex items-start justify-between gap-2">
-                <div class="min-w-0"><div class="text-xs text-muted">{{ __('Logistika') }}</div><div class="font-semibold truncate">{{ $ob['logistics']['company'] ?? 'Logistika şirkəti' }}</div></div>
-                @if($ob['logistics']['items'])<span class="badge {{ $ob['logistics']['forecast'] ? 'badge-amber' : 'badge-green' }} shrink-0">{{ $ob['logistics']['forecast'] ? 'proqnoz' : (collect($ob['logistics']['items'])->every(fn ($l) => $l['mode'] === 'act') ? 'akt üzrə' : 'dəqiq') }}</span>@endif
+                <div class="min-w-0"><div class="text-xs text-muted">{{ __('Logistika') }}</div><div class="font-semibold truncate">{{ $ob['logistics']['company'] ?? __('Logistika şirkəti') }}</div></div>
+                @if($ob['logistics']['items'])<span class="badge {{ $ob['logistics']['forecast'] ? 'badge-amber' : 'badge-green' }} shrink-0">{{ $ob['logistics']['forecast'] ? 'proqnoz' : (collect($ob['logistics']['items'])->every(fn ($l) => $l['mode'] === 'act') ? __('akt üzrə') : __('dəqiq')) }}</span>@endif
             </header>
             @if($ob['logistics']['items'])
                 <dl class="ob-rows">

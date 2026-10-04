@@ -36,12 +36,12 @@ class RubConverter
             try {
                 $c = $this->cbar($invoice->currency, $date);
             } catch (RateUnavailable $e) {
-                throw ValidationException::withMessages(['fx_date' => $e->getMessage().' Gələcək tarix üçün «Proqnoz» seçin.']);
+                throw ValidationException::withMessages(['fx_date' => $e->getMessage().__(' Gələcək tarix üçün «Proqnoz» seçin.')]);
             }
             $values = ['fx_bulletin_date' => $c['bulletin'], 'fx_base_azn' => $c['base'], 'fx_target_azn' => $c['rub'], 'fx_rate' => $c['rate']];
         } else {
             if (! $baseAzn || ! $rubAzn || $baseAzn <= 0 || $rubAzn <= 0) {
-                throw ValidationException::withMessages(['fx_base_azn' => 'Hər iki proqnoz kursunu daxil edin.']);
+                throw ValidationException::withMessages(['fx_base_azn' => __('Hər iki proqnoz kursunu daxil edin.')]);
             }
             $values = ['fx_bulletin_date' => null, 'fx_base_azn' => $baseAzn, 'fx_target_azn' => $rubAzn, 'fx_rate' => $baseAzn / $rubAzn];
         }

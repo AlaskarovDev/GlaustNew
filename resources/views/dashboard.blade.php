@@ -11,38 +11,38 @@
         'logistics' => 'lg:col-span-4', 'rates' => 'lg:col-span-8', 'activity' => 'lg:col-span-12',
     ];
     $shortcuts = collect([
-        ['Yeni layihə', 'folder', 'projects.create', [], 'projects.create', 'N P'],
-        ['Yeni müştəri', 'user-plus', 'counterparties.create', ['type' => 'customer'], 'crm.create', 'N M'],
-        ['Yeni təchizatçı', 'building', 'counterparties.create', ['type' => 'supplier'], 'crm.create', 'N S'],
-        ['Yeni müqavilə', 'signature', 'contracts.create', [], 'contracts.create', 'N Q'],
-        ['Bank əməliyyatı', 'bank', 'bank.transactions.create', [], 'bank.create', 'N B'],
+        [__('Yeni layihə'), 'folder', 'projects.create', [], 'projects.create', 'N P'],
+        [__('Yeni müştəri'), 'user-plus', 'counterparties.create', ['type' => 'customer'], 'crm.create', 'N M'],
+        [__('Yeni təchizatçı'), 'building', 'counterparties.create', ['type' => 'supplier'], 'crm.create', 'N S'],
+        [__('Yeni müqavilə'), 'signature', 'contracts.create', [], 'contracts.create', 'N Q'],
+        [__('Bank əməliyyatı'), 'bank', 'bank.transactions.create', [], 'bank.create', 'N B'],
         ['Excel import', 'upload', 'imports.index', [], null, null],
-        ['Hesabat yarat', 'chart', 'reports.index', [], 'reports.view', 'G H'],
+        [__('Hesabat yarat'), 'chart', 'reports.index', [], 'reports.view', 'G H'],
     ])->filter(fn ($s) => ! $s[4] || $user->can($s[4]));
     $charts = [
         'cashflow' => isset($cashflow) ? [
             'type' => 'bar', 'height' => 300, 'money' => true, 'categories' => $cashflow['categories'], 'colors' => ['#0f9d8a', '#e5484d', '#6366f1'],
             'series' => [
-                ['name' => 'Daxilolma', 'type' => 'column', 'data' => $cashflow['in']],
-                ['name' => 'Məxaric', 'type' => 'column', 'data' => $cashflow['out']],
-                ['name' => 'Fərq', 'type' => 'line', 'data' => $cashflow['net']],
+                ['name' => __('Daxilolma'), 'type' => 'column', 'data' => $cashflow['in']],
+                ['name' => __('Məxaric'), 'type' => 'column', 'data' => $cashflow['out']],
+                ['name' => __('Fərq'), 'type' => 'line', 'data' => $cashflow['net']],
             ],
             'stroke' => ['width' => [0, 0, 2.5], 'curve' => 'smooth'],
         ] : null,
-        'projects' => isset($projectStatus) ? ['type' => 'donut', 'height' => 300, 'labels' => $projectStatus['labels'], 'series' => $projectStatus['series'], 'colors' => $projectStatus['colors'], 'totalLabel' => 'Layihə'] : null,
+        'projects' => isset($projectStatus) ? ['type' => 'donut', 'height' => 300, 'labels' => $projectStatus['labels'], 'series' => $projectStatus['series'], 'colors' => $projectStatus['colors'], 'totalLabel' => __('Layihə')] : null,
         'budget' => isset($budget) ? [
             'type' => 'bar', 'height' => 280, 'money' => true, 'categories' => $budget['categories'], 'colors' => ['#cbd5e1', '#0f9d8a'], 'columnWidth' => '58%',
-            'series' => [['name' => 'Büdcə', 'data' => $budget['budget']], ['name' => 'Faktiki', 'data' => $budget['actual']]],
+            'series' => [['name' => __('Büdcə'), 'data' => $budget['budget']], ['name' => __('Faktiki'), 'data' => $budget['actual']]],
         ] : null,
         'top' => isset($top) ? [
             'type' => 'bar', 'horizontal' => true, 'height' => 260, 'money' => true, 'categories' => $top['labels'], 'colors' => ['#6366f1'],
-            'series' => [['name' => 'Dövriyyə', 'data' => $top['series']]],
+            'series' => [['name' => __('Dövriyyə'), 'data' => $top['series']]],
             'xaxis' => ['labels' => ['show' => false]], 'yaxis' => ['labels' => ['maxWidth' => 180, 'style' => ['fontSize' => '12px']]],
         ] : null,
     ];
-    $auditVerbs = ['created' => 'yaratdı', 'updated' => 'dəyişdi', 'deleted' => 'sildi', 'restored' => 'bərpa etdi'];
-    $auditTypes = ['project' => 'layihə', 'task' => 'tapşırıq', 'contract' => 'müqavilə', 'counterparty' => 'kontragent', 'bank_transaction' => 'bank əməliyyatı',
-        'bank_account' => 'bank hesabı', 'shipment' => 'yük', 'shipment_cost' => 'logistika xərci', 'user' => 'istifadəçi', 'role' => 'rol', 'company' => 'şirkət'];
+    $auditVerbs = ['created' => __('yaratdı'), 'updated' => __('dəyişdi'), 'deleted' => 'sildi', 'restored' => __('bərpa etdi')];
+    $auditTypes = ['project' => __('layihə'), 'task' => __('tapşırıq'), 'contract' => __('müqavilə'), 'counterparty' => 'kontragent', 'bank_transaction' => __('bank əməliyyatı'),
+        'bank_account' => __('bank hesabı'), 'shipment' => __('yük'), 'shipment_cost' => __('logistika xərci'), 'user' => __('istifadəçi'), 'role' => 'rol', 'company' => __('şirkət')];
 @endphp
 
 <div x-data="dashboardLayout(@js(['order' => $order, 'hidden' => $hidden]), @js($widgets))">
@@ -53,17 +53,17 @@
             <h1 class="mt-1 text-[28px] lg:text-[32px] font-semibold tracking-tight">{{ $greeting }}, {{ explode(' ', $user->name)[0] }}</h1>
             <p class="mt-1 text-sm text-muted">
                 @if($myDay['counts']['tasks'] || $myDay['counts']['reminders'])
-                    Bu gün <span class="font-semibold text-ink">{{ $myDay['counts']['tasks'] }}</span> tapşırığınız
-                    @if($myDay['counts']['overdue'])(<span class="text-danger font-medium">{{ $myDay['counts']['overdue'] }} gecikmiş</span>)@endif
-                    və <span class="font-semibold text-ink">{{ $myDay['counts']['reminders'] }}</span> xatırlatmanız var.
+                    {{ __('Bu gün') }} <span class="font-semibold text-ink">{{ $myDay['counts']['tasks'] }}</span> {{ __('tapşırığınız') }}
+                    @if($myDay['counts']['overdue'])(<span class="text-danger font-medium">{{ $myDay['counts']['overdue'] }} {{ __('gecikmiş') }}</span>)@endif
+                    {{ __('və') }} <span class="font-semibold text-ink">{{ $myDay['counts']['reminders'] }}</span> {{ __('xatırlatmanız var.') }}
                 @else
-                    Bu gün üçün təcili iş yoxdur — {{ $company->name }} üzrə ümumi vəziyyət aşağıdadır.
+                    {{ __('Bu gün üçün təcili iş yoxdur — :company üzrə ümumi vəziyyət aşağıdadır.', ['company' => $company->name]) }}
                 @endif
             </p>
         </div>
         <div class="flex items-center gap-2">
             <button type="button" class="btn btn-secondary" @click="editing = !editing" :class="editing && '!border-brand !text-brand-ink'">
-                <x-icon name="layers" class="size-4"/> <span x-text="editing ? 'Bağla' : 'Paneli düzənlə'"></span>
+                <x-icon name="layers" class="size-4"/> <span x-text="editing ? {{ \Illuminate\Support\Js::from(__('Bağla')) }} : {{ \Illuminate\Support\Js::from(__('Paneli düzənlə')) }}"></span>
             </button>
         </div>
     </div>
@@ -181,7 +181,7 @@
                                 <span @class(['size-2 rounded-full shrink-0', 'bg-danger' => !empty($t['late']), 'bg-saffron' => empty($t['late'])])></span>
                                 <span class="min-w-0 flex-1">
                                     <span class="block text-sm font-medium truncate">{{ $t['title'] }}</span>
-                                    <span class="block text-xs text-muted truncate">{{ $t['project'] ?? 'Layihəsiz' }}</span>
+                                    <span class="block text-xs text-muted truncate">{{ $t['project'] ?? __('Layihəsiz') }}</span>
                                 </span>
                                 <span @class(['text-xs font-mono shrink-0', 'text-danger' => !empty($t['late']), 'text-muted' => empty($t['late'])])>{{ $t['due'] }}</span>
                             </a>
@@ -202,7 +202,7 @@
                 <x-empty icon="target" :title="__('Büdcəli aktiv layihə yoxdur')" class="!py-10"/>
             @endif
             @if($budget['skipped'])
-                <p class="mt-2 text-xs text-saffron">Məzənnə tapılmadığı üçün göstərilmədi: {{ implode(', ', $budget['skipped']) }}</p>
+                <p class="mt-2 text-xs text-saffron">{{ __('Məzənnə tapılmadığı üçün göstərilmədi:') }} {{ implode(', ', $budget['skipped']) }}</p>
             @endif
         </section>
         @endisset
@@ -233,7 +233,7 @@
                                 <div class="h-1.5 flex-1 rounded-full bg-surface-2 overflow-hidden">
                                     <div class="h-full rounded-full bg-brand origin-left rise" style="width: {{ $b['azn'] !== null ? max(2, abs($b['azn']) / $max * 100) : 0 }}%"></div>
                                 </div>
-                                <span class="w-28 text-right text-xs font-mono text-muted">{{ $b['azn'] !== null ? '≈ '.money($b['azn']) : 'məzənnə yoxdur' }}</span>
+                                <span class="w-28 text-right text-xs font-mono text-muted">{{ $b['azn'] !== null ? '≈ '.money($b['azn']) : __('məzənnə yoxdur') }}</span>
                             </div>
                         </li>
                     @endforeach

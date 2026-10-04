@@ -10,8 +10,8 @@
                 <table class="table-g table-stack">
                     <thead><tr><th>{{ __('Tarix') }}</th><th>{{ __('Şirkət') }}</th><th>{{ __('Email') }}</th><th>{{ __('Hadisə') }}</th><th>IP</th></tr></thead>
                     <tbody>@foreach($logins as $l)
-                        <tr><td data-label="Tarix" class="font-mono text-xs">{{ azdate($l->created_at, true) }}</td><td data-label="Şirkət" class="text-xs">{{ $companies[$l->company_id] ?? 'Platforma' }}</td>
-                            <td data-label="Email" class="text-sm">{{ $l->email }}</td><td data-label="Hadisə">@include('settings.logs._event', ['event' => $l->event])</td><td data-label="IP" class="font-mono text-xs">{{ $l->ip_address }}</td></tr>
+                        <tr><td data-label="{{ __('Tarix') }}" class="font-mono text-xs">{{ azdate($l->created_at, true) }}</td><td data-label="{{ __('Şirkət') }}" class="text-xs">{{ $companies[$l->company_id] ?? 'Platforma' }}</td>
+                            <td data-label="Email" class="text-sm">{{ $l->email }}</td><td data-label="{{ __('Hadisə') }}">@include('settings.logs._event', ['event' => $l->event])</td><td data-label="IP" class="font-mono text-xs">{{ $l->ip_address }}</td></tr>
                     @endforeach</tbody>
                 </table>
             </div>

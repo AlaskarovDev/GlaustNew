@@ -37,10 +37,10 @@ class CurrencyExchangeService
         $toCur = $buy ? $d['currency'] : $d['counter_currency'];
         $errors = [];
         if ($from->currency !== $fromCur) {
-            $errors['from_account_id'] = "Bu hesab {$from->currency} hesabıdır; {$fromCur} hesabı seçin.";
+            $errors['from_account_id'] = __('Bu hesab :v1 hesabıdır; :v2 hesabı seçin.', ['v1' => $from->currency, 'v2' => $fromCur]);
         }
         if ($to->currency !== $toCur) {
-            $errors['to_account_id'] = "Bu hesab {$to->currency} hesabıdır; {$toCur} hesabı seçin.";
+            $errors['to_account_id'] = __('Bu hesab :v1 hesabıdır; :v2 hesabı seçin.', ['v1' => $to->currency, 'v2' => $toCur]);
         }
         if ($errors) {
             throw ValidationException::withMessages($errors);

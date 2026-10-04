@@ -91,7 +91,7 @@ class ImportRunner
                 $failed[] = ['line' => $line, 'cells' => $cells, 'error' => $e->getMessage()];
             } catch (\Throwable $e) {
                 report($e);
-                $failed[] = ['line' => $line, 'cells' => $cells, 'error' => 'Gözlənilməz xəta: '.class_basename($e)];
+                $failed[] = ['line' => $line, 'cells' => $cells, 'error' => __('Gözlənilməz xəta: ').class_basename($e)];
             }
         }
 

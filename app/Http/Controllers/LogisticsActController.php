@@ -34,9 +34,9 @@ class LogisticsActController extends Controller
             'remind' => ['nullable', 'boolean'],
             'reference' => ['nullable', 'string', 'max:80'],
             'notes' => ['nullable', 'string', 'max:2000'],
-        ], ['planned_date.required_if' => 'Köçürmə tarixini seçin.'], [
-            'act_number' => 'Akt nömrəsi', 'act_date' => 'Akt tarixi', 'amount' => 'Məbləğ', 'currency' => 'Valyuta', 'planned_date' => 'Köçürmə tarixi',
-            'counterparty_id' => 'Logistika şirkəti',
+        ], ['planned_date.required_if' => __('Köçürmə tarixini seçin.')], [
+            'act_number' => __('Akt nömrəsi'), 'act_date' => __('Akt tarixi'), 'amount' => __('Məbləğ'), 'currency' => __('Valyuta'), 'planned_date' => __('Köçürmə tarixi'),
+            'counterparty_id' => __('Logistika şirkəti'),
         ]);
         $parts = $data['payment_plan'] === 'today' ? $this->parts($request) : [];
         if ($parts) {
@@ -44,8 +44,8 @@ class LogisticsActController extends Controller
         }
         $act = $this->logistics->createAct($deal, $data, $parts);
 
-        return redirect()->route('deals.show', [$deal, 'tab' => 'logistics'])->with('success', 'Logistika aktı '.$act->act_number.' əlavə edildi'
-            .($act->payments->isNotEmpty() ? ' və ödənildi ('.$act->payments->count().' hissə).' : ($act->reminder_id ? '; '.azdate($act->planned_date).' üçün xatırlatma quruldu.' : '.')));
+        return redirect()->route('deals.show', [$deal, 'tab' => 'logistics'])->with('success', __('Logistika aktı ').$act->act_number.__(' əlavə edildi')
+            .($act->payments->isNotEmpty() ? __(' və ödənildi (').$act->payments->count().__(' hissə).') : ($act->reminder_id ? '; '.azdate($act->planned_date).__(' üçün xatırlatma quruldu.') : '.')));
     }
 
     public function pay(Request $request, Deal $deal, LogisticsAct $act): RedirectResponse
@@ -55,21 +55,21 @@ class LogisticsActController extends Controller
         $data = $request->validate([
             'payment_date' => ['required', 'date', 'before_or_equal:today'],
             'reference' => ['nullable', 'string', 'max:80'],
-        ], [], ['payment_date' => 'Köçürmə tarixi']);
+        ], [], ['payment_date' => __('Köçürmə tarixi')]);
         $paid = $this->logistics->pay($act, $this->parts($request), $data['payment_date'], $data['reference'] ?? null);
 
-        return redirect()->route('deals.show', [$deal, 'tab' => 'logistics'])->with('success', 'Akt '.$act->act_number.' üzrə ödəniş edildi ('.count($paid).' hissə).');
+        return redirect()->route('deals.show', [$deal, 'tab' => 'logistics'])->with('success', __('Akt ').$act->act_number.__(' üzrə ödəniş edildi (').count($paid).__(' hissə).'));
     }
 
     public function remind(Request $request, Deal $deal, LogisticsAct $act): RedirectResponse
     {
         $this->authorize('projects.update');
         abort_unless($act->deal_id === $deal->id, 404);
-        $data = $request->validate(['planned_date' => ['required', 'date', 'after_or_equal:today']], [], ['planned_date' => 'Köçürmə tarixi']);
+        $data = $request->validate(['planned_date' => ['required', 'date', 'after_or_equal:today']], [], ['planned_date' => __('Köçürmə tarixi')]);
         $act->update(['planned_date' => $data['planned_date'], 'payment_plan' => 'later']);
         $this->logistics->remind($act->fresh());
 
-        return back()->with('success', azdate($data['planned_date']).' üçün xatırlatma quruldu.');
+        return back()->with('success', azdate($data['planned_date']).__(' üçün xatırlatma quruldu.'));
     }
 
     public function destroy(Deal $deal, LogisticsAct $act): RedirectResponse
@@ -78,7 +78,7 @@ class LogisticsActController extends Controller
         abort_unless($act->deal_id === $deal->id, 404);
         $this->logistics->deleteAct($act);
 
-        return redirect()->route('deals.show', [$deal, 'tab' => 'logistics'])->with('success', 'Akt '.$act->act_number.' və onun ödənişləri silindi.');
+        return redirect()->route('deals.show', [$deal, 'tab' => 'logistics'])->with('success', __('Akt ').$act->act_number.__(' və onun ödənişləri silindi.'));
     }
 
     public function destroyPayment(Deal $deal, LogisticsPayment $payment): RedirectResponse
@@ -87,7 +87,7 @@ class LogisticsActController extends Controller
         abort_unless($payment->deal_id === $deal->id, 404);
         $this->logistics->deletePayment($payment);
 
-        return redirect()->route('deals.show', [$deal, 'tab' => 'logistics'])->with('success', 'Ödəniş hissəsi ləğv edildi; hesabdan silinmə və komissiya da silindi.');
+        return redirect()->route('deals.show', [$deal, 'tab' => 'logistics'])->with('success', __('Ödəniş hissəsi ləğv edildi; hesabdan silinmə və komissiya da silindi.'));
     }
 
     /** parts[i][act_amount|currency|bank_account_id|bank_rate|fee_amount] -> validated list */
@@ -112,9 +112,9 @@ class LogisticsActController extends Controller
             'parts.*.bank_rate' => ['nullable', 'numeric', 'gt:0', 'max:10000000'],
             'parts.*.fee_amount' => ['nullable', 'numeric', 'min:0'],
             'parts.*.payment_date' => ['nullable', 'date', 'before_or_equal:today'],
-        ], ['parts.required' => 'Ən azı bir ödəniş hissəsi daxil edin.', 'parts.*.payment_date.before_or_equal' => 'Hissənin ödəniş tarixi gələcək ola bilməz.'], [
-            'parts.*.payment_date' => 'Ödəniş tarixi',
-            'parts.*.act_amount' => 'Hissənin məbləği', 'parts.*.amount' => 'Ödənilən məbləğ', 'parts.*.bank_account_id' => 'Bank hesabı', 'parts.*.bank_rate' => 'Bankın kursu',
+        ], ['parts.required' => __('Ən azı bir ödəniş hissəsi daxil edin.'), 'parts.*.payment_date.before_or_equal' => __('Hissənin ödəniş tarixi gələcək ola bilməz.')], [
+            'parts.*.payment_date' => __('Ödəniş tarixi'),
+            'parts.*.act_amount' => __('Hissənin məbləği'), 'parts.*.amount' => __('Ödənilən məbləğ'), 'parts.*.bank_account_id' => __('Bank hesabı'), 'parts.*.bank_rate' => __('Bankın kursu'),
         ])['parts'];
     }
 }

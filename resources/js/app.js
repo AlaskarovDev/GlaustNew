@@ -6,6 +6,8 @@ window.Alpine = Alpine;
 Alpine.plugin(collapse);
 Alpine.plugin(focus);
 
+/** UI text from the layout's window.__i18n (Azerbaijani text is the key). */
+const t = (s) => (window.__i18n && window.__i18n[s]) || s;
 const csrf = () => document.querySelector('meta[name="csrf-token"]')?.content ?? '';
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const pageData = (id, fallback = null) => {
@@ -36,7 +38,7 @@ async function api(url, { method = 'GET', body = null } = {}) {
     }
     let data = null;
     try { data = await res.json(); } catch { /* empty body */ }
-    if (!res.ok || !data) throw new Error(data?.message || 'Server xətası (' + res.status + ')');
+    if (!res.ok || !data) throw new Error(data?.message || t('Server xətası') + ' (' + res.status + ')');
     return data;
 }
 window.glaustApi = api;
@@ -102,8 +104,8 @@ Alpine.store('confirm', {
     open: false, title: '', message: '', action: 'Sil', form: null,
     ask(form) {
         this.form = form;
-        this.title = form.dataset.confirmTitle || 'Əminsiniz?';
-        this.message = form.dataset.confirm || 'Bu əməliyyat geri qaytarıla bilməz.';
+        this.title = form.dataset.confirmTitle || t('Əminsiniz?');
+        this.message = form.dataset.confirm || t('Bu əməliyyat geri qaytarıla bilməz.');
         this.action = form.dataset.confirmAction || 'Sil';
         this.open = true;
     },
@@ -162,7 +164,7 @@ Alpine.data('myDay', () => ({
     toggle(tab) { if (this.open && this.tab === tab) { this.open = false; return; } this.tab = tab; this.open = true; },
     async complete(task) {
         task.done = true;
-        try { await api(`/ajax/tasks/${task.id}/complete`, { method: 'POST' }); toast('success', 'Tapşırıq tamamlandı'); setTimeout(() => this.load(), 450); }
+        try { await api(`/ajax/tasks/${task.id}/complete`, { method: 'POST' }); toast('success', t('Tapşırıq tamamlandı')); setTimeout(() => this.load(), 450); }
         catch (e) { task.done = false; toast('error', e.message); }
     },
     async read(r) {
@@ -173,7 +175,7 @@ Alpine.data('myDay', () => ({
     async snooze(r, minutes) {
         this.reminders = this.reminders.filter((x) => x.id !== r.id);
         this.counts.reminders = Math.max(0, this.counts.reminders - 1);
-        try { await api(`/ajax/reminders/${r.id}/snooze`, { method: 'POST', body: { minutes } }); toast('info', 'Xatırlatma ertələndi'); }
+        try { await api(`/ajax/reminders/${r.id}/snooze`, { method: 'POST', body: { minutes } }); toast('info', t('Xatırlatma ertələndi')); }
         catch (e) { toast('error', e.message); this.load(); }
     },
     get taskTotal() { return this.counts.tasks; },
@@ -282,11 +284,11 @@ function themed(config) {
         fill: config.type === 'area' ? { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.32, opacityTo: 0.02, stops: [0, 95] } } : { opacity: 1 },
         plotOptions: {
             bar: { borderRadius: 5, borderRadiusApplication: 'end', columnWidth: config.columnWidth || '52%', horizontal: !!config.horizontal, barHeight: '62%' },
-            pie: { donut: { size: '72%', labels: { show: true, name: { fontSize: '13px' }, value: { fontSize: '22px', fontWeight: 600, color: css.getPropertyValue('--g-ink').trim(), formatter: (v) => (money ? fmt(Number(v), 0) + ' ₼' : v) }, total: { show: true, label: config.totalLabel || 'Cəmi', color: muted, formatter: (w) => { const s = w.globals.seriesTotals.reduce((a, b) => a + b, 0); return money ? fmt(s, 0) + ' ₼' : s; } } } } },
+            pie: { donut: { size: '72%', labels: { show: true, name: { fontSize: '13px' }, value: { fontSize: '22px', fontWeight: 600, color: css.getPropertyValue('--g-ink').trim(), formatter: (v) => (money ? fmt(Number(v), 0) + ' ₼' : v) }, total: { show: true, label: config.totalLabel || t('Cəmi'), color: muted, formatter: (w) => { const s = w.globals.seriesTotals.reduce((a, b) => a + b, 0); return money ? fmt(s, 0) + ' ₼' : s; } } } } },
         },
         tooltip: { theme: dark ? 'dark' : 'light', y: { formatter: (v) => (money ? fmt(v, 2) + ' ₼' : config.rate ? fmtRate(v) + ' ₼' : fmt(v, config.decimals ?? 0)) } },
         markers: { size: config.type === 'line' ? 0 : 0, hover: { size: 5 } },
-        noData: { text: 'Məlumat yoxdur' },
+        noData: { text: t('Məlumat yoxdur') },
     };
 }
 Alpine.directive('chart', (el, { expression }, { evaluate, cleanup }) => {
@@ -561,7 +563,7 @@ Alpine.data('dashboardLayout', (initial, all) => ({
     pos(key) { return this.order.indexOf(key); },
     async save() {
         this.editing = false;
-        try { await api('/dashboard/layout', { method: 'POST', body: { order: this.order, hidden: this.hidden } }); toast('success', 'Panel yadda saxlanıldı'); }
+        try { await api('/dashboard/layout', { method: 'POST', body: { order: this.order, hidden: this.hidden } }); toast('success', t('Panel yadda saxlanıldı')); }
         catch (e) { toast('error', e.message); }
     },
 }));

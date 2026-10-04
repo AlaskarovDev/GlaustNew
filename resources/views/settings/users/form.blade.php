@@ -1,6 +1,6 @@
-<x-layouts.app :title="$user->exists ? $user->name : 'İstifadəçi dəvəti'">
-    <x-page-header :title="$user->exists ? $user->name : 'İstifadəçi dəvət et'" :back="route('settings.users.index')"
-                   :subtitle="$user->exists ? $user->email : 'Mail ilə dəvət göndəriləcək, istifadəçi öz şifrəsini təyin edəcək.'"/>
+<x-layouts.app :title="$user->exists ? $user->name : __('İstifadəçi dəvəti')">
+    <x-page-header :title="$user->exists ? $user->name : __('İstifadəçi dəvət et')" :back="route('settings.users.index')"
+                   :subtitle="$user->exists ? $user->email : __('Mail ilə dəvət göndəriləcək, istifadəçi öz şifrəsini təyin edəcək.')"/>
     <form method="POST" action="{{ $user->exists ? route('settings.users.update', $user->id) : route('settings.users.store') }}" class="card p-6 max-w-2xl space-y-5">
         @csrf
         @if($user->exists) @method('PUT') @endif
@@ -18,7 +18,7 @@
         </div>
         <div class="flex justify-end gap-2">
             <a href="{{ route('settings.users.index') }}" class="btn btn-secondary">{{ __('Ləğv et') }}</a>
-            <button class="btn btn-primary"><x-icon :name="$user->exists ? 'check' : 'send'" class="size-4"/> {{ $user->exists ? 'Yadda saxla' : 'Dəvət göndər' }}</button>
+            <button class="btn btn-primary"><x-icon :name="$user->exists ? 'check' : 'send'" class="size-4"/> {{ $user->exists ? __('Yadda saxla') : __('Dəvət göndər') }}</button>
         </div>
     </form>
 </x-layouts.app>

@@ -46,7 +46,7 @@
                 <div class="flex justify-between"><span class="text-muted">{{ __('Rol') }}</span><span>{{ $user->role?->name }}</span></div>
                 <div class="flex justify-between"><span class="text-muted">{{ __('Son giriş') }}</span><span class="font-mono text-xs">{{ azdate($user->last_login_at, true) }}</span></div>
                 <div class="flex justify-between"><span class="text-muted">2FA</span>
-                    <span @class(['badge', 'badge-green' => $user->hasTwoFactor(), 'badge-slate' => ! $user->hasTwoFactor()])>{{ $user->hasTwoFactor() ? 'Aktiv' : 'Söndürülüb' }}</span></div>
+                    <span @class(['badge', 'badge-green' => $user->hasTwoFactor(), 'badge-slate' => ! $user->hasTwoFactor()])>{{ $user->hasTwoFactor() ? __('Aktiv') : __('Söndürülüb') }}</span></div>
             </aside>
         </div>
 
@@ -109,7 +109,7 @@
                             <span class="grid place-items-center size-9 rounded-lg bg-surface-2 text-muted"><x-icon name="monitor" class="size-4"/></span>
                             <div class="min-w-0 flex-1">
                                 <div class="text-sm font-medium">{{ $s->device }} @if($s->current)<span class="badge badge-teal ml-1">{{ __('Bu cihaz') }}</span>@endif</div>
-                                <div class="text-xs text-muted font-mono">{{ $s->ip }} · son fəaliyyət {{ $s->last->diffForHumans() }}</div>
+                                <div class="text-xs text-muted font-mono">{{ $s->ip }} {{ __('· son fəaliyyət') }} {{ $s->last->diffForHumans() }}</div>
                             </div>
                         </li>
                     @endforeach
@@ -123,11 +123,11 @@
                     <tbody>
                     @foreach($logins as $l)
                         <tr>
-                            <td data-label="Hadisə">@include('settings.logs._event', ['event' => $l->event])</td>
-                            <td data-label="Tarix" class="font-mono text-xs">{{ azdate($l->created_at, true) }}</td>
+                            <td data-label="{{ __('Hadisə') }}">@include('settings.logs._event', ['event' => $l->event])</td>
+                            <td data-label="{{ __('Tarix') }}" class="font-mono text-xs">{{ azdate($l->created_at, true) }}</td>
                             <td data-label="IP" class="font-mono text-xs">{{ $l->ip_address }}</td>
-                            <td data-label="Cihaz">{{ $l->device }}</td>
-                            <td data-label="Müddət" class="num text-xs">{{ $l->duration_seconds !== null ? gmdate($l->duration_seconds >= 3600 ? 'G:i:s' : 'i:s', $l->duration_seconds) : '—' }}</td>
+                            <td data-label="{{ __('Cihaz') }}">{{ $l->device }}</td>
+                            <td data-label="{{ __('Müddət') }}" class="num text-xs">{{ $l->duration_seconds !== null ? gmdate($l->duration_seconds >= 3600 ? 'G:i:s' : 'i:s', $l->duration_seconds) : '—' }}</td>
                         </tr>
                     @endforeach
                     </tbody>

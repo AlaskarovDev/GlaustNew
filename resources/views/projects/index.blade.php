@@ -24,7 +24,7 @@
 
     @if($items->isEmpty())
         <div class="card">
-            <x-empty icon="folder" :title="$table->hasActiveFilters() ? 'Heç nə tapılmadı' : 'Hələ layihə yoxdur'" :text="__('Layihə yaradın: tərəfləri və müqavilələri seçin, sonra Trade-lər əlavə edin.')">
+            <x-empty icon="folder" :title="$table->hasActiveFilters() ? __('Heç nə tapılmadı') : __('Hələ layihə yoxdur')" :text="__('Layihə yaradın: tərəfləri və müqavilələri seçin, sonra Trade-lər əlavə edin.')">
                 @can('projects.create')<a href="{{ route('projects.create') }}" class="btn btn-primary"><x-icon name="plus" class="size-4"/> {{ __('Layihə yarat') }}</a>@endcan
             </x-empty>
         </div>
@@ -51,7 +51,7 @@
                         <div class="rounded-xl bg-surface-2 px-3 py-2.5" title="{{ __('Təxmini: satıcı fakturalarına əlavə etdiyimiz komissiya (bugünkü CBAR ilə AZN) − Trade-lərə yazılan xərclər (bank komissiyası və s.)') }}">
                             <div class="text-[11px] text-muted">{{ __('Proqnoz mənfəət') }}</div>
                             <div @class(['font-mono text-lg font-semibold', 'text-success' => $profit > 0, 'text-danger' => $profit !== null && $profit < 0, 'text-faint' => $profit === null])>{{ $profit === null ? '—' : '≈ '.money($profit) }}</div>
-                            <div class="text-[11px] text-faint">{{ $profit === null ? 'komissiya hələ yoxdur' : 'bugünkü CBAR ilə' }}</div>
+                            <div class="text-[11px] text-faint">{{ $profit === null ? __('komissiya hələ yoxdur') : __('bugünkü CBAR ilə') }}</div>
                         </div>
                     </div>
 
@@ -75,12 +75,12 @@
                     @foreach($items as $p)
                         @php $profit = \App\Support\ProjectForecast::profit($p->deals); @endphp
                         <tr>
-                            <td data-label="Kod" class="font-mono text-xs">{{ $p->code }}</td>
+                            <td data-label="{{ __('Kod') }}" class="font-mono text-xs">{{ $p->code }}</td>
                             <td data-label="Ad"><a href="{{ route('projects.show', $p) }}" class="font-medium text-ink hover:text-brand-ink">{{ $p->name }}</a></td>
-                            <td data-label="Tərəflər" class="text-sm">{{ $p->supplier?->name ?? '—' }} <span class="text-faint">→</span> {{ $p->counterparty?->name ?? '—' }}</td>
-                            <td data-label="Məsul"><span class="inline-flex items-center gap-2"><x-avatar :user="$p->manager" size="xs"/>{{ $p->manager?->name ?? '—' }}</span></td>
-                            <td data-label="Trade-lər" class="num">{{ $p->deals_count }}<div class="text-[11px] text-muted">{{ $p->active_deals_count }} davam edir</div></td>
-                            <td data-label="Mənfəət" @class(['num', 'text-success' => $profit > 0, 'text-danger' => $profit !== null && $profit < 0])>{{ $profit === null ? '—' : '≈ '.money($profit) }}</td>
+                            <td data-label="{{ __('Tərəflər') }}" class="text-sm">{{ $p->supplier?->name ?? '—' }} <span class="text-faint">→</span> {{ $p->counterparty?->name ?? '—' }}</td>
+                            <td data-label="{{ __('Məsul') }}"><span class="inline-flex items-center gap-2"><x-avatar :user="$p->manager" size="xs"/>{{ $p->manager?->name ?? '—' }}</span></td>
+                            <td data-label="{{ __('Trade-lər') }}" class="num">{{ $p->deals_count }}<div class="text-[11px] text-muted">{{ $p->active_deals_count }} davam edir</div></td>
+                            <td data-label="{{ __('Mənfəət') }}" @class(['num', 'text-success' => $profit > 0, 'text-danger' => $profit !== null && $profit < 0])>{{ $profit === null ? '—' : '≈ '.money($profit) }}</td>
                         </tr>
                     @endforeach
                     </tbody>

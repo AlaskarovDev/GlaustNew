@@ -26,7 +26,7 @@
                 <label class="flex flex-col items-center justify-center gap-2 h-40 rounded-2xl border-2 border-dashed cursor-pointer transition-colors text-center px-4"
                        :class="file ? 'border-brand bg-brand-soft/40' : 'border-line hover:border-brand hover:bg-brand-soft/30'">
                     <x-icon name="sheet" class="size-8 text-brand"/>
-                    <span class="text-sm font-medium" x-text="file || 'Excel və ya CSV faylını seçin'"></span>
+                    <span class="text-sm font-medium" x-text="file || {{ \Illuminate\Support\Js::from(__('Excel və ya CSV faylını seçin')) }}"></span>
                     <span class="text-xs text-muted">{{ __('.xlsx, .xls, .csv · 10 MB-a qədər · ilk sətir başlıqdır') }}</span>
                     <input type="file" name="file" accept=".xlsx,.xls,.csv" class="sr-only" required @change="file = $event.target.files[0]?.name">
                 </label>
@@ -50,9 +50,9 @@
                     <tbody>
                     @foreach($history as $i)
                         <tr>
-                            <td data-label="Fayl"><a href="{{ route('imports.show', $i) }}" class="font-medium hover:text-brand-ink break-all">{{ $i->original_name }}</a><div class="text-xs text-muted">{{ $i->user?->name }}</div></td>
-                            <td data-label="Növ" class="text-xs">{{ collect(\App\Imports\ImportRunner::TYPES)->first(fn ($c) => $c::type() === $i->type)::title() }}</td>
-                            <td data-label="Nəticə">
+                            <td data-label="{{ __('Fayl') }}"><a href="{{ route('imports.show', $i) }}" class="font-medium hover:text-brand-ink break-all">{{ $i->original_name }}</a><div class="text-xs text-muted">{{ $i->user?->name }}</div></td>
+                            <td data-label="{{ __('Növ') }}" class="text-xs">{{ collect(\App\Imports\ImportRunner::TYPES)->first(fn ($c) => $c::type() === $i->type)::title() }}</td>
+                            <td data-label="{{ __('Nəticə') }}">
                                 @switch($i->status)
                                     @case('done')<span class="badge badge-green">{{ $i->imported_rows }} ✓</span>@if($i->failed_rows)<span class="badge badge-rose ml-1">{{ $i->failed_rows }} ✗</span>@endif @break
                                     @case('queued') @case('processing')<span class="badge badge-blue">{{ __('Gedir…') }}</span> @break
@@ -60,7 +60,7 @@
                                     @default<span class="badge badge-slate">{{ __('Təsdiq gözləyir') }}</span>
                                 @endswitch
                             </td>
-                            <td data-label="Tarix" class="font-mono text-xs">{{ azdate($i->created_at, true) }}</td>
+                            <td data-label="{{ __('Tarix') }}" class="font-mono text-xs">{{ azdate($i->created_at, true) }}</td>
                         </tr>
                     @endforeach
                     </tbody>

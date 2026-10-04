@@ -1,6 +1,6 @@
 @php
     $editing = $contract->exists;
-    $title = $editing ? 'Müqavilə '.$contract->number : ($contract->parent_id ? 'Əlavə razılaşma' : 'Yeni müqavilə');
+    $title = $editing ? __('Müqavilə ').$contract->number : ($contract->parent_id ? __('Əlavə razılaşma') : __('Yeni müqavilə'));
     $users = \App\Models\User::forTenant()->where('is_active', true)->orderBy('name')->pluck('name', 'id');
     $paymentRows = old('payments', $payments);
 @endphp
@@ -10,7 +10,7 @@
 
     @if($errors->any())
         <div class="card border-danger/30 bg-danger-soft/50 p-4 mb-6 text-sm text-danger flex gap-2" role="alert">
-            <x-icon name="alert" class="size-5 shrink-0"/> Formda {{ $errors->count() }} xəta var — aşağıdakı sahələri yoxlayın.
+            <x-icon name="alert" class="size-5 shrink-0"/> Formda {{ $errors->count() }} {{ __('xəta var — aşağıdakı sahələri yoxlayın.') }}
         </div>
     @endif
 
@@ -41,7 +41,7 @@
                     <fieldset class="sm:col-span-2">
                         <legend class="field-label">{{ __('Müqavilənin növü') }} <span class="text-danger">*</span></legend>
                         <div class="grid sm:grid-cols-2 gap-2">
-                            @foreach(['sale' => ['Satış', 'Müştəri ilə — biz satırıq / xidmət göstəririk', 'arrow-up-right'], 'purchase' => ['Alış', 'Təchizatçı ilə — biz alırıq / xidmət alırıq', 'arrow-down-left']] as $val => [$label, $hint, $icon])
+                            @foreach(['sale' => [__('Satış'), __('Müştəri ilə — biz satırıq / xidmət göstəririk'), 'arrow-up-right'], 'purchase' => [__('Alış'), __('Təchizatçı ilə — biz alırıq / xidmət alırıq'), 'arrow-down-left']] as $val => [$label, $hint, $icon])
                                 <label class="flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all"
                                        :class="kind === '{{ $val }}' ? 'border-brand bg-brand-soft/60 ring-1 ring-brand/30' : 'border-line hover:border-line-strong'">
                                     <input type="radio" name="kind" value="{{ $val }}" x-model="kind" class="sr-only">

@@ -45,7 +45,7 @@ class BankTransactionController extends Controller
     {
         $this->authorize('bank.create');
         if (! BankAccount::where('is_active', true)->exists()) {
-            return redirect()->route('bank.accounts.create')->with('info', 'Əvvəlcə bank hesabı əlavə edin.');
+            return redirect()->route('bank.accounts.create')->with('info', __('Əvvəlcə bank hesabı əlavə edin.'));
         }
         $tx = new BankTransaction([
             'direction' => $request->query('direction') === 'out' ? 'out' : 'in',
@@ -74,18 +74,18 @@ class BankTransactionController extends Controller
                     ['purpose' => $data['purpose'] ?? null, 'reference' => $data['reference'] ?? null],
                 );
 
-                return redirect()->route('bank.transactions.show', $out)->with('success', $out->kind === 'conversion' ? 'Konvertasiya qeydə alındı.' : 'Köçürmə qeydə alındı.');
+                return redirect()->route('bank.transactions.show', $out)->with('success', $out->kind === 'conversion' ? __('Konvertasiya qeydə alındı.') : __('Köçürmə qeydə alındı.'));
             }
 
             [$account, $data, $applied] = $this->validatedRegular($request);
             $tx = $this->ledger->record($account, $data, $applied);
         } catch (RateUnavailable $e) {
-            throw ValidationException::withMessages(['transaction_date' => $e->getMessage().' Əməliyyat yadda saxlanmadı.']);
+            throw ValidationException::withMessages(['transaction_date' => $e->getMessage().__(' Əməliyyat yadda saxlanmadı.')]);
         }
 
         return redirect()->to($request->boolean('another')
             ? route('bank.transactions.create', ['direction' => $tx->direction, 'account_id' => $tx->bank_account_id])
-            : route('bank.transactions.show', $tx))->with('success', 'Əməliyyat qeydə alındı.');
+            : route('bank.transactions.show', $tx))->with('success', __('Əməliyyat qeydə alındı.'));
     }
 
     public function show(BankTransaction $transaction): View
@@ -101,7 +101,7 @@ class BankTransactionController extends Controller
     {
         $this->authorize('bank.update');
         if ($transaction->transfer_group) {
-            return redirect()->route('bank.transactions.show', $transaction)->with('info', 'Köçürmə və konvertasiyanı redaktə etmək olmur: silib yenidən daxil edin.');
+            return redirect()->route('bank.transactions.show', $transaction)->with('info', __('Köçürmə və konvertasiyanı redaktə etmək olmur: silib yenidən daxil edin.'));
         }
         $transaction->load(['counterparty', 'contract', 'project']);
 
@@ -120,7 +120,7 @@ class BankTransactionController extends Controller
             throw ValidationException::withMessages(['transaction_date' => $e->getMessage()]);
         }
 
-        return redirect()->route('bank.transactions.show', $transaction)->with('success', 'Əməliyyat yeniləndi.');
+        return redirect()->route('bank.transactions.show', $transaction)->with('success', __('Əməliyyat yeniləndi.'));
     }
 
     public function destroy(BankTransaction $transaction): RedirectResponse
@@ -128,7 +128,7 @@ class BankTransactionController extends Controller
         $this->authorize('bank.delete');
         $n = $this->ledger->delete($transaction);
 
-        return redirect()->route('bank.transactions.index')->with('success', $n > 1 ? 'Köçürmənin hər iki tərəfi silindi.' : 'Əməliyyat silindi.');
+        return redirect()->route('bank.transactions.index')->with('success', $n > 1 ? __('Köçürmənin hər iki tərəfi silindi.') : __('Əməliyyat silindi.'));
     }
 
     private function formData(BankTransaction $tx, string $mode): array
@@ -160,7 +160,7 @@ class BankTransactionController extends Controller
             'category_id' => ['nullable', 'integer', TenantExists::plain('categories')],
             'purpose' => ['nullable', 'string', 'max:255'],
             'reference' => ['nullable', 'string', 'max:80'],
-        ], [], ['transaction_date' => 'Tarix', 'applied_rate' => 'Bank məzənnəsi', 'category_id' => 'Kateqoriya']);
+        ], [], ['transaction_date' => __('Tarix'), 'applied_rate' => __('Bank məzənnəsi'), 'category_id' => __('Kateqoriya')]);
 
         $account = $tx ? $tx->account : BankAccount::findOrFail($data['bank_account_id']);
 
@@ -168,7 +168,7 @@ class BankTransactionController extends Controller
         if (! empty($data['contract_id'])) {
             $contract = Contract::findOrFail($data['contract_id']);
             if (! empty($data['counterparty_id']) && (int) $data['counterparty_id'] !== $contract->counterparty_id) {
-                throw ValidationException::withMessages(['contract_id' => "Müqavilə {$contract->number} başqa kontragentə aiddir."]);
+                throw ValidationException::withMessages(['contract_id' => __('Müqavilə :v1 başqa kontragentə aiddir.', ['v1' => $contract->number])]);
             }
             $data['counterparty_id'] = $contract->counterparty_id;
             $data['project_id'] ??= $contract->project_id;
@@ -191,14 +191,14 @@ class BankTransactionController extends Controller
             'amount_in' => ['nullable', 'numeric', 'gt:0', 'max:999999999999'],
             'purpose' => ['nullable', 'string', 'max:255'],
             'reference' => ['nullable', 'string', 'max:80'],
-        ], ['to_account_id.different' => 'Göndərən və alan hesab eyni ola bilməz.'], [
-            'from_account_id' => 'Göndərən hesab', 'to_account_id' => 'Alan hesab', 'amount_out' => 'Silinən məbləğ', 'amount_in' => 'Daxil olan məbləğ', 'transaction_date' => 'Tarix',
+        ], ['to_account_id.different' => __('Göndərən və alan hesab eyni ola bilməz.')], [
+            'from_account_id' => __('Göndərən hesab'), 'to_account_id' => __('Alan hesab'), 'amount_out' => __('Silinən məbləğ'), 'amount_in' => __('Daxil olan məbləğ'), 'transaction_date' => __('Tarix'),
         ]);
 
         $from = BankAccount::findOrFail($data['from_account_id']);
         $to = BankAccount::findOrFail($data['to_account_id']);
         if ($from->currency !== $to->currency && empty($data['amount_in'])) {
-            throw ValidationException::withMessages(['amount_in' => "Konvertasiyada daxil olan məbləği ({$to->currency}) yazın."]);
+            throw ValidationException::withMessages(['amount_in' => __('Konvertasiyada daxil olan məbləği (:v1) yazın.', ['v1' => $to->currency])]);
         }
 
         return $data;

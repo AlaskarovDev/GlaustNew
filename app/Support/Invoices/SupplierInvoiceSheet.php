@@ -167,7 +167,7 @@ class SupplierInvoiceSheet
             }
         }
         if ($headerIndex === null) {
-            return ['invoices' => [], 'errors' => [0 => 'Başlıq sətri tapılmadı: birinci sütunda «Proforma N» olmalıdır.'], 'rows' => 0];
+            return ['invoices' => [], 'errors' => [0 => __('Başlıq sətri tapılmadı: birinci sütunda «Proforma N» olmalıdır.')], 'rows' => 0];
         }
 
         // Only the eight seller columns are read; the first occurrence of each header wins.
@@ -182,7 +182,7 @@ class SupplierInvoiceSheet
         }
         $missing = array_diff(array_keys($wanted), array_keys($map));
         if ($missing) {
-            return ['invoices' => [], 'errors' => [0 => 'Sütunlar tapılmadı: '.implode(', ', array_map(fn ($k) => $wanted[$k][0], $missing))], 'rows' => 0];
+            return ['invoices' => [], 'errors' => [0 => __('Sütunlar tapılmadı: ').implode(', ', array_map(fn ($k) => $wanted[$k][0], $missing))], 'rows' => 0];
         }
 
         $invoices = [];
@@ -203,21 +203,21 @@ class SupplierInvoiceSheet
 
             $problems = [];
             if ($proforma === '') {
-                $problems[] = 'Proforma N boşdur';
+                $problems[] = __('Proforma N boşdur');
             }
             if ($description === '') {
-                $problems[] = 'Description boşdur';
+                $problems[] = __('Description boşdur');
             }
             if ($qty === null || $qty <= 0) {
-                $problems[] = 'Quantity müsbət rəqəm olmalıdır';
+                $problems[] = __('Quantity müsbət rəqəm olmalıdır');
             }
             if ($price === null || $price < 0) {
-                $problems[] = 'Unit Price rəqəm olmalıdır';
+                $problems[] = __('Unit Price rəqəm olmalıdır');
             }
             if ($total === null) {
-                $problems[] = 'Total/EUR boşdur';
+                $problems[] = __('Total/EUR boşdur');
             } elseif ($qty !== null && $price !== null && abs($qty * $price - $total) > max(0.05, abs($total) * 0.005)) {
-                $problems[] = 'Total/EUR ('.num($total).') Quantity × Unit Price ('.num($qty * $price).') ilə uyğun gəlmir';
+                $problems[] = 'Total/EUR ('.num($total).') Quantity × Unit Price ('.num($qty * $price).__(') ilə uyğun gəlmir');
             }
             if ($problems) {
                 $errors[$line] = implode('; ', $problems);
@@ -238,7 +238,7 @@ class SupplierInvoiceSheet
         $book->disconnectWorksheets();
 
         if (! $count) {
-            $errors[0] = 'Faylda məlumat sətri yoxdur.';
+            $errors[0] = __('Faylda məlumat sətri yoxdur.');
         }
 
         return ['invoices' => $invoices, 'errors' => $errors, 'rows' => $count];

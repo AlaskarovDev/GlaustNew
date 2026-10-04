@@ -3,8 +3,8 @@
     $team = \App\Http\Controllers\ProjectController::teamOptions();
     $selected = array_map('intval', old('members', $memberIds));
 @endphp
-<x-layouts.app :title="$editing ? $project->name : 'Yeni layihə'">
-    <x-page-header :title="$editing ? $project->name : 'Yeni layihə'" :back="$editing ? route('projects.show', $project) : route('projects.index')"/>
+<x-layouts.app :title="$editing ? $project->name : __('Yeni layihə')">
+    <x-page-header :title="$editing ? $project->name : __('Yeni layihə')" :back="$editing ? route('projects.show', $project) : route('projects.index')"/>
 
     <form method="POST" action="{{ $editing ? route('projects.update', $project) : route('projects.store') }}" class="grid lg:grid-cols-[minmax(0,1fr)_340px] gap-6 items-start" x-data="{ busy: false }" @submit="busy = true">
         @csrf

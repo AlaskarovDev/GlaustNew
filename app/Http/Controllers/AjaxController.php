@@ -29,7 +29,7 @@ class AjaxController extends Controller
         $codes = (array) tenant()->setting('ticker_currencies');
         $data = Cache::remember('ticker:'.md5(implode(',', $codes)).':'.$rates->today()->format('Ymd'), 600, fn () => $rates->ticker($codes));
         if (! $data['ok']) {
-            $data['message'] = 'Mərkəzi Bankın məzənnələri yüklənmədi.';
+            $data['message'] = __('Mərkəzi Bankın məzənnələri yüklənmədi.');
         }
 
         return response()->json($data);
@@ -44,7 +44,7 @@ class AjaxController extends Controller
     {
         $currency = strtoupper((string) $request->query('currency'));
         if (! in_array($currency, config('glaust.currencies'), true)) {
-            return response()->json(['ok' => false, 'message' => 'Naməlum valyuta.']);
+            return response()->json(['ok' => false, 'message' => __('Naməlum valyuta.')]);
         }
         try {
             $day = $rates->normalize((string) $request->query('date'));
@@ -54,7 +54,7 @@ class AjaxController extends Controller
         } catch (RateUnavailable $e) {
             return response()->json(['ok' => false, 'message' => $e->getMessage()]);
         } catch (\InvalidArgumentException) {
-            return response()->json(['ok' => false, 'message' => 'Tarix düzgün deyil.']);
+            return response()->json(['ok' => false, 'message' => __('Tarix düzgün deyil.')]);
         }
     }
 
@@ -63,7 +63,7 @@ class AjaxController extends Controller
     {
         $from = strtoupper((string) $request->query('from'));
         if (! in_array($from, config('glaust.currencies'), true)) {
-            return response()->json(['ok' => false, 'message' => 'Naməlum valyuta.']);
+            return response()->json(['ok' => false, 'message' => __('Naməlum valyuta.')]);
         }
         try {
             $c = $converter->cbar($from, (string) $request->query('date'));
@@ -72,7 +72,7 @@ class AjaxController extends Controller
         } catch (RateUnavailable $e) {
             return response()->json(['ok' => false, 'message' => $e->getMessage()]);
         } catch (\InvalidArgumentException) {
-            return response()->json(['ok' => false, 'message' => 'Tarix düzgün deyil.']);
+            return response()->json(['ok' => false, 'message' => __('Tarix düzgün deyil.')]);
         }
     }
 
@@ -88,25 +88,25 @@ class AjaxController extends Controller
 
         if ($user->can('projects.view')) {
             foreach (Project::where(fn ($w) => $w->where('name', 'like', $like)->orWhere('code', 'like', $like))->limit(5)->get() as $p) {
-                $results[] = ['group' => 'Layihə', 'label' => $p->name, 'meta' => $p->code, 'url' => route('projects.show', $p)];
+                $results[] = ['group' => __('Layihə'), 'label' => $p->name, 'meta' => $p->code, 'url' => route('projects.show', $p)];
             }
             foreach (Task::where('title', 'like', $like)->limit(5)->get() as $t) {
-                $results[] = ['group' => 'Tapşırıq', 'label' => $t->title, 'meta' => status_label('task', $t->status), 'url' => route('tasks.show', $t)];
+                $results[] = ['group' => __('Tapşırıq'), 'label' => $t->title, 'meta' => status_label('task', $t->status), 'url' => route('tasks.show', $t)];
             }
         }
         if ($user->can('crm.view')) {
             foreach (Counterparty::where(fn ($w) => $w->where('name', 'like', $like)->orWhere('voen', 'like', $like)->orWhere('email', 'like', $like))->limit(6)->get() as $c) {
-                $results[] = ['group' => $c->isCustomer() && ! $c->isSupplier() ? 'Müştəri' : ($c->isSupplier() && ! $c->isCustomer() ? 'Təchizatçı' : 'Kontragent'), 'label' => $c->name, 'meta' => $c->voen ? 'VÖEN '.$c->voen : null, 'url' => route('counterparties.show', $c)];
+                $results[] = ['group' => $c->isCustomer() && ! $c->isSupplier() ? __('Müştəri') : ($c->isSupplier() && ! $c->isCustomer() ? __('Təchizatçı') : __('Kontragent')), 'label' => $c->name, 'meta' => $c->voen ? __('VÖEN ').$c->voen : null, 'url' => route('counterparties.show', $c)];
             }
         }
         if ($user->can('contracts.view')) {
             foreach (Contract::with('counterparty')->where(fn ($w) => $w->where('number', 'like', $like)->orWhere('subject', 'like', $like))->limit(5)->get() as $c) {
-                $results[] = ['group' => 'Müqavilə', 'label' => $c->number.' · '.$c->subject, 'meta' => $c->counterparty?->name, 'url' => route('contracts.show', $c)];
+                $results[] = ['group' => __('Müqavilə'), 'label' => $c->number.' · '.$c->subject, 'meta' => $c->counterparty?->name, 'url' => route('contracts.show', $c)];
             }
         }
         if ($user->can('logistics.view')) {
             foreach (Shipment::where(fn ($w) => $w->where('number', 'like', $like)->orWhere('container_no', 'like', $like)->orWhere('document_no', 'like', $like))->limit(5)->get() as $s) {
-                $results[] = ['group' => 'Yük', 'label' => $s->number.' · '.$s->origin.' → '.$s->destination, 'meta' => status_label('shipment', $s->status), 'url' => route('shipments.show', $s)];
+                $results[] = ['group' => __('Yük'), 'label' => $s->number.' · '.$s->origin.' → '.$s->destination, 'meta' => status_label('shipment', $s->status), 'url' => route('shipments.show', $s)];
             }
         }
 
@@ -125,7 +125,7 @@ class AjaxController extends Controller
                     ->when($request->query('role') === 'supplier', fn ($w) => $w->suppliers())
                     ->when($q !== '', fn ($w) => $w->where(fn ($x) => $x->where('name', 'like', $like)->orWhere('voen', 'like', $like)))
                     ->orderBy('name')->limit(15)->get()
-                    ->map(fn ($c) => ['id' => $c->id, 'label' => $c->name, 'meta' => trim(($c->voen ? 'VÖEN '.$c->voen.' · ' : '').$c->typeLabel()), 'type' => $c->type])
+                    ->map(fn ($c) => ['id' => $c->id, 'label' => $c->name, 'meta' => trim(($c->voen ? __('VÖEN ').$c->voen.' · ' : '').$c->typeLabel()), 'type' => $c->type])
                 : collect(),
             'contracts' => Contract::with('counterparty')
                 ->when($request->integer('counterparty_id'), fn ($w, $id) => $w->where('counterparty_id', $id))
@@ -157,7 +157,7 @@ class AjaxController extends Controller
     public function storeCounterparty(Request $request): JsonResponse
     {
         if (! $request->user()->can('crm.create')) {
-            return response()->json(['ok' => false, 'message' => 'Kontragent yaratmağa icazəniz yoxdur.']);
+            return response()->json(['ok' => false, 'message' => __('Kontragent yaratmağa icazəniz yoxdur.')]);
         }
         $request->merge(['voen' => preg_replace('/\D/', '', (string) $request->input('voen')) ?: null]);
 
@@ -168,7 +168,7 @@ class AjaxController extends Controller
             'voen' => ['nullable', 'digits:10', Rule::unique('counterparties', 'voen')->where('company_id', tenant()->id)],
             'phone' => ['nullable', 'string', 'max:40'],
             'email' => ['nullable', 'email', 'max:190'],
-        ], ['voen.unique' => 'Bu VÖEN ilə kontragent artıq var.'], ['name' => 'Ad', 'voen' => 'VÖEN']);
+        ], ['voen.unique' => __('Bu VÖEN ilə kontragent artıq var.')], ['name' => 'Ad', 'voen' => __('VÖEN')]);
 
         if ($validator->fails()) {
             return response()->json(['ok' => false, 'errors' => $validator->errors()->toArray()]);
@@ -182,7 +182,7 @@ class AjaxController extends Controller
     public function completeTask(Request $request, Task $task): JsonResponse
     {
         if ($task->assignee_id !== $request->user()->id && ! $request->user()->can('projects.update')) {
-            return response()->json(['ok' => false, 'message' => 'Bu tapşırığı dəyişməyə icazəniz yoxdur.']);
+            return response()->json(['ok' => false, 'message' => __('Bu tapşırığı dəyişməyə icazəniz yoxdur.')]);
         }
         $task->update(['status' => 'done']);
 

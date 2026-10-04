@@ -13,7 +13,7 @@ class ShipmentTable extends Table
 
     public function title(): string
     {
-        return 'Yüklər';
+        return __('Yüklər');
     }
 
     protected function baseQuery(): Builder
@@ -24,11 +24,11 @@ class ShipmentTable extends Table
     public function filters(): array
     {
         return [
-            'status' => ['label' => 'Status', 'type' => 'select', 'options' => status_options('shipment') + ['open' => 'Açıq (təhvil verilməmiş)', 'delayed' => 'Gecikən']],
-            'direction' => ['label' => 'İstiqamət', 'type' => 'select', 'options' => config('glaust.shipment_directions')],
-            'transport_mode' => ['label' => 'Nəqliyyat', 'type' => 'select', 'options' => config('glaust.transport_modes')],
-            'from' => ['label' => 'Yüklənmə tarixindən', 'type' => 'date'],
-            'to' => ['label' => 'Tarixədək', 'type' => 'date'],
+            'status' => ['label' => 'Status', 'type' => 'select', 'options' => status_options('shipment') + ['open' => __('Açıq (təhvil verilməmiş)'), 'delayed' => __('Gecikən')]],
+            'direction' => ['label' => __('İstiqamət'), 'type' => 'select', 'options' => config('glaust.shipment_directions')],
+            'transport_mode' => ['label' => __('Nəqliyyat'), 'type' => 'select', 'options' => config('glaust.transport_modes')],
+            'from' => ['label' => __('Yüklənmə tarixindən'), 'type' => 'date'],
+            'to' => ['label' => __('Tarixədək'), 'type' => 'date'],
         ];
     }
 
@@ -63,24 +63,24 @@ class ShipmentTable extends Table
     public function columns(): array
     {
         return [
-            Column::make('Nömrə', 'number'),
-            Column::make('İstiqamət', fn ($s) => config('glaust.shipment_directions.'.$s->direction)),
-            Column::make('Çıxış', 'origin'),
-            Column::make('Təyinat', 'destination'),
-            Column::make('Daşıyıcı', 'carrier.name'),
-            Column::make('Nəqliyyat', fn ($s) => config('glaust.transport_modes.'.$s->transport_mode)),
-            Column::make('Nəqliyyat vasitəsi', 'vehicle'),
-            Column::make('Konteyner', 'container_no'),
-            Column::make('CMR / konosament', 'document_no'),
-            Column::make('Yük', 'cargo_description', width: 30),
-            Column::make('Çəki (kq)', 'weight_kg', 'number'),
-            Column::make('Həcm (m³)', 'volume_m3', 'number'),
-            Column::make('Yüklənmə', 'loading_date', 'date'),
-            Column::make('Gözlənilən çatma', 'eta', 'date'),
+            Column::make(__('Nömrə'), 'number'),
+            Column::make(__('İstiqamət'), fn ($s) => config('glaust.shipment_directions.'.$s->direction)),
+            Column::make(__('Çıxış'), 'origin'),
+            Column::make(__('Təyinat'), 'destination'),
+            Column::make(__('Daşıyıcı'), 'carrier.name'),
+            Column::make(__('Nəqliyyat'), fn ($s) => config('glaust.transport_modes.'.$s->transport_mode)),
+            Column::make(__('Nəqliyyat vasitəsi'), 'vehicle'),
+            Column::make(__('Konteyner'), 'container_no'),
+            Column::make(__('CMR / konosament'), 'document_no'),
+            Column::make(__('Yük'), 'cargo_description', width: 30),
+            Column::make(__('Çəki (kq)'), 'weight_kg', 'number'),
+            Column::make(__('Həcm (m³)'), 'volume_m3', 'number'),
+            Column::make(__('Yüklənmə'), 'loading_date', 'date'),
+            Column::make(__('Gözlənilən çatma'), 'eta', 'date'),
             Column::make('Status', fn ($s) => status_label('shipment', $s->status)),
-            Column::make('Xərclər (AZN)', fn ($s) => (float) $s->costs_sum_amount_azn, 'money', total: true),
-            Column::make('Layihə', 'project.code'),
-            Column::make('Müqavilə', 'contract.number'),
+            Column::make(__('Xərclər (AZN)'), fn ($s) => (float) $s->costs_sum_amount_azn, 'money', total: true),
+            Column::make(__('Layihə'), 'project.code'),
+            Column::make(__('Müqavilə'), 'contract.number'),
         ];
     }
 }

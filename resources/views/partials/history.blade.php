@@ -1,8 +1,8 @@
 {{-- $history: AuditLog collection for one record --}}
 @php
-    $verbs = ['created' => ['yaratdı', 'green'], 'updated' => ['dəyişdi', 'blue'], 'deleted' => ['sildi', 'rose'], 'restored' => ['bərpa etdi', 'teal']];
+    $verbs = ['created' => [__('yaratdı'), 'green'], 'updated' => [__('dəyişdi'), 'blue'], 'deleted' => ['sildi', 'rose'], 'restored' => [__('bərpa etdi'), 'teal']];
     $show = function ($v) {
-        if (is_bool($v)) return $v ? 'bəli' : 'xeyr';
+        if (is_bool($v)) return $v ? __('bəli') : 'xeyr';
         if ($v === null || $v === '') return '—';
         if (is_array($v)) return json_encode($v, JSON_UNESCAPED_UNICODE);
         return \Illuminate\Support\Str::limit((string) $v, 60);

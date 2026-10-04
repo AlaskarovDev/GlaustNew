@@ -11,7 +11,7 @@ class Iban implements ValidationRule
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
         if (! self::valid((string) $value)) {
-            $fail('IBAN düzgün deyil (yoxlama rəqəmləri uyğun gəlmir).');
+            $fail(__('IBAN düzgün deyil (yoxlama rəqəmləri uyğun gəlmir).'));
         }
     }
 

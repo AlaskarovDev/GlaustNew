@@ -18,7 +18,7 @@
     <div>
         <span class="field-label">{{ __('Necə ödəniləcək?') }}</span>
         <div class="grid grid-cols-3 gap-1 p-1 rounded-[10px] bg-surface-2" role="radiogroup" aria-label="{{ __('Köçürmə şərtləri') }}">
-            @foreach(['RUB' => 'Hamısı rubl ilə', 'EUR' => 'Hamısı avro ilə', 'split' => 'Başqa şərtlərlə'] as $k => $l)
+            @foreach(['RUB' => __('Hamısı rubl ilə'), 'EUR' => __('Hamısı avro ilə'), 'split' => __('Başqa şərtlərlə')] as $k => $l)
                 <button type="button" class="h-9 rounded-lg text-[13px] font-medium transition-colors" @click="setTerms('{{ $k }}')"
                         :class="terms === '{{ $k }}' ? 'bg-surface text-brand-ink shadow-[var(--shadow-card)]' : 'text-ink-2 hover:text-ink'" :aria-pressed="terms === '{{ $k }}'">{{ $l }}</button>
             @endforeach
@@ -37,7 +37,7 @@
                     <div>
                         <label class="field-label">{{ __('Ödəniş tarixi') }} <span class="text-danger">*</span></label>
                         <input type="date" :name="`parts[${i}][payment_date]`" x-model="p.date" @change="load()" :max="today" class="input" :class="!p.date && 'border-saffron'">
-                        <p class="text-[11px] mt-1" :class="p.date ? 'text-muted' : 'text-saffron'" x-text="p.date ? 'CBAR kursu və komissiya bu tarixə görə' : 'Əvvəlcə ödəniş tarixini seçin — hesablama bu tarixin kursu ilə aparılır'"></p>
+                        <p class="text-[11px] mt-1" :class="p.date ? 'text-muted' : 'text-saffron'" x-text="p.date ? {{ \Illuminate\Support\Js::from(__('CBAR kursu və komissiya bu tarixə görə')) }} : {{ \Illuminate\Support\Js::from(__('Əvvəlcə ödəniş tarixini seçin — hesablama bu tarixin kursu ilə aparılır')) }}"></p>
                     </div>
                     <div class="grid grid-cols-[1fr_96px] gap-2">
                         <div>
@@ -77,7 +77,7 @@
                     <div class="pt-2 mt-1 border-t border-line">
                         <div class="flex items-center justify-between gap-2">
                             <dt class="text-muted">{{ __('Bank komissiyası') }}</dt>
-                            <dd><input :name="`parts[${i}][fee_amount]`" :value="p.feeTouched ? p.fee : (ruleFee(p) || '')" @input="p.fee = $event.target.value; p.feeTouched = true" inputmode="decimal" class="input !h-8 w-28 font-mono text-right text-sm" :aria-label="'Komissiya, hissə ' + (i + 1)"></dd>
+                            <dd><input :name="`parts[${i}][fee_amount]`" :value="p.feeTouched ? p.fee : (ruleFee(p) || '')" @input="p.fee = $event.target.value; p.feeTouched = true" inputmode="decimal" class="input !h-8 w-28 font-mono text-right text-sm" :aria-label="{{ \Illuminate\Support\Js::from(__('Komissiya, hissə ')) }} + (i + 1)"></dd>
                         </div>
                         <div class="text-[11px] text-muted mt-1 font-mono" x-show="fee(p)">
                             = <span x-text="feeIn(p, 'RUB') !== null ? fmt(feeIn(p, 'RUB')) + ' RUB' : ''"></span> · <span x-text="feeIn(p, 'AZN') !== null ? fmt(feeIn(p, 'AZN')) + ' AZN' : ''"></span> · <span x-text="feeIn(p, 'EUR') !== null ? fmt(feeIn(p, 'EUR')) + ' EUR' : ''"></span>

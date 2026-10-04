@@ -46,7 +46,7 @@
             <p class="step-sub">{{ __('Fakturanın kəsiləcəyi tarixə görə') }}</p>
         </div>
         @if($invoice->hasRub())
-            <span @class(['badge ml-auto shrink-0', 'badge-green' => ! $isForecast, 'badge-amber' => $isForecast])>{{ \App\Support\Invoices\RubConverter::SOURCES[$invoice->fx_source] }}</span>
+            <span @class(['badge ml-auto shrink-0', 'badge-green' => ! $isForecast, 'badge-amber' => $isForecast])>{{ __(\App\Support\Invoices\RubConverter::SOURCES[$invoice->fx_source]) }}</span>
         @else
             <span class="badge badge-slate ml-auto shrink-0">{{ __('Gözləyir') }}</span>
         @endif
@@ -60,17 +60,17 @@
         <div class="step-summary">
             <div class="step-value">1 {{ $cur }} = {{ num($invoice->fx_rate, 4) }} ₽</div>
             <table class="rate-table mt-2">
-                <tr @class(['is-used' => ! $isForecast])><td>{{ $d }}</td><td>CB {{ $cur }}</td><td>{{ $cb ? $r($cb['base']) : 'dərc olunmayıb' }}</td></tr>
-                <tr @class(['is-used' => ! $isForecast])><td>{{ $d }}</td><td>CB RUB</td><td>{{ $cb ? $r($cb['rub']) : 'dərc olunmayıb' }}</td></tr>
+                <tr @class(['is-used' => ! $isForecast])><td>{{ $d }}</td><td>CB {{ $cur }}</td><td>{{ $cb ? $r($cb['base']) : __('dərc olunmayıb') }}</td></tr>
+                <tr @class(['is-used' => ! $isForecast])><td>{{ $d }}</td><td>CB RUB</td><td>{{ $cb ? $r($cb['rub']) : __('dərc olunmayıb') }}</td></tr>
                 @if($isForecast)
                     <tr class="gap"><td colspan="3"></td></tr>
-                    <tr class="is-used"><td>{{ $d }}</td><td>Proq {{ $cur }}</td><td>{{ $r($invoice->fx_base_azn) }}</td></tr>
+                    <tr class="is-used"><td>{{ $d }}</td><td>{{ __('Proq') }} {{ $cur }}</td><td>{{ $r($invoice->fx_base_azn) }}</td></tr>
                     <tr class="is-used"><td>{{ $d }}</td><td>{{ __('Proq RUB') }}</td><td>{{ $r($invoice->fx_target_azn) }}</td></tr>
                 @endif
             </table>
             @if($isForecast && $actual)
                 @php $diff = ($actual['rate'] / (float) $invoice->fx_rate - 1) * 100; @endphp
-                <div class="step-meta">CBAR ilə: 1 {{ $cur }} = {{ num($actual['rate'], 4) }} ₽
+                <div class="step-meta">{{ __('CBAR ilə: 1') }} {{ $cur }} = {{ num($actual['rate'], 4) }} ₽
                     <span @class(['font-mono', 'text-danger' => $diff > 0, 'text-success' => $diff <= 0])>({{ $diff >= 0 ? '+' : '' }}{{ num($diff, 2) }}%)</span></div>
             @endif
         </div>
@@ -102,7 +102,7 @@
                 </tr>
                 <tr class="gap"><td colspan="3"></td></tr>
                 <tr :class="source === 'forecast' && 'is-used'">
-                    <td x-text="dmy()"></td><td><label for="fx-base">Proq {{ $cur }}</label></td>
+                    <td x-text="dmy()"></td><td><label for="fx-base">{{ __('Proq') }} {{ $cur }}</label></td>
                     <td><input id="fx-base" name="fx_base_azn" x-model="base" :disabled="source !== 'forecast'" @focus="source = 'forecast'" inputmode="decimal" placeholder="2,0005" class="input !h-8 font-mono text-right @error('fx_base_azn') is-invalid @enderror"></td>
                 </tr>
                 <tr :class="source === 'forecast' && 'is-used'">
@@ -127,7 +127,7 @@
 
         @if($invoice->hasRub())
             <footer class="step-foot">
-                <button type="button" class="btn btn-secondary btn-sm" @click="editing = !editing"><x-icon name="pencil" class="size-3.5"/> <span x-text="editing ? 'Bağla' : 'Dəyiş'"></span></button>
+                <button type="button" class="btn btn-secondary btn-sm" @click="editing = !editing"><x-icon name="pencil" class="size-3.5"/> <span x-text="editing ? {{ \Illuminate\Support\Js::from(__('Bağla')) }} : {{ \Illuminate\Support\Js::from(__('Dəyiş')) }}"></span></button>
                 <span class="text-[11px] text-faint ml-auto">{{ azdate($invoice->fx_updated_at, true) }}</span>
                 <form method="POST" action="{{ route('invoices.rub.clear', $invoice) }}" data-confirm="{{ __('Konvertasiya silinsin?') }}" data-confirm-action="{{ __('Sil') }}">
                     @csrf @method('DELETE')

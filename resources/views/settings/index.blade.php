@@ -6,7 +6,7 @@
         <div><div class="text-xs text-muted">{{ __('Şirkət') }}</div><div class="font-semibold">{{ $company->name }}</div></div>
         <div><div class="text-xs text-muted">{{ __('Tarif') }}</div><div class="font-semibold">{{ $company->plan?->name ?? '—' }}</div></div>
         <div><div class="text-xs text-muted">{{ __('Abunə') }}</div><x-status group="subscription" :value="$company->subscription_status"/></div>
-        <div><div class="text-xs text-muted">{{ $company->subscription_status === 'trial' ? 'Sınaq bitir' : 'Abunə bitir' }}</div><div class="font-mono">{{ azdate($company->subscription_status === 'trial' ? $company->trial_ends_at : $company->subscription_ends_at) }}</div></div>
+        <div><div class="text-xs text-muted">{{ $company->subscription_status === 'trial' ? __('Sınaq bitir') : __('Abunə bitir') }}</div><div class="font-mono">{{ azdate($company->subscription_status === 'trial' ? $company->trial_ends_at : $company->subscription_ends_at) }}</div></div>
         <div><div class="text-xs text-muted">{{ __('İstifadəçilər') }}</div><div class="font-mono">{{ $usersCount }}{{ $company->plan ? ' / '.$company->plan->max_users : '' }}</div></div>
     </div>
 

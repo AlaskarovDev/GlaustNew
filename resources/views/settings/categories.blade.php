@@ -9,8 +9,8 @@
                     <li class="flex items-center gap-3 px-5 py-3">
                         <span class="size-3 rounded-full" style="background: {{ $c->color ?? '#94a3b8' }}"></span>
                         <span class="flex-1 text-sm">{{ $c->name }}</span>
-                        <span class="text-xs text-muted font-mono">{{ $c->transactions_count }} əməliyyat</span>
-                        @can('settings.update')<x-delete-form :action="route('settings.categories.destroy', $c)" label="" :message="'«'.$c->name.'» silinsin? Əməliyyatlar kateqoriyasız qalacaq.'"/>@endcan
+                        <span class="text-xs text-muted font-mono">{{ $c->transactions_count }} {{ __('əməliyyat') }}</span>
+                        @can('settings.update')<x-delete-form :action="route('settings.categories.destroy', $c)" label="" :message="'«'.$c->name.__('» silinsin? Əməliyyatlar kateqoriyasız qalacaq.')"/>@endcan
                     </li>
                 @empty
                     <li class="px-5 py-6 text-sm text-muted">{{ __('Kateqoriya yoxdur.') }}</li>

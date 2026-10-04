@@ -15,7 +15,7 @@ class BankTransactionTable extends Table
 
     public function title(): string
     {
-        return 'Bank əməliyyatları';
+        return __('Bank əməliyyatları');
     }
 
     protected function baseQuery(): Builder
@@ -26,12 +26,12 @@ class BankTransactionTable extends Table
     public function filters(): array
     {
         return [
-            'account_id' => ['label' => 'Hesab', 'type' => 'select', 'options' => BankAccount::orderBy('name')->get()->mapWithKeys(fn ($a) => [$a->id => $a->name.' ('.$a->currency.')'])->all()],
-            'direction' => ['label' => 'İstiqamət', 'type' => 'select', 'options' => ['in' => 'Mədaxil', 'out' => 'Məxaric']],
-            'kind' => ['label' => 'Növ', 'type' => 'select', 'options' => config('glaust.transaction_kinds')],
-            'category_id' => ['label' => 'Kateqoriya', 'type' => 'select', 'options' => Category::where('scope', 'bank')->orderBy('name')->pluck('name', 'id')->all()],
-            'from' => ['label' => 'Tarixdən', 'type' => 'date'],
-            'to' => ['label' => 'Tarixədək', 'type' => 'date'],
+            'account_id' => ['label' => __('Hesab'), 'type' => 'select', 'options' => BankAccount::orderBy('name')->get()->mapWithKeys(fn ($a) => [$a->id => $a->name.' ('.$a->currency.')'])->all()],
+            'direction' => ['label' => __('İstiqamət'), 'type' => 'select', 'options' => ['in' => __('Mədaxil'), 'out' => __('Məxaric')]],
+            'kind' => ['label' => __('Növ'), 'type' => 'select', 'options' => config('glaust.transaction_kinds')],
+            'category_id' => ['label' => __('Kateqoriya'), 'type' => 'select', 'options' => Category::where('scope', 'bank')->orderBy('name')->pluck('name', 'id')->all()],
+            'from' => ['label' => __('Tarixdən'), 'type' => 'date'],
+            'to' => ['label' => __('Tarixədək'), 'type' => 'date'],
         ];
     }
 
@@ -63,22 +63,22 @@ class BankTransactionTable extends Table
     public function columns(): array
     {
         return [
-            Column::make('Tarix', 'transaction_date', 'date'),
-            Column::make('Hesab', 'account.name'),
+            Column::make(__('Tarix'), 'transaction_date', 'date'),
+            Column::make(__('Hesab'), 'account.name'),
             Column::make('Bank', 'account.bank_name'),
-            Column::make('İstiqamət', fn ($t) => $t->direction === 'in' ? 'Mədaxil' : 'Məxaric'),
-            Column::make('Növ', fn ($t) => config('glaust.transaction_kinds.'.$t->kind)),
-            Column::make('Məbləğ', fn ($t) => ($t->direction === 'out' ? -1 : 1) * (float) $t->amount, 'money'),
-            Column::make('Valyuta', 'currency'),
-            Column::make('CBAR məzənnəsi', 'cbar_rate', 'rate'),
-            Column::make('Tətbiq olunan məzənnə', 'applied_rate', 'rate'),
+            Column::make(__('İstiqamət'), fn ($t) => $t->direction === 'in' ? __('Mədaxil') : __('Məxaric')),
+            Column::make(__('Növ'), fn ($t) => config('glaust.transaction_kinds.'.$t->kind)),
+            Column::make(__('Məbləğ'), fn ($t) => ($t->direction === 'out' ? -1 : 1) * (float) $t->amount, 'money'),
+            Column::make(__('Valyuta'), 'currency'),
+            Column::make(__('CBAR məzənnəsi'), 'cbar_rate', 'rate'),
+            Column::make(__('Tətbiq olunan məzənnə'), 'applied_rate', 'rate'),
             Column::make('AZN', fn ($t) => ($t->direction === 'out' ? -1 : 1) * (float) $t->amount_azn, 'money', total: true),
-            Column::make('Kontragent', 'counterparty.name'),
-            Column::make('Müqavilə', 'contract.number'),
-            Column::make('Layihə', 'project.code'),
-            Column::make('Kateqoriya', 'category.name'),
-            Column::make('Təyinat', 'purpose', width: 40),
-            Column::make('Sənəd №', 'reference'),
+            Column::make(__('Kontragent'), 'counterparty.name'),
+            Column::make(__('Müqavilə'), 'contract.number'),
+            Column::make(__('Layihə'), 'project.code'),
+            Column::make(__('Kateqoriya'), 'category.name'),
+            Column::make(__('Təyinat'), 'purpose', width: 40),
+            Column::make(__('Sənəd №'), 'reference'),
         ];
     }
 

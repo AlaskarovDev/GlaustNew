@@ -54,7 +54,7 @@ class DealController extends Controller
             return $deal;
         });
 
-        return redirect()->route('deals.show', $deal)->with('success', "Trade {$deal->code} yaradıldı. İndi təchizatçı fakturasını Excel-dən import edin.");
+        return redirect()->route('deals.show', $deal)->with('success', __('Trade :v1 yaradıldı. İndi təchizatçı fakturasını Excel-dən import edin.', ['v1' => $deal->code]));
     }
 
     /** Tabs follow the order of the work: invoices (buy, calculate, documents) -> income (buyer pays) -> logistics. */
@@ -94,26 +94,26 @@ class DealController extends Controller
             // Invoices are bound to the side's contract: it cannot be swapped under them.
             foreach (['purchase_contract_id' => 'supplier', 'sale_contract_id' => 'customer'] as $field => $type) {
                 if ((int) ($data[$field] ?? 0) !== (int) $deal->{$field} && $deal->invoices()->where('type', $type)->exists()) {
-                    throw ValidationException::withMessages([$field => 'Bu müqaviləyə bağlı fakturalar var — əvvəlcə fakturaları silin.']);
+                    throw ValidationException::withMessages([$field => __('Bu müqaviləyə bağlı fakturalar var — əvvəlcə fakturaları silin.')]);
                 }
             }
             $deal->update($data);
             $this->storeContractFiles($request, $deal);
         });
 
-        return redirect()->route('deals.show', $deal)->with('success', 'Trade yeniləndi.');
+        return redirect()->route('deals.show', $deal)->with('success', __('Trade yeniləndi.'));
     }
 
     public function destroy(Deal $deal): RedirectResponse
     {
         $this->authorize('projects.delete');
         if ($deal->invoices()->exists()) {
-            return back()->with('error', 'Trade-də fakturalar var. Əvvəlcə fakturaları silin.');
+            return back()->with('error', __('Trade-də fakturalar var. Əvvəlcə fakturaları silin.'));
         }
         $project = $deal->project_id;
         $deal->delete();
 
-        return redirect()->route('projects.show', [$project, 'tab' => 'deals'])->with('success', "Trade {$deal->code} silindi.");
+        return redirect()->route('projects.show', [$project, 'tab' => 'deals'])->with('success', __('Trade :v1 silindi.', ['v1' => $deal->code]));
     }
 
     private function validated(Request $request, ?Deal $deal = null): array
@@ -128,13 +128,13 @@ class DealController extends Controller
             'notes' => ['nullable', 'string', 'max:5000'],
             'sale_contract_file' => ['nullable', 'file', 'mimes:pdf', 'max:'.config('glaust.upload.max_kb')],
             'purchase_contract_file' => ['nullable', 'file', 'mimes:pdf', 'max:'.config('glaust.upload.max_kb')],
-        ], ContractSides::rules()), ['code.unique' => 'Bu kodla Trade artıq var.'], ContractSides::attributes() + [
-            'code' => 'Kod', 'title' => 'Ad', 'deal_date' => 'Tarix', 'sale_contract_file' => 'Satış müqaviləsinin PDF-i', 'purchase_contract_file' => 'Alış müqaviləsinin PDF-i',
+        ], ContractSides::rules()), ['code.unique' => __('Bu kodla Trade artıq var.')], ContractSides::attributes() + [
+            'code' => __('Kod'), 'title' => 'Ad', 'deal_date' => __('Tarix'), 'sale_contract_file' => __('Satış müqaviləsinin PDF-i'), 'purchase_contract_file' => __('Alış müqaviləsinin PDF-i'),
         ]);
 
         foreach (['sale' => 'sale_contract', 'purchase' => 'purchase_contract'] as $side => $prefix) {
             if ($request->hasFile($prefix.'_file') && empty($data[$prefix.'_id'])) {
-                throw ValidationException::withMessages([$prefix.'_file' => 'PDF yükləmək üçün əvvəlcə müqaviləni seçin.']);
+                throw ValidationException::withMessages([$prefix.'_file' => __('PDF yükləmək üçün əvvəlcə müqaviləni seçin.')]);
             }
         }
         unset($data['sale_contract_file'], $data['purchase_contract_file']);

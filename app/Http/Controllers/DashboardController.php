@@ -54,22 +54,22 @@ class DashboardController extends Controller
             'today' => $today,
             'order' => $order,
             'hidden' => $hidden,
-            'widgets' => self::WIDGETS,
+            'widgets' => array_map(fn ($l) => __($l), self::WIDGETS),
             'myDay' => $reminders->myDay($user),
         ];
 
         $data['kpis'] = array_values(array_filter([
-            $can('projects.view') ? ['label' => 'Aktiv layihələr', 'value' => Project::where('status', 'active')->count(), 'int' => true, 'icon' => 'folder', 'tone' => 'teal', 'url' => route('projects.index', ['status' => 'active']),
-                'hint' => Project::where('status', 'planned')->count().' planlaşdırılıb'] : null,
-            $can('projects.view') ? ['label' => 'Gecikən tapşırıqlar', 'value' => Task::open()->where('due_date', '<', $today->toDateString())->count(), 'int' => true, 'icon' => 'clock', 'tone' => 'rose', 'url' => route('tasks.index', ['due' => 'overdue', 'view' => 'list']),
-                'hint' => Task::open()->whereDate('due_date', $today->toDateString())->count().' bu gün'] : null,
-            $can('contracts.view') ? ['label' => 'Aktiv müqavilələr', 'value' => (float) Contract::whereIn('status', ['signed', 'active'])->sum('amount_azn'), 'money' => true, 'icon' => 'signature', 'tone' => 'blue', 'url' => route('contracts.index', ['status' => 'active']),
-                'hint' => Contract::whereIn('status', ['signed', 'active'])->count().' müqavilə · AZN ekvivalenti'] : null,
+            $can('projects.view') ? ['label' => __('Aktiv layihələr'), 'value' => Project::where('status', 'active')->count(), 'int' => true, 'icon' => 'folder', 'tone' => 'teal', 'url' => route('projects.index', ['status' => 'active']),
+                'hint' => Project::where('status', 'planned')->count().__(' planlaşdırılıb')] : null,
+            $can('projects.view') ? ['label' => __('Gecikən tapşırıqlar'), 'value' => Task::open()->where('due_date', '<', $today->toDateString())->count(), 'int' => true, 'icon' => 'clock', 'tone' => 'rose', 'url' => route('tasks.index', ['due' => 'overdue', 'view' => 'list']),
+                'hint' => Task::open()->whereDate('due_date', $today->toDateString())->count().__(' bu gün')] : null,
+            $can('contracts.view') ? ['label' => __('Aktiv müqavilələr'), 'value' => (float) Contract::whereIn('status', ['signed', 'active'])->sum('amount_azn'), 'money' => true, 'icon' => 'signature', 'tone' => 'blue', 'url' => route('contracts.index', ['status' => 'active']),
+                'hint' => Contract::whereIn('status', ['signed', 'active'])->count().__(' müqavilə · AZN ekvivalenti')] : null,
             $can('bank.view') ? $this->monthFlowKpi($today) : null,
-            $can('logistics.view') ? ['label' => 'Yoldakı yüklər', 'value' => Shipment::whereIn('status', ['loading', 'in_transit', 'customs'])->count(), 'int' => true, 'icon' => 'truck', 'tone' => 'violet', 'url' => route('shipments.index', ['status' => 'in_transit']),
+            $can('logistics.view') ? ['label' => __('Yoldakı yüklər'), 'value' => Shipment::whereIn('status', ['loading', 'in_transit', 'customs'])->count(), 'int' => true, 'icon' => 'truck', 'tone' => 'violet', 'url' => route('shipments.index', ['status' => 'in_transit']),
                 'hint' => Shipment::whereNotIn('status', ['arrived', 'delivered'])->whereNotNull('eta')->where('eta', '<', $today->toDateString())->count().' gecikir'] : null,
-            $can('contracts.view') ? ['label' => '30 gündə bitən müqavilə', 'value' => Contract::whereIn('status', ['signed', 'active'])->whereBetween('end_date', [$today->toDateString(), $today->addDays(30)->toDateString()])->count(), 'int' => true, 'icon' => 'calendar', 'tone' => 'amber', 'url' => route('contracts.index', ['ending' => '30']),
-                'hint' => 'yeniləmə və ya bağlanış'] : null,
+            $can('contracts.view') ? ['label' => __('30 gündə bitən müqavilə'), 'value' => Contract::whereIn('status', ['signed', 'active'])->whereBetween('end_date', [$today->toDateString(), $today->addDays(30)->toDateString()])->count(), 'int' => true, 'icon' => 'calendar', 'tone' => 'amber', 'url' => route('contracts.index', ['ending' => '30']),
+                'hint' => __('yeniləmə və ya bağlanış')] : null,
         ]));
 
         if ($can('bank.view')) {
@@ -109,10 +109,10 @@ class DashboardController extends Controller
         $h = (int) now()->format('G');
 
         return match (true) {
-            $h < 5 => 'Gecəniz xeyrə qalsın',
-            $h < 12 => 'Sabahınız xeyir',
-            $h < 18 => 'Günortanız xeyir',
-            default => 'Axşamınız xeyir',
+            $h < 5 => __('Gecəniz xeyrə qalsın'),
+            $h < 12 => __('Sabahınız xeyir'),
+            $h < 18 => __('Günortanız xeyir'),
+            default => __('Axşamınız xeyir'),
         };
     }
 
@@ -129,9 +129,9 @@ class DashboardController extends Controller
         $in = (float) ($rows['in'] ?? 0);
         $out = (float) ($rows['out'] ?? 0);
 
-        return ['label' => 'Bu ayın daxilolmaları', 'value' => $in, 'money' => true, 'icon' => 'arrow-down-left', 'tone' => 'green',
+        return ['label' => __('Bu ayın daxilolmaları'), 'value' => $in, 'money' => true, 'icon' => 'arrow-down-left', 'tone' => 'green',
             'url' => route('bank.transactions.index', ['from' => $today->startOfMonth()->toDateString()]),
-            'hint' => 'Məxaric: '.money($out).' · Fərq: '.money($in - $out)];
+            'hint' => __('Məxaric: ').money($out).__(' · Fərq: ').money($in - $out)];
     }
 
     private function cashflow(CarbonImmutable $today): array

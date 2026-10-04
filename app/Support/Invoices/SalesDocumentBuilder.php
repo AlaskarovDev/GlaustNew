@@ -76,7 +76,7 @@ class SalesDocumentBuilder
     {
         $invoice = $doc->sourceInvoice;
         if (! $invoice || ! $invoice->rubReady()) {
-            throw new \RuntimeException('Mənbə fakturanın hesablaması tam deyil.');
+            throw new \RuntimeException(__('Mənbə fakturanın hesablaması tam deyil.'));
         }
         $lines = $this->computedLines($invoice, $doc->kind);
         $doc->update(['lines' => $lines, 'total' => $this->total($lines, $doc->freight, $doc->insurance), 'updated_by' => auth()->id()]);
@@ -109,7 +109,7 @@ class SalesDocumentBuilder
         $proforma = $docs->get('proforma');
         $base = $docs->get('specification') ?? $proforma;
         if (! $proforma || ! $base) {
-            throw new \RuntimeException('Proforma faktura tapılmadı.');
+            throw new \RuntimeException(__('Proforma faktura tapılmadı.'));
         }
         $lines = array_map(fn ($l) => ['uom' => $this->enUnit((string) ($l['uom'] ?? ''))] + $l, $base->lines);
         $date = today();

@@ -50,23 +50,23 @@ class BankAccountController extends Controller
         }
         $in = round($rows->where('direction', 'in')->sum('amount'), 2);
         $out = round($rows->where('direction', 'out')->sum('amount'), 2);
-        $period = ($from ? azdate($from) : 'əvvəldən').' — '.($to ? azdate($to) : 'bu günə');
+        $period = ($from ? azdate($from) : __('əvvəldən')).' — '.($to ? azdate($to) : __('bu günə'));
 
         if ($format = $data['format'] ?? null) {
             $cur = $account->currency;
             $cols = [
-                \App\Tables\Column::make('Tarix', 'transaction_date', 'date'),
-                \App\Tables\Column::make('Qarşı tərəf', fn ($t) => $t->counterparty?->name ?? ($t->kind !== 'regular' ? 'Daxili köçürmə' : '—')),
-                \App\Tables\Column::make('Təyinat', fn ($t) => trim(($t->purpose ?? '').($t->deal ? ' · '.$t->deal->code : ''))),
-                \App\Tables\Column::make('İstinad', 'reference'),
-                \App\Tables\Column::make('Mədaxil ('.$cur.')', fn ($t) => $t->direction === 'in' ? (float) $t->amount : null, 'money', total: true),
-                \App\Tables\Column::make('Məxaric ('.$cur.')', fn ($t) => $t->direction === 'out' ? (float) $t->amount : null, 'money', total: true),
-                \App\Tables\Column::make('Qalıq ('.$cur.')', 'running_balance', 'money'),
-                \App\Tables\Column::make('Kurs', 'applied_rate', 'rate'),
+                \App\Tables\Column::make(__('Tarix'), 'transaction_date', 'date'),
+                \App\Tables\Column::make(__('Qarşı tərəf'), fn ($t) => $t->counterparty?->name ?? ($t->kind !== 'regular' ? __('Daxili köçürmə') : '—')),
+                \App\Tables\Column::make(__('Təyinat'), fn ($t) => trim(($t->purpose ?? '').($t->deal ? ' · '.$t->deal->code : ''))),
+                \App\Tables\Column::make(__('İstinad'), 'reference'),
+                \App\Tables\Column::make(__('Mədaxil (').$cur.')', fn ($t) => $t->direction === 'in' ? (float) $t->amount : null, 'money', total: true),
+                \App\Tables\Column::make(__('Məxaric (').$cur.')', fn ($t) => $t->direction === 'out' ? (float) $t->amount : null, 'money', total: true),
+                \App\Tables\Column::make(__('Qalıq (').$cur.')', 'running_balance', 'money'),
+                \App\Tables\Column::make(__('Kurs'), 'applied_rate', 'rate'),
                 \App\Tables\Column::make('AZN', 'amount_azn', 'money'),
             ];
-            $title = 'Hesab çıxarışı — '.$account->name.' ('.$cur.')';
-            $filters = [$account->bank_name.($account->iban ? ' · '.$account->iban : ''), 'Dövr: '.$period, 'Əvvəlki qalıq: '.money($opening, $cur).' · Son qalıq: '.money($running, $cur)];
+            $title = __('Hesab çıxarışı — ').$account->name.' ('.$cur.')';
+            $filters = [$account->bank_name.($account->iban ? ' · '.$account->iban : ''), __('Dövr: ').$period, __('Əvvəlki qalıq: ').money($opening, $cur).__(' · Son qalıq: ').money($running, $cur)];
             $name = 'cixaris-'.\Illuminate\Support\Str::slug($account->name.'-'.$cur).'-'.now()->format('Y-m-d');
 
             return $format === 'pdf'
@@ -92,7 +92,7 @@ class BankAccountController extends Controller
         $this->authorize('bank.create');
         BankAccount::create($this->validated($request));
 
-        return redirect()->route('bank.accounts.index')->with('success', 'Bank hesabı əlavə edildi.');
+        return redirect()->route('bank.accounts.index')->with('success', __('Bank hesabı əlavə edildi.'));
     }
 
     public function edit(BankAccount $account): View
@@ -107,11 +107,11 @@ class BankAccountController extends Controller
         $this->authorize('bank.update');
         $data = $this->validated($request);
         if ($account->transactions()->exists() && $data['currency'] !== $account->currency) {
-            return back()->withInput()->withErrors(['currency' => 'Əməliyyatları olan hesabın valyutası dəyişdirilə bilməz.']);
+            return back()->withInput()->withErrors(['currency' => __('Əməliyyatları olan hesabın valyutası dəyişdirilə bilməz.')]);
         }
         $account->update($data);
 
-        return redirect()->route('bank.accounts.index')->with('success', 'Bank hesabı yeniləndi.');
+        return redirect()->route('bank.accounts.index')->with('success', __('Bank hesabı yeniləndi.'));
     }
 
     public function destroy(BankAccount $account): RedirectResponse
@@ -120,11 +120,11 @@ class BankAccountController extends Controller
         if ($account->transactions()->exists()) {
             $account->update(['is_active' => false]);
 
-            return back()->with('info', 'Hesabda əməliyyatlar olduğu üçün silinmədi, deaktiv edildi.');
+            return back()->with('info', __('Hesabda əməliyyatlar olduğu üçün silinmədi, deaktiv edildi.'));
         }
         $account->delete();
 
-        return back()->with('success', 'Bank hesabı silindi.');
+        return back()->with('success', __('Bank hesabı silindi.'));
     }
 
     private function validated(Request $request): array
@@ -139,7 +139,7 @@ class BankAccountController extends Controller
             'opening_balance' => ['required', 'numeric', 'min:-999999999999', 'max:999999999999'],
             'opening_date' => ['nullable', 'date'],
             'is_active' => ['nullable', 'boolean'],
-        ], [], ['bank_name' => 'Bank', 'opening_balance' => 'Başlanğıc qalıq']);
+        ], [], ['bank_name' => 'Bank', 'opening_balance' => __('Başlanğıc qalıq')]);
         $data['is_active'] = $request->boolean('is_active');
 
         return $data;

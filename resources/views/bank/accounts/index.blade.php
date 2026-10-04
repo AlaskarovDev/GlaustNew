@@ -54,16 +54,16 @@
                                 <div class="min-w-0 flex-1">
                                     <a href="{{ route('bank.accounts.statement', $a) }}" class="font-medium hover:text-brand-ink">{{ $a->name }}</a>
                                     @unless($a->is_active)<span class="badge badge-slate ml-1">{{ __('Deaktiv') }}</span>@endunless
-                                    <div class="text-xs text-muted font-mono break-all">{{ $a->iban ? trim(chunk_split($a->iban, 4, ' ')) : 'IBAN göstərilməyib' }}</div>
+                                    <div class="text-xs text-muted font-mono break-all">{{ $a->iban ? trim(chunk_split($a->iban, 4, ' ')) : __('IBAN göstərilməyib') }}</div>
                                 </div>
                                 <div class="text-right min-w-[150px]">
                                     <div @class(['font-mono font-semibold', 'text-danger' => $bal < 0])>{{ money($bal, $a->currency) }}</div>
-                                    <div class="text-[11px] text-muted">{{ $a->azn !== null ? '≈ '.money($a->azn) : 'məzənnə tapılmadı' }} · {{ $a->transactions_count }} əməliyyat</div>
+                                    <div class="text-[11px] text-muted">{{ $a->azn !== null ? '≈ '.money($a->azn) : __('məzənnə tapılmadı') }} · {{ $a->transactions_count }} {{ __('əməliyyat') }}</div>
                                 </div>
                                 <div class="flex items-center gap-1 ml-auto">
                                     <a href="{{ route('bank.accounts.statement', $a) }}" class="btn btn-secondary btn-sm"><x-icon name="list" class="size-4"/> {{ __('Çıxarış') }}</a>
                                     @can('bank.update')<a href="{{ route('bank.accounts.edit', $a) }}" class="btn btn-ghost btn-sm btn-icon" aria-label="{{ __('Redaktə') }}"><x-icon name="pencil" class="size-4"/></a>@endcan
-                                    @can('bank.delete')<x-delete-form :action="route('bank.accounts.destroy', $a)" label="" :message="'«'.$a->name.'» silinsin? Əməliyyatı olan hesab yalnız deaktiv edilir.'"/>@endcan
+                                    @can('bank.delete')<x-delete-form :action="route('bank.accounts.destroy', $a)" label="" :message="'«'.$a->name.__('» silinsin? Əməliyyatı olan hesab yalnız deaktiv edilir.')"/>@endcan
                                 </div>
                             </li>
                         @endforeach

@@ -14,7 +14,7 @@
                 <x-input name="smtp_username" :label="__('İstifadəçi adı')" :value="$company->smtp_username" wrapper="sm:col-span-2" autocomplete="off"/>
                 <x-select name="smtp_encryption" :label="__('Şifrələmə')" :options="['ssl' => 'SSL (465)', 'tls' => 'TLS / STARTTLS (587)']" :value="$company->smtp_encryption" :placeholder="__('Yoxdur')"/>
                 <x-input name="smtp_password" type="password" :label="__('Şifrə')" wrapper="sm:col-span-3" autocomplete="new-password"
-                         :hint="$company->smtp_password ? 'Şifrə saxlanılıb (şifrələnmiş). Dəyişmək istəmirsinizsə boş saxlayın.' : null"/>
+                         :hint="$company->smtp_password ? __('Şifrə saxlanılıb (şifrələnmiş). Dəyişmək istəmirsinizsə boş saxlayın.') : null"/>
                 <x-input name="smtp_from_address" type="email" :label="__('Göndərən email')" :value="$company->smtp_from_address" wrapper="sm:col-span-2"/>
                 <x-input name="smtp_from_name" :label="__('Göndərən adı')" :value="$company->smtp_from_name" :placeholder="$company->name"/>
             </div>

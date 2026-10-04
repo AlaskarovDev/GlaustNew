@@ -31,12 +31,12 @@ class ObligationController extends Controller
             $ob = DealObligations::for($deal);
             $lines = [
                 'pay' => array_filter([
-                    $ob['seller']['due'] ? ['who' => $deal->supplier?->name, 'what' => 'Satıcıya ödəniş', 'amounts' => $ob['seller']['due']] : null,
-                    $ob['logistics']['due'] ? ['who' => $ob['logistics']['company'] ?? 'Logistika şirkəti', 'what' => 'Logistika xərci'.($ob['logistics']['forecast'] ? ' (proqnoz)' : ''), 'amounts' => $ob['logistics']['due']] : null,
+                    $ob['seller']['due'] ? ['who' => $deal->supplier?->name, 'what' => __('Satıcıya ödəniş'), 'amounts' => $ob['seller']['due']] : null,
+                    $ob['logistics']['due'] ? ['who' => $ob['logistics']['company'] ?? __('Logistika şirkəti'), 'what' => __('Logistika xərci').($ob['logistics']['forecast'] ? ' (proqnoz)' : ''), 'amounts' => $ob['logistics']['due']] : null,
                 ]),
-                'supply' => $ob['buyer']['goods'] ? [['who' => $deal->counterparty?->name, 'what' => 'Ödədiyi məbləğ qədər məhsul', 'amounts' => $ob['buyer']['goods']]] : [],
-                'receive' => $ob['buyer']['due'] ? [['who' => $deal->counterparty?->name, 'what' => 'Proforma üzrə qalıq', 'amounts' => $ob['buyer']['due']]] : [],
-                'deliver' => $ob['seller']['goods'] ? [['who' => $deal->supplier?->name, 'what' => 'Ödədiyimiz məbləğ qədər məhsul', 'amounts' => $ob['seller']['goods']]] : [],
+                'supply' => $ob['buyer']['goods'] ? [['who' => $deal->counterparty?->name, 'what' => __('Ödədiyi məbləğ qədər məhsul'), 'amounts' => $ob['buyer']['goods']]] : [],
+                'receive' => $ob['buyer']['due'] ? [['who' => $deal->counterparty?->name, 'what' => __('Proforma üzrə qalıq'), 'amounts' => $ob['buyer']['due']]] : [],
+                'deliver' => $ob['seller']['goods'] ? [['who' => $deal->supplier?->name, 'what' => __('Ödədiyimiz məbləğ qədər məhsul'), 'amounts' => $ob['seller']['goods']]] : [],
             ];
             foreach ($lines as $key => $items) {
                 foreach ($items as $item) {
@@ -51,6 +51,6 @@ class ObligationController extends Controller
             }
         }
 
-        return view('obligations.index', ['groups' => $groups, 'meta' => self::GROUPS, 'dealCount' => $deals->count()]);
+        return view('obligations.index', ['groups' => $groups, 'meta' => array_map(fn ($g) => [__($g[0]), __($g[1]), $g[2], $g[3]], self::GROUPS), 'dealCount' => $deals->count()]);
     }
 }

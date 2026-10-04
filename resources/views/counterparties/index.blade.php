@@ -12,7 +12,7 @@
     </x-page-header>
 
     <nav class="flex gap-6 border-b border-line mb-5 overflow-x-auto" aria-label="{{ __('Kontragent növü') }}">
-        @foreach(['' => ['Hamısı', $counts['all']], 'customer' => ['Müştərilər', $counts['customer']], 'supplier' => ['Təchizatçılar', $counts['supplier']]] as $type => [$label, $n])
+        @foreach(['' => [__('Hamısı'), $counts['all']], 'customer' => [__('Müştərilər'), $counts['customer']], 'supplier' => [__('Təchizatçılar'), $counts['supplier']]] as $type => [$label, $n])
             <a href="{{ route('counterparties.index', array_filter(['type' => $type])) }}" @class(['tab-link', 'is-active' => (string) request('type') === $type])>
                 {{ $label }} <span class="ml-1 text-xs font-mono text-faint">{{ $n }}</span>
             </a>
@@ -22,8 +22,8 @@
     <div class="card overflow-hidden">
         <x-filter-bar :table="$table" export-route="counterparties.export" export-ability="crm.export" :placeholder="__('Ad, VÖEN, email, telefon, etiket…')"/>
         @if($items->isEmpty())
-            <x-empty icon="users" :title="$table->hasActiveFilters() ? 'Heç nə tapılmadı' : 'Hələ kontragent yoxdur'"
-                     :text="$table->hasActiveFilters() ? 'Filtrləri dəyişin və ya sıfırlayın.' : 'Müştəri və təchizatçılarınızı əlavə edin və ya Excel-dən import edin.'">
+            <x-empty icon="users" :title="$table->hasActiveFilters() ? __('Heç nə tapılmadı') : __('Hələ kontragent yoxdur')"
+                     :text="$table->hasActiveFilters() ? __('Filtrləri dəyişin və ya sıfırlayın.') : __('Müştəri və təchizatçılarınızı əlavə edin və ya Excel-dən import edin.')">
                 @can('crm.create')<a href="{{ route('counterparties.create') }}" class="btn btn-primary"><x-icon name="plus" class="size-4"/> {{ __('Kontragent əlavə et') }}</a>@endcan
             </x-empty>
         @else
@@ -53,22 +53,22 @@
                                     </span>
                                 </a>
                             </td>
-                            <td data-label="Növ">
+                            <td data-label="{{ __('Növ') }}">
                                 <span @class(['badge', 'badge-teal' => $c->type === 'customer', 'badge-amber' => $c->type === 'supplier', 'badge-violet' => $c->type === 'both'])>{{ $c->typeLabel() }}</span>
                             </td>
-                            <td data-label="VÖEN" class="font-mono text-xs">{{ $c->voen ?? '—' }}</td>
-                            <td data-label="Əlaqə" class="text-xs">
+                            <td data-label="{{ __('VÖEN') }}" class="font-mono text-xs">{{ $c->voen ?? '—' }}</td>
+                            <td data-label="{{ __('Əlaqə') }}" class="text-xs">
                                 @if($contact = $c->contacts->first())
                                     <div class="text-ink-2">{{ $contact->name }}</div>
                                 @endif
                                 <div class="text-muted">{{ $c->phone ?? $c->email ?? '—' }}</div>
                             </td>
-                            <td data-label="Müqavilələr" class="num">
+                            <td data-label="{{ __('Müqavilələr') }}" class="num">
                                 <span class="text-ink">{{ $c->active_contracts_count }}</span><span class="text-faint"> / {{ $c->contracts_count }}</span>
                             </td>
                             <td data-label="" class="text-right">
                                 @can('crm.update')
-                                    <a href="{{ route('counterparties.edit', $c) }}" class="btn btn-ghost btn-sm btn-icon" aria-label="Redaktə et: {{ $c->name }}"><x-icon name="pencil" class="size-4"/></a>
+                                    <a href="{{ route('counterparties.edit', $c) }}" class="btn btn-ghost btn-sm btn-icon" aria-label="{{ __('Redaktə et: :v1', ['v1' => $c->name]) }}"><x-icon name="pencil" class="size-4"/></a>
                                 @endcan
                             </td>
                         </tr>

@@ -67,6 +67,9 @@ if (! function_exists('azdate')) {
 if (! function_exists('az_month')) {
     function az_month(int $month, bool $short = false): string
     {
+        if (app()->getLocale() !== 'az') {
+            return mb_convert_case(\Carbon\Carbon::create(2000, $month, 1)->locale(app()->getLocale())->isoFormat($short ? 'MMM' : 'MMMM'), MB_CASE_TITLE);
+        }
         $full = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'İyun', 'İyul', 'Avqust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr'];
         $abbr = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'İyn', 'İyl', 'Avq', 'Sen', 'Okt', 'Noy', 'Dek'];
 
@@ -77,6 +80,10 @@ if (! function_exists('az_month')) {
 if (! function_exists('az_weekday')) {
     function az_weekday(DateTimeInterface $date): string
     {
+        if (app()->getLocale() !== 'az') {
+            return mb_convert_case(\Carbon\Carbon::instance($date)->locale(app()->getLocale())->isoFormat('dddd'), MB_CASE_TITLE);
+        }
+
         return ['Bazar', 'Bazar ertəsi', 'Çərşənbə axşamı', 'Çərşənbə', 'Cümə axşamı', 'Cümə', 'Şənbə'][(int) $date->format('w')];
     }
 }
@@ -84,7 +91,7 @@ if (! function_exists('az_weekday')) {
 if (! function_exists('status_label')) {
     function status_label(string $group, ?string $key): string
     {
-        return config("glaust.statuses.$group.$key.0", (string) $key);
+        return __(config("glaust.statuses.$group.$key.0", (string) $key));
     }
 }
 
@@ -99,7 +106,7 @@ if (! function_exists('status_options')) {
     /** ['key' => 'Label', ...] for a status group. */
     function status_options(string $group): array
     {
-        return array_map(fn ($v) => $v[0], config("glaust.statuses.$group", []));
+        return array_map(fn ($v) => __($v[0]), config("glaust.statuses.$group", []));
     }
 }
 

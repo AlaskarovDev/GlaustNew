@@ -19,12 +19,12 @@ class BankStatementReport extends Report
 
     public static function title(): string
     {
-        return 'Bank hesabı üzrə hərəkət';
+        return __('Bank hesabı üzrə hərəkət');
     }
 
     public static function description(): string
     {
-        return 'Seçilmiş hesab üzrə dövrün əvvəlinə qalıq, bütün hərəkətlər, cari qalıq və dövrün sonuna qalıq.';
+        return __('Seçilmiş hesab üzrə dövrün əvvəlinə qalıq, bütün hərəkətlər, cari qalıq və dövrün sonuna qalıq.');
     }
 
     public static function icon(): string
@@ -39,7 +39,7 @@ class BankStatementReport extends Report
 
     public function filters(): array
     {
-        return ['account_id' => ['label' => 'Hesab', 'type' => 'select', 'options' => BankAccount::orderBy('name')->get()->mapWithKeys(fn ($a) => [$a->id => $a->name.' ('.$a->currency.')'])->all()]] + parent::filters();
+        return ['account_id' => ['label' => __('Hesab'), 'type' => 'select', 'options' => BankAccount::orderBy('name')->get()->mapWithKeys(fn ($a) => [$a->id => $a->name.' ('.$a->currency.')'])->all()]] + parent::filters();
     }
 
     private function account(): ?BankAccount
@@ -84,13 +84,13 @@ class BankStatementReport extends Report
         $cur = $this->build()['account']?->currency ?? '';
 
         return [
-            Column::make('Tarix', 'date', 'date'),
-            Column::make('Kontragent', 'party', width: 28),
-            Column::make('Təyinat', 'purpose', width: 36),
-            Column::make('Sənəd №', 'reference'),
-            Column::make("Mədaxil ($cur)", 'in', 'money', total: true),
-            Column::make("Məxaric ($cur)", 'out', 'money', total: true),
-            Column::make("Qalıq ($cur)", 'balance', 'money'),
+            Column::make(__('Tarix'), 'date', 'date'),
+            Column::make(__('Kontragent'), 'party', width: 28),
+            Column::make(__('Təyinat'), 'purpose', width: 36),
+            Column::make(__('Sənəd №'), 'reference'),
+            Column::make(__('Mədaxil (:v1)', ['v1' => $cur]), 'in', 'money', total: true),
+            Column::make(__('Məxaric (:v1)', ['v1' => $cur]), 'out', 'money', total: true),
+            Column::make(__('Qalıq (:v1)', ['v1' => $cur]), 'balance', 'money'),
             Column::make('CBAR', 'rate', 'rate'),
         ];
     }
@@ -106,10 +106,10 @@ class BankStatementReport extends Report
         $cur = $b['account']?->currency ?? 'AZN';
 
         return [
-            ['label' => 'Dövrün əvvəlinə qalıq', 'value' => $b['opening'], 'money' => true, 'currency' => $cur],
-            ['label' => 'Mədaxil', 'value' => $b['in'], 'money' => true, 'currency' => $cur, 'tone' => 'success'],
-            ['label' => 'Məxaric', 'value' => $b['out'], 'money' => true, 'currency' => $cur, 'tone' => 'danger'],
-            ['label' => 'Dövrün sonuna qalıq', 'value' => round($b['opening'] + $b['in'] - $b['out'], 2), 'money' => true, 'currency' => $cur],
+            ['label' => __('Dövrün əvvəlinə qalıq'), 'value' => $b['opening'], 'money' => true, 'currency' => $cur],
+            ['label' => __('Mədaxil'), 'value' => $b['in'], 'money' => true, 'currency' => $cur, 'tone' => 'success'],
+            ['label' => __('Məxaric'), 'value' => $b['out'], 'money' => true, 'currency' => $cur, 'tone' => 'danger'],
+            ['label' => __('Dövrün sonuna qalıq'), 'value' => round($b['opening'] + $b['in'] - $b['out'], 2), 'money' => true, 'currency' => $cur],
         ];
     }
 
@@ -122,11 +122,11 @@ class BankStatementReport extends Report
         $daily = $rows->groupBy(fn ($r) => $r['date']->format('d.m'))->map(fn (Collection $g) => $g->last()['balance']);
 
         return ['type' => 'area', 'height' => 260, 'decimals' => 2, 'colors' => ['#6366f1'], 'categories' => $daily->keys()->all(),
-            'series' => [['name' => 'Qalıq', 'data' => $daily->values()->all()]]];
+            'series' => [['name' => __('Qalıq'), 'data' => $daily->values()->all()]]];
     }
 
     public function note(): ?string
     {
-        return $this->build()['account'] ? 'Hesab: '.$this->build()['account']->name.' · '.$this->build()['account']->bank_name : 'Bank hesabı yoxdur.';
+        return $this->build()['account'] ? __('Hesab: ').$this->build()['account']->name.' · '.$this->build()['account']->bank_name : __('Bank hesabı yoxdur.');
     }
 }

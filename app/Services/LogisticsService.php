@@ -67,7 +67,7 @@ class LogisticsService
             if ((! isset($p['act_amount']) || $p['act_amount'] === null) && isset($p['amount'])) {
                 $same = $p['currency'] === $act->currency;
                 if (! $same && empty($p['bank_rate'])) {
-                    throw ValidationException::withMessages(["parts.$i.bank_rate" => ($i + 1)."-ci hissə: bankın kursunu daxil edin (1 {$act->currency} = ? {$p['currency']})."]);
+                    throw ValidationException::withMessages(["parts.$i.bank_rate" => ($i + 1).__('-ci hissə: bankın kursunu daxil edin (1 :v1 = ? :v2).', ['v1' => $act->currency, 'v2' => $p['currency']])]);
                 }
                 $p['act_amount'] = round((float) $p['amount'] / ($same ? 1 : (float) $p['bank_rate']), 2);
                 $p['paid'] = round((float) $p['amount'], 2);
@@ -76,10 +76,10 @@ class LogisticsService
         unset($p);
         $total = round(array_sum(array_map(fn ($p) => (float) $p['act_amount'], $parts)), 2);
         if ($total <= 0) {
-            throw ValidationException::withMessages(['parts' => 'Ödəniş hissələrinin məbləğini daxil edin.']);
+            throw ValidationException::withMessages(['parts' => __('Ödəniş hissələrinin məbləğini daxil edin.')]);
         }
         if ($total > $act->remaining() + 0.05) {
-            throw ValidationException::withMessages(['parts' => 'Hissələrin cəmi ('.money($total, $act->currency).') aktın qalığından ('.money($act->remaining(), $act->currency).') çoxdur.']);
+            throw ValidationException::withMessages(['parts' => __('Hissələrin cəmi (').money($total, $act->currency).__(') aktın qalığından (').money($act->remaining(), $act->currency).__(') çoxdur.')]);
         }
 
         return DB::transaction(function () use ($act, $parts, $date, $reference) {
@@ -91,13 +91,13 @@ class LogisticsService
                 $account = BankAccount::findOrFail($p['bank_account_id']);
                 $cur = $p['currency'];
                 if ($account->currency !== $cur) {
-                    throw ValidationException::withMessages(["parts.$i.bank_account_id" => ($i + 1)."-ci hissə: hesab {$account->currency}, ödəniş {$cur} — {$cur} hesabı seçin."]);
+                    throw ValidationException::withMessages(["parts.$i.bank_account_id" => ($i + 1).__('-ci hissə: hesab :v1, ödəniş :v2 — :v3 hesabı seçin.', ['v1' => $account->currency, 'v2' => $cur, 'v3' => $cur])]);
                 }
                 $share = round((float) $p['act_amount'], 2);
                 $cbar = $this->rate($cur, $partDate, "parts.$i.payment_date");
                 $same = $cur === $act->currency;
                 if (! $same && empty($p['bank_rate'])) {
-                    throw ValidationException::withMessages(["parts.$i.bank_rate" => ($i + 1)."-ci hissə: bankın kursunu daxil edin (1 {$act->currency} = ? {$cur})."]);
+                    throw ValidationException::withMessages(["parts.$i.bank_rate" => ($i + 1).__('-ci hissə: bankın kursunu daxil edin (1 :v1 = ? :v2).', ['v1' => $act->currency, 'v2' => $cur])]);
                 }
                 $cross = $cbarAct / $cbar;
                 $bankRate = $same ? 1.0 : (float) $p['bank_rate'];

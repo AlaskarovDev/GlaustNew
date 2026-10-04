@@ -3,7 +3,7 @@
     @include('settings._nav')
 
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5 stagger">
-        @foreach(['login' => ['Girişlər (7 gün)', 'text-success'], 'failed' => ['Uğursuz cəhdlər', 'text-danger'], 'locked' => ['Bağlanmış hesab', 'text-danger'], 'session_expired' => ['Bitmiş sessiyalar', 'text-saffron']] as $e => [$label, $cls])
+        @foreach(['login' => [__('Girişlər (7 gün)'), 'text-success'], 'failed' => [__('Uğursuz cəhdlər'), 'text-danger'], 'locked' => [__('Bağlanmış hesab'), 'text-danger'], 'session_expired' => [__('Bitmiş sessiyalar'), 'text-saffron']] as $e => [$label, $cls])
             <div class="card p-4" style="--i:{{ $loop->index }}"><div class="text-xs text-muted">{{ $label }}</div><div class="text-2xl font-semibold font-mono {{ ($stats[$e] ?? 0) ? $cls : '' }}">{{ $stats[$e] ?? 0 }}</div></div>
         @endforeach
     </div>
@@ -29,14 +29,14 @@
                 <tbody>
                 @forelse($logs as $l)
                     <tr>
-                        <td data-label="Tarix" class="font-mono text-xs whitespace-nowrap">{{ azdate($l->created_at, true) }}:{{ $l->created_at->format('s') }}</td>
-                        <td data-label="İstifadəçi"><div class="text-sm text-ink">{{ $l->user?->name ?? '—' }}</div><div class="text-xs text-muted">{{ $l->email }}</div></td>
-                        <td data-label="Hadisə">@include('settings.logs._event', ['event' => $l->event])</td>
+                        <td data-label="{{ __('Tarix') }}" class="font-mono text-xs whitespace-nowrap">{{ azdate($l->created_at, true) }}:{{ $l->created_at->format('s') }}</td>
+                        <td data-label="{{ __('İstifadəçi') }}"><div class="text-sm text-ink">{{ $l->user?->name ?? '—' }}</div><div class="text-xs text-muted">{{ $l->email }}</div></td>
+                        <td data-label="{{ __('Hadisə') }}">@include('settings.logs._event', ['event' => $l->event])</td>
                         <td data-label="IP" class="font-mono text-xs">{{ $l->ip_address }}</td>
-                        <td data-label="Cihaz" class="text-xs" title="{{ $l->user_agent }}">{{ $l->device }}</td>
-                        <td data-label="Müddət" class="num text-xs">
+                        <td data-label="{{ __('Cihaz') }}" class="text-xs" title="{{ $l->user_agent }}">{{ $l->device }}</td>
+                        <td data-label="{{ __('Müddət') }}" class="num text-xs">
                             @if($l->duration_seconds !== null)
-                                {{ $l->duration_seconds >= 3600 ? intdiv($l->duration_seconds, 3600).' saat ' : '' }}{{ intdiv($l->duration_seconds % 3600, 60) }} dəq
+                                {{ $l->duration_seconds >= 3600 ? intdiv($l->duration_seconds, 3600).' saat ' : '' }}{{ intdiv($l->duration_seconds % 3600, 60) }} {{ __('dəq') }}
                             @elseif($l->event === 'login' && ! $l->closed)
                                 <span class="badge badge-green !h-5">{{ __('açıqdır') }}</span>
                             @else — @endif

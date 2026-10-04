@@ -12,7 +12,7 @@
                     <span class="block text-[11px] text-muted">{{ $file->humanSize() }} · {{ azdate($file->created_at) }} · {{ $file->uploader?->name }}</span>
                 </a>
                 @can($ability)
-                    <x-delete-form :action="route('attachments.destroy', $file)" label="" :message="'«'.$file->original_name.'» silinsin?'" :button="__('btn btn-ghost btn-sm btn-icon text-faint hover:text-danger')"/>
+                    <x-delete-form :action="route('attachments.destroy', $file)" label="" :message="'«'.$file->original_name.'» silinsin?'" button="btn btn-ghost btn-sm btn-icon text-faint hover:text-danger"/>
                 @endcan
             </li>
         @empty
@@ -26,7 +26,7 @@
             <input type="hidden" name="attachable_id" value="{{ $model->id }}">
             <label class="flex flex-col items-center justify-center gap-1 h-24 rounded-xl border-2 border-dashed border-line hover:border-brand hover:bg-brand-soft/40 cursor-pointer transition-colors text-center px-3">
                 <x-icon name="upload" class="size-5 text-muted"/>
-                <span class="text-xs text-muted" x-text="name || 'Fayl seçin (PDF, şəkil, Word, Excel · 15 MB-a qədər)'"></span>
+                <span class="text-xs text-muted" x-text="name || {{ \Illuminate\Support\Js::from(__('Fayl seçin (PDF, şəkil, Word, Excel · 15 MB-a qədər)')) }}"></span>
                 <input type="file" name="file" class="sr-only" required @change="name = $event.target.files[0]?.name; $nextTick(() => $el.form.requestSubmit())">
             </label>
             @error('file')<p class="field-error">{{ $message }}</p>@enderror

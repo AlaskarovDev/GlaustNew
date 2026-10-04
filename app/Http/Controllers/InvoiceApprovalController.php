@@ -18,7 +18,7 @@ class InvoiceApprovalController extends Controller
         $this->approvals->submit($invoice, $request->user());
         $first = $invoice->fresh()->approval_flow[0] ?? null;
 
-        return back()->with('success', 'Faktura təsdiqə göndərildi'.($first ? ': '.(\App\Models\User::forTenant()->find($first['user_id'])?->name ?? '') : '').'. Təsdiq bitənə qədər düzəlişlər dayandırılıb.');
+        return back()->with('success', __('Faktura təsdiqə göndərildi').($first ? ': '.(\App\Models\User::forTenant()->find($first['user_id'])?->name ?? '') : '').__('. Təsdiq bitənə qədər düzəlişlər dayandırılıb.'));
     }
 
     /** Only the approver of the current step can decide; anyone else is refused by the service. */
@@ -30,9 +30,9 @@ class InvoiceApprovalController extends Controller
         $invoice->refresh();
 
         return back()->with('success', match (true) {
-            ! $approve => 'Faktura geri qaytarıldı; göndərən şəxsə bildiriş getdi.',
-            $invoice->isApproved() => 'Faktura təsdiqləndi. Kommersiya fakturası hazırdır.',
-            default => 'Təsdiqləndi; növbəti şəxsə göndərildi.',
+            ! $approve => __('Faktura geri qaytarıldı; göndərən şəxsə bildiriş getdi.'),
+            $invoice->isApproved() => __('Faktura təsdiqləndi. Kommersiya fakturası hazırdır.'),
+            default => __('Təsdiqləndi; növbəti şəxsə göndərildi.'),
         });
     }
 
@@ -40,6 +40,6 @@ class InvoiceApprovalController extends Controller
     {
         $this->approvals->withdraw($invoice, $request->user());
 
-        return back()->with('success', 'Təsdiq sorğusu geri çəkildi; faktura yenidən redaktə edilə bilər.');
+        return back()->with('success', __('Təsdiq sorğusu geri çəkildi; faktura yenidən redaktə edilə bilər.'));
     }
 }

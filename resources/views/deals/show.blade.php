@@ -5,7 +5,7 @@
         $importErrors = session('import_errors', []);
     @endphp
     <x-page-header :title="$deal->title" :back="route('projects.show', [$deal->project, 'tab' => 'deals'])"
-                   :subtitle="'Trade '.$deal->code.' · '.azdate($deal->deal_date).' · Layihə '.$deal->project->code">
+                   :subtitle="'Trade '.$deal->code.' · '.azdate($deal->deal_date).__(' · Layihə ').$deal->project->code">
         <x-slot:actions>
             @can('projects.update')
                 <a href="{{ route('deals.edit', $deal) }}" class="btn btn-secondary"><x-icon name="pencil" class="size-4"/> {{ __('Redaktə') }}</a>
@@ -44,10 +44,10 @@
     @php
         $received = $deal->payments->groupBy('currency')->map(fn ($g) => $g->sum('amount'));
         $tabs = [
-            'invoices' => ['1', 'Fakturalar', $supplierInvoices->count() + $deal->salesDocuments->count()],
-            'income' => ['2', 'Mədaxillər', $deal->payments->count()],
+            'invoices' => ['1', __('Fakturalar'), $supplierInvoices->count() + $deal->salesDocuments->count()],
+            'income' => ['2', __('Mədaxillər'), $deal->payments->count()],
             'logistics' => ['3', 'Logistika', $deal->logisticsActs->count()],
-            'contracts' => [null, 'Müqavilələr', collect([$deal->purchaseContract, $deal->saleContract])->filter()->count()],
+            'contracts' => [null, __('Müqavilələr'), collect([$deal->purchaseContract, $deal->saleContract])->filter()->count()],
         ];
     @endphp
     @include('deals._obligations')
@@ -79,7 +79,7 @@
             @if($deal->notes)<section class="card p-5"><h2 class="text-sm font-semibold mb-2">{{ __('Qeydlər') }}</h2><p class="text-sm whitespace-pre-line">{{ $deal->notes }}</p></section>@endif
             @include('partials.attachments', ['model' => $deal, 'type' => 'deal', 'ability' => 'projects.update'])
             @can('projects.delete')
-                <x-delete-form :action="route('deals.destroy', $deal)" :label="__('Trade-i sil')" :button="__('btn btn-ghost w-full text-danger hover:!bg-danger-soft')" :message="'Trade '.$deal->code.' silinəcək. Fakturası olan Trade silinmir.'"/>
+                <x-delete-form :action="route('deals.destroy', $deal)" :label="__('Trade-i sil')" button="btn btn-ghost w-full text-danger hover:!bg-danger-soft" :message="'Trade '.$deal->code.__(' silinəcək. Fakturası olan Trade silinmir.')"/>
             @endcan
         </div>
     </div>

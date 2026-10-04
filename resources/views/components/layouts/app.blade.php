@@ -9,7 +9,7 @@
     $theme = $user->theme ?: 'system';
 @endphp
 <!DOCTYPE html>
-<html lang="az" data-theme="{{ $theme }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="{{ $theme }}">
 <head>
     <meta charset="utf-8">
     <meta http-equiv="Content-Security-Policy" content="{{ \App\Support\Csp::policy(true) }}">
@@ -27,6 +27,7 @@
             document.documentElement.dataset.theme = mode;
         })();
     </script>
+    <script nonce="{{ Vite::cspNonce() }}">window.__i18n = @json(\App\Support\JsTranslations::all());</script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body x-data="{ nav: false, collapsed: false }" x-init="collapsed = glaustPref.get('glaust-nav') === '1'" class="overflow-x-hidden">
@@ -105,11 +106,11 @@
         @if($company->subscription_status === 'trial' && $company->trial_ends_at)
             <div class="rounded-xl bg-white/[0.04] border border-white/[0.06] px-3 py-2.5 text-xs" :class="collapsed && 'lg:hidden'">
                 <div class="flex items-center gap-2 text-amber-300 font-medium"><x-icon name="sparkles" class="size-4"/> {{ __('Sınaq müddəti') }}</div>
-                <div class="mt-1 text-slate-400">{{ max(0, (int) now()->startOfDay()->diffInDays($company->trial_ends_at, false)) }} gün qalıb · {{ $company->plan?->name }}</div>
+                <div class="mt-1 text-slate-400">{{ max(0, (int) now()->startOfDay()->diffInDays($company->trial_ends_at, false)) }} {{ __('gün qalıb ·') }} {{ $company->plan?->name }}</div>
             </div>
         @endif
         <button type="button" class="hidden lg:flex nav-link w-full" @click="collapsed = !collapsed; glaustPref.set('glaust-nav', collapsed ? '1' : '0')"
-                :class="collapsed && 'lg:justify-center lg:px-0'" :aria-label="collapsed ? 'Menyunu genişləndir' : 'Menyunu daralt'">
+                :class="collapsed && 'lg:justify-center lg:px-0'" :aria-label="collapsed ? {{ \Illuminate\Support\Js::from(__('Menyunu genişləndir')) }} : 'Menyunu daralt'">
             <x-icon name="chevrons-left" class="size-[19px] shrink-0 transition-transform duration-300" ::class="collapsed && 'rotate-180'"/>
             <span :class="collapsed && 'lg:hidden'">{{ __('Daralt') }}</span>
         </button>
@@ -164,7 +165,7 @@
                     </div>
                 </div>
                 <template x-if="stale && date">
-                    <span class="hidden xl:inline-flex badge badge-amber shrink-0" x-text="'Son məlumat: ' + dateLabel"></span>
+                    <span class="hidden xl:inline-flex badge badge-amber shrink-0" x-text="{{ \Illuminate\Support\Js::from(__('Son məlumat: ')) }} + dateLabel"></span>
                 </template>
 
                 {{-- mobile: one flipping currency --}}
@@ -204,7 +205,7 @@
                         :class="open && tab === 'reminders' ? 'bg-brand-soft text-brand-ink' : 'text-ink-2 hover:bg-surface-2'" aria-label="{{ __('Xatırlatmalar') }}" :aria-expanded="open && tab === 'reminders'">
                     <span :class="ringing && 'animate-ring'" class="origin-top"><x-icon name="bell" class="size-[19px]"/></span>
                     <span x-show="counts.reminders > 0" x-cloak class="absolute top-1.5 right-1.5 size-2.5 rounded-full bg-saffron ring-2 ring-canvas animate-pulse-dot"></span>
-                    <span class="sr-only" x-text="counts.reminders + ' xatırlatma'"></span>
+                    <span class="sr-only" x-text="counts.reminders + {{ \Illuminate\Support\Js::from(__(' xatırlatma')) }}"></span>
                 </button>
 
                 {{-- Panel --}}
@@ -224,7 +225,7 @@
 
                         {{-- tasks --}}
                         <div x-show="tab === 'tasks' && !loading">
-                            <template x-for="group in [['overdue', 'Gecikmiş', 'text-danger'], ['today', 'Bu gün', 'text-brand-ink'], ['upcoming', 'Yaxın 3 gün', 'text-muted']]" :key="group[0]">
+                            <template x-for="group in [['overdue', {{ \Illuminate\Support\Js::from(__('Gecikmiş')) }}, 'text-danger'], ['today', {{ \Illuminate\Support\Js::from(__('Bu gün')) }}, 'text-brand-ink'], ['upcoming', {{ \Illuminate\Support\Js::from(__('Yaxın 3 gün')) }}, 'text-muted']]" :key="group[0]">
                                 <div x-show="tasks[group[0]].length">
                                     <div class="px-4 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider" :class="group[2]" x-text="group[1] + ' · ' + tasks[group[0]].length"></div>
                                     <ul>
@@ -311,13 +312,15 @@
                     <button type="button" @click="open = false; $dispatch('glaust:shortcuts')" class="w-full flex items-center gap-2.5 px-3 h-9 rounded-lg text-sm text-ink-2 hover:bg-surface-2"><x-icon name="keyboard" class="size-4"/> {{ __('Qısa yollar') }} <span class="ml-auto kbd">?</span></button>
                     <div class="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-faint">{{ __('Tema') }}</div>
                     <div class="grid grid-cols-3 gap-1 px-1 pb-1">
-                        @foreach(['light' => ['sun', 'Açıq'], 'dark' => ['moon', 'Qaranlıq'], 'system' => ['monitor', 'Sistem']] as $mode => [$icon, $label])
+                        @foreach(['light' => ['sun', __('Açıq')], 'dark' => ['moon', __('Qaranlıq')], 'system' => ['monitor', __('Sistem')]] as $mode => [$icon, $label])
                             <button type="button" @click="$store.theme.set('{{ $mode }}')" class="flex flex-col items-center gap-1 py-2 rounded-lg text-[11px] font-medium transition-colors"
                                     :class="$store.theme.mode === '{{ $mode }}' ? 'bg-brand-soft text-brand-ink' : 'text-muted hover:bg-surface-2'">
                                 <x-icon :name="$icon" class="size-4"/>{{ $label }}
                             </button>
                         @endforeach
                     </div>
+                    <div class="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-faint">{{ __('Dil') }}</div>
+                    <x-locale-switcher compact class="px-1 pb-1"/>
                     <div class="border-t border-line mt-1 pt-1">
                         <form method="POST" action="{{ route('logout') }}">@csrf
                             <button class="w-full flex items-center gap-2.5 px-3 h-9 rounded-lg text-sm text-danger hover:bg-danger-soft"><x-icon name="log-out" class="size-4"/> {{ __('Çıxış') }}</button>

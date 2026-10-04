@@ -1,17 +1,17 @@
 @php
     $u = auth()->user();
     $links = array_filter([
-        $u->can('settings.view') ? ['settings.company', 'Şirkət'] : null,
-        $u->can('users.view') ? ['settings.users.index', 'İstifadəçilər', 'settings.users.*'] : null,
-        $u->can('users.view') ? ['settings.roles.index', 'Rollar', 'settings.roles.*'] : null,
-        $u->can('settings.view') ? ['settings.general', 'Ümumi'] : null,
-        $u->can('settings.view') ? ['settings.approvals', 'Təsdiq axını'] : null,
+        $u->can('settings.view') ? ['settings.company', __('Şirkət')] : null,
+        $u->can('users.view') ? ['settings.users.index', __('İstifadəçilər'), 'settings.users.*'] : null,
+        $u->can('users.view') ? ['settings.roles.index', __('Rollar'), 'settings.roles.*'] : null,
+        $u->can('settings.view') ? ['settings.general', __('Ümumi')] : null,
+        $u->can('settings.view') ? ['settings.approvals', __('Təsdiq axını')] : null,
         $u->can('settings.view') ? ['settings.mail', 'Mail'] : null,
-        $u->can('settings.view') ? ['settings.categories', 'Kateqoriyalar'] : null,
-        $u->can('logs.view') ? ['settings.logs.logins', 'Girişlər'] : null,
-        $u->can('logs.view') ? ['settings.logs.sessions', 'Sessiyalar'] : null,
+        $u->can('settings.view') ? ['settings.categories', __('Kateqoriyalar')] : null,
+        $u->can('logs.view') ? ['settings.logs.logins', __('Girişlər')] : null,
+        $u->can('logs.view') ? ['settings.logs.sessions', __('Sessiyalar')] : null,
         $u->can('logs.view') ? ['settings.logs.audit', 'Audit'] : null,
-        $u->can('logs.view') ? ['settings.logs.mail', 'Mail jurnalı'] : null,
+        $u->can('logs.view') ? ['settings.logs.mail', __('Mail jurnalı')] : null,
     ]);
 @endphp
 <nav class="flex gap-6 border-b border-line mb-6 overflow-x-auto" aria-label="{{ __('Tənzimləmələr') }}">

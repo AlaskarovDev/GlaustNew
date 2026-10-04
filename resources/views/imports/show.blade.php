@@ -1,5 +1,5 @@
 <x-layouts.app :title="'Import · '.$import->original_name">
-    <x-page-header :title="$class::title().' importu'" :subtitle="$import->original_name.' · '.$import->total_rows.' sətir'.($account ? ' · '.$account->name.' ('.$account->currency.')' : '')" :back="route('imports.index', ['type' => $import->type])"/>
+    <x-page-header :title="$class::title().' importu'" :subtitle="$import->original_name.' · '.$import->total_rows.__(' sətir').($account ? ' · '.$account->name.' ('.$account->currency.')' : '')" :back="route('imports.index', ['type' => $import->type])"/>
 
     @if($import->status === 'uploaded')
         <ol class="flex items-center gap-3 mb-6 text-sm">
@@ -26,7 +26,7 @@
                         <select name="map[{{ $key }}]" class="input !h-9 text-[13px] {{ ! empty($def['required']) && ! isset($import->mapping[$key]) ? 'is-invalid' : '' }}">
                             <option value="">{{ __('— istifadə etmə —') }}</option>
                             @foreach($headers as $i => $h)
-                                <option value="{{ $i }}" @selected(isset($import->mapping[$key]) && (int) $import->mapping[$key] === $i)>{{ $h !== null && $h !== '' ? $h : 'Sütun '.($i + 1) }}</option>
+                                <option value="{{ $i }}" @selected(isset($import->mapping[$key]) && (int) $import->mapping[$key] === $i)>{{ $h !== null && $h !== '' ? $h : __('Sütun ').($i + 1) }}</option>
                             @endforeach
                         </select>
                     </label>
@@ -37,10 +37,10 @@
         @php $bad = collect($preview)->whereNotNull('error')->count(); @endphp
         <section class="card overflow-hidden mb-6">
             <header class="flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-b border-line">
-                <h2 class="text-sm font-semibold">Önizləmə — ilk {{ count($preview) }} sətir</h2>
+                <h2 class="text-sm font-semibold">{{ __('Önizləmə — ilk') }} {{ count($preview) }} {{ __('sətir') }}</h2>
                 <div class="flex gap-2 text-xs">
-                    <span class="badge badge-green">{{ count($preview) - $bad }} düzgün</span>
-                    @if($bad)<span class="badge badge-rose">{{ $bad }} xətalı</span>@endif
+                    <span class="badge badge-green">{{ count($preview) - $bad }} {{ __('düzgün') }}</span>
+                    @if($bad)<span class="badge badge-rose">{{ $bad }} {{ __('xətalı') }}</span>@endif
                 </div>
             </header>
             <div class="overflow-x-auto">
@@ -70,15 +70,15 @@
             @endforeach
             <div class="flex-1 text-sm">
                 @if($missing->isNotEmpty())
-                    <span class="text-danger flex items-center gap-2"><x-icon name="alert" class="size-4"/> Məcburi sahələr uyğunlaşdırılmayıb: {{ $missing->map(fn ($k) => $fields[$k]['label'])->implode(', ') }}</span>
+                    <span class="text-danger flex items-center gap-2"><x-icon name="alert" class="size-4"/> {{ __('Məcburi sahələr uyğunlaşdırılmayıb:') }} {{ $missing->map(fn ($k) => $fields[$k]['label'])->implode(', ') }}</span>
                 @else
-                    Yalnız xətasız sətirlər yazılacaq. Xətalı sətirlər səbəbi ilə ayrıca Excel faylında qaytarılacaq.
+                    {{ __('Yalnız xətasız sətirlər yazılacaq. Xətalı sətirlər səbəbi ilə ayrıca Excel faylında qaytarılacaq.') }}
                     @if($import->total_rows > \App\Imports\ImportRunner::SYNC_LIMIT)<span class="text-muted">{{ __('Fayl böyük olduğu üçün arxa planda emal olunacaq.') }}</span>@endif
                 @endif
             </div>
             <button class="btn btn-primary" :disabled="busy" @disabled($missing->isNotEmpty())>
                 <span x-show="busy" x-cloak class="size-4 rounded-full border-2 border-current border-t-transparent animate-spin"></span>
-                {{ $import->total_rows }} sətri import et
+                {{ $import->total_rows }} {{ __('sətri import et') }}
             </button>
         </form>
     @else
@@ -86,7 +86,7 @@
             @if(in_array($import->status, ['queued', 'processing']))
                 <div class="flex items-center gap-4">
                     <span class="size-10 rounded-full border-4 border-brand border-t-transparent animate-spin"></span>
-                    <div><div class="font-semibold">{{ __('Import davam edir…') }}</div><div class="text-sm text-muted">{{ $import->total_rows }} sətir emal olunur. Səhifəni bir az sonra yeniləyin.</div></div>
+                    <div><div class="font-semibold">{{ __('Import davam edir…') }}</div><div class="text-sm text-muted">{{ $import->total_rows }} {{ __('sətir emal olunur. Səhifəni bir az sonra yeniləyin.') }}</div></div>
                 </div>
             @elseif($import->status === 'failed')
                 <x-empty icon="alert" :title="__('Import uğursuz oldu')" :text="$import->message"/>

@@ -42,10 +42,10 @@ class InvoiceController extends Controller
         $request->validate([
             'file' => ['required', 'file', 'max:10240', new SpreadsheetFile],
             'invoice_date' => ['required', 'date', 'before_or_equal:today'],
-        ], [], ['file' => 'Excel faylı', 'invoice_date' => 'Faktura tarixi']);
+        ], [], ['file' => __('Excel faylı'), 'invoice_date' => __('Faktura tarixi')]);
 
         if (! $deal->purchase_contract_id || ! $deal->supplier_id) {
-            return back()->with('error', 'Satıcının fakturası alış müqaviləsinə bağlanır: əvvəlcə Trade-də «Məhsulu satan tərəf» və onun müqaviləsini seçin.');
+            return back()->with('error', __('Satıcının fakturası alış müqaviləsinə bağlanır: əvvəlcə Trade-də «Məhsulu satan tərəf» və onun müqaviləsini seçin.'));
         }
 
         try {
@@ -53,22 +53,22 @@ class InvoiceController extends Controller
         } catch (\Throwable $e) {
             report($e);
 
-            return back()->with('error', 'Fayl oxunmadı. TradeFlow şablonundan və ya .xlsx formatından istifadə edin.');
+            return back()->with('error', __('Fayl oxunmadı. TradeFlow şablonundan və ya .xlsx formatından istifadə edin.'));
         }
         if ($parsed['errors']) {
-            return back()->with('import_errors', $parsed['errors'])->with('error', count($parsed['errors']).' sətirdə xəta var — heç nə yadda saxlanmadı. Faylı düzəldib yenidən yükləyin.');
+            return back()->with('import_errors', $parsed['errors'])->with('error', count($parsed['errors']).__(' sətirdə xəta var — heç nə yadda saxlanmadı. Faylı düzəldib yenidən yükləyin.'));
         }
 
         $existing = $deal->invoices()->where('type', 'supplier')->whereIn('number', array_map('strval', array_keys($parsed['invoices'])))->pluck('number')->all();
         if ($existing) {
-            return back()->with('error', 'Bu proforma(lar) artıq bu Trade-də var: '.implode(', ', $existing).'. Təkrar import edilmədi.');
+            return back()->with('error', __('Bu proforma(lar) artıq bu Trade-də var: ').implode(', ', $existing).__('. Təkrar import edilmədi.'));
         }
 
         $currency = 'EUR'; // the sheet's money column is Total/EUR
         try {
             $rate = $rates->rate($currency, $request->input('invoice_date'));
         } catch (RateUnavailable $e) {
-            return back()->with('error', $e->getMessage().' Faktura yadda saxlanmadı.');
+            return back()->with('error', $e->getMessage().__(' Faktura yadda saxlanmadı.'));
         }
 
         $created = DB::transaction(function () use ($parsed, $deal, $request, $currency, $rate) {
@@ -100,8 +100,8 @@ class InvoiceController extends Controller
 
         $lines = array_sum(array_map('count', $parsed['invoices']));
         $msg = count($created) === 1
-            ? "Faktura {$created[0]->number} import edildi: {$lines} sətir, ".money($created[0]->total, $currency).'.'
-            : count($created)." faktura import edildi ({$lines} sətir).";
+            ? __('Faktura :v1 import edildi: :v2 sətir, ', ['v1' => $created[0]->number, 'v2' => $lines]).money($created[0]->total, $currency).'.'
+            : count($created).__(' faktura import edildi (:v1 sətir).', ['v1' => $lines]);
 
         return redirect()->route(count($created) === 1 ? 'invoices.show' : 'deals.show', count($created) === 1 ? $created[0] : $deal)->with('success', $msg);
     }
@@ -138,7 +138,7 @@ class InvoiceController extends Controller
             return back()->with('error', $this->lockedMessage($invoice));
         }
         if ($invoice->status === 'cancelled') {
-            return back()->with('error', 'Ləğv edilmiş fakturaya xərc əlavə olunmur.');
+            return back()->with('error', __('Ləğv edilmiş fakturaya xərc əlavə olunmur.'));
         }
         $request->merge([
             'logistics_amount' => parse_number($request->input('logistics_amount')),
@@ -154,13 +154,13 @@ class InvoiceController extends Controller
             'items.*' => ['nullable', 'numeric', 'min:0', 'max:999999999'],
             'item_currency' => ['required_if:logistics_method,per_item', 'array'],
             'item_currency.*' => ['nullable', $currencies],
-        ], [], ['logistics_mode' => 'Xərcin növü', 'logistics_method' => 'Bölüşdürmə üsulu', 'logistics_currency' => 'Valyuta', 'logistics_amount' => 'Logistika xərci']);
+        ], [], ['logistics_mode' => __('Xərcin növü'), 'logistics_method' => __('Bölüşdürmə üsulu'), 'logistics_currency' => __('Valyuta'), 'logistics_amount' => __('Logistika xərci')]);
 
         $currency = $data['logistics_currency'] ?? null;
         if ($data['logistics_method'] === 'per_item') {
             $used = array_values(array_unique(array_filter((array) ($data['item_currency'] ?? []))));
             if (count($used) !== 1) {
-                return back()->withInput()->withErrors(['item_currency' => count($used) ? 'Bütün məhsullar üzrə xərc eyni valyutada olmalıdır (seçilib: '.implode(', ', $used).').' : 'Valyutanı seçin.']);
+                return back()->withInput()->withErrors(['item_currency' => count($used) ? __('Bütün məhsullar üzrə xərc eyni valyutada olmalıdır (seçilib: ').implode(', ', $used).').' : __('Valyutanı seçin.')]);
             }
             $currency = $used[0];
         }
@@ -170,7 +170,7 @@ class InvoiceController extends Controller
         $invoice->refresh();
         $this->documentsReady($invoice);
 
-        return back()->with('success', 'Logistika xərci ('.Invoice::LOGISTICS_MODES[$invoice->logistics_mode].') bölüşdürüldü: '
+        return back()->with('success', __('Logistika xərci (').__(Invoice::LOGISTICS_MODES[$invoice->logistics_mode]).__(') bölüşdürüldü: ')
             .money($invoice->logistics_amount, $invoice->logistics_currency)
             .($invoice->logistics_currency !== $invoice->currency ? ' = '.money($invoice->logistics_total, $invoice->currency) : '').'.');
     }
@@ -183,7 +183,7 @@ class InvoiceController extends Controller
         }
         $allocator->clear($invoice);
 
-        return back()->with('success', 'Logistika xərci silindi.');
+        return back()->with('success', __('Logistika xərci silindi.'));
     }
 
     /** Our commission %: applied to every line (Total × %), before or after the logistics cost. */
@@ -194,18 +194,18 @@ class InvoiceController extends Controller
             return back()->with('error', $this->lockedMessage($invoice));
         }
         if ($invoice->status === 'cancelled') {
-            return back()->with('error', 'Ləğv edilmiş fakturaya komissiya tətbiq olunmur.');
+            return back()->with('error', __('Ləğv edilmiş fakturaya komissiya tətbiq olunmur.'));
         }
         $request->merge(['commission_rate' => parse_number(str_replace('%', '', (string) $request->input('commission_rate')))]);
         $data = $request->validate([
             'commission_rate' => ['required', 'numeric', 'min:0', 'max:100', 'decimal:0,4'],
-        ], [], ['commission_rate' => 'Komissiya faizi']);
+        ], [], ['commission_rate' => __('Komissiya faizi')]);
 
         $calculator->apply($invoice, (float) $data['commission_rate']);
         $invoice->refresh();
         $this->documentsReady($invoice);
 
-        return back()->with('success', 'Komissiya '.$invoice->commissionLabel().'% tətbiq olundu: '.money($invoice->commission_total, $invoice->currency).'.');
+        return back()->with('success', __('Komissiya ').$invoice->commissionLabel().__('% tətbiq olundu: ').money($invoice->commission_total, $invoice->currency).'.');
     }
 
     public function clearCommission(Invoice $invoice, \App\Support\Invoices\CommissionCalculator $calculator): RedirectResponse
@@ -216,7 +216,7 @@ class InvoiceController extends Controller
         }
         $calculator->clear($invoice);
 
-        return back()->with('success', 'Komissiya silindi.');
+        return back()->with('success', __('Komissiya silindi.'));
     }
 
     /**
@@ -230,7 +230,7 @@ class InvoiceController extends Controller
             return back()->with('error', $this->lockedMessage($invoice));
         }
         if ($invoice->status === 'cancelled') {
-            return back()->with('error', 'Ləğv edilmiş fakturada çevirmə edilmir.');
+            return back()->with('error', __('Ləğv edilmiş fakturada çevirmə edilmir.'));
         }
         $request->merge(['fx_base_azn' => parse_number($request->input('fx_base_azn')), 'fx_target_azn' => parse_number($request->input('fx_target_azn'))]);
         $data = $request->validate([
@@ -238,8 +238,8 @@ class InvoiceController extends Controller
             'fx_date' => ['required', 'date', Rule::when($request->input('fx_source') === 'cbar', ['before_or_equal:today'])],
             'fx_base_azn' => ['required_if:fx_source,forecast', 'nullable', 'numeric', 'gt:0', 'max:1000000'],
             'fx_target_azn' => ['required_if:fx_source,forecast', 'nullable', 'numeric', 'gt:0', 'max:1000000'],
-        ], ['fx_date.before_or_equal' => 'Gələcək tarix üçün CBAR kursu hələ dərc olunmayıb — «Proqnoz» seçin.'],
-            ['fx_source' => 'Kurs mənbəyi', 'fx_date' => 'Faktura tarixi', 'fx_base_azn' => 'Proq '.$invoice->currency, 'fx_target_azn' => 'Proq RUB']);
+        ], ['fx_date.before_or_equal' => __('Gələcək tarix üçün CBAR kursu hələ dərc olunmayıb — «Proqnoz» seçin.')],
+            ['fx_source' => __('Kurs mənbəyi'), 'fx_date' => __('Faktura tarixi'), 'fx_base_azn' => __('Proq ').$invoice->currency, 'fx_target_azn' => __('Proq RUB')]);
 
         $forecast = $data['fx_source'] === 'forecast';
         $converter->apply($invoice, $data['fx_source'], $data['fx_date'],
@@ -247,7 +247,7 @@ class InvoiceController extends Controller
         $invoice->refresh();
         $this->documentsReady($invoice);
 
-        return back()->with('success', \App\Support\Invoices\RubConverter::SOURCES[$invoice->fx_source].' tətbiq olundu: 1 '.$invoice->currency.' = '.num($invoice->fx_rate, 4).' RUB ('.azdate($invoice->fx_date).').');
+        return back()->with('success', __(\App\Support\Invoices\RubConverter::SOURCES[$invoice->fx_source]).__(' tətbiq olundu: 1 ').$invoice->currency.' = '.num($invoice->fx_rate, 4).' RUB ('.azdate($invoice->fx_date).').');
     }
 
     public function clearRub(Invoice $invoice, \App\Support\Invoices\RubConverter $converter): RedirectResponse
@@ -258,14 +258,14 @@ class InvoiceController extends Controller
         }
         $converter->clear($invoice);
 
-        return back()->with('success', 'RUB çevirməsi silindi.');
+        return back()->with('success', __('RUB çevirməsi silindi.'));
     }
 
     private function lockedMessage(Invoice $invoice): string
     {
         return $invoice->isApproved()
-            ? 'Faktura təsdiqlənib — düzəliş əməliyyatlarına icazə dayandırılıb.'
-            : 'Faktura təsdiqdədir — təsdiq bitənə və ya sorğu geri çəkilənə qədər düzəliş edilmir.';
+            ? __('Faktura təsdiqlənib — düzəliş əməliyyatlarına icazə dayandırılıb.')
+            : __('Faktura təsdiqdədir — təsdiq bitənə və ya sorğu geri çəkilənə qədər düzəliş edilmir.');
     }
 
     /** Create the buyer's proforma + specification the first time the calculation is complete. */
@@ -285,11 +285,11 @@ class InvoiceController extends Controller
             return back()->with('error', $this->lockedMessage($invoice));
         }
         if (! $invoice->rubReady()) {
-            return back()->with('error', 'Əvvəlcə 3 addımı tamamlayın: logistika, komissiya, RUB konvertasiyası.');
+            return back()->with('error', __('Əvvəlcə 3 addımı tamamlayın: logistika, komissiya, RUB konvertasiyası.'));
         }
         $created = $builder->ensureFor($invoice);
 
-        return back()->with('success', $created ? 'Yaradıldı: '.collect($created)->map(fn ($d) => $d->title().' '.$d->number)->implode(', ').'.' : 'Sənədlər artıq mövcuddur.');
+        return back()->with('success', $created ? __('Yaradıldı: ').collect($created)->map(fn ($d) => $d->title().' '.$d->number)->implode(', ').'.' : __('Sənədlər artıq mövcuddur.'));
     }
 
     public function destroy(Invoice $invoice): RedirectResponse
@@ -301,7 +301,7 @@ class InvoiceController extends Controller
         $deal = $invoice->deal_id;
         $invoice->delete();
 
-        return redirect()->route('deals.show', $deal)->with('success', "Faktura {$invoice->number} silindi.");
+        return redirect()->route('deals.show', $deal)->with('success', __('Faktura :v1 silindi.', ['v1' => $invoice->number]));
     }
 
     public function export(Request $request, Invoice $invoice): Response

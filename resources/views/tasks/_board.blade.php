@@ -11,7 +11,7 @@
                 <h3 class="text-sm font-semibold">{{ $label }}</h3>
                 <span class="text-xs font-mono text-muted" data-count-for="{{ $status }}">{{ $list->count() }}</span>
                 @can('projects.create')
-                    <a href="{{ route('tasks.create', array_filter(['status' => $status, 'project_id' => $project?->id])) }}" class="ml-auto btn btn-ghost btn-sm btn-icon !size-7" aria-label="{{ $label }} sütununa tapşırıq əlavə et"><x-icon name="plus" class="size-4"/></a>
+                    <a href="{{ route('tasks.create', array_filter(['status' => $status, 'project_id' => $project?->id])) }}" class="ml-auto btn btn-ghost btn-sm btn-icon !size-7" aria-label="{{ __(':v1 sütununa tapşırıq əlavə et', ['v1' => $label]) }}"><x-icon name="plus" class="size-4"/></a>
                 @endcan
             </header>
             <div class="flex-1 px-2.5 pb-2.5 space-y-2 min-h-16" data-column="{{ $status }}">

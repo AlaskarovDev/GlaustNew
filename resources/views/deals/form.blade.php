@@ -1,11 +1,11 @@
 @php $editing = $deal->exists; @endphp
 <x-layouts.app :title="$editing ? 'Trade '.$deal->code : 'Yeni Trade'">
     <x-page-header :title="$editing ? 'Trade '.$deal->code : 'Yeni Trade'" :back="$editing ? route('deals.show', $deal) : route('projects.show', [$project, 'tab' => 'deals'])"
-                   :subtitle="'Layihə: '.$project->code.' · '.$project->name.' — məhsulu satıcıdan alıb alıcıya satırıq'"/>
+                   :subtitle="__('Layihə: ').$project->code.' · '.$project->name.__(' — məhsulu satıcıdan alıb alıcıya satırıq')"/>
 
     @if($errors->any())
         <div class="card border-danger/30 bg-danger-soft/50 p-4 mb-6 text-sm text-danger flex gap-2" role="alert">
-            <x-icon name="alert" class="size-5 shrink-0"/> Formda {{ $errors->count() }} xəta var — aşağıdakı sahələri yoxlayın.
+            <x-icon name="alert" class="size-5 shrink-0"/> Formda {{ $errors->count() }} {{ __('xəta var — aşağıdakı sahələri yoxlayın.') }}
         </div>
     @endif
 

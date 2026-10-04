@@ -44,14 +44,14 @@ class CurrencyExchangeController extends Controller
             'to_account_id' => ['required', 'integer', TenantExists::in('bank_accounts'), 'different:from_account_id'],
             'reference' => ['nullable', 'string', 'max:80'],
             'notes' => ['nullable', 'string', 'max:255'],
-        ], ['counter_currency.different' => 'Fərqli valyuta seçin.', 'bank_rate.required' => 'Bankın kursunu daxil edin.'], [
-            'exchange_date' => 'Tarix', 'currency' => 'Valyuta', 'counter_currency' => 'Qarşı valyuta', 'amount' => 'Məbləğ', 'bank_rate' => 'Bankın kursu',
-            'from_account_id' => 'Silinən hesab', 'to_account_id' => 'Mədaxil hesabı',
+        ], ['counter_currency.different' => __('Fərqli valyuta seçin.'), 'bank_rate.required' => __('Bankın kursunu daxil edin.')], [
+            'exchange_date' => __('Tarix'), 'currency' => __('Valyuta'), 'counter_currency' => __('Qarşı valyuta'), 'amount' => __('Məbləğ'), 'bank_rate' => __('Bankın kursu'),
+            'from_account_id' => __('Silinən hesab'), 'to_account_id' => __('Mədaxil hesabı'),
         ]);
         $x = $this->exchanges->execute($data);
 
-        return redirect()->route('bank.exchanges.index')->with('success', CurrencyExchange::DIRECTIONS[$x->direction].' icra edildi: '.money($x->amount, $x->currency)
-            .' ↔ '.money($x->counter_amount, $x->counter_currency).'. CBAR ilə fərq: '.money($x->difference, $x->counter_currency).'.');
+        return redirect()->route('bank.exchanges.index')->with('success', __(CurrencyExchange::DIRECTIONS[$x->direction]).' icra edildi: '.money($x->amount, $x->currency)
+            .' ↔ '.money($x->counter_amount, $x->counter_currency).__('. CBAR ilə fərq: ').money($x->difference, $x->counter_currency).'.');
     }
 
     public function destroy(CurrencyExchange $exchange): RedirectResponse
@@ -59,6 +59,6 @@ class CurrencyExchangeController extends Controller
         $this->authorize('bank.delete');
         $this->exchanges->delete($exchange);
 
-        return back()->with('success', 'Əməliyyat ləğv edildi; bank hesablarındakı hərəkətlər silindi.');
+        return back()->with('success', __('Əməliyyat ləğv edildi; bank hesablarındakı hərəkətlər silindi.'));
     }
 }

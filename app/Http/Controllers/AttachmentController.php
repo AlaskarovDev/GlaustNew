@@ -34,7 +34,7 @@ class AttachmentController extends Controller
             'attachable_type' => ['required', 'in:'.implode(',', array_keys(self::ABILITIES))],
             'attachable_id' => ['required', 'integer'],
             'file' => ['required', 'file', 'max:'.config('glaust.upload.max_kb'), 'mimes:'.config('glaust.upload.mimes')],
-        ], [], ['file' => 'Fayl']);
+        ], [], ['file' => __('Fayl')]);
 
         $this->authorize(self::ABILITIES[$data['attachable_type']][1]);
 
@@ -55,7 +55,7 @@ class AttachmentController extends Controller
             'uploaded_by' => $request->user()->id,
         ]);
 
-        return back()->with('success', 'Fayl yükləndi.');
+        return back()->with('success', __('Fayl yükləndi.'));
     }
 
     public function download(Attachment $attachment): StreamedResponse
@@ -71,7 +71,7 @@ class AttachmentController extends Controller
         $this->authorize(self::ABILITIES[$attachment->attachable_type][1] ?? 'settings.update');
         $attachment->delete();
 
-        return back()->with('success', 'Fayl silindi.');
+        return back()->with('success', __('Fayl silindi.'));
     }
 
     private function checkQuota(int $incoming): void
@@ -82,7 +82,7 @@ class AttachmentController extends Controller
         }
         $used = (int) Attachment::sum('size');
         if ($used + $incoming > $limitMb * 1024 * 1024) {
-            abort(back()->with('error', 'Tarif üzrə yaddaş limiti ('.$limitMb.' MB) dolub.'));
+            abort(back()->with('error', __('Tarif üzrə yaddaş limiti (').$limitMb.__(' MB) dolub.')));
         }
     }
 }

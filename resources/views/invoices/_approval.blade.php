@@ -21,7 +21,7 @@
         <x-icon name="lock" class="size-5 shrink-0"/>
         <div class="flex-1 min-w-[220px]">
             <div class="font-semibold">{{ __('Fakturada düzəliş əməliyyatlarına icazə dayandırılıb') }}</div>
-            <div class="text-xs opacity-80">Təsdiqlənib: {{ azdate($invoice->approved_at, true) }} — logistika, komissiya, konvertasiya və sənədlər artıq dəyişdirilmir.</div>
+            <div class="text-xs opacity-80">{{ __('Təsdiqlənib:') }} {{ azdate($invoice->approved_at, true) }} {{ __('— logistika, komissiya, konvertasiya və sənədlər artıq dəyişdirilmir.') }}</div>
         </div>
         @if($commercial)
             <a href="{{ route('sales-documents.pdf', $commercial) }}" class="btn btn-primary"><x-icon name="download" class="size-4"/> Commercial Invoice {{ $commercial->number }}</a>
@@ -42,7 +42,7 @@
         </div>
         @if($invoice->approval_status)
             @php [$stLabel, $stTone] = \App\Models\Invoice::APPROVAL_STATUSES[$invoice->approval_status]; @endphp
-            <span class="badge badge-{{ $stTone }}">{{ $stLabel }}</span>
+            <span class="badge badge-{{ $stTone }}">{{ __($stLabel) }}</span>
         @endif
     </header>
 
@@ -54,8 +54,8 @@
                     <li class="approval-step is-{{ $state }}">
                         <span class="approval-dot">@if($state === 'done')<x-icon name="check" class="size-4"/>@else{{ $i + 1 }}@endif</span>
                         <div class="min-w-0">
-                            <div class="font-medium truncate">{{ $who?->name ?? 'Silinmiş istifadəçi' }}</div>
-                            <div class="text-[11px] text-muted truncate">{{ $s['title'] ?: ($who?->position ?? '') }}{{ $state === 'now' ? ' · gözləyir' : '' }}</div>
+                            <div class="font-medium truncate">{{ $who?->name ?? __('Silinmiş istifadəçi') }}</div>
+                            <div class="text-[11px] text-muted truncate">{{ $s['title'] ?: ($who?->position ?? '') }}{{ $state === 'now' ? __(' · gözləyir') : '' }}</div>
                         </div>
                     </li>
                 @endforeach
@@ -109,7 +109,7 @@
                     @php [$verb, $tone] = \App\Models\InvoiceApproval::ACTIONS[$e->action] ?? [$e->action, 'slate']; @endphp
                     <li class="flex flex-wrap items-baseline gap-x-2">
                         <span class="font-medium">{{ $e->user?->name ?? 'Sistem' }}</span>
-                        <span class="badge badge-{{ $tone }} !h-5">{{ $verb }}</span>
+                        <span class="badge badge-{{ $tone }} !h-5">{{ __($verb) }}</span>
                         <span class="text-xs text-faint">{{ azdate($e->created_at, true) }}</span>
                         @if($e->comment)<span class="w-full text-xs text-muted pl-1">«{{ $e->comment }}»</span>@endif
                     </li>

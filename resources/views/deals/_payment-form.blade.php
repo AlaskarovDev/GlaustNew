@@ -12,10 +12,10 @@
     <section class="card mb-6" x-data="{ open: {{ ($mine && $errors->any()) || $list->isEmpty() ? 'true' : 'false' }} }">
         <header class="flex flex-wrap items-center justify-between gap-3 px-5 py-4" :class="open && 'border-b border-line'">
             <div>
-                <h2 class="text-base font-semibold flex items-center gap-2">@if($out)<x-icon name="arrow-up-right" class="size-5 text-danger"/> Satıcıya ödəniş @else<x-icon name="arrow-down-left" class="size-5 text-success"/> Yeni mədaxil @endif</h2>
-                <p class="text-xs text-muted">{{ $out ? 'Satıcıya etdiyimiz ödəniş: məbləğ, tarix, valyuta, silindiyi bank hesabımız və bankın tətbiq etdiyi kurs' : 'Alıcının göndərdiyi ödəniş: məbləğ, tarix, valyuta, daxil olduğu bank hesabımız və bankın tətbiq etdiyi kurs' }}</p>
+                <h2 class="text-base font-semibold flex items-center gap-2">@if($out)<x-icon name="arrow-up-right" class="size-5 text-danger"/> {{ __('Satıcıya ödəniş') }} @else<x-icon name="arrow-down-left" class="size-5 text-success"/> {{ __('Yeni mədaxil') }} @endif</h2>
+                <p class="text-xs text-muted">{{ $out ? __('Satıcıya etdiyimiz ödəniş: məbləğ, tarix, valyuta, silindiyi bank hesabımız və bankın tətbiq etdiyi kurs') : __('Alıcının göndərdiyi ödəniş: məbləğ, tarix, valyuta, daxil olduğu bank hesabımız və bankın tətbiq etdiyi kurs') }}</p>
             </div>
-            <button type="button" class="btn btn-secondary btn-sm" @click="open = !open"><x-icon name="plus" class="size-4" x-show="!open"/><span x-text="open ? 'Bağla' : @js($out ? 'Ödəniş əlavə et' : 'Gələn ödəniş əlavə et')"></span></button>
+            <button type="button" class="btn btn-secondary btn-sm" @click="open = !open"><x-icon name="plus" class="size-4" x-show="!open"/><span x-text="open ? {{ \Illuminate\Support\Js::from(__('Bağla')) }} : @js($out ? __('Ödəniş əlavə et') : __('Gələn ödəniş əlavə et'))"></span></button>
         </header>
         <form method="POST" action="{{ route('deals.payments.store', $deal) }}" x-show="open" x-collapse class="p-5" @if($list->isNotEmpty() && ! ($mine && $errors->any())) x-cloak @endif
               x-data="rateLookup({ currency: @js($defCur), date: @js($mine ? old('transaction_date', today()->toDateString()) : today()->toDateString()), amount: @js((string) ($mine ? old('amount', '') : '')), override: @js($override), applied: @js((string) ($mine ? old('applied_rate', '') : '')) })">
@@ -29,9 +29,9 @@
                  }" x-init="syncAccount(); $watch('currency', () => syncAccount())">
             <div class="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
                 <div>
-                    <span class="field-label">{{ $out ? 'Kimə' : 'Kimdən' }}</span>
-                    <div class="input flex items-center gap-2 bg-surface-2 text-ink" aria-readonly="true"><x-icon name="building" class="size-4 text-muted shrink-0"/><span class="truncate">{{ $party ?? ($out ? 'Satıcı seçilməyib' : 'Alıcı seçilməyib') }}</span></div>
-                    <p class="text-[11px] text-muted mt-1">{{ $out ? 'Məhsulu satan tərəf' : 'Məhsul alan tərəf' }} — avtomatik</p>
+                    <span class="field-label">{{ $out ? __('Kimə') : __('Kimdən') }}</span>
+                    <div class="input flex items-center gap-2 bg-surface-2 text-ink" aria-readonly="true"><x-icon name="building" class="size-4 text-muted shrink-0"/><span class="truncate">{{ $party ?? ($out ? __('Satıcı seçilməyib') : __('Alıcı seçilməyib')) }}</span></div>
+                    <p class="text-[11px] text-muted mt-1">{{ $out ? __('Məhsulu satan tərəf') : __('Məhsul alan tərəf') }} — avtomatik</p>
                 </div>
                 <x-field :label="__('Tarix')" name="transaction_date" required>
                     <input type="date" name="transaction_date" x-model="date" max="{{ today()->toDateString() }}" class="input @error('transaction_date') is-invalid @enderror" required>
@@ -47,17 +47,17 @@
             </div>
 
             <div class="grid md:grid-cols-2 gap-4">
-                <x-field :label="$out ? 'Silindiyi bank hesabımız' : 'Daxil olduğu bank hesabımız'" name="bank_account_id" required>
+                <x-field :label="$out ? __('Silindiyi bank hesabımız') : __('Daxil olduğu bank hesabımız')" name="bank_account_id" required>
                     <select name="bank_account_id" x-model="account" class="input @error('bank_account_id') is-invalid @enderror" required>
                         <template x-for="a in options()" :key="a.id"><option :value="String(a.id)" x-text="a.label + ' (' + a.currency + ')'"></option></template>
                     </select>
                     <p class="text-[11px] text-saffron mt-1" x-show="!options().length" x-cloak>
-                        <span x-text="currency"></span> valyutasında aktiv bank hesabı yoxdur. @can('bank.create')<a href="{{ route('bank.accounts.index') }}" class="underline">{{ __('Hesab əlavə edin') }}</a>@endcan
+                        <span x-text="currency"></span> {{ __('valyutasında aktiv bank hesabı yoxdur.') }} @can('bank.create')<a href="{{ route('bank.accounts.index') }}" class="underline">{{ __('Hesab əlavə edin') }}</a>@endcan
                     </p>
                 </x-field>
                 <div class="grid grid-cols-2 gap-4">
                     <x-field :label="__('İstinad / ödəniş tapşırığı №')" name="reference"><input name="reference" value="{{ $mine ? old('reference') : '' }}" class="input font-mono"></x-field>
-                    <x-field :label="__('Təyinat')" name="purpose"><input name="purpose" value="{{ $mine ? old('purpose') : '' }}" placeholder="Trade {{ $deal->code }} üzrə ödəniş" class="input"></x-field>
+                    <x-field :label="__('Təyinat')" name="purpose"><input name="purpose" value="{{ $mine ? old('purpose') : '' }}" placeholder="{{ __('Trade :v1 üzrə ödəniş', ['v1' => $deal->code]) }}" class="input"></x-field>
                 </div>
             </div>
 
@@ -72,7 +72,7 @@
                     <div class="p-4">
                         <label class="text-xs text-muted" for="applied-rate">{{ __('Bankın kursu (1') }} <span x-text="currency"></span> = ₼)</label>
                         <input id="applied-rate" name="applied_rate" x-model="applied" @input="override = true" inputmode="decimal" class="input mt-1 font-mono text-right @error('applied_rate') is-invalid @enderror">
-                        <p class="text-[11px] mt-1" :class="override ? 'text-brand-ink' : 'text-muted'" x-text="override ? 'Əl ilə daxil edilib' : 'CBAR-dan götürülüb — bankın kursu fərqlidirsə dəyişin'"></p>
+                        <p class="text-[11px] mt-1" :class="override ? 'text-brand-ink' : 'text-muted'" x-text="override ? {{ \Illuminate\Support\Js::from(__('Əl ilə daxil edilib')) }} : {{ \Illuminate\Support\Js::from(__('CBAR-dan götürülüb — bankın kursu fərqlidirsə dəyişin')) }}"></p>
                     </div>
                     <div class="p-4 bg-surface-2/60">
                         <div class="text-xs text-muted">{{ __('Ekvivalent (bankın kursu ilə)') }}</div>
@@ -84,7 +84,7 @@
             </div>
 
             <div class="flex justify-end">
-                <button class="btn btn-primary" :disabled="!options().length"><x-icon name="check" class="size-4"/> {{ $out ? 'Ödənişi qeydə al' : 'Mədaxili qeydə al' }}</button>
+                <button class="btn btn-primary" :disabled="!options().length"><x-icon name="check" class="size-4"/> {{ $out ? __('Ödənişi qeydə al') : __('Mədaxili qeydə al') }}</button>
             </div>
             </div>
         </form>

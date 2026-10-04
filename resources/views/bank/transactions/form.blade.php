@@ -4,8 +4,8 @@
     $selectedAccount = old('bank_account_id', $tx->bank_account_id ?? $accounts->first()?->id);
     $override = (bool) old('override_rate', $editing && $tx->currency !== 'AZN' && (float) $tx->applied_rate !== (float) $tx->cbar_rate);
 @endphp
-<x-layouts.app :title="$editing ? 'Əməliyyatı redaktə et' : 'Yeni bank əməliyyatı'">
-    <x-page-header :title="$editing ? 'Əməliyyatı redaktə et' : 'Yeni bank əməliyyatı'" :back="$editing ? route('bank.transactions.show', $tx) : route('bank.transactions.index')"/>
+<x-layouts.app :title="$editing ? __('Əməliyyatı redaktə et') : __('Yeni bank əməliyyatı')">
+    <x-page-header :title="$editing ? __('Əməliyyatı redaktə et') : __('Yeni bank əməliyyatı')" :back="$editing ? route('bank.transactions.show', $tx) : route('bank.transactions.index')"/>
 
     @unless($editing)
         <nav class="inline-flex p-1 rounded-xl bg-surface border border-line mb-6" aria-label="{{ __('Əməliyyat növü') }}">
@@ -78,7 +78,7 @@
                         <span @class(['grid place-items-center size-10 rounded-xl', 'bg-success-soft text-success' => $tx->direction === 'in', 'bg-danger-soft text-danger' => $tx->direction === 'out'])>
                             <x-icon :name="$tx->direction === 'in' ? 'arrow-down-left' : 'arrow-up-right'" class="size-5"/>
                         </span>
-                        <h2 class="text-base font-semibold">{{ $tx->direction === 'in' ? 'Mədaxil' : 'Məxaric' }}</h2>
+                        <h2 class="text-base font-semibold">{{ $tx->direction === 'in' ? __('Mədaxil') : __('Məxaric') }}</h2>
                     </div>
                     <div class="grid sm:grid-cols-2 gap-4">
                         @if($editing)

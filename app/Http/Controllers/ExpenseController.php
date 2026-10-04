@@ -44,23 +44,23 @@ class ExpenseController extends Controller
             $this->authorize('expenses.export');
             $rows = $query()->with(['category', 'counterparty', 'account'])->orderBy('expense_date')->get();
             $cols = [
-                Column::make('Tarix', 'expense_date', 'date'),
-                Column::make('Kateqoriya', fn ($e) => $e->category?->name ?? '—'),
-                Column::make('Təsvir', 'description'),
-                Column::make('Kimə', fn ($e) => $e->counterparty?->name),
-                Column::make('Məbləğ', 'amount', 'money'),
-                Column::make('Valyuta', 'currency'),
+                Column::make(__('Tarix'), 'expense_date', 'date'),
+                Column::make(__('Kateqoriya'), fn ($e) => $e->category?->name ?? '—'),
+                Column::make(__('Təsvir'), 'description'),
+                Column::make(__('Kimə'), fn ($e) => $e->counterparty?->name),
+                Column::make(__('Məbləğ'), 'amount', 'money'),
+                Column::make(__('Valyuta'), 'currency'),
                 Column::make('AZN', 'amount_azn', 'money', total: true),
-                Column::make('Status', fn ($e) => Expense::STATUSES[$e->status][0]),
-                Column::make('Ödəniş', fn ($e) => $e->payment_method ? Expense::METHODS[$e->payment_method].($e->account ? ' · '.$e->account->name : '') : '—'),
-                Column::make('Ödəniş tarixi', 'paid_at', 'date'),
+                Column::make('Status', fn ($e) => __(Expense::STATUSES[$e->status][0])),
+                Column::make(__('Ödəniş'), fn ($e) => $e->payment_method ? __(Expense::METHODS[$e->payment_method]).($e->account ? ' · '.$e->account->name : '') : '—'),
+                Column::make(__('Ödəniş tarixi'), 'paid_at', 'date'),
             ];
             $name = 'xercler-'.$from.'-'.$to;
-            $filters = ['Dövr: '.azdate($from).' — '.azdate($to)];
+            $filters = [__('Dövr: ').azdate($from).' — '.azdate($to)];
 
             return $format === 'pdf'
-                ? app(PdfExporter::class)->download('Xərclər', $cols, $rows, $name.'.pdf', $filters)
-                : app(SpreadsheetExporter::class)->download('Xərclər', $cols, $rows, $name.'.xlsx', $filters);
+                ? app(PdfExporter::class)->download(__('Xərclər'), $cols, $rows, $name.'.pdf', $filters)
+                : app(SpreadsheetExporter::class)->download(__('Xərclər'), $cols, $rows, $name.'.xlsx', $filters);
         }
 
         $all = $query()->get(['id', 'status', 'amount_azn', 'category_id', 'due_date', 'payment_method']);
@@ -99,7 +99,7 @@ class ExpenseController extends Controller
         $expense = $this->expenses->save(new Expense, $this->validated($request));
 
         return redirect()->to($request->boolean('another') ? route('expenses.create') : route('expenses.index'))
-            ->with('success', 'Xərc əlavə edildi'.($expense->bank_transaction_id ? ' və '.$expense->account?->name.' hesabından silindi' : '').'.');
+            ->with('success', __('Xərc əlavə edildi').($expense->bank_transaction_id ? __(' və ').$expense->account?->name.__(' hesabından silindi') : '').'.');
     }
 
     public function edit(Request $request, Expense $expense): View
@@ -119,7 +119,7 @@ class ExpenseController extends Controller
         $this->authorize('expenses.update');
         $this->expenses->save($expense, $this->validated($request));
 
-        return redirect()->route('expenses.index')->with('success', 'Xərc yeniləndi.');
+        return redirect()->route('expenses.index')->with('success', __('Xərc yeniləndi.'));
     }
 
     public function destroy(Expense $expense): RedirectResponse
@@ -127,7 +127,7 @@ class ExpenseController extends Controller
         $this->authorize('expenses.delete');
         $this->expenses->delete($expense);
 
-        return back()->with('success', 'Xərc silindi'.($expense->payment_method === 'bank' ? '; bank hesabından silinmə də ləğv edildi' : '').'.');
+        return back()->with('success', __('Xərc silindi').($expense->payment_method === 'bank' ? __('; bank hesabından silinmə də ləğv edildi') : '').'.');
     }
 
     /* ----- categories (Xərc kateqoriyaları) ----- */
@@ -145,10 +145,10 @@ class ExpenseController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120', Rule::unique('categories')->where('company_id', tenant()->id)->where('scope', 'expense')],
             'color' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
-        ], ['name.unique' => 'Bu adda kateqoriya var.'], ['name' => 'Ad']);
+        ], ['name.unique' => __('Bu adda kateqoriya var.')], ['name' => 'Ad']);
         Category::create($data + ['scope' => 'expense']);
 
-        return back()->with('success', 'Kateqoriya əlavə edildi: '.$data['name'].'.');
+        return back()->with('success', __('Kateqoriya əlavə edildi: ').$data['name'].'.');
     }
 
     public function updateCategory(Request $request, Category $category): RedirectResponse
@@ -158,10 +158,10 @@ class ExpenseController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120', Rule::unique('categories')->where('company_id', tenant()->id)->where('scope', 'expense')->ignore($category->id)],
             'color' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
-        ], ['name.unique' => 'Bu adda kateqoriya var.'], ['name' => 'Ad']);
+        ], ['name.unique' => __('Bu adda kateqoriya var.')], ['name' => 'Ad']);
         $category->update($data);
 
-        return back()->with('success', 'Kateqoriya yeniləndi.');
+        return back()->with('success', __('Kateqoriya yeniləndi.'));
     }
 
     public function destroyCategory(Category $category): RedirectResponse
@@ -171,7 +171,7 @@ class ExpenseController extends Controller
         $used = $category->expenses()->count();
         $category->delete();
 
-        return back()->with('success', 'Kateqoriya silindi'.($used ? " ({$used} xərc kateqoriyasız qaldı)" : '').'.');
+        return back()->with('success', __('Kateqoriya silindi').($used ? __(' (:v1 xərc kateqoriyasız qaldı)', ['v1' => $used]) : '').'.');
     }
 
     private function form(Expense $expense): View
@@ -203,7 +203,7 @@ class ExpenseController extends Controller
             'bank_account_id' => ['required_if:payment_method,bank', 'nullable', 'integer', TenantExists::in('bank_accounts')],
             'reference' => ['nullable', 'string', 'max:80'],
             'notes' => ['nullable', 'string', 'max:2000'],
-        ], ['bank_account_id.required_if' => 'Hesabdan köçürmə üçün bank hesabını seçin.', 'paid_at.required_if' => 'Ödəniş tarixini seçin.', 'payment_method.required_if' => 'Ödəniş üsulunu seçin.'],
-            ['expense_date' => 'Tarix', 'category_id' => 'Kateqoriya', 'description' => 'Təsvir', 'amount' => 'Məbləğ', 'paid_at' => 'Ödəniş tarixi', 'bank_account_id' => 'Bank hesabı']);
+        ], ['bank_account_id.required_if' => __('Hesabdan köçürmə üçün bank hesabını seçin.'), 'paid_at.required_if' => __('Ödəniş tarixini seçin.'), 'payment_method.required_if' => __('Ödəniş üsulunu seçin.')],
+            ['expense_date' => __('Tarix'), 'category_id' => __('Kateqoriya'), 'description' => __('Təsvir'), 'amount' => __('Məbləğ'), 'paid_at' => __('Ödəniş tarixi'), 'bank_account_id' => __('Bank hesabı')]);
     }
 }

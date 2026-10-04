@@ -12,7 +12,7 @@
                 <div class="flex items-start justify-between gap-2">
                     <div>
                         <h2 class="font-semibold">{{ $r->name }}</h2>
-                        <div class="text-xs text-muted mt-0.5">{{ $r->users_count }} istifadəçi {{ $r->is_system ? '· sistem rolu' : '' }}</div>
+                        <div class="text-xs text-muted mt-0.5">{{ $r->users_count }} {{ __('istifadəçi') }} {{ $r->is_system ? '· sistem rolu' : '' }}</div>
                     </div>
                     @if($r->is_admin)<span class="badge badge-teal"><x-icon name="crown" class="size-3"/> {{ __('Tam icazə') }}</span>@endif
                 </div>

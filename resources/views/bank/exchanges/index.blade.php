@@ -10,7 +10,7 @@
         <div class="card p-4" style="--i:0"><div class="text-xs text-muted">{{ __('Əməliyyat') }}</div><div class="text-xl font-semibold font-mono">{{ $totals->n }}</div></div>
         <div class="card p-4" style="--i:1"><div class="text-xs text-muted">{{ __('Bank ilə CBAR fərqi (cəmi, AZN)') }}</div>
             <div @class(['text-xl font-semibold font-mono', 'text-danger' => $diffAzn > 0, 'text-success' => $diffAzn < 0])>{{ $diffAzn > 0 ? '−' : ($diffAzn < 0 ? '+' : '') }}{{ money(abs($diffAzn)) }}</div>
-            <div class="text-[11px] text-muted">{{ $diffAzn > 0 ? 'CBAR-a görə itki' : ($diffAzn < 0 ? 'CBAR-a görə qazanc' : 'fərq yoxdur') }}</div></div>
+            <div class="text-[11px] text-muted">{{ $diffAzn > 0 ? __('CBAR-a görə itki') : ($diffAzn < 0 ? __('CBAR-a görə qazanc') : __('fərq yoxdur')) }}</div></div>
         <div class="card p-4" style="--i:2"><div class="text-xs text-muted">{{ __('Hesablanma qaydası') }}</div><div class="text-[12px] text-ink-2 mt-1 leading-relaxed">{{ __('Alışda: bankın tələb etdiyi − CBAR ilə lazım olan · Satışda: CBAR ilə gələcək − bankın verdiyi') }}</div></div>
     </div>
 
@@ -65,14 +65,14 @@
                     </div>
                     <div class="grid sm:grid-cols-[1fr_120px_140px] gap-4">
                         <x-field name="amount" required>
-                            <x-slot:label><span x-text="dir === 'buy' ? 'Almaq istədiyimiz məbləğ' : 'Satmaq istədiyimiz məbləğ'"></span></x-slot:label>
+                            <x-slot:label><span x-text="dir === 'buy' ? {{ \Illuminate\Support\Js::from(__('Almaq istədiyimiz məbləğ')) }} : {{ \Illuminate\Support\Js::from(__('Satmaq istədiyimiz məbləğ')) }}"></span></x-slot:label>
                             <input name="amount" x-model="amount" inputmode="decimal" placeholder="10 000" class="input font-mono text-right @error('amount') is-invalid @enderror" required>
                         </x-field>
                         <x-field :label="__('Valyuta')" name="currency" required>
                             <select name="currency" x-model="cur" class="input">@foreach(config('glaust.currencies') as $c)<option value="{{ $c }}">{{ $c }}</option>@endforeach</select>
                         </x-field>
                         <x-field name="counter_currency" required>
-                            <x-slot:label><span x-text="dir === 'buy' ? 'Nə ilə ödəyirik' : 'Nə alırıq'"></span></x-slot:label>
+                            <x-slot:label><span x-text="dir === 'buy' ? {{ \Illuminate\Support\Js::from(__('Nə ilə ödəyirik')) }} : {{ \Illuminate\Support\Js::from(__('Nə alırıq')) }}"></span></x-slot:label>
                             <select name="counter_currency" x-model="counter" class="input @error('counter_currency') is-invalid @enderror">@foreach(config('glaust.currencies') as $c)<option value="{{ $c }}">{{ $c }}</option>@endforeach</select>
                         </x-field>
                     </div>
@@ -108,7 +108,7 @@
                         <div class="text-[11px] text-danger" x-show="error" x-text="error"></div>
                     </div>
                     <dl class="px-4 py-3 space-y-2 text-sm">
-                        <div class="flex justify-between gap-3"><dt class="text-muted" x-text="dir === 'buy' ? 'CBAR ilə lazım olan' : 'CBAR ilə gələcək'"></dt><dd class="font-mono" x-text="cbarAmount() !== null ? fmt(cbarAmount()) + ' ' + counter : '—'"></dd></div>
+                        <div class="flex justify-between gap-3"><dt class="text-muted" x-text="dir === 'buy' ? {{ \Illuminate\Support\Js::from(__('CBAR ilə lazım olan')) }} : {{ \Illuminate\Support\Js::from(__('CBAR ilə gələcək')) }}"></dt><dd class="font-mono" x-text="cbarAmount() !== null ? fmt(cbarAmount()) + ' ' + counter : '—'"></dd></div>
                     </dl>
                     <div class="px-4 pb-3">
                         <label class="field-label" for="bank-rate">{{ __('Bankın kursu: 1') }} <span x-text="cur"></span> = ? <span x-text="counter"></span> <span class="text-danger">*</span></label>
@@ -116,7 +116,7 @@
                         @error('bank_rate')<p class="field-error">{{ $message }}</p>@enderror
                     </div>
                     <dl class="px-4 py-3 border-t border-line space-y-2 text-sm">
-                        <div class="flex justify-between gap-3"><dt class="text-muted" x-text="dir === 'buy' ? 'Bank ilə ödəniləcək' : 'Bankdan gələcək'"></dt><dd class="font-mono font-semibold" x-text="bankAmount() !== null ? fmt(bankAmount()) + ' ' + counter : '—'"></dd></div>
+                        <div class="flex justify-between gap-3"><dt class="text-muted" x-text="dir === 'buy' ? {{ \Illuminate\Support\Js::from(__('Bank ilə ödəniləcək')) }} : {{ \Illuminate\Support\Js::from(__('Bankdan gələcək')) }}"></dt><dd class="font-mono font-semibold" x-text="bankAmount() !== null ? fmt(bankAmount()) + ' ' + counter : '—'"></dd></div>
                         <div class="flex justify-between gap-3" x-show="diff() !== null">
                             <dt class="text-muted">{{ __('CBAR ilə fərq') }}</dt>
                             <dd class="font-mono font-semibold" :class="diff() > {{ __('0 ? \'text-danger\' : (diff()') }} < 0 ? 'text-success' : '')"
@@ -143,16 +143,16 @@
                     <tbody>
                     @foreach($list as $x)
                         <tr>
-                            <td data-label="Tarix" class="font-mono text-xs">{{ azdate($x->exchange_date) }}@if($x->reference)<div class="text-faint">{{ $x->reference }}</div>@endif</td>
-                            <td data-label="Əməliyyat"><span class="badge {{ $x->direction === 'buy' ? 'badge-teal' : 'badge-amber' }}">{{ \App\Models\CurrencyExchange::DIRECTIONS[$x->direction] }}</span></td>
-                            <td data-label="Məbləğ" class="num font-medium">{{ money($x->amount, $x->currency) }}</td>
-                            <td data-label="CBAR kursu" class="num text-xs">{{ rate_fmt($x->cbar_cross) }}<div class="text-faint">{{ $x->currency }}/{{ $x->counter_currency }}</div></td>
-                            <td data-label="Bank kursu" class="num text-xs font-medium">{{ rate_fmt($x->bank_rate) }}</td>
-                            <td data-label="CBAR ilə" class="num">{{ money($x->counter_amount_cbar, $x->counter_currency) }}</td>
-                            <td data-label="Bank ilə" class="num font-medium">{{ money($x->counter_amount, $x->counter_currency) }}</td>
-                            <td data-label="Fərq" @class(['num', 'text-danger' => $x->difference > 0, 'text-success' => $x->difference < 0])>{{ $x->difference > 0 ? '−' : ($x->difference < 0 ? '+' : '') }}{{ money(abs($x->difference), $x->counter_currency) }}
+                            <td data-label="{{ __('Tarix') }}" class="font-mono text-xs">{{ azdate($x->exchange_date) }}@if($x->reference)<div class="text-faint">{{ $x->reference }}</div>@endif</td>
+                            <td data-label="{{ __('Əməliyyat') }}"><span class="badge {{ $x->direction === 'buy' ? 'badge-teal' : 'badge-amber' }}">{{ __(\App\Models\CurrencyExchange::DIRECTIONS[$x->direction]) }}</span></td>
+                            <td data-label="{{ __('Məbləğ') }}" class="num font-medium">{{ money($x->amount, $x->currency) }}</td>
+                            <td data-label="{{ __('CBAR kursu') }}" class="num text-xs">{{ rate_fmt($x->cbar_cross) }}<div class="text-faint">{{ $x->currency }}/{{ $x->counter_currency }}</div></td>
+                            <td data-label="{{ __('Bank kursu') }}" class="num text-xs font-medium">{{ rate_fmt($x->bank_rate) }}</td>
+                            <td data-label="{{ __('CBAR ilə') }}" class="num">{{ money($x->counter_amount_cbar, $x->counter_currency) }}</td>
+                            <td data-label="{{ __('Bank ilə') }}" class="num font-medium">{{ money($x->counter_amount, $x->counter_currency) }}</td>
+                            <td data-label="{{ __('Fərq') }}" @class(['num', 'text-danger' => $x->difference > 0, 'text-success' => $x->difference < 0])>{{ $x->difference > 0 ? '−' : ($x->difference < 0 ? '+' : '') }}{{ money(abs($x->difference), $x->counter_currency) }}
                                 @if($x->counter_currency !== 'AZN')<div class="text-[11px] text-faint">{{ money(abs($x->difference_azn)) }}</div>@endif</td>
-                            <td data-label="Hesablar" class="text-xs">{{ $x->fromAccount?->name }} → {{ $x->toAccount?->name }}</td>
+                            <td data-label="{{ __('Hesablar') }}" class="text-xs">{{ $x->fromAccount?->name }} → {{ $x->toAccount?->name }}</td>
                             <td class="text-right">
                                 @can('bank.delete')
                                     <form method="POST" action="{{ route('bank.exchanges.destroy', $x) }}" data-confirm="{{ __('Əməliyyat ləğv edilsin? Hər iki bank hərəkəti silinəcək.') }}" data-confirm-action="{{ __('Ləğv et') }}">

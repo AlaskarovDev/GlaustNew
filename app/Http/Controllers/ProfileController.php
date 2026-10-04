@@ -49,7 +49,7 @@ class ProfileController extends Controller
             'position' => ['nullable', 'string', 'max:120'],
             'daily_digest' => ['nullable', 'boolean'],
             'email_reminders' => ['nullable', 'boolean'],
-        ], [], ['position' => 'Vəzifə']);
+        ], [], ['position' => __('Vəzifə')]);
 
         $request->user()->update([
             'name' => $data['name'],
@@ -59,7 +59,7 @@ class ProfileController extends Controller
             'email_reminders' => $request->boolean('email_reminders'),
         ]);
 
-        return back()->with('success', 'Profil yeniləndi.');
+        return back()->with('success', __('Profil yeniləndi.'));
     }
 
     public function password(Request $request, AuthLogger $log): RedirectResponse
@@ -67,14 +67,14 @@ class ProfileController extends Controller
         $request->validate([
             'current_password' => ['required', 'current_password'],
             'password' => ['required', 'confirmed', Password::defaults(), 'different:current_password'],
-        ], [], ['current_password' => 'Cari şifrə', 'password' => 'Yeni şifrə']);
+        ], [], ['current_password' => __('Cari şifrə'), 'password' => __('Yeni şifrə')]);
 
         $user = $request->user();
         $user->update(['password' => $request->input('password')]);
         $log->passwordChanged($user);
         $closed = $log->forceLogoutEverywhere($user, $request->session()->getId());
 
-        return back()->with('success', 'Şifrə dəyişdirildi.'.($closed ? " Digər {$closed} sessiya bağlandı." : ''));
+        return back()->with('success', __('Şifrə dəyişdirildi.').($closed ? __(' Digər :v1 sessiya bağlandı.', ['v1' => $closed]) : ''));
     }
 
     public function theme(Request $request): JsonResponse
@@ -94,34 +94,34 @@ class ProfileController extends Controller
             $user->forceFill(['two_factor_secret' => $google2fa->generateSecretKey(32), 'two_factor_confirmed_at' => null])->save();
         }
 
-        return redirect()->route('profile.edit', ['tab' => 'security'])->with('info', 'QR kodu autentifikator tətbiqi ilə skan edin və kodu təsdiqləyin.');
+        return redirect()->route('profile.edit', ['tab' => 'security'])->with('info', __('QR kodu autentifikator tətbiqi ilə skan edin və kodu təsdiqləyin.'));
     }
 
     public function confirmTwoFactor(Request $request, Google2FA $google2fa): RedirectResponse
     {
-        $request->validate(['code' => ['required', 'digits:6']], [], ['code' => 'Kod']);
+        $request->validate(['code' => ['required', 'digits:6']], [], ['code' => __('Kod')]);
         $user = $request->user();
         if (! $user->two_factor_secret || ! $google2fa->verifyKey($user->two_factor_secret, $request->input('code'), 1)) {
-            return back()->withErrors(['code' => 'Kod yanlışdır.']);
+            return back()->withErrors(['code' => __('Kod yanlışdır.')]);
         }
         $user->forceFill(['two_factor_confirmed_at' => now()])->save();
 
-        return redirect()->route('profile.edit', ['tab' => 'security'])->with('success', 'İki mərhələli təsdiq aktivləşdirildi.');
+        return redirect()->route('profile.edit', ['tab' => 'security'])->with('success', __('İki mərhələli təsdiq aktivləşdirildi.'));
     }
 
     public function disableTwoFactor(Request $request): RedirectResponse
     {
-        $request->validate(['current_password' => ['required', 'current_password']], [], ['current_password' => 'Şifrə']);
+        $request->validate(['current_password' => ['required', 'current_password']], [], ['current_password' => __('Şifrə')]);
         $request->user()->forceFill(['two_factor_secret' => null, 'two_factor_confirmed_at' => null])->save();
 
-        return redirect()->route('profile.edit', ['tab' => 'security'])->with('success', 'İki mərhələli təsdiq söndürüldü.');
+        return redirect()->route('profile.edit', ['tab' => 'security'])->with('success', __('İki mərhələli təsdiq söndürüldü.'));
     }
 
     public function logoutOthers(Request $request, AuthLogger $log): RedirectResponse
     {
-        $request->validate(['password' => ['required', 'current_password']], [], ['password' => 'Şifrə']);
+        $request->validate(['password' => ['required', 'current_password']], [], ['password' => __('Şifrə')]);
         $n = $log->forceLogoutEverywhere($request->user(), $request->session()->getId());
 
-        return back()->with('success', "{$n} digər sessiya bağlandı.");
+        return back()->with('success', __(':v1 digər sessiya bağlandı.', ['v1' => $n]));
     }
 }

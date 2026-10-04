@@ -16,7 +16,7 @@ class ShipmentImporter extends Importer
 
     public static function title(): string
     {
-        return 'Yüklər';
+        return __('Yüklər');
     }
 
     public static function ability(): string
@@ -26,25 +26,25 @@ class ShipmentImporter extends Importer
 
     public static function description(): string
     {
-        return 'Nömrə boşdursa avtomatik verilir. Daşıyıcı CRM-də təchizatçı kimi olmalıdır.';
+        return __('Nömrə boşdursa avtomatik verilir. Daşıyıcı CRM-də təchizatçı kimi olmalıdır.');
     }
 
     public function fields(): array
     {
         return [
-            'number' => ['label' => 'Nömrə', 'aliases' => ['yük nömrəsi', 'number'], 'example' => ''],
-            'direction' => ['label' => 'İstiqamət', 'required' => true, 'aliases' => ['direction'], 'example' => 'İdxal'],
-            'origin' => ['label' => 'Çıxış', 'required' => true, 'aliases' => ['haradan', 'origin', 'from'], 'example' => 'İstanbul'],
-            'destination' => ['label' => 'Təyinat', 'required' => true, 'aliases' => ['haraya', 'destination', 'to'], 'example' => 'Bakı'],
-            'transport_mode' => ['label' => 'Nəqliyyat', 'aliases' => ['nəqliyyat növü', 'mode'], 'example' => 'Avto'],
-            'carrier' => ['label' => 'Daşıyıcı', 'aliases' => ['carrier', 'daşıyıcı voen'], 'example' => ''],
-            'vehicle' => ['label' => 'Nəqliyyat vasitəsi', 'aliases' => ['maşın', 'vehicle'], 'example' => '10-AA-100'],
-            'container_no' => ['label' => 'Konteyner', 'aliases' => ['konteyner №', 'container'], 'example' => ''],
+            'number' => ['label' => __('Nömrə'), 'aliases' => ['yük nömrəsi', 'number'], 'example' => ''],
+            'direction' => ['label' => __('İstiqamət'), 'required' => true, 'aliases' => ['direction'], 'example' => 'İdxal'],
+            'origin' => ['label' => __('Çıxış'), 'required' => true, 'aliases' => ['haradan', 'origin', 'from'], 'example' => 'İstanbul'],
+            'destination' => ['label' => __('Təyinat'), 'required' => true, 'aliases' => ['haraya', 'destination', 'to'], 'example' => 'Bakı'],
+            'transport_mode' => ['label' => __('Nəqliyyat'), 'aliases' => ['nəqliyyat növü', 'mode'], 'example' => 'Avto'],
+            'carrier' => ['label' => __('Daşıyıcı'), 'aliases' => ['carrier', 'daşıyıcı voen'], 'example' => ''],
+            'vehicle' => ['label' => __('Nəqliyyat vasitəsi'), 'aliases' => ['maşın', 'vehicle'], 'example' => '10-AA-100'],
+            'container_no' => ['label' => __('Konteyner'), 'aliases' => ['konteyner №', 'container'], 'example' => ''],
             'document_no' => ['label' => 'CMR', 'aliases' => ['cmr', 'konosament', 'awb', 'sənəd'], 'example' => ''],
-            'cargo_description' => ['label' => 'Yük', 'aliases' => ['yükün təsviri', 'cargo'], 'example' => 'Tikinti materialları'],
-            'weight_kg' => ['label' => 'Çəki (kq)', 'aliases' => ['çəki', 'weight'], 'example' => '12000'],
-            'loading_date' => ['label' => 'Yüklənmə', 'aliases' => ['yüklənmə tarixi'], 'example' => '01.10.2026'],
-            'eta' => ['label' => 'Çatma', 'aliases' => ['gözlənilən çatma', 'eta'], 'example' => '10.10.2026'],
+            'cargo_description' => ['label' => __('Yük'), 'aliases' => ['yükün təsviri', 'cargo'], 'example' => 'Tikinti materialları'],
+            'weight_kg' => ['label' => __('Çəki (kq)'), 'aliases' => ['çəki', 'weight'], 'example' => '12000'],
+            'loading_date' => ['label' => __('Yüklənmə'), 'aliases' => ['yüklənmə tarixi'], 'example' => '01.10.2026'],
+            'eta' => ['label' => __('Çatma'), 'aliases' => ['gözlənilən çatma', 'eta'], 'example' => '10.10.2026'],
             'status' => ['label' => 'Status', 'aliases' => [], 'example' => 'Yolda'],
         ];
     }
@@ -91,7 +91,7 @@ class ShipmentImporter extends Importer
         $v = (string) $row['carrier'];
         $c = Counterparty::suppliers()->where(fn ($q) => $q->where('voen', preg_replace('/\D/', '', $v) ?: '-')->orWhere('name', $v))->first();
 
-        return $c ?? throw new RowError("Daşıyıcı CRM-də təchizatçı kimi tapılmadı: {$v}");
+        return $c ?? throw new RowError(__('Daşıyıcı CRM-də təchizatçı kimi tapılmadı: :v1', ['v1' => $v]));
     }
 
     protected function persist(array $row): void

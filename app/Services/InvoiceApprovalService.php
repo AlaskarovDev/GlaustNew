@@ -37,13 +37,13 @@ class InvoiceApprovalService
     public function blocker(Invoice $invoice, Company $company): ?string
     {
         return match (true) {
-            $invoice->type !== 'supplier' => 'Yalnız satıcının fakturası təsdiqə göndərilir.',
-            $invoice->approval_status === 'pending' => 'Faktura artıq təsdiqdədir.',
-            $invoice->approval_status === 'approved' => 'Faktura artıq təsdiqlənib.',
-            $invoice->status === 'cancelled' => 'Ləğv edilmiş faktura təsdiqə göndərilmir.',
-            ! $invoice->rubReady() => 'Əvvəlcə 3 addımı tamamlayın: logistika, komissiya, RUB konvertasiyası.',
-            ! $invoice->salesDocuments()->where('kind', 'proforma')->exists() => 'Alıcı üçün proforma faktura yoxdur.',
-            ! $this->flow($company) => 'Təsdiq axını qurulmayıb: Tənzimləmələr → Təsdiq axını.',
+            $invoice->type !== 'supplier' => __('Yalnız satıcının fakturası təsdiqə göndərilir.'),
+            $invoice->approval_status === 'pending' => __('Faktura artıq təsdiqdədir.'),
+            $invoice->approval_status === 'approved' => __('Faktura artıq təsdiqlənib.'),
+            $invoice->status === 'cancelled' => __('Ləğv edilmiş faktura təsdiqə göndərilmir.'),
+            ! $invoice->rubReady() => __('Əvvəlcə 3 addımı tamamlayın: logistika, komissiya, RUB konvertasiyası.'),
+            ! $invoice->salesDocuments()->where('kind', 'proforma')->exists() => __('Alıcı üçün proforma faktura yoxdur.'),
+            ! $this->flow($company) => __('Təsdiq axını qurulmayıb: Tənzimləmələr → Təsdiq axını.'),
             default => null,
         };
     }
@@ -65,10 +65,10 @@ class InvoiceApprovalService
     public function decide(Invoice $invoice, User $by, bool $approve, ?string $comment): void
     {
         if ($invoice->approval_status !== 'pending' || $invoice->currentApproverId() !== $by->id) {
-            throw ValidationException::withMessages(['approval' => 'Bu faktura hazırda sizin təsdiqinizi gözləmir.']);
+            throw ValidationException::withMessages(['approval' => __('Bu faktura hazırda sizin təsdiqinizi gözləmir.')]);
         }
         if (! $approve && trim((string) $comment) === '') {
-            throw ValidationException::withMessages(['comment' => 'Geri qaytarmağın səbəbini yazın.']);
+            throw ValidationException::withMessages(['comment' => __('Geri qaytarmağın səbəbini yazın.')]);
         }
 
         $final = false;
@@ -103,10 +103,10 @@ class InvoiceApprovalService
     public function withdraw(Invoice $invoice, User $by): void
     {
         if ($invoice->approval_status !== 'pending') {
-            throw ValidationException::withMessages(['approval' => 'Təsdiqdə olmayan faktura geri çəkilə bilməz.']);
+            throw ValidationException::withMessages(['approval' => __('Təsdiqdə olmayan faktura geri çəkilə bilməz.')]);
         }
         if ($invoice->submitted_by !== $by->id && ! $by->role?->is_admin) {
-            throw ValidationException::withMessages(['approval' => 'Yalnız göndərən şəxs və ya admin geri çəkə bilər.']);
+            throw ValidationException::withMessages(['approval' => __('Yalnız göndərən şəxs və ya admin geri çəkə bilər.')]);
         }
         DB::transaction(function () use ($invoice, $by) {
             Reminder::where('source', 'approval')->where('remindable_type', 'invoice')->where('remindable_id', $invoice->id)->whereNull('read_at')->update(['read_at' => now()]);

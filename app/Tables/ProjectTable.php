@@ -14,7 +14,7 @@ class ProjectTable extends Table
 
     public function title(): string
     {
-        return 'Layihələr';
+        return __('Layihələr');
     }
 
     protected function baseQuery(): Builder
@@ -30,7 +30,7 @@ class ProjectTable extends Table
     public function filters(): array
     {
         return [
-            'manager_id' => ['label' => 'Menecer', 'type' => 'select', 'options' => User::forTenant()->orderBy('name')->pluck('name', 'id')->all()],
+            'manager_id' => ['label' => __('Menecer'), 'type' => 'select', 'options' => User::forTenant()->orderBy('name')->pluck('name', 'id')->all()],
         ];
     }
 
@@ -58,14 +58,14 @@ class ProjectTable extends Table
     public function columns(): array
     {
         return [
-            Column::make('Kod', 'code'),
+            Column::make(__('Kod'), 'code'),
             Column::make('Ad', 'name', width: 34),
-            Column::make('Satan tərəf', 'supplier.name'),
-            Column::make('Alan tərəf', 'counterparty.name'),
-            Column::make('Məsul şəxs', 'manager.name'),
-            Column::make('Trade-lər', 'deals_count', 'number', total: true),
-            Column::make('Davam edən', 'active_deals_count', 'number', total: true),
-            Column::make('Proqnoz mənfəət (AZN)', fn ($p) => \App\Support\ProjectForecast::profit($p->deals), 'money', total: true),
+            Column::make(__('Satan tərəf'), 'supplier.name'),
+            Column::make(__('Alan tərəf'), 'counterparty.name'),
+            Column::make(__('Məsul şəxs'), 'manager.name'),
+            Column::make(__('Trade-lər'), 'deals_count', 'number', total: true),
+            Column::make(__('Davam edən'), 'active_deals_count', 'number', total: true),
+            Column::make(__('Proqnoz mənfəət (AZN)'), fn ($p) => \App\Support\ProjectForecast::profit($p->deals), 'money', total: true),
         ];
     }
 }

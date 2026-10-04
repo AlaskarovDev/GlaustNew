@@ -1,12 +1,12 @@
 <x-layouts.admin :title="$company->name">
-    <x-page-header :title="$company->name" :subtitle="($company->voen ? 'VÖEN '.$company->voen.' · ' : '').'qeydiyyat '.azdate($company->created_at)" :back="route('admin.companies.index')"/>
+    <x-page-header :title="$company->name" :subtitle="($company->voen ? __('VÖEN ').$company->voen.' · ' : '').'qeydiyyat '.azdate($company->created_at)" :back="route('admin.companies.index')"/>
     <div class="grid lg:grid-cols-[minmax(0,1fr)_380px] gap-6 items-start">
         <div class="space-y-6 min-w-0">
             {{-- Users of this company: add, edit (password, phone, position, role), deactivate --}}
             <section class="card overflow-hidden" x-data="{ adding: {{ $errors->any() && old('_form') === 'new' ? 'true' : 'false' }} }">
                 <header class="px-5 h-14 flex items-center justify-between border-b border-line">
-                    <h2 class="text-sm font-semibold">İstifadəçilər ({{ $users->count() }})</h2>
-                    <button type="button" class="btn btn-primary btn-sm" @click="adding = !adding"><x-icon name="plus" class="size-4"/> <span x-text="adding ? 'Bağla' : 'İstifadəçi əlavə et'"></span></button>
+                    <h2 class="text-sm font-semibold">{{ __('İstifadəçilər (') }}{{ $users->count() }})</h2>
+                    <button type="button" class="btn btn-primary btn-sm" @click="adding = !adding"><x-icon name="plus" class="size-4"/> <span x-text="adding ? {{ \Illuminate\Support\Js::from(__('Bağla')) }} : {{ \Illuminate\Support\Js::from(__('İstifadəçi əlavə et')) }}"></span></button>
                 </header>
                 <form method="POST" action="{{ route('admin.companies.users.store', $company) }}" x-show="adding" x-collapse @unless($errors->any() && old('_form') === 'new') x-cloak @endunless class="p-5 border-b border-line bg-surface-2/50 grid sm:grid-cols-2 gap-4">
                     @csrf
@@ -32,8 +32,8 @@
                                         <div class="font-medium">{{ $u->name }} @unless($u->is_active)<span class="badge badge-slate ml-1">{{ __('Deaktiv') }}</span>@endunless</div>
                                         <div class="text-xs text-muted">{{ $u->email }} · {{ $u->role?->name }}{{ $u->position ? ' · '.$u->position : '' }}{{ $u->phone ? ' · '.$u->phone : '' }}</div>
                                     </div>
-                                    <span class="text-xs text-faint font-mono">{{ $u->last_login_at ? azdate($u->last_login_at, true) : 'giriş olmayıb' }}</span>
-                                    <button type="button" class="btn btn-secondary btn-sm" @click="edit = !edit"><x-icon name="pencil" class="size-3.5"/> <span x-text="edit ? 'Bağla' : 'Redaktə'"></span></button>
+                                    <span class="text-xs text-faint font-mono">{{ $u->last_login_at ? azdate($u->last_login_at, true) : __('giriş olmayıb') }}</span>
+                                    <button type="button" class="btn btn-secondary btn-sm" @click="edit = !edit"><x-icon name="pencil" class="size-3.5"/> <span x-text="edit ? {{ \Illuminate\Support\Js::from(__('Bağla')) }} : {{ \Illuminate\Support\Js::from(__('Redaktə')) }}"></span></button>
                                 </div>
                                 <form method="POST" action="{{ route('admin.companies.users.update', [$company, $u]) }}" x-show="edit" x-collapse @unless($mine && $errors->any()) x-cloak @endunless class="px-5 pb-5 grid sm:grid-cols-2 gap-4">
                                     @csrf @method('PUT')
@@ -56,8 +56,8 @@
                 <header class="px-5 h-14 flex items-center border-b border-line"><h2 class="text-sm font-semibold">{{ __('Son giriş hadisələri') }}</h2></header>
                 <table class="table-g table-stack">
                     <tbody>@foreach($logins as $l)
-                        <tr><td data-label="Tarix" class="font-mono text-xs">{{ azdate($l->created_at, true) }}</td><td data-label="Email">{{ $l->email }}</td>
-                            <td data-label="Hadisə">@include('settings.logs._event', ['event' => $l->event])</td><td data-label="IP" class="font-mono text-xs">{{ $l->ip_address }}</td></tr>
+                        <tr><td data-label="{{ __('Tarix') }}" class="font-mono text-xs">{{ azdate($l->created_at, true) }}</td><td data-label="Email">{{ $l->email }}</td>
+                            <td data-label="{{ __('Hadisə') }}">@include('settings.logs._event', ['event' => $l->event])</td><td data-label="IP" class="font-mono text-xs">{{ $l->ip_address }}</td></tr>
                     @endforeach</tbody>
                 </table>
             </section>
@@ -74,7 +74,7 @@
             </form>
             <section class="card p-5 text-sm space-y-2">
                 <div class="flex justify-between"><span class="text-muted">{{ __('Fayllar') }}</span><span class="font-mono">{{ round($storage / 1048576, 1) }} MB{{ $company->plan ? ' / '.$company->plan->max_storage_mb.' MB' : '' }}</span></div>
-                <div class="flex justify-between"><span class="text-muted">{{ __('Öz SMTP') }}</span><span>{{ $company->hasOwnSmtp() ? 'bəli' : 'xeyr' }}</span></div>
+                <div class="flex justify-between"><span class="text-muted">{{ __('Öz SMTP') }}</span><span>{{ $company->hasOwnSmtp() ? __('bəli') : 'xeyr' }}</span></div>
                 <div class="flex justify-between"><span class="text-muted">{{ __('Email') }}</span><span>{{ $company->email }}</span></div>
             </section>
         </aside>

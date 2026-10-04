@@ -1,6 +1,6 @@
 @php $editing = $shipment->exists; @endphp
-<x-layouts.app :title="$editing ? 'Yük '.$shipment->number : 'Yeni yük'">
-    <x-page-header :title="$editing ? 'Yük '.$shipment->number : 'Yeni yük'" :back="$editing ? route('shipments.show', $shipment) : route('shipments.index')"/>
+<x-layouts.app :title="$editing ? __('Yük ').$shipment->number : __('Yeni yük')">
+    <x-page-header :title="$editing ? __('Yük ').$shipment->number : __('Yeni yük')" :back="$editing ? route('shipments.show', $shipment) : route('shipments.index')"/>
 
     <form method="POST" action="{{ $editing ? route('shipments.update', $shipment) : route('shipments.store') }}" class="grid lg:grid-cols-[minmax(0,1fr)_340px] gap-6 items-start" x-data="{ busy: false }" @submit="busy = true">
         @csrf

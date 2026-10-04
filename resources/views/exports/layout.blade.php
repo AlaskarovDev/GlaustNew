@@ -30,14 +30,14 @@
 <body>
 <header>
     <table width="100%"><tr>
-        <td class="brand">{{ $company?->name ?? 'TradeFlow' }} <span>·</span> <span style="color:#667085;font-weight:normal;font-size:9px">{{ $company?->voen ? 'VÖEN '.$company->voen : '' }}</span></td>
+        <td class="brand">{{ $company?->name ?? 'TradeFlow' }} <span>·</span> <span style="color:#667085;font-weight:normal;font-size:9px">{{ $company?->voen ? __('VÖEN ').$company->voen : '' }}</span></td>
         <td class="meta">{{ __('TradeFlow') }}<br>{{ now()->format('d.m.Y H:i') }}</td>
     </tr></table>
 </header>
 <footer>
     <table width="100%"><tr>
         <td>{{ $title }}</td>
-        <td style="text-align:right">Çap edən: {{ auth()->user()?->name }}</td>
+        <td style="text-align:right">{{ __('Çap edən:') }} {{ auth()->user()?->name }}</td>
     </tr></table>
 </footer>
 <script type="text/php">

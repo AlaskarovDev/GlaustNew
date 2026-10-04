@@ -20,12 +20,12 @@ class ProjectBudgetReport extends Report
 
     public static function title(): string
     {
-        return 'Layihə büdcəsi və faktiki xərc';
+        return __('Layihə büdcəsi və faktiki xərc');
     }
 
     public static function description(): string
     {
-        return 'Layihələr üzrə alan və satan tərəflə müqavilələr (marja), büdcə, bank məxarici, logistika xərcləri, daxilolma və nəticə.';
+        return __('Layihələr üzrə alan və satan tərəflə müqavilələr (marja), büdcə, bank məxarici, logistika xərcləri, daxilolma və nəticə.');
     }
 
     public static function icon(): string
@@ -87,21 +87,21 @@ class ProjectBudgetReport extends Report
     public function columns(): array
     {
         return [
-            Column::make('Kod', 'code'),
-            Column::make('Layihə', 'name', width: 32),
-            Column::make('Alan tərəf', 'client'),
-            Column::make('Satan tərəf', 'supplier'),
+            Column::make(__('Kod'), 'code'),
+            Column::make(__('Layihə'), 'name', width: 32),
+            Column::make(__('Alan tərəf'), 'client'),
+            Column::make(__('Satan tərəf'), 'supplier'),
             Column::make('Status', 'status'),
-            Column::make('Satış müqaviləsi (AZN)', 'sale_azn', 'money', total: true),
-            Column::make('Alış müqaviləsi (AZN)', 'purchase_azn', 'money', total: true),
-            Column::make('Müqavilə marjası', 'contract_margin', 'money', total: true),
-            Column::make('Büdcə (AZN)', 'budget', 'money', total: true),
-            Column::make('Bank məxarici', 'bank', 'money', total: true),
+            Column::make(__('Satış müqaviləsi (AZN)'), 'sale_azn', 'money', total: true),
+            Column::make(__('Alış müqaviləsi (AZN)'), 'purchase_azn', 'money', total: true),
+            Column::make(__('Müqavilə marjası'), 'contract_margin', 'money', total: true),
+            Column::make(__('Büdcə (AZN)'), 'budget', 'money', total: true),
+            Column::make(__('Bank məxarici'), 'bank', 'money', total: true),
             Column::make('Logistika', 'logistics', 'money', total: true),
-            Column::make('Faktiki xərc', 'expense', 'money', total: true),
-            Column::make('Büdcədən %', 'used', 'number'),
-            Column::make('Daxilolma', 'income', 'money', total: true),
-            Column::make('Nəticə', 'result', 'money', total: true),
+            Column::make(__('Faktiki xərc'), 'expense', 'money', total: true),
+            Column::make(__('Büdcədən %'), 'used', 'number'),
+            Column::make(__('Daxilolma'), 'income', 'money', total: true),
+            Column::make(__('Nəticə'), 'result', 'money', total: true),
         ];
     }
 
@@ -115,10 +115,10 @@ class ProjectBudgetReport extends Report
         $d = $this->data();
 
         return [
-            ['label' => 'Müqavilə marjası', 'value' => $d->sum('contract_margin'), 'money' => true, 'tone' => $d->sum('contract_margin') >= 0 ? 'success' : 'danger'],
-            ['label' => 'Faktiki xərc', 'value' => $d->sum('expense'), 'money' => true, 'tone' => 'danger'],
-            ['label' => 'Daxilolma', 'value' => $d->sum('income'), 'money' => true, 'tone' => 'success'],
-            ['label' => 'Büdcəni aşan layihə', 'value' => $d->filter(fn ($r) => $r['used'] !== null && $r['used'] > 100)->count(), 'tone' => 'danger'],
+            ['label' => __('Müqavilə marjası'), 'value' => $d->sum('contract_margin'), 'money' => true, 'tone' => $d->sum('contract_margin') >= 0 ? 'success' : 'danger'],
+            ['label' => __('Faktiki xərc'), 'value' => $d->sum('expense'), 'money' => true, 'tone' => 'danger'],
+            ['label' => __('Daxilolma'), 'value' => $d->sum('income'), 'money' => true, 'tone' => 'success'],
+            ['label' => __('Büdcəni aşan layihə'), 'value' => $d->filter(fn ($r) => $r['used'] !== null && $r['used'] > 100)->count(), 'tone' => 'danger'],
         ];
     }
 
@@ -130,6 +130,6 @@ class ProjectBudgetReport extends Report
         }
 
         return ['type' => 'bar', 'height' => 320, 'money' => true, 'colors' => ['#cbd5e1', '#e5484d', '#0f9d8a'], 'categories' => $d->pluck('code')->values()->all(),
-            'series' => [['name' => 'Büdcə', 'data' => $d->pluck('budget')->values()->all()], ['name' => 'Faktiki xərc', 'data' => $d->pluck('expense')->values()->all()], ['name' => 'Daxilolma', 'data' => $d->pluck('income')->values()->all()]]];
+            'series' => [['name' => __('Büdcə'), 'data' => $d->pluck('budget')->values()->all()], ['name' => __('Faktiki xərc'), 'data' => $d->pluck('expense')->values()->all()], ['name' => __('Daxilolma'), 'data' => $d->pluck('income')->values()->all()]]];
     }
 }

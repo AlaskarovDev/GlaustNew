@@ -1,7 +1,7 @@
 @php
     $editing = $item->exists;
     $contacts = old('contacts', $item->relationLoaded('contacts') ? $item->contacts->map->only(['name', 'position', 'phone', 'email'])->all() : []);
-    $title = $editing ? $item->name : ($item->type === 'supplier' ? 'Yeni təchizatçı' : 'Yeni müştəri');
+    $title = $editing ? $item->name : ($item->type === 'supplier' ? __('Yeni təchizatçı') : __('Yeni müştəri'));
 @endphp
 <x-layouts.app :title="$title">
     <x-page-header :title="$title" :back="$editing ? route('counterparties.show', $item) : route('counterparties.index')"
@@ -19,7 +19,7 @@
                 <fieldset class="mb-5">
                     <legend class="field-label">{{ __('Növ') }} <span class="text-danger">*</span></legend>
                     <div class="grid sm:grid-cols-3 gap-2">
-                        @foreach(['customer' => ['Müştəri', 'user', 'Ona satırıq / xidmət göstəririk'], 'supplier' => ['Təchizatçı', 'building', 'Ondan alırıq / daşıyıcı'], 'both' => ['Hər ikisi', 'transfer', 'Həm alır, həm satır']] as $val => [$label, $icon, $hint])
+                        @foreach(['customer' => [__('Müştəri'), 'user', __('Ona satırıq / xidmət göstəririk')], 'supplier' => [__('Təchizatçı'), 'building', __('Ondan alırıq / daşıyıcı')], 'both' => [__('Hər ikisi'), 'transfer', __('Həm alır, həm satır')]] as $val => [$label, $icon, $hint])
                             <label class="relative flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all"
                                    :class="type === '{{ $val }}' ? 'border-brand bg-brand-soft/60 ring-1 ring-brand/30' : 'border-line hover:border-line-strong'">
                                 <input type="radio" name="type" value="{{ $val }}" x-model="type" class="sr-only">
@@ -84,7 +84,7 @@
             </section>
             <div class="flex gap-2">
                 <a href="{{ $editing ? route('counterparties.show', $item) : route('counterparties.index') }}" class="btn btn-secondary flex-1">{{ __('Ləğv et') }}</a>
-                <button class="btn btn-primary flex-1" :disabled="busy"><x-icon name="check" class="size-4"/> {{ $editing ? 'Yadda saxla' : 'Əlavə et' }}</button>
+                <button class="btn btn-primary flex-1" :disabled="busy"><x-icon name="check" class="size-4"/> {{ $editing ? __('Yadda saxla') : __('Əlavə et') }}</button>
             </div>
         </aside>
     </form>

@@ -26,20 +26,20 @@ class SupplierPaymentService
     public function pay(Deal $deal, array $d): SupplierPayment
     {
         if (! $deal->supplier_id) {
-            throw ValidationException::withMessages(['amount' => 'Əvvəlcə Trade-də satıcını seçin.']);
+            throw ValidationException::withMessages(['amount' => __('Əvvəlcə Trade-də satıcını seçin.')]);
         }
         $account = BankAccount::findOrFail($d['bank_account_id']);
         $cur = $d['currency'];
         $same = $account->currency === $cur;
         if (! $same && empty($d['bank_rate'])) {
-            throw ValidationException::withMessages(['bank_rate' => "Hesab {$account->currency}, ödəniş {$cur}: bankın kursunu daxil edin (1 {$cur} = ? {$account->currency})."]);
+            throw ValidationException::withMessages(['bank_rate' => __('Hesab :v1, ödəniş :v2: bankın kursunu daxil edin (1 :v3 = ? :v4).', ['v1' => $account->currency, 'v2' => $cur, 'v3' => $cur, 'v4' => $account->currency])]);
         }
 
         try {
             $cbar = $this->rates->rate($cur, $d['payment_date']);
             $cbarAcc = $this->rates->rate($account->currency, $d['payment_date']);
         } catch (RateUnavailable $e) {
-            throw ValidationException::withMessages(['payment_date' => $e->getMessage().' Ödəniş edilmədi.']);
+            throw ValidationException::withMessages(['payment_date' => $e->getMessage().__(' Ödəniş edilmədi.')]);
         }
         $amount = round((float) $d['amount'], 2);
         $cross = $cbar / $cbarAcc;

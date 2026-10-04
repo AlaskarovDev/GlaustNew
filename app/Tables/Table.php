@@ -83,7 +83,7 @@ abstract class Table
     {
         $out = [];
         if ($q = trim((string) $this->request->query('q'))) {
-            $out[] = 'Axtarış: '.$q;
+            $out[] = __('Axtarış: ').$q;
         }
         foreach ($this->filters() as $key => $def) {
             $value = $this->request->query($key);

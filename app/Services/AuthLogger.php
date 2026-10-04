@@ -161,7 +161,7 @@ class AuthLogger
             str_contains($agent, 'iPhone') || str_contains($agent, 'iPad') => 'iOS',
             str_contains($agent, 'Mac OS') => 'macOS',
             str_contains($agent, 'Linux') => 'Linux',
-            default => 'naməlum OS',
+            default => __('naməlum OS'),
         };
 
         return $browser.' · '.$os;

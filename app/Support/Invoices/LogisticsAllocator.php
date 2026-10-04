@@ -28,14 +28,14 @@ class LogisticsAllocator
     {
         $items = $invoice->items()->get();
         if ($items->isEmpty()) {
-            throw ValidationException::withMessages(['logistics' => 'Fakturada məhsul sətri yoxdur.']);
+            throw ValidationException::withMessages(['logistics' => __('Fakturada məhsul sətri yoxdur.')]);
         }
 
         $factor = $this->factor($currency, $invoice);
 
         if ($method === 'total') {
             if ($amount === null || $amount < 0) {
-                throw ValidationException::withMessages(['logistics_amount' => 'Logistika xərcinin məbləğini daxil edin.']);
+                throw ValidationException::withMessages(['logistics_amount' => __('Logistika xərcinin məbləğini daxil edin.')]);
             }
             $original = $this->split($items->pluck('total', 'id')->map(fn ($v) => (float) $v)->all(), $amount);
         } else {
@@ -43,7 +43,7 @@ class LogisticsAllocator
             foreach ($items as $item) {
                 $v = $perItem[$item->id] ?? null;
                 if ($v === null || $v === '' || ! is_numeric($v) || $v < 0) {
-                    throw ValidationException::withMessages(["items.{$item->id}" => "Sətir {$item->line_no} ({$item->description}) üçün xərci daxil edin (0 ola bilər)."]);
+                    throw ValidationException::withMessages(["items.{$item->id}" => __('Sətir :v1 (:v2) üçün xərci daxil edin (0 ola bilər).', ['v1' => $item->line_no, 'v2' => $item->description])]);
                 }
                 $original[$item->id] = round((float) $v, 2);
             }
@@ -83,7 +83,7 @@ class LogisticsAllocator
         try {
             return round($this->rates->rate($currency, $invoice->invoice_date) / $this->rates->rate($invoice->currency, $invoice->invoice_date), 8);
         } catch (\App\Services\Cbar\RateUnavailable $e) {
-            throw ValidationException::withMessages(['logistics_currency' => $e->getMessage().' Logistika yadda saxlanmadı.']);
+            throw ValidationException::withMessages(['logistics_currency' => $e->getMessage().__(' Logistika yadda saxlanmadı.')]);
         }
     }
 

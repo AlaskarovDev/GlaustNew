@@ -19,12 +19,12 @@ class ContractsReport extends Report
 
     public static function title(): string
     {
-        return 'Müqavilələrin icrası';
+        return __('Müqavilələrin icrası');
     }
 
     public static function description(): string
     {
-        return 'Hər müqavilə üzrə məbləğ, bank vasitəsilə icra, qalıq və ödəniş qrafikinin vəziyyəti.';
+        return __('Hər müqavilə üzrə məbləğ, bank vasitəsilə icra, qalıq və ödəniş qrafikinin vəziyyəti.');
     }
 
     public static function icon(): string
@@ -40,7 +40,7 @@ class ContractsReport extends Report
     public function filters(): array
     {
         return parent::filters() + [
-            'kind' => ['label' => 'Növ', 'type' => 'select', 'options' => ['sale' => 'Satış', 'purchase' => 'Alış']],
+            'kind' => ['label' => __('Növ'), 'type' => 'select', 'options' => ['sale' => __('Satış'), 'purchase' => __('Alış')]],
             'status' => ['label' => 'Status', 'type' => 'select', 'options' => status_options('contract')],
         ];
     }
@@ -68,7 +68,7 @@ class ContractsReport extends Report
             $overdue = $plan->whereNull('paid_at')->filter(fn ($p) => $p->due_date->lt(today()));
 
             return [
-                'number' => $c->number, 'date' => $c->contract_date, 'party' => $c->counterparty?->name, 'kind' => $c->kind === 'sale' ? 'Satış' : 'Alış',
+                'number' => $c->number, 'date' => $c->contract_date, 'party' => $c->counterparty?->name, 'kind' => $c->kind === 'sale' ? __('Satış') : __('Alış'),
                 'status' => status_label('contract', $c->status), 'amount_azn' => (float) $c->amount_azn, 'settled' => $done,
                 'left' => round(max(0, (float) $c->amount_azn - $done), 2),
                 'pct' => $c->amount_azn > 0 ? round($done / (float) $c->amount_azn * 100, 1) : 0,
@@ -80,17 +80,17 @@ class ContractsReport extends Report
     public function columns(): array
     {
         return [
-            Column::make('Nömrə', 'number'),
-            Column::make('Tarix', 'date', 'date'),
-            Column::make('Kontragent', 'party', width: 30),
-            Column::make('Növ', 'kind'),
+            Column::make(__('Nömrə'), 'number'),
+            Column::make(__('Tarix'), 'date', 'date'),
+            Column::make(__('Kontragent'), 'party', width: 30),
+            Column::make(__('Növ'), 'kind'),
             Column::make('Status', 'status'),
-            Column::make('Məbləğ (AZN)', 'amount_azn', 'money', total: true),
-            Column::make('İcra (AZN)', 'settled', 'money', total: true),
-            Column::make('Qalıq (AZN)', 'left', 'money', total: true),
-            Column::make('İcra %', 'pct', 'number'),
-            Column::make('Gecikmiş ödəniş', 'overdue', 'money', total: true),
-            Column::make('Bitmə', 'end', 'date'),
+            Column::make(__('Məbləğ (AZN)'), 'amount_azn', 'money', total: true),
+            Column::make(__('İcra (AZN)'), 'settled', 'money', total: true),
+            Column::make(__('Qalıq (AZN)'), 'left', 'money', total: true),
+            Column::make(__('İcra %'), 'pct', 'number'),
+            Column::make(__('Gecikmiş ödəniş'), 'overdue', 'money', total: true),
+            Column::make(__('Bitmə'), 'end', 'date'),
         ];
     }
 
@@ -104,10 +104,10 @@ class ContractsReport extends Report
         $d = $this->data();
 
         return [
-            ['label' => 'Müqavilələr', 'value' => $d->count()],
-            ['label' => 'Ümumi məbləğ', 'value' => $d->sum('amount_azn'), 'money' => true],
-            ['label' => 'İcra olunub', 'value' => $d->sum('settled'), 'money' => true, 'tone' => 'success'],
-            ['label' => 'Gecikmiş ödənişlər', 'value' => $d->sum('overdue'), 'money' => true, 'tone' => $d->sum('overdue') > 0 ? 'danger' : null],
+            ['label' => __('Müqavilələr'), 'value' => $d->count()],
+            ['label' => __('Ümumi məbləğ'), 'value' => $d->sum('amount_azn'), 'money' => true],
+            ['label' => __('İcra olunub'), 'value' => $d->sum('settled'), 'money' => true, 'tone' => 'success'],
+            ['label' => __('Gecikmiş ödənişlər'), 'value' => $d->sum('overdue'), 'money' => true, 'tone' => $d->sum('overdue') > 0 ? 'danger' : null],
         ];
     }
 
@@ -120,6 +120,6 @@ class ContractsReport extends Report
 
         return ['type' => 'bar', 'height' => 300, 'money' => true, 'stacked' => true, 'colors' => ['#0f9d8a', '#cbd5e1'],
             'categories' => $d->pluck('number')->all(),
-            'series' => [['name' => 'İcra', 'data' => $d->pluck('settled')->all()], ['name' => 'Qalıq', 'data' => $d->pluck('left')->all()]]];
+            'series' => [['name' => __('İcra'), 'data' => $d->pluck('settled')->all()], ['name' => __('Qalıq'), 'data' => $d->pluck('left')->all()]]];
     }
 }

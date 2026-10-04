@@ -29,7 +29,7 @@ class SetTenant
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
-            return redirect()->route('login')->withErrors(['email' => 'Hesabınız deaktiv edilib. Administratorla əlaqə saxlayın.']);
+            return redirect()->route('login')->withErrors(['email' => __('Hesabınız deaktiv edilib. Administratorla əlaqə saxlayın.')]);
         }
 
         if ($user->company_id === null) {

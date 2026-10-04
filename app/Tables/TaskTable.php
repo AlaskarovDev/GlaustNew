@@ -17,7 +17,7 @@ class TaskTable extends Table
 
     public function title(): string
     {
-        return 'Tapşırıqlar';
+        return __('Tapşırıqlar');
     }
 
     protected function baseQuery(): Builder
@@ -29,11 +29,11 @@ class TaskTable extends Table
     public function filters(): array
     {
         return [
-            'project_id' => ['label' => 'Layihə', 'type' => 'select', 'options' => Project::whereNotIn('status', ['cancelled'])->orderBy('code')->get()->mapWithKeys(fn ($p) => [$p->id => $p->code.' · '.$p->name])->all()],
-            'assignee_id' => ['label' => 'Məsul', 'type' => 'select', 'options' => ['me' => 'Mən'] + User::forTenant()->orderBy('name')->pluck('name', 'id')->all()],
-            'status' => ['label' => 'Status', 'type' => 'select', 'options' => status_options('task') + ['open' => 'Açıq (tamamlanmamış)']],
-            'priority' => ['label' => 'Prioritet', 'type' => 'select', 'options' => status_options('priority')],
-            'due' => ['label' => 'Son tarix', 'type' => 'select', 'options' => ['overdue' => 'Gecikmiş', 'today' => 'Bu gün', 'week' => '7 gün ərzində', 'none' => 'Tarixsiz']],
+            'project_id' => ['label' => __('Layihə'), 'type' => 'select', 'options' => Project::whereNotIn('status', ['cancelled'])->orderBy('code')->get()->mapWithKeys(fn ($p) => [$p->id => $p->code.' · '.$p->name])->all()],
+            'assignee_id' => ['label' => __('Məsul'), 'type' => 'select', 'options' => ['me' => __('Mən')] + User::forTenant()->orderBy('name')->pluck('name', 'id')->all()],
+            'status' => ['label' => 'Status', 'type' => 'select', 'options' => status_options('task') + ['open' => __('Açıq (tamamlanmamış)')]],
+            'priority' => ['label' => __('Prioritet'), 'type' => 'select', 'options' => status_options('priority')],
+            'due' => ['label' => __('Son tarix'), 'type' => 'select', 'options' => ['overdue' => __('Gecikmiş'), 'today' => __('Bu gün'), 'week' => __('7 gün ərzində'), 'none' => __('Tarixsiz')]],
         ];
     }
 
@@ -67,15 +67,15 @@ class TaskTable extends Table
     public function columns(): array
     {
         return [
-            Column::make('Tapşırıq', 'title', width: 40),
-            Column::make('Layihə', fn ($t) => $t->project ? $t->project->code.' · '.$t->project->name : ''),
-            Column::make('Məsul', 'assignee.name'),
+            Column::make(__('Tapşırıq'), 'title', width: 40),
+            Column::make(__('Layihə'), fn ($t) => $t->project ? $t->project->code.' · '.$t->project->name : ''),
+            Column::make(__('Məsul'), 'assignee.name'),
             Column::make('Status', fn ($t) => status_label('task', $t->status)),
-            Column::make('Prioritet', fn ($t) => status_label('priority', $t->priority)),
-            Column::make('Başlama', 'start_date', 'date'),
-            Column::make('Son tarix', 'due_date', 'date'),
-            Column::make('Plan (saat)', 'estimated_hours', 'number'),
-            Column::make('Tamamlanıb', 'completed_at', 'datetime'),
+            Column::make(__('Prioritet'), fn ($t) => status_label('priority', $t->priority)),
+            Column::make(__('Başlama'), 'start_date', 'date'),
+            Column::make(__('Son tarix'), 'due_date', 'date'),
+            Column::make(__('Plan (saat)'), 'estimated_hours', 'number'),
+            Column::make(__('Tamamlanıb'), 'completed_at', 'datetime'),
         ];
     }
 }

@@ -25,8 +25,8 @@
             <span class="lock-pulse" aria-hidden="true"></span>
             <x-icon name="lock" class="size-5 shrink-0"/>
             <div class="flex-1 min-w-[220px]">
-                <div class="font-semibold">{{ $doc->kind === 'commercial' ? 'Kommersiya fakturası — təsdiqdən sonra yaradılıb, dəyişdirilmir' : 'Sənəddə düzəliş əməliyyatlarına icazə dayandırılıb' }}</div>
-                <div class="text-xs opacity-80">{{ $doc->sourceInvoice?->isApproved() ? 'Faktura '.$doc->sourceInvoice->number.' təsdiqlənib.' : 'Faktura '.$doc->sourceInvoice?->number.' təsdiqdədir.' }} PDF yükləmək mümkündür.</div>
+                <div class="font-semibold">{{ $doc->kind === 'commercial' ? __('Kommersiya fakturası — təsdiqdən sonra yaradılıb, dəyişdirilmir') : __('Sənəddə düzəliş əməliyyatlarına icazə dayandırılıb') }}</div>
+                <div class="text-xs opacity-80">{{ $doc->sourceInvoice?->isApproved() ? __('Faktura ').$doc->sourceInvoice->number.__(' təsdiqlənib.') : __('Faktura ').$doc->sourceInvoice?->number.__(' təsdiqdədir.') }} {{ __('PDF yükləmək mümkündür.') }}</div>
             </div>
         </div>
     @else
@@ -36,7 +36,7 @@
             <b class="text-brand-ink">{{ __('Redaktə edilə bilən sənəd.') }}</b>
             {{ __('Hesablamadan avtomatik yaradılıb; bütün sahələr və sətirlər dəyişdirilə bilər. PDF hər dəfə son yadda saxlanmış vəziyyətdən yaradılır, dəyişikliklər aşağıdakı tarixçədə qalır.') }}
         </div>
-        <span class="text-xs text-muted">Son dəyişiklik: {{ azdate($doc->updated_at, true) }}{{ $doc->editor ? ' · '.$doc->editor->name : '' }}</span>
+        <span class="text-xs text-muted">{{ __('Son dəyişiklik:') }} {{ azdate($doc->updated_at, true) }}{{ $doc->editor ? ' · '.$doc->editor->name : '' }}</span>
     </div>
     @endif
 
@@ -143,11 +143,11 @@
                         <template x-for="(l, i) in lines" :key="i">
                             <tr class="align-top">
                                 <td class="font-mono pt-4" x-text="i + 1"></td>
-                                <td><textarea :name="`lines[${i}][description]`" x-model="l.description" rows="1" class="input !h-auto min-h-9 py-1.5 text-[13px] resize-y" :aria-label="'Təsvir, sətir ' + (i + 1)"></textarea></td>
-                                @if($pf)<td><input :name="`lines[${i}][hs_code]`" x-model="l.hs_code" class="input !h-9 font-mono" :aria-label="'Gömrük kodu, sətir ' + (i + 1)"></td>@else<input type="hidden" :name="`lines[${i}][hs_code]`" :value="l.hs_code">@endif
-                                <td><input :name="`lines[${i}][quantity]`" x-model="l.quantity" inputmode="decimal" class="input !h-9 font-mono text-right" :aria-label="'Miqdar, sətir ' + (i + 1)"></td>
-                                <td><input :name="`lines[${i}][uom]`" x-model="l.uom" class="input !h-9" :aria-label="'Ölçü vahidi, sətir ' + (i + 1)"></td>
-                                <td><input :name="`lines[${i}][unit_price]`" x-model="l.unit_price" inputmode="decimal" class="input !h-9 font-mono text-right" :aria-label="'Qiymət, sətir ' + (i + 1)"></td>
+                                <td><textarea :name="`lines[${i}][description]`" x-model="l.description" rows="1" class="input !h-auto min-h-9 py-1.5 text-[13px] resize-y" :aria-label="{{ \Illuminate\Support\Js::from(__('Təsvir, sətir ')) }} + (i + 1)"></textarea></td>
+                                @if($pf)<td><input :name="`lines[${i}][hs_code]`" x-model="l.hs_code" class="input !h-9 font-mono" :aria-label="{{ \Illuminate\Support\Js::from(__('Gömrük kodu, sətir ')) }} + (i + 1)"></td>@else<input type="hidden" :name="`lines[${i}][hs_code]`" :value="l.hs_code">@endif
+                                <td><input :name="`lines[${i}][quantity]`" x-model="l.quantity" inputmode="decimal" class="input !h-9 font-mono text-right" :aria-label="{{ \Illuminate\Support\Js::from(__('Miqdar, sətir ')) }} + (i + 1)"></td>
+                                <td><input :name="`lines[${i}][uom]`" x-model="l.uom" class="input !h-9" :aria-label="{{ \Illuminate\Support\Js::from(__('Ölçü vahidi, sətir ')) }} + (i + 1)"></td>
+                                <td><input :name="`lines[${i}][unit_price]`" x-model="l.unit_price" inputmode="decimal" class="input !h-9 font-mono text-right" :aria-label="{{ \Illuminate\Support\Js::from(__('Qiymət, sətir ')) }} + (i + 1)"></td>
                                 <td class="num font-medium text-ink pt-4" x-text="fmt(lineTotal(l))"></td>
                                 <td class="pt-2">
                                     @if($canEdit)
@@ -201,11 +201,11 @@
                     <template x-if="diff() !== null">
                         <div class="text-xs rounded-lg px-3 py-2" :class="diff() === 0 ? 'bg-success-soft text-success' : 'bg-danger-soft text-danger'">
                             {{ __('Proforma cəmi:') }} <span class="font-mono" x-text="fmt(proformaTotal)"></span> ·
-                            <span x-text="diff() === 0 ? 'eynidir' : 'fərq: ' + (diff() > 0 ? '+' : '') + fmt(diff())"></span>
+                            <span x-text="diff() === 0 ? 'eynidir' : {{ \Illuminate\Support\Js::from(__('fərq: ')) }} + (diff() > 0 ? '+' : '') + fmt(diff())"></span>
                         </div>
                     </template>
                     @unless($pf)
-                        <p class="text-[11px] text-muted">Sözlə: {{ \App\Support\RuMoney::words($doc->grandTotal(), $doc->currency) }} <span class="text-faint">{{ __('(yadda saxladıqdan sonra yenilənir)') }}</span></p>
+                        <p class="text-[11px] text-muted">{{ __('Sözlə:') }} {{ \App\Support\RuMoney::words($doc->grandTotal(), $doc->currency) }} <span class="text-faint">{{ __('(yadda saxladıqdan sonra yenilənir)') }}</span></p>
                     @endunless
                 </section>
             </div>
@@ -232,7 +232,7 @@
                 </a>
             @endif
             @if(auth()->user()->can('projects.delete') && ! $doc->isLocked())
-                <x-delete-form :action="route('sales-documents.destroy', $doc)" :label="$doc->title().' sil'" :button="__('btn btn-ghost w-full text-danger hover:!bg-danger-soft')" :message="$doc->title().' '.$doc->number.' silinəcək. Fakturadan yenidən yaratmaq olar.'"/>
+                <x-delete-form :action="route('sales-documents.destroy', $doc)" :label="$doc->title().' sil'" button="btn btn-ghost w-full text-danger hover:!bg-danger-soft" :message="$doc->title().' '.$doc->number.__(' silinəcək. Fakturadan yenidən yaratmaq olar.')"/>
             @endif
         </div>
     </div>

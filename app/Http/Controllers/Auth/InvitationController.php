@@ -23,7 +23,7 @@ class InvitationController extends Controller
     public function store(Request $request, string $token, AuthLogger $log): RedirectResponse
     {
         $user = $this->find($token);
-        $request->validate(['password' => ['required', 'confirmed', Password::defaults()]], [], ['password' => 'Şifrə']);
+        $request->validate(['password' => ['required', 'confirmed', Password::defaults()]], [], ['password' => __('Şifrə')]);
 
         $user->forceFill([
             'password' => $request->input('password'),
@@ -35,7 +35,7 @@ class InvitationController extends Controller
         $request->session()->regenerate();
         $log->login($user);
 
-        return redirect()->route('dashboard')->with('success', 'Xoş gəldiniz, '.$user->name.'!');
+        return redirect()->route('dashboard')->with('success', __('Xoş gəldiniz, ').$user->name.'!');
     }
 
     private function find(string $token): User
@@ -43,6 +43,6 @@ class InvitationController extends Controller
         // Tokens are 64 random chars; invitations expire after 7 days.
         return User::where('invitation_token', hash('sha256', $token))
             ->where('updated_at', '>=', now()->subDays(7))
-            ->firstOr(fn () => abort(404, 'Dəvət linki etibarsızdır və ya müddəti bitib.'));
+            ->firstOr(fn () => abort(404, __('Dəvət linki etibarsızdır və ya müddəti bitib.')));
     }
 }

@@ -13,11 +13,11 @@
                             <div class="flex items-center gap-3" x-show="!edit">
                                 <span class="size-3 rounded-full shrink-0" style="background: {{ $c->color ?: '#94a3b8' }}"></span>
                                 <a href="{{ route('expenses.index', ['category_id' => $c->id, 'from' => '2000-01-01', 'to' => today()->addYears(5)->toDateString()]) }}" class="font-medium flex-1 min-w-0 truncate hover:text-brand-ink">{{ $c->name }}</a>
-                                <span class="text-xs text-muted">{{ $c->expenses_count }} xərc</span>
+                                <span class="text-xs text-muted">{{ $c->expenses_count }} {{ __('xərc') }}</span>
                                 <span class="font-mono text-sm w-32 text-right">{{ money($c->expenses_sum_amount_azn ?? 0) }}</span>
                                 @can('expenses.update')<button type="button" class="btn btn-ghost btn-icon btn-sm" @click="edit = true" aria-label="{{ __('Adını dəyiş') }}"><x-icon name="pencil" class="size-4"/></button>@endcan
                                 @can('expenses.delete')
-                                    <form method="POST" action="{{ route('expenses.categories.destroy', $c) }}" data-confirm="«{{ $c->name }}» silinsin?{{ $c->expenses_count ? ' '.$c->expenses_count.' xərc kateqoriyasız qalacaq.' : '' }}" data-confirm-action="{{ __('Sil') }}">
+                                    <form method="POST" action="{{ route('expenses.categories.destroy', $c) }}" data-confirm="«{{ $c->name }}» silinsin?{{ $c->expenses_count ? ' '.$c->expenses_count.__(' xərc kateqoriyasız qalacaq.') : '' }}" data-confirm-action="{{ __('Sil') }}">
                                         @csrf @method('DELETE')<button class="btn btn-ghost btn-icon btn-sm text-danger" aria-label="{{ __('Sil') }}"><x-icon name="trash" class="size-4"/></button>
                                     </form>
                                 @endcan

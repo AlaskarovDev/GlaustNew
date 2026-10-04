@@ -1,5 +1,5 @@
-<x-layouts.app :title="$account->exists ? $account->name : 'Yeni bank hesabı'">
-    <x-page-header :title="$account->exists ? $account->name : 'Yeni bank hesabı'" :back="route('bank.accounts.index')"/>
+<x-layouts.app :title="$account->exists ? $account->name : __('Yeni bank hesabı')">
+    <x-page-header :title="$account->exists ? $account->name : __('Yeni bank hesabı')" :back="route('bank.accounts.index')"/>
     <form method="POST" action="{{ $account->exists ? route('bank.accounts.update', $account) : route('bank.accounts.store') }}" class="card p-6 max-w-2xl space-y-5">
         @csrf
         @if($account->exists) @method('PUT') @endif

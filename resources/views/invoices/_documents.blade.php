@@ -7,7 +7,7 @@
             <p class="text-xs text-muted">{{ __('3 addım tamamlananda avtomatik yaradılır; sonra hər sahə redaktə edilə və PDF yenidən yüklənə bilər.') }}</p>
         </div>
         @if(session('documents_created'))
-            <span class="badge badge-green">Yeni yaradıldı: {{ implode(', ', session('documents_created')) }}</span>
+            <span class="badge badge-green">{{ __('Yeni yaradıldı:') }} {{ implode(', ', session('documents_created')) }}</span>
         @endif
     </header>
 
@@ -32,7 +32,7 @@
     @if($docs->whereIn('kind', \App\Models\SalesDocument::AUTO_KINDS)->count() < count(\App\Models\SalesDocument::AUTO_KINDS))
         <div class="px-5 py-4 {{ $docs->isNotEmpty() ? 'border-t border-line' : '' }} flex flex-wrap items-center gap-3 text-sm">
             @if($invoice->rubReady())
-                <span class="flex-1 text-muted">{{ $docs->isEmpty() ? 'Sənədlər hələ yaradılmayıb.' : 'Silinmiş sənəd var.' }}</span>
+                <span class="flex-1 text-muted">{{ $docs->isEmpty() ? __('Sənədlər hələ yaradılmayıb.') : __('Silinmiş sənəd var.') }}</span>
                 @if(auth()->user()->can('projects.update') && ! $invoice->isLocked())
                     <form method="POST" action="{{ route('invoices.documents', $invoice) }}">@csrf
                         <button class="btn btn-primary btn-sm"><x-icon name="sparkles" class="size-4"/> {{ __('Hesablamadan yarat') }}</button>

@@ -100,14 +100,18 @@ class SmokeTest extends TestCase
         $urls[] = route('reports.show', ['counterparties', 'counterparty_id' => $m['counterparty']->id]);
         $urls[] = route('reports.show', ['income-expense', 'group' => 'category']);
 
-        foreach ($urls as $url) {
-            $res = $this->get($url);
-            if ($res->getStatusCode() !== 200) {
-                $e = $res->baseResponse instanceof \Illuminate\Http\Response ? $res->exception : null;
-                $this->fail("GET {$url} -> {$res->getStatusCode()}
+        // every screen in each interface language (texts, config labels and month names are translated per request)
+        foreach (array_keys(config('glaust.locales')) as $locale) {
+            $this->admin->forceFill(['locale' => $locale])->save();
+            foreach ($urls as $url) {
+                $res = $this->get($url);
+                if ($res->getStatusCode() !== 200) {
+                    $e = $res->baseResponse instanceof \Illuminate\Http\Response ? $res->exception : null;
+                    $this->fail("[{$locale}] GET {$url} -> {$res->getStatusCode()}
 ".($e ? get_class($e).': '.$e->getMessage().' @ '.$e->getFile().':'.$e->getLine() : ''));
+                }
+                $this->addToAssertionCount(1);
             }
-            $this->addToAssertionCount(1);
         }
     }
 

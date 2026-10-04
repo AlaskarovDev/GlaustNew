@@ -58,7 +58,7 @@ class ProjectController extends Controller
             return $project;
         });
 
-        return redirect()->route('projects.show', $project)->with('success', "Layihə {$project->code} yaradıldı.");
+        return redirect()->route('projects.show', $project)->with('success', __('Layihə :v1 yaradıldı.', ['v1' => $project->code]));
     }
 
     public function show(Request $request, Project $project, CurrencyRates $rates): View
@@ -123,7 +123,7 @@ class ProjectController extends Controller
             $project->members()->sync($members);
         });
 
-        return redirect()->route('projects.show', $project)->with('success', 'Layihə yeniləndi.');
+        return redirect()->route('projects.show', $project)->with('success', __('Layihə yeniləndi.'));
     }
 
     public function destroy(Project $project): RedirectResponse
@@ -131,16 +131,16 @@ class ProjectController extends Controller
         $this->authorize('projects.delete');
         $project->delete();
 
-        return redirect()->route('projects.index')->with('success', "Layihə {$project->code} silindi.");
+        return redirect()->route('projects.index')->with('success', __('Layihə :v1 silindi.', ['v1' => $project->code]));
     }
 
     public function storeMilestone(Request $request, Project $project): RedirectResponse
     {
         $this->authorize('projects.update');
-        $data = $request->validate(['name' => ['required', 'string', 'max:190'], 'due_date' => ['nullable', 'date']], [], ['name' => 'Mərhələnin adı']);
+        $data = $request->validate(['name' => ['required', 'string', 'max:190'], 'due_date' => ['nullable', 'date']], [], ['name' => __('Mərhələnin adı')]);
         $project->milestones()->create($data);
 
-        return back()->with('success', 'Mərhələ əlavə edildi.');
+        return back()->with('success', __('Mərhələ əlavə edildi.'));
     }
 
     public function updateMilestone(Request $request, Project $project, Milestone $milestone): RedirectResponse
@@ -158,7 +158,7 @@ class ProjectController extends Controller
         abort_unless($milestone->project_id === $project->id, 404);
         $milestone->delete();
 
-        return back()->with('success', 'Mərhələ silindi.');
+        return back()->with('success', __('Mərhələ silindi.'));
     }
 
     /** @return array{0: array, 1: int[]} */
@@ -182,10 +182,10 @@ class ProjectController extends Controller
             'description' => ['nullable', 'string', 'max:10000'],
             'members' => ['nullable', 'array'],
             'members.*' => ['integer', TenantExists::plain('users')],
-        ], ['code.unique' => 'Bu kodla layihə artıq var.'], [
-            'code' => 'Layihə kodu', 'manager_id' => 'Menecer', 'members.*' => 'Komanda üzvü',
-            'counterparty_id' => 'Məhsulu alan tərəf', 'supplier_id' => 'Məhsulu satan tərəf',
-            'sale_contract_id' => 'Alan tərəflə müqavilə', 'purchase_contract_id' => 'Satan tərəflə müqavilə',
+        ], ['code.unique' => __('Bu kodla layihə artıq var.')], [
+            'code' => __('Layihə kodu'), 'manager_id' => __('Menecer'), 'members.*' => __('Komanda üzvü'),
+            'counterparty_id' => __('Məhsulu alan tərəf'), 'supplier_id' => __('Məhsulu satan tərəf'),
+            'sale_contract_id' => __('Alan tərəflə müqavilə'), 'purchase_contract_id' => __('Satan tərəflə müqavilə'),
         ]);
 
         $data = \App\Support\ContractSides::check($data);

@@ -1,11 +1,11 @@
-<x-layouts.app :title="'Yük '.$shipment->number">
+<x-layouts.app :title="__('Yük ').$shipment->number">
     @php
         $modeIcons = ['road' => 'truck', 'rail' => 'train', 'sea' => 'ship', 'air' => 'plane'];
         $step = $shipment->stepIndex();
         $flow = \App\Models\Shipment::FLOW;
         $costTotal = $shipment->costs->sum('amount_azn');
     @endphp
-    <x-page-header :title="'Yük '.$shipment->number" :subtitle="$shipment->origin.' → '.$shipment->destination" :back="route('shipments.index')">
+    <x-page-header :title="__('Yük ').$shipment->number" :subtitle="$shipment->origin.' → '.$shipment->destination" :back="route('shipments.index')">
         <x-slot:actions>
             @can('logistics.update')
                 <a href="{{ route('shipments.edit', $shipment) }}" class="btn btn-primary"><x-icon name="pencil" class="size-4"/> {{ __('Redaktə') }}</a>
@@ -19,7 +19,7 @@
             <x-status group="shipment" :value="$shipment->status"/>
             <span class="badge badge-slate"><x-icon :name="$modeIcons[$shipment->transport_mode] ?? 'truck'" class="size-3.5"/> {{ config('glaust.transport_modes.'.$shipment->transport_mode) }}</span>
             <span class="badge badge-slate">{{ config('glaust.shipment_directions.'.$shipment->direction) }}</span>
-            @if($shipment->isDelayed())<span class="badge badge-rose">{{ (int) $shipment->eta->diffInDays(today()) }} gün gecikir</span>@endif
+            @if($shipment->isDelayed())<span class="badge badge-rose">{{ (int) $shipment->eta->diffInDays(today()) }} {{ __('gün gecikir') }}</span>@endif
         </div>
         <ol class="grid grid-cols-6 gap-1 sm:gap-2" aria-label="{{ __('Status zənciri') }}">
             @foreach($flow as $i => $s)
@@ -62,10 +62,10 @@
                         <tbody>
                         @foreach($shipment->costs as $c)
                             <tr>
-                                <td data-label="Tarix" class="font-mono text-xs">{{ azdate($c->cost_date) }}</td>
-                                <td data-label="Növ">{{ config('glaust.cost_types.'.$c->cost_type) }}@if($c->note)<div class="text-xs text-muted">{{ $c->note }}</div>@endif</td>
-                                <td data-label="Kontragent" class="text-xs">{{ $c->counterparty?->name ?? '—' }}</td>
-                                <td data-label="Məbləğ" class="num">{{ money($c->amount, $c->currency) }}</td>
+                                <td data-label="{{ __('Tarix') }}" class="font-mono text-xs">{{ azdate($c->cost_date) }}</td>
+                                <td data-label="{{ __('Növ') }}">{{ config('glaust.cost_types.'.$c->cost_type) }}@if($c->note)<div class="text-xs text-muted">{{ $c->note }}</div>@endif</td>
+                                <td data-label="{{ __('Kontragent') }}" class="text-xs">{{ $c->counterparty?->name ?? '—' }}</td>
+                                <td data-label="{{ __('Məbləğ') }}" class="num">{{ money($c->amount, $c->currency) }}</td>
                                 <td data-label="AZN" class="num">{{ money($c->amount_azn) }}@if($c->currency !== 'AZN')<div class="text-[11px] text-faint">{{ rate_fmt($c->cbar_rate) }}</div>@endif</td>
                                 <td data-label="" class="text-right">@can('logistics.update')<x-delete-form :action="route('shipments.costs.destroy', [$shipment, $c])" label="" :message="__('Xərc silinsin?')"/>@endcan</td>
                             </tr>
@@ -106,18 +106,18 @@
         <aside class="space-y-6 lg:sticky lg:top-24">
             <section class="card p-5 text-sm space-y-3">
                 @foreach([
-                    ['Daşıyıcı', $shipment->carrier ? '<a class="text-brand-ink hover:underline" href="'.route('counterparties.show', $shipment->carrier).'">'.e($shipment->carrier->name).'</a>' : '—'],
-                    ['Nəqliyyat vasitəsi', e($shipment->vehicle ?? '—')],
-                    ['Konteyner', '<span class="font-mono">'.e($shipment->container_no ?? '—').'</span>'],
-                    ['CMR / konosament', '<span class="font-mono">'.e($shipment->document_no ?? '—').'</span>'],
-                    ['Yük', e($shipment->cargo_description ?? '—')],
-                    ['Çəki / həcm', ($shipment->weight_kg ? num($shipment->weight_kg).' kq' : '—').' / '.($shipment->volume_m3 ? num($shipment->volume_m3, 3).' m³' : '—')],
-                    ['Yüklənmə', '<span class="font-mono">'.azdate($shipment->loading_date).'</span>'],
-                    ['Gözlənilən çatma', '<span class="font-mono '.($shipment->isDelayed() ? 'text-danger' : '').'">'.azdate($shipment->eta).'</span>'],
-                    ['Təhvil', '<span class="font-mono">'.azdate($shipment->delivered_at, true).'</span>'],
-                    ['Layihə', $shipment->project ? '<a class="text-brand-ink hover:underline" href="'.route('projects.show', $shipment->project).'">'.e($shipment->project->code).'</a>' : '—'],
-                    ['Müqavilə', $shipment->contract ? '<a class="text-brand-ink hover:underline font-mono" href="'.route('contracts.show', $shipment->contract).'">'.e($shipment->contract->number).'</a>' : '—'],
-                    ['Məsul', e($shipment->responsible?->name ?? '—')],
+                    [__('Daşıyıcı'), $shipment->carrier ? '<a class="text-brand-ink hover:underline" href="'.route('counterparties.show', $shipment->carrier).'">'.e($shipment->carrier->name).'</a>' : '—'],
+                    [__('Nəqliyyat vasitəsi'), e($shipment->vehicle ?? '—')],
+                    [__('Konteyner'), '<span class="font-mono">'.e($shipment->container_no ?? '—').'</span>'],
+                    [__('CMR / konosament'), '<span class="font-mono">'.e($shipment->document_no ?? '—').'</span>'],
+                    [__('Yük'), e($shipment->cargo_description ?? '—')],
+                    [__('Çəki / həcm'), ($shipment->weight_kg ? num($shipment->weight_kg).' kq' : '—').' / '.($shipment->volume_m3 ? num($shipment->volume_m3, 3).' m³' : '—')],
+                    [__('Yüklənmə'), '<span class="font-mono">'.azdate($shipment->loading_date).'</span>'],
+                    [__('Gözlənilən çatma'), '<span class="font-mono '.($shipment->isDelayed() ? 'text-danger' : '').'">'.azdate($shipment->eta).'</span>'],
+                    [__('Təhvil'), '<span class="font-mono">'.azdate($shipment->delivered_at, true).'</span>'],
+                    [__('Layihə'), $shipment->project ? '<a class="text-brand-ink hover:underline" href="'.route('projects.show', $shipment->project).'">'.e($shipment->project->code).'</a>' : '—'],
+                    [__('Müqavilə'), $shipment->contract ? '<a class="text-brand-ink hover:underline font-mono" href="'.route('contracts.show', $shipment->contract).'">'.e($shipment->contract->number).'</a>' : '—'],
+                    [__('Məsul'), e($shipment->responsible?->name ?? '—')],
                 ] as [$k, $v])
                     <div class="flex justify-between gap-4"><span class="text-muted shrink-0">{{ $k }}</span><span class="text-right min-w-0 break-words">{!! $v !!}</span></div>
                 @endforeach
@@ -125,7 +125,7 @@
             @if($shipment->notes)<section class="card p-5"><h2 class="text-sm font-semibold mb-2">{{ __('Qeydlər') }}</h2><p class="text-sm whitespace-pre-line">{{ $shipment->notes }}</p></section>@endif
             @include('partials.attachments', ['model' => $shipment, 'type' => 'shipment', 'ability' => 'logistics.update'])
             @can('logistics.delete')
-                <x-delete-form :action="route('shipments.destroy', $shipment)" :label="__('Yükü sil')" :button="__('btn btn-ghost w-full text-danger hover:!bg-danger-soft')" :message="'Yük '.$shipment->number.' silinəcək.'"/>
+                <x-delete-form :action="route('shipments.destroy', $shipment)" :label="__('Yükü sil')" button="btn btn-ghost w-full text-danger hover:!bg-danger-soft" :message="__('Yük ').$shipment->number.__(' silinəcək.')"/>
             @endcan
         </aside>
     </div>

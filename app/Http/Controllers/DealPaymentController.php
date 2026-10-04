@@ -32,7 +32,7 @@ class DealPaymentController extends Controller
         $out = false;
         $partyId = $out ? $deal->supplier_id : $deal->counterparty_id;
         if (! $partyId) {
-            return back()->with('error', $out ? 'Əvvəlcə Trade-də satıcını seçin.' : 'Əvvəlcə Trade-də alıcını (məhsulu satdığımız tərəfi) seçin.');
+            return back()->with('error', $out ? __('Əvvəlcə Trade-də satıcını seçin.') : __('Əvvəlcə Trade-də alıcını (məhsulu satdığımız tərəfi) seçin.'));
         }
         $request->merge(['amount' => parse_number($request->input('amount')), 'applied_rate' => parse_number($request->input('applied_rate'))]);
         $data = $request->validate([
@@ -43,11 +43,11 @@ class DealPaymentController extends Controller
             'applied_rate' => ['nullable', 'numeric', 'gt:0', 'max:100000'],
             'reference' => ['nullable', 'string', 'max:80'],
             'purpose' => ['nullable', 'string', 'max:255'],
-        ], [], ['transaction_date' => 'Tarix', 'currency' => 'Valyuta', 'amount' => 'Məbləğ', 'bank_account_id' => 'Bank hesabı', 'applied_rate' => 'Bankın kursu']);
+        ], [], ['transaction_date' => __('Tarix'), 'currency' => __('Valyuta'), 'amount' => __('Məbləğ'), 'bank_account_id' => __('Bank hesabı'), 'applied_rate' => __('Bankın kursu')]);
 
         $account = BankAccount::findOrFail($data['bank_account_id']);
         if ($account->currency !== $data['currency']) {
-            throw ValidationException::withMessages(['bank_account_id' => "Seçilən hesab {$account->currency} hesabıdır, ödəniş isə {$data['currency']} ilədir. Eyni valyutalı hesab seçin."]);
+            throw ValidationException::withMessages(['bank_account_id' => __('Seçilən hesab :v1 hesabıdır, ödəniş isə :v2 ilədir. Eyni valyutalı hesab seçin.', ['v1' => $account->currency, 'v2' => $data['currency']])]);
         }
 
         try {
@@ -59,14 +59,14 @@ class DealPaymentController extends Controller
                 'contract_id' => $out ? $deal->purchase_contract_id : $deal->sale_contract_id,
                 'project_id' => $deal->project_id,
                 'deal_id' => $deal->id,
-                'purpose' => ($data['purpose'] ?? null) ?: 'Trade '.$deal->code.($out ? ' üzrə satıcıya ödəniş' : ' üzrə alıcının ödənişi'),
+                'purpose' => ($data['purpose'] ?? null) ?: 'Trade '.$deal->code.($out ? __(' üzrə satıcıya ödəniş') : __(' üzrə alıcının ödənişi')),
                 'reference' => $data['reference'] ?? null,
             ], $data['applied_rate'] ?? null);
         } catch (RateUnavailable $e) {
-            throw ValidationException::withMessages(['transaction_date' => $e->getMessage().' Mədaxil yadda saxlanmadı.']);
+            throw ValidationException::withMessages(['transaction_date' => $e->getMessage().__(' Mədaxil yadda saxlanmadı.')]);
         }
 
-        return redirect()->route('deals.show', [$deal, 'tab' => 'income'])->with('success', ($out ? 'Satıcıya ödəniş' : 'Mədaxil').' qeydə alındı: '.money($data['amount'], $data['currency']).'.');
+        return redirect()->route('deals.show', [$deal, 'tab' => 'income'])->with('success', ($out ? __('Satıcıya ödəniş') : __('Mədaxil')).__(' qeydə alındı: ').money($data['amount'], $data['currency']).'.');
     }
 
     /** We pay the seller: invoice currency, bank's rate when the account differs, bank fee as an expense. */
@@ -86,11 +86,11 @@ class DealPaymentController extends Controller
             'fee_amount' => ['nullable', 'numeric', 'min:0', 'max:999999999'],
             'reference' => ['nullable', 'string', 'max:80'],
             'purpose' => ['nullable', 'string', 'max:255'],
-        ], [], ['payment_date' => 'Tarix', 'currency' => 'Valyuta', 'amount' => 'Məbləğ', 'bank_account_id' => 'Bank hesabı', 'bank_rate' => 'Bankın kursu', 'fee_amount' => 'Bank komissiyası']);
+        ], [], ['payment_date' => __('Tarix'), 'currency' => __('Valyuta'), 'amount' => __('Məbləğ'), 'bank_account_id' => __('Bank hesabı'), 'bank_rate' => __('Bankın kursu'), 'fee_amount' => __('Bank komissiyası')]);
 
         $p = app(\App\Services\SupplierPaymentService::class)->pay($deal, $data);
 
-        return redirect()->route('deals.show', [$deal, 'tab' => 'income'])->with('success', 'Satıcıya ödəniş: '.money($p->amount, $p->currency)
+        return redirect()->route('deals.show', [$deal, 'tab' => 'income'])->with('success', __('Satıcıya ödəniş: ').money($p->amount, $p->currency)
             .' · hesabdan silindi: '.money($p->totalDebit(), $p->account_currency).((float) $p->fee_account_amount ? ' (komissiya '.money($p->fee_account_amount, $p->account_currency).' daxil)' : '').'.');
     }
 
@@ -100,7 +100,7 @@ class DealPaymentController extends Controller
         abort_unless($supplierPayment->deal_id === $deal->id, 404);
         app(\App\Services\SupplierPaymentService::class)->delete($supplierPayment);
 
-        return redirect()->route('deals.show', [$deal, 'tab' => 'income'])->with('success', 'Satıcıya ödəniş ləğv edildi; hesabdan silinmə və komissiya da silindi.');
+        return redirect()->route('deals.show', [$deal, 'tab' => 'income'])->with('success', __('Satıcıya ödəniş ləğv edildi; hesabdan silinmə və komissiya da silindi.'));
     }
 
     public function destroy(Deal $deal, BankTransaction $payment): RedirectResponse
@@ -109,6 +109,6 @@ class DealPaymentController extends Controller
         abort_unless($payment->deal_id === $deal->id, 404);
         $payment->delete();
 
-        return redirect()->route('deals.show', [$deal, 'tab' => 'income'])->with('success', 'Mədaxil silindi.');
+        return redirect()->route('deals.show', [$deal, 'tab' => 'income'])->with('success', __('Mədaxil silindi.'));
     }
 }

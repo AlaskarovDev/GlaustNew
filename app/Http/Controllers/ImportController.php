@@ -49,10 +49,10 @@ class ImportController extends Controller
             'type' => ['required', 'string'],
             'file' => ['required', 'file', 'max:10240', new SpreadsheetFile(['xlsx', 'xls', 'csv', 'txt'])],
             'account_id' => ['nullable', 'integer', TenantExists::in('bank_accounts')],
-        ], [], ['file' => 'Fayl', 'account_id' => 'Bank hesabı']);
+        ], [], ['file' => __('Fayl'), 'account_id' => __('Bank hesabı')]);
         $class = $this->typeClass($data['type']);
         if ($class === BankTransactionImporter::class && empty($data['account_id'])) {
-            return back()->withInput()->withErrors(['account_id' => 'Çıxarışın aid olduğu bank hesabını seçin.']);
+            return back()->withInput()->withErrors(['account_id' => __('Çıxarışın aid olduğu bank hesabını seçin.')]);
         }
 
         $file = $request->file('file');
@@ -63,12 +63,12 @@ class ImportController extends Controller
         } catch (\Throwable $e) {
             Storage::disk('local')->delete($path);
 
-            return back()->withErrors(['file' => 'Fayl oxunmadı. Excel (.xlsx) və ya CSV faylı yükləyin.']);
+            return back()->withErrors(['file' => __('Fayl oxunmadı. Excel (.xlsx) və ya CSV faylı yükləyin.')]);
         }
         if (! $sheet['headers'] || ! $sheet['rows']) {
             Storage::disk('local')->delete($path);
 
-            return back()->withErrors(['file' => 'Faylda başlıq sətri və ya məlumat yoxdur.']);
+            return back()->withErrors(['file' => __('Faylda başlıq sətri və ya məlumat yoxdur.')]);
         }
 
         $importer = $class === BankTransactionImporter::class ? new BankTransactionImporter : new $class;
@@ -120,7 +120,7 @@ class ImportController extends Controller
             $import->update(['status' => 'queued']);
             ProcessImport::dispatch($import->id, tenant()->id);
 
-            return redirect()->route('imports.show', $import)->with('info', "Fayl böyükdür ({$import->total_rows} sətir) — import arxa planda aparılır. Səhifəni bir az sonra yeniləyin.");
+            return redirect()->route('imports.show', $import)->with('info', __('Fayl böyükdür (:v1 sətir) — import arxa planda aparılır. Səhifəni bir az sonra yeniləyin.', ['v1' => $import->total_rows]));
         }
 
         @set_time_limit(300);
@@ -128,7 +128,7 @@ class ImportController extends Controller
         $import->refresh();
 
         return redirect()->route('imports.show', $import)->with($import->failed_rows ? 'warning' : 'success',
-            "{$import->imported_rows} sətir import edildi".($import->failed_rows ? ", {$import->failed_rows} sətir xəta ilə qaytarıldı." : '.'));
+            __(':v1 sətir import edildi', ['v1' => $import->imported_rows]).($import->failed_rows ? __(', :v1 sətir xəta ilə qaytarıldı.', ['v1' => $import->failed_rows]) : '.'));
     }
 
     public function errors(Import $import): StreamedResponse

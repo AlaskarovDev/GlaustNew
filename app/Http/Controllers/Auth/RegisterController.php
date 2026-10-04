@@ -33,10 +33,10 @@ class RegisterController extends Controller
             'password' => ['required', 'confirmed', Password::defaults()],
             'terms' => ['accepted'],
         ], [
-            'email.unique' => 'Bu email ilə artıq hesab var.',
-            'terms.accepted' => 'Şərtləri qəbul etməlisiniz.',
+            'email.unique' => __('Bu email ilə artıq hesab var.'),
+            'terms.accepted' => __('Şərtləri qəbul etməlisiniz.'),
         ], [
-            'company_name' => 'Şirkətin adı', 'voen' => 'VÖEN', 'name' => 'Ad, soyad', 'password' => 'Şifrə', 'phone' => 'Telefon',
+            'company_name' => __('Şirkətin adı'), 'voen' => __('VÖEN'), 'name' => __('Ad, soyad'), 'password' => __('Şifrə'), 'phone' => __('Telefon'),
         ]);
 
         $user = $provisioner->create(
@@ -48,6 +48,6 @@ class RegisterController extends Controller
         $request->session()->regenerate();
         $log->login($user);
 
-        return redirect()->route('dashboard')->with('success', 'Xoş gəldiniz! Şirkətiniz yaradıldı, 14 günlük sınaq müddəti başladı.');
+        return redirect()->route('dashboard')->with('success', __('Xoş gəldiniz! Şirkətiniz yaradıldı, 14 günlük sınaq müddəti başladı.'));
     }
 }

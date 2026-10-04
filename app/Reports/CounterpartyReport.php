@@ -23,12 +23,12 @@ class CounterpartyReport extends Report
 
     public static function title(): string
     {
-        return 'Kontragent dövriyyəsi və akt-üzləşmə';
+        return __('Kontragent dövriyyəsi və akt-üzləşmə');
     }
 
     public static function description(): string
     {
-        return 'Kontragentlər üzrə daxilolma/məxaric; bir kontragent seçəndə müqavilə öhdəlikləri və ödənişlərlə üzləşmə aktı.';
+        return __('Kontragentlər üzrə daxilolma/məxaric; bir kontragent seçəndə müqavilə öhdəlikləri və ödənişlərlə üzləşmə aktı.');
     }
 
     public static function icon(): string
@@ -43,7 +43,7 @@ class CounterpartyReport extends Report
 
     public function filters(): array
     {
-        return ['counterparty_id' => ['label' => 'Kontragent', 'type' => 'select', 'options' => Counterparty::orderBy('name')->pluck('name', 'id')->all()]] + parent::filters();
+        return ['counterparty_id' => ['label' => __('Kontragent'), 'type' => 'select', 'options' => Counterparty::orderBy('name')->pluck('name', 'id')->all()]] + parent::filters();
     }
 
     private function selected(): ?Counterparty
@@ -62,12 +62,12 @@ class CounterpartyReport extends Report
             $events = collect();
             foreach (Contract::where('counterparty_id', $cp->id)->whereNotIn('status', ['draft', 'cancelled'])->whereBetween('contract_date', [$from, $to])->get() as $c) {
                 // Sale: they owe us (debit). Purchase: we owe them (credit).
-                $events->push(['date' => $c->contract_date, 'doc' => 'Müqavilə '.$c->number, 'text' => $c->subject,
+                $events->push(['date' => $c->contract_date, 'doc' => __('Müqavilə ').$c->number, 'text' => $c->subject,
                     'debit' => $c->kind === 'sale' ? (float) $c->amount_azn : null, 'credit' => $c->kind === 'purchase' ? (float) $c->amount_azn : null]);
             }
             foreach (BankTransaction::where('counterparty_id', $cp->id)->where('kind', 'regular')->whereBetween('transaction_date', [$from, $to])->get() as $t) {
                 // Money in from them reduces what they owe (credit); money out to them reduces what we owe (debit).
-                $events->push(['date' => $t->transaction_date, 'doc' => ($t->direction === 'in' ? 'Daxilolma' : 'Ödəniş').($t->reference ? ' № '.$t->reference : ''), 'text' => $t->purpose,
+                $events->push(['date' => $t->transaction_date, 'doc' => ($t->direction === 'in' ? __('Daxilolma') : __('Ödəniş')).($t->reference ? ' № '.$t->reference : ''), 'text' => $t->purpose,
                     'debit' => $t->direction === 'out' ? (float) $t->amount_azn : null, 'credit' => $t->direction === 'in' ? (float) $t->amount_azn : null]);
             }
             $saldo = 0.0;
@@ -97,23 +97,23 @@ class CounterpartyReport extends Report
     {
         if ($this->selected()) {
             return [
-                Column::make('Tarix', 'date', 'date'),
-                Column::make('Sənəd', 'doc'),
-                Column::make('Məzmun', 'text', width: 36),
-                Column::make('Debet (AZN)', 'debit', 'money', total: true),
-                Column::make('Kredit (AZN)', 'credit', 'money', total: true),
+                Column::make(__('Tarix'), 'date', 'date'),
+                Column::make(__('Sənəd'), 'doc'),
+                Column::make(__('Məzmun'), 'text', width: 36),
+                Column::make(__('Debet (AZN)'), 'debit', 'money', total: true),
+                Column::make(__('Kredit (AZN)'), 'credit', 'money', total: true),
                 Column::make('Saldo (AZN)', 'saldo', 'money'),
             ];
         }
 
         return [
-            Column::make('Kontragent', 'name', width: 34),
-            Column::make('VÖEN', 'voen'),
-            Column::make('Növ', 'type'),
-            Column::make('Daxilolma (AZN)', 'in', 'money', total: true),
-            Column::make('Məxaric (AZN)', 'out', 'money', total: true),
-            Column::make('Dövriyyə (AZN)', 'total', 'money', total: true),
-            Column::make('Əməliyyat sayı', 'count', 'number'),
+            Column::make(__('Kontragent'), 'name', width: 34),
+            Column::make(__('VÖEN'), 'voen'),
+            Column::make(__('Növ'), 'type'),
+            Column::make(__('Daxilolma (AZN)'), 'in', 'money', total: true),
+            Column::make(__('Məxaric (AZN)'), 'out', 'money', total: true),
+            Column::make(__('Dövriyyə (AZN)'), 'total', 'money', total: true),
+            Column::make(__('Əməliyyat sayı'), 'count', 'number'),
         ];
     }
 
@@ -129,16 +129,16 @@ class CounterpartyReport extends Report
             $saldo = (float) ($d->last()['saldo'] ?? 0);
 
             return [
-                ['label' => 'Debet', 'value' => $d->sum('debit'), 'money' => true],
-                ['label' => 'Kredit', 'value' => $d->sum('credit'), 'money' => true],
-                ['label' => $saldo >= 0 ? 'Kontragentin borcu' : 'Bizim borcumuz', 'value' => abs($saldo), 'money' => true, 'tone' => $saldo >= 0 ? 'success' : 'danger'],
+                ['label' => __('Debet'), 'value' => $d->sum('debit'), 'money' => true],
+                ['label' => __('Kredit'), 'value' => $d->sum('credit'), 'money' => true],
+                ['label' => $saldo >= 0 ? __('Kontragentin borcu') : __('Bizim borcumuz'), 'value' => abs($saldo), 'money' => true, 'tone' => $saldo >= 0 ? 'success' : 'danger'],
             ];
         }
 
         return [
-            ['label' => 'Kontragent sayı', 'value' => $d->count()],
-            ['label' => 'Daxilolma', 'value' => $d->sum('in'), 'money' => true, 'tone' => 'success'],
-            ['label' => 'Məxaric', 'value' => $d->sum('out'), 'money' => true, 'tone' => 'danger'],
+            ['label' => __('Kontragent sayı'), 'value' => $d->count()],
+            ['label' => __('Daxilolma'), 'value' => $d->sum('in'), 'money' => true, 'tone' => 'success'],
+            ['label' => __('Məxaric'), 'value' => $d->sum('out'), 'money' => true, 'tone' => 'danger'],
         ];
     }
 
@@ -151,14 +151,14 @@ class CounterpartyReport extends Report
 
         return ['type' => 'bar', 'horizontal' => true, 'height' => 340, 'money' => true, 'stacked' => true, 'colors' => ['#0f9d8a', '#e9a23b'],
             'categories' => $top->pluck('name')->all(),
-            'series' => [['name' => 'Daxilolma', 'data' => $top->pluck('in')->all()], ['name' => 'Məxaric', 'data' => $top->pluck('out')->all()]],
+            'series' => [['name' => __('Daxilolma'), 'data' => $top->pluck('in')->all()], ['name' => __('Məxaric'), 'data' => $top->pluck('out')->all()]],
             'yaxis' => ['labels' => ['maxWidth' => 200]]];
     }
 
     public function note(): ?string
     {
         return $this->selected()
-            ? 'Üzləşmə aktı: '.$this->selected()->name.'. Debet — kontragentin bizə borcunu artırır (satış müqaviləsi, ona ödənişimiz); kredit — azaldır (ondan daxilolma, alış müqaviləsi). Məbləğlər CBAR məzənnəsi ilə AZN-dədir.'
-            : 'Akt-üzləşmə üçün filtrdən kontragent seçin.';
+            ? __('Üzləşmə aktı: ').$this->selected()->name.__('. Debet — kontragentin bizə borcunu artırır (satış müqaviləsi, ona ödənişimiz); kredit — azaldır (ondan daxilolma, alış müqaviləsi). Məbləğlər CBAR məzənnəsi ilə AZN-dədir.')
+            : __('Akt-üzləşmə üçün filtrdən kontragent seçin.');
     }
 }

@@ -37,7 +37,7 @@
             <div class="ml-auto flex flex-wrap gap-1.5 text-xs">
                 @foreach(['Bu ay' => [now()->startOfMonth(), now()], 'Keçən ay' => [now()->subMonthNoOverflow()->startOfMonth(), now()->subMonthNoOverflow()->endOfMonth()], 'Bu rüb' => [now()->firstOfQuarter(), now()], 'Bu il' => [now()->startOfYear(), now()]] as $l => [$f, $t])
                     @if(isset($filters['from']))
-                        <a href="{{ request()->fullUrlWithQuery(['from' => $f->format('Y-m-d'), 'to' => $t->format('Y-m-d')]) }}" class="btn btn-ghost btn-sm !h-7 text-muted">{{ $l }}</a>
+                        <a href="{{ request()->fullUrlWithQuery(['from' => $f->format('Y-m-d'), 'to' => $t->format('Y-m-d')]) }}" class="btn btn-ghost btn-sm !h-7 text-muted">{{ __($l) }}</a>
                     @endif
                 @endforeach
             </div>
@@ -92,14 +92,14 @@
                         <tfoot class="hidden md:table-footer-group">
                         <tr class="bg-surface-2 font-semibold">
                             @foreach($columns as $i => $c)
-                                <td class="px-4 py-3 border-t-2 border-line-strong {{ isset($totals[$i]) ? 'text-right font-mono' : '' }}">{{ $i === 0 ? 'Cəmi' : (isset($totals[$i]) ? $c->display($totals[$i]) : '') }}</td>
+                                <td class="px-4 py-3 border-t-2 border-line-strong {{ isset($totals[$i]) ? 'text-right font-mono' : '' }}">{{ $i === 0 ? __('Cəmi') : (isset($totals[$i]) ? $c->display($totals[$i]) : '') }}</td>
                             @endforeach
                         </tr>
                         </tfoot>
                     @endif
                 </table>
             </div>
-            <div class="px-4 py-3 border-t border-line text-xs text-muted">{{ $rows->count() }} sətir · {{ implode(' · ', $report->filterSummary()) }}</div>
+            <div class="px-4 py-3 border-t border-line text-xs text-muted">{{ $rows->count() }} {{ __('sətir ·') }} {{ implode(' · ', $report->filterSummary()) }}</div>
         @endif
     </section>
 </x-layouts.app>

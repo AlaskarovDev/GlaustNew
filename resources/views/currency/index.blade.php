@@ -1,6 +1,6 @@
 <x-layouts.app :title="__('Valyuta məzənnələri')">
     <x-page-header :title="__('Valyuta məzənnələri')" icon="coins"
-                   subtitle="Azərbaycan Respublikasının Mərkəzi Bankı (CBAR) · rəsmi məzənnələr · {{ $date->format('d.m.Y') }}">
+                   subtitle="{{ __('Azərbaycan Respublikasının Mərkəzi Bankı (CBAR) · rəsmi məzənnələr · :v1', ['v1' => $date->format('d.m.Y')]) }}">
         <x-slot:actions>
             <form method="GET" class="flex items-center gap-2">
                 <input type="date" name="date" value="{{ $date->format('Y-m-d') }}" max="{{ $today->format('Y-m-d') }}" class="input !w-[160px] font-mono" aria-label="{{ __('Tarix') }}">
@@ -13,8 +13,8 @@
     @if($bulletin && ! $bulletin->isSameDay($date))
         <div class="card bg-surface-2 p-4 mb-5 flex gap-3 text-sm">
             <x-icon name="info" class="size-5 text-brand shrink-0"/>
-            <div>{{ $date->format('d.m.Y') }} tarixində qüvvədə olan məzənnələr Mərkəzi Bankın <b>{{ $bulletin->format('d.m.Y') }}</b> tarixli bülletenindəndir
-                ({{ $date->isToday() ? 'bugünkü bülleten hələ dərc olunmayıb' : 'həmin gün yeni bülleten dərc olunmayıb' }}).</div>
+            <div>{{ $date->format('d.m.Y') }} {{ __('tarixində qüvvədə olan məzənnələr Mərkəzi Bankın') }} <b>{{ $bulletin->format('d.m.Y') }}</b> {{ __('tarixli bülletenindəndir
+                (') }}{{ $date->isToday() ? __('bugünkü bülleten hələ dərc olunmayıb') : __('həmin gün yeni bülleten dərc olunmayıb') }}).</div>
         </div>
     @endif
 
@@ -22,7 +22,7 @@
         <span class="text-muted">{{ __('Sürətli keçid:') }}</span>
         @foreach(['Bugün' => $today, 'Dünən' => $today->subDay(), '1 həftə əvvəl' => $today->subWeek(), '1 ay əvvəl' => $today->subMonth()] as $label => $d)
             <a href="{{ route('currency.index', ['date' => $d->format('Y-m-d'), 'code' => $code]) }}"
-               @class(['btn btn-sm', 'btn-secondary' => ! $d->isSameDay($date), 'bg-brand-soft text-brand-ink' => $d->isSameDay($date)])>{{ $label }}</a>
+               @class(['btn btn-sm', 'btn-secondary' => ! $d->isSameDay($date), 'bg-brand-soft text-brand-ink' => $d->isSameDay($date)])>{{ __($label) }}</a>
         @endforeach
     </div>
 
@@ -42,7 +42,7 @@
                     <p class="text-xs text-muted">{{ __('1 vahid üçün manat · saxlanılan tarixçə') }}</p>
                 </div>
                 <div class="flex gap-1 p-1 rounded-lg bg-surface-2 border border-line">
-                    @foreach([30 => '30 gün', 90 => '90 gün', 365 => '1 il'] as $d => $l)
+                    @foreach([30 => __('30 gün'), 90 => __('90 gün'), 365 => __('1 il')] as $d => $l)
                         <a href="{{ route('currency.index', ['date' => $date->format('Y-m-d'), 'code' => $code, 'days' => $d]) }}"
                            @class(['px-2.5 h-7 grid place-items-center rounded-md text-xs font-medium', 'bg-surface shadow-sm text-ink' => $days === $d, 'text-muted hover:text-ink' => $days !== $d])>{{ $l }}</a>
                     @endforeach
@@ -90,12 +90,12 @@
                         $chg = $prev ? ($r['rate'] - $prev) / $prev * 100 : null;
                     @endphp
                     <tr @class(['bg-brand-soft/40' => $c === $code])>
-                        <td data-label="Kod"><a href="{{ route('currency.index', ['date' => $date->format('Y-m-d'), 'code' => $c, 'days' => $days]) }}" class="font-semibold text-ink hover:text-brand-ink">{{ $c }}</a></td>
-                        <td data-label="Valyuta" class="max-w-[220px] truncate">{{ $r['name'] }}</td>
+                        <td data-label="{{ __('Kod') }}"><a href="{{ route('currency.index', ['date' => $date->format('Y-m-d'), 'code' => $c, 'days' => $days]) }}" class="font-semibold text-ink hover:text-brand-ink">{{ $c }}</a></td>
+                        <td data-label="{{ __('Valyuta') }}" class="max-w-[220px] truncate">{{ $r['name'] }}</td>
                         <td data-label="Nominal" class="num">{{ num($r['nominal'], 0) }}</td>
-                        <td data-label="Məzənnə" class="num">{{ rate_fmt($r['value']) }}</td>
+                        <td data-label="{{ __('Məzənnə') }}" class="num">{{ rate_fmt($r['value']) }}</td>
                         <td data-label="1 vahid" class="num text-ink font-medium">{{ rate_fmt($r['rate']) }}</td>
-                        <td data-label="Dəyişmə" class="num">
+                        <td data-label="{{ __('Dəyişmə') }}" class="num">
                             @if($chg === null)
                                 <span class="text-faint">—</span>
                             @elseif(abs($chg) < 0.005)

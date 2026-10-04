@@ -12,7 +12,7 @@
                 <a href="{{ route('counterparties.edit', $counterparty) }}" class="btn btn-secondary"><x-icon name="pencil" class="size-4"/> {{ __('Redaktə') }}</a>
             @endcan
             @can('crm.delete')
-                <x-delete-form :action="route('counterparties.destroy', $counterparty)" :button="__('btn btn-secondary text-danger')" :message="'«'.$counterparty->name.'» silinəcək. Açıq müqaviləsi varsa silinməyəcək.'"/>
+                <x-delete-form :action="route('counterparties.destroy', $counterparty)" button="btn btn-secondary text-danger" :message="'«'.$counterparty->name.__('» silinəcək. Açıq müqaviləsi varsa silinməyəcək.')"/>
             @endcan
         </x-slot:actions>
     </x-page-header>
@@ -20,14 +20,14 @@
     <div class="flex flex-wrap items-center gap-2 -mt-4 mb-6">
         <span @class(['badge', 'badge-teal' => $counterparty->type === 'customer', 'badge-amber' => $counterparty->type === 'supplier', 'badge-violet' => $counterparty->type === 'both'])>{{ $counterparty->typeLabel() }}</span>
         <span class="badge badge-slate">{{ config('glaust.entity_types.'.$counterparty->entity_type) }}</span>
-        @if($counterparty->voen)<span class="badge badge-slate font-mono">VÖEN {{ $counterparty->voen }}</span>@endif
+        @if($counterparty->voen)<span class="badge badge-slate font-mono">{{ __('VÖEN') }} {{ $counterparty->voen }}</span>@endif
         @foreach($counterparty->tagList() as $tag)<span class="badge badge-blue">#{{ $tag }}</span>@endforeach
     </div>
 
     <div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6 stagger">
         <div class="card p-5" style="--i:0"><div class="text-xs text-muted">{{ __('Aktiv müqavilələr') }}</div><div class="mt-1 text-2xl font-semibold font-mono">{{ $activeContracts->count() }}</div><div class="text-xs text-muted mt-1">≈ {{ money($activeContracts->sum('amount_azn')) }}</div></div>
-        <div class="card p-5" style="--i:1"><div class="text-xs text-muted">{{ __('Daxilolma (bütün dövr)') }}</div><div class="mt-1 text-2xl font-semibold font-mono text-success">{{ money($in) }}</div><div class="text-xs text-muted mt-1">{{ $turnover['in']->n ?? 0 }} əməliyyat</div></div>
-        <div class="card p-5" style="--i:2"><div class="text-xs text-muted">{{ __('Məxaric (bütün dövr)') }}</div><div class="mt-1 text-2xl font-semibold font-mono text-danger">{{ money($out) }}</div><div class="text-xs text-muted mt-1">{{ $turnover['out']->n ?? 0 }} əməliyyat</div></div>
+        <div class="card p-5" style="--i:1"><div class="text-xs text-muted">{{ __('Daxilolma (bütün dövr)') }}</div><div class="mt-1 text-2xl font-semibold font-mono text-success">{{ money($in) }}</div><div class="text-xs text-muted mt-1">{{ $turnover['in']->n ?? 0 }} {{ __('əməliyyat') }}</div></div>
+        <div class="card p-5" style="--i:2"><div class="text-xs text-muted">{{ __('Məxaric (bütün dövr)') }}</div><div class="mt-1 text-2xl font-semibold font-mono text-danger">{{ money($out) }}</div><div class="text-xs text-muted mt-1">{{ $turnover['out']->n ?? 0 }} {{ __('əməliyyat') }}</div></div>
         <div class="card p-5" style="--i:3"><div class="text-xs text-muted">{{ __('Ümumi dövriyyə') }}</div><div class="mt-1 text-2xl font-semibold font-mono">{{ money($in + $out) }}</div><div class="text-xs text-muted mt-1">Saldo: {{ money($in - $out) }}</div></div>
     </div>
 
@@ -48,11 +48,11 @@
                         <tbody>
                         @foreach($contracts as $c)
                             <tr>
-                                <td data-label="Nömrə"><a href="{{ route('contracts.show', $c) }}" class="font-mono font-medium text-ink hover:text-brand-ink">{{ $c->number }}</a></td>
-                                <td data-label="Növ" class="text-xs">{{ $c->kind === 'sale' ? 'Satış' : 'Alış' }}</td>
-                                <td data-label="Mövzu" class="max-w-[260px] truncate">{{ $c->subject }}</td>
-                                <td data-label="Bitmə" class="font-mono text-xs">{{ azdate($c->end_date) }}</td>
-                                <td data-label="Məbləğ" class="num">{{ money($c->amount, $c->currency) }}</td>
+                                <td data-label="{{ __('Nömrə') }}"><a href="{{ route('contracts.show', $c) }}" class="font-mono font-medium text-ink hover:text-brand-ink">{{ $c->number }}</a></td>
+                                <td data-label="{{ __('Növ') }}" class="text-xs">{{ $c->kind === 'sale' ? __('Satış') : __('Alış') }}</td>
+                                <td data-label="{{ __('Mövzu') }}" class="max-w-[260px] truncate">{{ $c->subject }}</td>
+                                <td data-label="{{ __('Bitmə') }}" class="font-mono text-xs">{{ azdate($c->end_date) }}</td>
+                                <td data-label="{{ __('Məbləğ') }}" class="num">{{ money($c->amount, $c->currency) }}</td>
                                 <td data-label="Status"><x-status group="contract" :value="$c->status"/></td>
                             </tr>
                         @endforeach
@@ -93,10 +93,10 @@
                             <tbody>
                             @foreach($transactions as $t)
                                 <tr>
-                                    <td data-label="Tarix" class="font-mono text-xs">{{ azdate($t->transaction_date) }}</td>
-                                    <td data-label="Hesab" class="text-xs">{{ $t->account?->name }}</td>
-                                    <td data-label="Təyinat" class="max-w-[240px] truncate"><a href="{{ route('bank.transactions.show', $t) }}" class="hover:text-brand-ink">{{ $t->purpose ?? '—' }}</a></td>
-                                    <td data-label="Məbləğ" class="num {{ $t->direction === 'in' ? 'text-success' : 'text-danger' }}">{{ $t->direction === 'in' ? '+' : '−' }}{{ money($t->amount, $t->currency) }}</td>
+                                    <td data-label="{{ __('Tarix') }}" class="font-mono text-xs">{{ azdate($t->transaction_date) }}</td>
+                                    <td data-label="{{ __('Hesab') }}" class="text-xs">{{ $t->account?->name }}</td>
+                                    <td data-label="{{ __('Təyinat') }}" class="max-w-[240px] truncate"><a href="{{ route('bank.transactions.show', $t) }}" class="hover:text-brand-ink">{{ $t->purpose ?? '—' }}</a></td>
+                                    <td data-label="{{ __('Məbləğ') }}" class="num {{ $t->direction === 'in' ? 'text-success' : 'text-danger' }}">{{ $t->direction === 'in' ? '+' : '−' }}{{ money($t->amount, $t->currency) }}</td>
                                     <td data-label="AZN" class="num text-muted">{{ money($t->amount_azn) }}</td>
                                 </tr>
                             @endforeach

@@ -17,7 +17,7 @@
         @foreach($filters as $key => $def)
             @if($def['type'] === 'select')
                 <select name="{{ $key }}" class="input !h-9 !w-auto min-w-[140px] text-[13px]" aria-label="{{ $def['label'] }}" @change="$el.form.requestSubmit()">
-                    <option value="">{{ $def['label'] }}: hamısı</option>
+                    <option value="">{{ $def['label'] }}{{ __(': hamısı') }}</option>
                     @foreach($def['options'] as $val => $text)
                         <option value="{{ $val }}" @selected((string) request($key) === (string) $val)>{{ $text }}</option>
                     @endforeach

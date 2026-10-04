@@ -2,7 +2,7 @@
 <x-layouts.app :title="__('Audit jurnalı')">
     @php
         $colors = ['created' => 'green', 'updated' => 'blue', 'deleted' => 'rose', 'restored' => 'teal'];
-        $show = fn ($v) => is_bool($v) ? ($v ? 'bəli' : 'xeyr') : (is_array($v) ? json_encode($v, JSON_UNESCAPED_UNICODE) : (($v === null || $v === '') ? '—' : \Illuminate\Support\Str::limit((string) $v, 80)));
+        $show = fn ($v) => is_bool($v) ? ($v ? __('bəli') : 'xeyr') : (is_array($v) ? json_encode($v, JSON_UNESCAPED_UNICODE) : (($v === null || $v === '') ? '—' : \Illuminate\Support\Str::limit((string) $v, 80)));
     @endphp
     <x-page-header :title="__('Tənzimləmələr')" icon="settings"/>
     @include('settings._nav')
@@ -35,7 +35,7 @@
                         </div>
                         <div class="text-xs text-faint mt-0.5 font-mono">{{ azdate($a->created_at, true) }} · {{ $a->ip_address ?? 'sistem' }}</div>
                         @if($a->old_values || $a->new_values)
-                            <button type="button" class="mt-1.5 text-xs text-brand-ink hover:underline" @click="open = !open" x-text="open ? 'Gizlət' : 'Təfərrüat'">{{ __('Təfərrüat') }}</button>
+                            <button type="button" class="mt-1.5 text-xs text-brand-ink hover:underline" @click="open = !open" x-text="open ? {{ \Illuminate\Support\Js::from(__('Gizlət')) }} : {{ \Illuminate\Support\Js::from(__('Təfərrüat')) }}">{{ __('Təfərrüat') }}</button>
                             <dl x-show="open" x-collapse x-cloak class="mt-2 rounded-lg bg-surface-2 p-3 text-xs space-y-1 font-mono">
                                 @foreach(($a->action === 'updated' ? $a->new_values : ($a->new_values ?: $a->old_values)) ?? [] as $field => $value)
                                     <div class="flex flex-wrap gap-x-2"><dt class="text-muted">{{ $field }}:</dt>

@@ -31,7 +31,7 @@
     <div class="card overflow-hidden">
         <x-filter-bar :table="$table" export-route="shipments.export" export-ability="logistics.export" :placeholder="__('Nömrə, marşrut, konteyner, CMR, daşıyıcı…')"/>
         @if($items->isEmpty())
-            <x-empty icon="package" :title="$table->hasActiveFilters() ? 'Heç nə tapılmadı' : 'Hələ yük yoxdur'" :text="__('Yükləri qeyd edin, statusu dəyişdikcə tarixçə avtomatik saxlanılır.')">
+            <x-empty icon="package" :title="$table->hasActiveFilters() ? __('Heç nə tapılmadı') : __('Hələ yük yoxdur')" :text="__('Yükləri qeyd edin, statusu dəyişdikcə tarixçə avtomatik saxlanılır.')">
                 @can('logistics.create')<a href="{{ route('shipments.create') }}" class="btn btn-primary"><x-icon name="plus" class="size-4"/> {{ __('Yük əlavə et') }}</a>@endcan
             </x-empty>
         @else
@@ -44,21 +44,21 @@
                     <tbody>
                     @foreach($items as $s)
                         <tr>
-                            <td data-label="Nömrə">
+                            <td data-label="{{ __('Nömrə') }}">
                                 <a href="{{ route('shipments.show', $s) }}" class="inline-flex items-center gap-2 font-mono font-medium text-ink hover:text-brand-ink">
                                     <span class="grid place-items-center size-8 rounded-lg bg-surface-2 text-muted"><x-icon :name="$modeIcons[$s->transport_mode] ?? 'truck'" class="size-4"/></span>{{ $s->number }}
                                 </a>
                             </td>
-                            <td data-label="Marşrut">
+                            <td data-label="{{ __('Marşrut') }}">
                                 <div class="flex items-center gap-1.5 text-sm"><span class="truncate max-w-[130px]">{{ $s->origin }}</span><x-icon name="arrow-right" class="size-3.5 text-faint shrink-0"/><span class="truncate max-w-[130px]">{{ $s->destination }}</span></div>
                                 <div class="text-xs text-muted">{{ config('glaust.shipment_directions.'.$s->direction) }}{{ $s->container_no ? ' · '.$s->container_no : '' }}</div>
                             </td>
-                            <td data-label="Daşıyıcı" class="text-sm">{{ $s->carrier?->name ?? '—' }}</td>
-                            <td data-label="Çatma" class="text-xs">
+                            <td data-label="{{ __('Daşıyıcı') }}" class="text-sm">{{ $s->carrier?->name ?? '—' }}</td>
+                            <td data-label="{{ __('Çatma') }}" class="text-xs">
                                 <span @class(['font-mono', 'text-danger font-medium' => $s->isDelayed()])>{{ azdate($s->eta) }}</span>
-                                @if($s->isDelayed())<div class="text-danger">{{ (int) $s->eta->diffInDays(today()) }} gün gecikir</div>@endif
+                                @if($s->isDelayed())<div class="text-danger">{{ (int) $s->eta->diffInDays(today()) }} {{ __('gün gecikir') }}</div>@endif
                             </td>
-                            <td data-label="Xərclər" class="num">{{ $s->costs_sum_amount_azn ? money($s->costs_sum_amount_azn) : '—' }}</td>
+                            <td data-label="{{ __('Xərclər') }}" class="num">{{ $s->costs_sum_amount_azn ? money($s->costs_sum_amount_azn) : '—' }}</td>
                             <td data-label="Status"><x-status group="shipment" :value="$s->status"/></td>
                         </tr>
                     @endforeach

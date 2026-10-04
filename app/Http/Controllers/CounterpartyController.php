@@ -58,10 +58,10 @@ class CounterpartyController extends Controller
 
         // Opened from another form's "quick create" modal: return to it with the new id.
         if ($request->filled('return_to') && str_starts_with((string) $request->input('return_to'), url('/'))) {
-            return redirect()->to($request->input('return_to'))->with('success', $item->name.' əlavə edildi.')->with('created_counterparty', ['id' => $item->id, 'label' => $item->name]);
+            return redirect()->to($request->input('return_to'))->with('success', $item->name.__(' əlavə edildi.'))->with('created_counterparty', ['id' => $item->id, 'label' => $item->name]);
         }
 
-        return redirect()->route('counterparties.show', $item)->with('success', $item->typeLabel().' əlavə edildi.');
+        return redirect()->route('counterparties.show', $item)->with('success', $item->typeLabel().__(' əlavə edildi.'));
     }
 
     public function show(Counterparty $counterparty): View
@@ -99,17 +99,17 @@ class CounterpartyController extends Controller
             // A party with sales contracts must stay a customer, with purchase contracts a supplier.
             $kinds = $counterparty->contracts()->distinct()->pluck('kind');
             if ($kinds->contains('sale') && $data['type'] === 'supplier') {
-                abort(back()->withInput()->withErrors(['type' => 'Bu kontragentlə satış müqavilələri var — növ «Təchizatçı» ola bilməz. «Müştəri və təchizatçı» seçin.']));
+                abort(back()->withInput()->withErrors(['type' => __('Bu kontragentlə satış müqavilələri var — növ «Təchizatçı» ola bilməz. «Müştəri və təchizatçı» seçin.')]));
             }
             if ($kinds->contains('purchase') && $data['type'] === 'customer') {
-                abort(back()->withInput()->withErrors(['type' => 'Bu kontragentlə alış müqavilələri var — növ «Müştəri» ola bilməz. «Müştəri və təchizatçı» seçin.']));
+                abort(back()->withInput()->withErrors(['type' => __('Bu kontragentlə alış müqavilələri var — növ «Müştəri» ola bilməz. «Müştəri və təchizatçı» seçin.')]));
             }
 
             $counterparty->update($data);
             $this->syncContacts($counterparty, $contacts);
         });
 
-        return redirect()->route('counterparties.show', $counterparty)->with('success', 'Məlumatlar yeniləndi.');
+        return redirect()->route('counterparties.show', $counterparty)->with('success', __('Məlumatlar yeniləndi.'));
     }
 
     public function destroy(Counterparty $counterparty): RedirectResponse
@@ -117,7 +117,7 @@ class CounterpartyController extends Controller
         $this->authorize('crm.delete');
         $open = $counterparty->contracts()->whereNotIn('status', ['completed', 'cancelled'])->count();
         if ($open) {
-            return back()->with('error', "Bu kontragentin {$open} açıq müqaviləsi var. Əvvəlcə müqavilələri bağlayın və ya ləğv edin.");
+            return back()->with('error', __('Bu kontragentin :v1 açıq müqaviləsi var. Əvvəlcə müqavilələri bağlayın və ya ləğv edin.', ['v1' => $open]));
         }
         $counterparty->delete();
 
@@ -155,9 +155,9 @@ class CounterpartyController extends Controller
             'contacts.*.phone' => ['nullable', 'string', 'max:40'],
             'contacts.*.email' => ['nullable', 'email', 'max:190'],
         ], [
-            'voen.unique' => 'Bu VÖEN ilə kontragent artıq mövcuddur (silinmişlər daxil).',
-            'swift.regex' => 'SWIFT/BIC kodu 8 və ya 11 simvol olmalıdır.',
-        ], ['swift' => 'SWIFT', 'contacts.*.name' => 'Əlaqə şəxsinin adı', 'contacts.*.email' => 'Əlaqə şəxsinin emaili']);
+            'voen.unique' => __('Bu VÖEN ilə kontragent artıq mövcuddur (silinmişlər daxil).'),
+            'swift.regex' => __('SWIFT/BIC kodu 8 və ya 11 simvol olmalıdır.'),
+        ], ['swift' => 'SWIFT', 'contacts.*.name' => __('Əlaqə şəxsinin adı'), 'contacts.*.email' => __('Əlaqə şəxsinin emaili')]);
 
         $contacts = array_values(array_filter($data['contacts'] ?? [], fn ($c) => filled($c['name'] ?? null)));
         unset($data['contacts']);

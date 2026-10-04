@@ -13,7 +13,7 @@
         </div>
         <div class="grid sm:grid-cols-2 gap-4">
             <x-select name="plan_id" :label="__('Tarif')" :options="$plans->pluck('name', 'id')->all()" :placeholder="__('Avtomatik')"/>
-            <x-select name="subscription_status" :label="__('Status')" :options="['active' => 'Aktiv', 'trial' => 'Sınaq']" value="active" required/>
+            <x-select name="subscription_status" :label="__('Status')" :options="['active' => __('Aktiv'), 'trial' => __('Sınaq')]" value="active" required/>
         </div>
         <button class="btn btn-primary"><x-icon name="check" class="size-4"/> {{ __('Şirkəti yarat') }}</button>
     </form>

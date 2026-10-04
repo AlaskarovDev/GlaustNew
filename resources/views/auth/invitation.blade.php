@@ -1,4 +1,4 @@
-<x-layouts.guest :title="__('Dəvət')" :heading="__('Komandaya xoş gəldiniz')" :subheading="$user->company?->name.' sizi TradeFlow-ə dəvət edib. Hesabınız üçün şifrə təyin edin.'">
+<x-layouts.guest :title="__('Dəvət')" :heading="__('Komandaya xoş gəldiniz')" :subheading="$user->company?->name.__(' sizi TradeFlow-ə dəvət edib. Hesabınız üçün şifrə təyin edin.')">
     <div class="card p-4 flex items-center gap-3 mb-6">
         <x-avatar :user="$user"/>
         <div class="min-w-0">

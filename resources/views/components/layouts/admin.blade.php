@@ -1,15 +1,16 @@
 @props(['title' => null])
 @php
     $flash = collect(['success', 'error', 'info', 'warning'])->filter(fn ($k) => session()->has($k))->map(fn ($k) => ['type' => $k, 'message' => session($k)])->values();
-    $links = [['admin.dashboard', 'dashboard', 'Ümumi baxış'], ['admin.companies.index', 'building', 'Şirkətlər'], ['admin.plans.index', 'layers', 'Tariflər'], ['admin.logs', 'history', 'Sistem logları']];
+    $links = [['admin.dashboard', 'dashboard', __('Ümumi baxış')], ['admin.companies.index', 'building', __('Şirkətlər')], ['admin.plans.index', 'layers', __('Tariflər')], ['admin.logs', 'history', __('Sistem logları')]];
 @endphp
 <!DOCTYPE html>
-<html lang="az">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="{{ \App\Support\Csp::policy(true) }}"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="csrf-token" content="{{ csrf_token() }}"><meta name="robots" content="noindex, nofollow">
     <title>{{ $title ? $title.' · ' : '' }}TradeFlow Admin</title>
     <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
     <script nonce="{{ Vite::cspNonce() }}">(() => { let m = 'system'; try { m = localStorage.getItem('glaust-theme') || m } catch (e) {} document.documentElement.classList.toggle('dark', m === 'dark' || (m === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)); })();</script>
+    <script nonce="{{ Vite::cspNonce() }}">window.__i18n = @json(\App\Support\JsTranslations::all());</script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body x-data class="overflow-x-hidden">
@@ -27,7 +28,8 @@
             @if(auth()->user()?->company_id)
                 <a href="{{ route('dashboard') }}" class="nav-link !h-9 ml-auto"><x-icon name="arrow-left" class="size-4"/> <span class="hidden sm:inline">{{ __('Şirkətə qayıt') }}</span></a>
             @endif
-            <form method="POST" action="{{ route('logout') }}" class="{{ auth()->user()?->company_id ? '' : 'ml-auto' }}">@csrf<button class="nav-link !h-9"><x-icon name="log-out" class="size-4"/> <span class="hidden sm:inline">{{ __('Çıxış') }}</span></button></form>
+            <x-locale-switcher compact @class(['w-32', 'ml-auto' => ! auth()->user()?->company_id])/>
+            <form method="POST" action="{{ route('logout') }}">@csrf<button class="nav-link !h-9"><x-icon name="log-out" class="size-4"/> <span class="hidden sm:inline">{{ __('Çıxış') }}</span></button></form>
         </div>
     </header>
     <main class="page-enter max-w-[1400px] mx-auto px-4 sm:px-6 py-8">{{ $slot }}</main>

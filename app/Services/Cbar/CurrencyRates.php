@@ -38,7 +38,7 @@ class CurrencyRates
         $key = $day->format('Y-m-d');
 
         if ($day->gt($this->today())) {
-            throw RateUnavailable::for('—', $key, 'Gələcək tarix üçün məzənnə dərc olunmur.');
+            throw RateUnavailable::for('—', $key, __('Gələcək tarix üçün məzənnə dərc olunmur.'));
         }
 
         $recent = $day->gte($this->today()->subDay());
@@ -63,7 +63,7 @@ class CurrencyRates
                 Cache::put($failKey, true, 300);
 
                 // Rows already stored for this exact date are real CBAR rates, not a substitute.
-                return $stored['rates'] ? $stored : throw RateUnavailable::for('—', $key, 'CBAR əlçatan deyil.');
+                return $stored['rates'] ? $stored : throw RateUnavailable::for('—', $key, __('CBAR əlçatan deyil.'));
             });
     }
 

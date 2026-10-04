@@ -1,7 +1,7 @@
 <x-layouts.app :title="__('Bank əməliyyatı')">
     @php
         $in = $tx->direction === 'in';
-        $title = $tx->kind === 'regular' ? ($in ? 'Mədaxil' : 'Məxaric') : config('glaust.transaction_kinds.'.$tx->kind);
+        $title = $tx->kind === 'regular' ? ($in ? __('Mədaxil') : __('Məxaric')) : config('glaust.transaction_kinds.'.$tx->kind);
     @endphp
     <x-page-header :title="$title.' · '.azdate($tx->transaction_date)" :back="route('bank.transactions.index')">
         <x-slot:actions>
@@ -11,7 +11,7 @@
                 @endunless
             @endcan
             @can('bank.delete')
-                <x-delete-form :action="route('bank.transactions.destroy', $tx)" :button="__('btn btn-secondary text-danger')" :message="$tx->transfer_group ? 'Köçürmənin hər iki tərəfi silinəcək.' : 'Əməliyyat silinəcək.'"/>
+                <x-delete-form :action="route('bank.transactions.destroy', $tx)" button="btn btn-secondary text-danger" :message="$tx->transfer_group ? __('Köçürmənin hər iki tərəfi silinəcək.') : __('Əməliyyat silinəcək.')"/>
             @endcan
         </x-slot:actions>
     </x-page-header>
@@ -47,7 +47,7 @@
             @if($counterpart)
                 @php $result = $tx->kind === 'conversion' ? round(($in ? $tx->cbar_amount_azn - $counterpart->cbar_amount_azn : $counterpart->cbar_amount_azn - $tx->cbar_amount_azn), 2) : null; @endphp
                 <section class="card p-6">
-                    <h2 class="text-sm font-semibold mb-4">{{ $tx->kind === 'conversion' ? 'Konvertasiyanın digər tərəfi' : 'Köçürmənin digər tərəfi' }}</h2>
+                    <h2 class="text-sm font-semibold mb-4">{{ $tx->kind === 'conversion' ? __('Konvertasiyanın digər tərəfi') : __('Köçürmənin digər tərəfi') }}</h2>
                     <a href="{{ route('bank.transactions.show', $counterpart) }}" class="flex items-center gap-4 p-4 rounded-xl border border-line hover:border-line-strong transition-colors">
                         <x-icon name="transfer" class="size-5 text-brand"/>
                         <div class="flex-1 min-w-0"><div class="text-sm font-medium">{{ $counterpart->account->name }} ({{ $counterpart->currency }})</div><div class="text-xs text-muted">{{ $counterpart->direction === 'in' ? 'daxil olub' : 'silinib' }}</div></div>

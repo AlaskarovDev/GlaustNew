@@ -8,7 +8,7 @@
     </x-page-header>
 
     <nav class="flex gap-6 border-b border-line mb-5 overflow-x-auto" aria-label="{{ __('Görünüş') }}">
-        @foreach(['board' => ['kanban', 'Kanban'], 'list' => ['list', 'Siyahı'], 'calendar' => ['calendar', 'Təqvim'], 'gantt' => ['gantt', 'Gantt']] as $key => [$icon, $label])
+        @foreach(['board' => ['kanban', 'Kanban'], 'list' => ['list', __('Siyahı')], 'calendar' => ['calendar', __('Təqvim')], 'gantt' => ['gantt', 'Gantt']] as $key => [$icon, $label])
             <a href="{{ request()->fullUrlWithQuery(['view' => $key, 'page' => null]) }}" @class(['tab-link inline-flex items-center gap-1.5', 'is-active' => $view === $key])><x-icon :name="$icon" class="size-4"/> {{ $label }}</a>
         @endforeach
     </nav>
@@ -31,12 +31,12 @@
                         <tbody>
                         @foreach($items as $t)
                             <tr>
-                                <td data-label="Tapşırıq"><a href="{{ route('tasks.show', $t) }}" class="font-medium text-ink hover:text-brand-ink">{{ $t->title }}</a>
+                                <td data-label="{{ __('Tapşırıq') }}"><a href="{{ route('tasks.show', $t) }}" class="font-medium text-ink hover:text-brand-ink">{{ $t->title }}</a>
                                     @if($t->checklist_count)<span class="ml-2 text-xs text-muted font-mono">{{ $t->checklist_done_count }}/{{ $t->checklist_count }}</span>@endif</td>
-                                <td data-label="Layihə" class="text-xs">{{ $t->project?->code }}</td>
-                                <td data-label="Məsul"><span class="inline-flex items-center gap-2"><x-avatar :user="$t->assignee" size="xs"/><span class="text-xs">{{ $t->assignee?->name ?? '—' }}</span></span></td>
-                                <td data-label="Prioritet"><x-status group="priority" :value="$t->priority" :dot="false"/></td>
-                                <td data-label="Son tarix" @class(['font-mono text-xs', 'text-danger font-medium' => $t->isOverdue()])>{{ azdate($t->due_date) }}</td>
+                                <td data-label="{{ __('Layihə') }}" class="text-xs">{{ $t->project?->code }}</td>
+                                <td data-label="{{ __('Məsul') }}"><span class="inline-flex items-center gap-2"><x-avatar :user="$t->assignee" size="xs"/><span class="text-xs">{{ $t->assignee?->name ?? '—' }}</span></span></td>
+                                <td data-label="{{ __('Prioritet') }}"><x-status group="priority" :value="$t->priority" :dot="false"/></td>
+                                <td data-label="{{ __('Son tarix') }}" @class(['font-mono text-xs', 'text-danger font-medium' => $t->isOverdue()])>{{ azdate($t->due_date) }}</td>
                                 <td data-label="Status"><x-status group="task" :value="$t->status"/></td>
                             </tr>
                         @endforeach
@@ -59,7 +59,7 @@
                 <a href="{{ request()->fullUrlWithQuery(['month' => $next]) }}" class="btn btn-ghost btn-sm btn-icon" aria-label="{{ __('Növbəti ay') }}"><x-icon name="chevron-right" class="size-4"/></a>
             </header>
             <div class="hidden md:grid grid-cols-7 border-b border-line bg-surface-2 text-xs font-medium text-muted">
-                @foreach(['B.e', 'Ç.a', 'Ç', 'C.a', 'C', 'Ş', 'B'] as $d)<div class="px-3 py-2">{{ $d }}</div>@endforeach
+                @foreach(['B.e', __('Ç.a'), __('Ç'), 'C.a', 'C', __('Ş'), 'B'] as $d)<div class="px-3 py-2">{{ $d }}</div>@endforeach
             </div>
             <div class="grid md:grid-cols-7">
                 @for($d = $start->copy(); $d->lte($end); $d->addDay())
@@ -110,7 +110,7 @@
                                 $color = ['todo' => 'bg-slate-400', 'in_progress' => 'bg-blue-500', 'review' => 'bg-violet-500', 'done' => 'bg-success'][$t->status];
                             @endphp
                             <div class="grid grid-cols-[260px_1fr] border-b border-line last:border-0 hover:bg-surface-2/60">
-                                <a href="{{ route('tasks.show', $t) }}" class="px-4 py-2.5 text-sm truncate hover:text-brand-ink">{{ $t->title }}<span class="block text-[11px] text-muted">{{ $t->project?->code }} · {{ $t->assignee?->name ?? 'təyin edilməyib' }}</span></a>
+                                <a href="{{ route('tasks.show', $t) }}" class="px-4 py-2.5 text-sm truncate hover:text-brand-ink">{{ $t->title }}<span class="block text-[11px] text-muted">{{ $t->project?->code }} · {{ $t->assignee?->name ?? __('təyin edilməyib') }}</span></a>
                                 <div class="relative">
                                     @if($todayPct >= 0 && $todayPct <= 100)<span class="absolute inset-y-0 w-px bg-danger/50" style="left: {{ $todayPct }}%"></span>@endif
                                     <span class="absolute top-1/2 -translate-y-1/2 h-5 rounded-md {{ $color }} {{ $t->isOverdue() ? 'ring-2 ring-danger/60' : '' }} rise" style="left: {{ $left }}%; width: {{ $width }}%" title="{{ azdate($s) }} — {{ azdate($t->due_date) }}"></span>

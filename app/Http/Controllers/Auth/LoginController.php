@@ -31,7 +31,7 @@ class LoginController extends Controller
         $data = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required', 'string'],
-        ], [], ['email' => 'Email', 'password' => 'Şifrə']);
+        ], [], ['email' => 'Email', 'password' => __('Şifrə')]);
 
         $email = Str::lower(trim($data['email']));
         $user = User::where('email', $email)->first();
@@ -40,8 +40,8 @@ class LoginController extends Controller
         if ($user?->isLocked()) {
             $this->log->failed($email, $user, 'locked');
 
-            return $fail('Çoxlu uğursuz cəhd səbəbindən hesab müvəqqəti bağlanıb. '
-                .$user->locked_until->diffForHumans(['parts' => 1, 'syntax' => \Carbon\CarbonInterface::DIFF_ABSOLUTE]).' sonra yenidən cəhd edin.');
+            return $fail(__('Çoxlu uğursuz cəhd səbəbindən hesab müvəqqəti bağlanıb. ')
+                .$user->locked_until->diffForHumans(['parts' => 1, 'syntax' => \Carbon\CarbonInterface::DIFF_ABSOLUTE]).__(' sonra yenidən cəhd edin.'));
         }
 
         if (! $user || ! Hash::check($data['password'], $user->password)) {
@@ -53,19 +53,19 @@ class LoginController extends Controller
                 ])->saveQuietly();
                 $this->log->failed($email, $user, $attempts >= self::MAX_ATTEMPTS ? 'locked' : 'failed');
                 if ($attempts >= self::MAX_ATTEMPTS) {
-                    return $fail('Şifrə '.self::MAX_ATTEMPTS.' dəfə səhv daxil edildi. Hesab '.self::LOCK_MINUTES.' dəqiqəlik bağlandı.');
+                    return $fail(__('Şifrə ').self::MAX_ATTEMPTS.__(' dəfə səhv daxil edildi. Hesab ').self::LOCK_MINUTES.__(' dəqiqəlik bağlandı.'));
                 }
             } else {
                 $this->log->failed($email, null);
             }
 
-            return $fail('Email və ya şifrə yanlışdır.');
+            return $fail(__('Email və ya şifrə yanlışdır.'));
         }
 
         if (! $user->is_active || $user->invitation_token) {
             $this->log->failed($email, $user, 'failed');
 
-            return $fail($user->invitation_token ? 'Dəvəti hələ qəbul etməmisiniz. Mailinizdəki linkdən şifrə təyin edin.' : 'Hesabınız deaktiv edilib.');
+            return $fail($user->invitation_token ? __('Dəvəti hələ qəbul etməmisiniz. Mailinizdəki linkdən şifrə təyin edin.') : __('Hesabınız deaktiv edilib.'));
         }
 
         if ($user->hasTwoFactor()) {
@@ -88,16 +88,16 @@ class LoginController extends Controller
         if (! $pending || time() - $pending['at'] > 300) {
             $request->session()->forget('login.2fa');
 
-            return redirect()->route('login')->withErrors(['email' => 'Təsdiq müddəti bitdi. Yenidən daxil olun.']);
+            return redirect()->route('login')->withErrors(['email' => __('Təsdiq müddəti bitdi. Yenidən daxil olun.')]);
         }
 
-        $request->validate(['code' => ['required', 'digits:6']], [], ['code' => 'Kod']);
+        $request->validate(['code' => ['required', 'digits:6']], [], ['code' => __('Kod')]);
         $user = User::findOrFail($pending['id']);
 
         if (! $google2fa->verifyKey($user->two_factor_secret, $request->input('code'), 1)) {
             $this->log->failed($user->email, $user, 'two_factor_failed');
 
-            return back()->withErrors(['code' => 'Kod yanlışdır.']);
+            return back()->withErrors(['code' => __('Kod yanlışdır.')]);
         }
 
         $request->session()->forget('login.2fa');
@@ -114,7 +114,7 @@ class LoginController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('login')->with('status', 'Sistemdən çıxdınız.');
+        return redirect()->route('login')->with('status', __('Sistemdən çıxdınız.'));
     }
 
     private function complete(Request $request, User $user, bool $remember): RedirectResponse

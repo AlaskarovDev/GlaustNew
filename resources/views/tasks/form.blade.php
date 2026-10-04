@@ -3,8 +3,8 @@
     $users = \App\Http\Controllers\TaskController::users();
     $milestones = $task->project_id ? \App\Models\Milestone::where('project_id', $task->project_id)->orderBy('due_date')->pluck('name', 'id')->all() : [];
 @endphp
-<x-layouts.app :title="$editing ? $task->title : 'Yeni tapşırıq'">
-    <x-page-header :title="$editing ? 'Tapşırığı redaktə et' : 'Yeni tapşırıq'" :back="$editing ? route('tasks.show', $task) : ($task->project_id ? route('projects.show', [$task->project_id, 'tab' => 'board']) : route('tasks.index'))"/>
+<x-layouts.app :title="$editing ? $task->title : __('Yeni tapşırıq')">
+    <x-page-header :title="$editing ? __('Tapşırığı redaktə et') : __('Yeni tapşırıq')" :back="$editing ? route('tasks.show', $task) : ($task->project_id ? route('projects.show', [$task->project_id, 'tab' => 'board']) : route('tasks.index'))"/>
 
     <form method="POST" action="{{ $editing ? route('tasks.update', $task) : route('tasks.store') }}" class="grid lg:grid-cols-[minmax(0,1fr)_340px] gap-6 items-start" x-data="{ busy: false }" @submit="busy = true">
         @csrf

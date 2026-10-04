@@ -24,7 +24,7 @@
             const locked = this.rows.find(r => r !== row && r.currency && r.currency !== value);
             if (value && locked) {
                 el.value = row.currency || '';
-                toast('warning', 'Siz daha öncəki məhsulda ' + locked.currency + ' valyutasını seçmisiniz. Bütün məhsullar üzrə xərc eyni valyutada olmalıdır.');
+                toast('warning', {{ \Illuminate\Support\Js::from(__('Siz daha öncəki məhsulda :currency valyutasını seçmisiniz. Bütün məhsullar üzrə xərc eyni valyutada olmalıdır.')) }}.replace(':currency', locked.currency));
                 return;
             }
             row.currency = value;
@@ -39,10 +39,10 @@
         <span class="step-no">1</span>
         <div class="min-w-0">
             <h2 class="step-title">{{ __('Logistika xərci') }}</h2>
-            <p class="step-sub">Total/{{ $invoice->currency }} payına görə bölünür</p>
+            <p class="step-sub">Total/{{ $invoice->currency }} {{ __('payına görə bölünür') }}</p>
         </div>
         @if($invoice->hasLogistics())
-            <span @class(['badge ml-auto shrink-0', 'badge-amber' => $invoice->logistics_mode === 'forecast', 'badge-green' => $invoice->logistics_mode === 'actual'])>{{ \App\Models\Invoice::LOGISTICS_MODES[$invoice->logistics_mode] }}</span>
+            <span @class(['badge ml-auto shrink-0', 'badge-amber' => $invoice->logistics_mode === 'forecast', 'badge-green' => $invoice->logistics_mode === 'actual'])>{{ __(\App\Models\Invoice::LOGISTICS_MODES[$invoice->logistics_mode]) }}</span>
         @else
             <span class="badge badge-slate ml-auto shrink-0">{{ __('Gözləyir') }}</span>
         @endif
@@ -52,7 +52,7 @@
         <div class="step-summary">
             <div class="step-value">{{ money($invoice->logistics_amount, $invoice->logistics_currency) }}</div>
             <div class="step-meta">
-                {{ $invoice->logistics_method === 'total' ? 'Ümumi məbləğ, paya görə bölünüb' : 'Hər məhsul üzrə ayrıca' }}
+                {{ $invoice->logistics_method === 'total' ? __('Ümumi məbləğ, paya görə bölünüb') : __('Hər məhsul üzrə ayrıca') }}
                 @if($invoice->logistics_currency !== $invoice->currency)
                     <br>= {{ money($invoice->logistics_total, $invoice->currency) }} · CBAR {{ azdate($invoice->invoice_date) }}, 1 {{ $invoice->logistics_currency }} = {{ rate_fmt($invoice->logistics_rate) }} {{ $invoice->currency }}
                 @endif
@@ -66,7 +66,7 @@
             <input type="hidden" name="logistics_method" :value="method">
             <div class="segmented" role="radiogroup" aria-label="{{ __('Xərcin növü') }}">
                 @foreach(\App\Models\Invoice::LOGISTICS_MODES as $k => $l)
-                    <label :class="mode === '{{ $k }}' && 'is-on'"><input type="radio" name="logistics_mode" value="{{ $k }}" x-model="mode" class="sr-only"> {{ $l }}</label>
+                    <label :class="mode === '{{ $k }}' && 'is-on'"><input type="radio" name="logistics_mode" value="{{ $k }}" x-model="mode" class="sr-only"> {{ __($l) }}</label>
                 @endforeach
             </div>
             <div class="segmented" role="radiogroup" aria-label="{{ __('Necə daxil edilsin') }}">
@@ -84,11 +84,11 @@
                 </div>
                 @error('logistics_amount')<p class="field-error">{{ $message }}</p>@enderror
                 @error('logistics_currency')<p class="field-error">{{ $message }}</p>@enderror
-                <p x-show="currency !== @js($invoice->currency)" class="text-[11px] text-muted">{{ $invoice->currency }}-a {{ azdate($invoice->invoice_date) }} CBAR məzənnəsi ilə çevriləcək.</p>
+                <p x-show="currency !== @js($invoice->currency)" class="text-[11px] text-muted">{{ $invoice->currency }}-a {{ azdate($invoice->invoice_date) }} {{ __('CBAR məzənnəsi ilə çevriləcək.') }}</p>
             </div>
 
             <div x-show="method === 'per_item'" x-cloak class="space-y-1.5">
-                <button type="button" class="btn btn-secondary w-full" @click="modal = true"><x-icon name="list" class="size-4"/> Məhsullar üzrə daxil et ({{ $invoice->items->count() }})</button>
+                <button type="button" class="btn btn-secondary w-full" @click="modal = true"><x-icon name="list" class="size-4"/> {{ __('Məhsullar üzrə daxil et (') }}{{ $invoice->items->count() }})</button>
                 <p class="text-xs text-muted text-center" x-show="perItemTotal() > 0">{{ __('Cəmi:') }} <span class="font-mono text-ink" x-text="fmt(perItemTotal()) + ' ' + (lockedCurrency() || '')"></span></p>
                 <p class="text-xs text-saffron text-center" x-show="!complete()">{{ __('Bütün sətirlər üçün məbləğ və valyuta daxil edin.') }}</p>
             </div>
@@ -119,7 +119,7 @@
                                     <td class="min-w-[200px]" x-text="row.description"></td>
                                     <td class="num" x-text="fmt(row.quantity) + ' ' + (row.uom || '')"></td>
                                     <td class="num" x-text="fmt(row.total)"></td>
-                                    <td><input :name="`items[${row.id}]`" x-model="row.amount" inputmode="decimal" class="input !h-9 font-mono text-right" :aria-label="'Xərc: ' + row.description"></td>
+                                    <td><input :name="`items[${row.id}]`" x-model="row.amount" inputmode="decimal" class="input !h-9 font-mono text-right" :aria-label="{{ \Illuminate\Support\Js::from(__('Xərc: ')) }} + row.description"></td>
                                     <td>
                                         <select :name="`item_currency[${row.id}]`" class="input !h-9" :value="row.currency" @change="pickCurrency(row, $event.target.value, $event.target)" :aria-label="'Valyuta: ' + row.description">
                                             <option value="">—</option>
@@ -144,7 +144,7 @@
 
         @if($invoice->hasLogistics())
             <footer class="step-foot">
-                <button type="button" class="btn btn-secondary btn-sm" @click="editing = !editing"><x-icon name="pencil" class="size-3.5"/> <span x-text="editing ? 'Bağla' : 'Dəyiş'"></span></button>
+                <button type="button" class="btn btn-secondary btn-sm" @click="editing = !editing"><x-icon name="pencil" class="size-3.5"/> <span x-text="editing ? {{ \Illuminate\Support\Js::from(__('Bağla')) }} : {{ \Illuminate\Support\Js::from(__('Dəyiş')) }}"></span></button>
                 <span class="text-[11px] text-faint ml-auto">{{ azdate($invoice->logistics_updated_at, true) }}</span>
                 <form method="POST" action="{{ route('invoices.logistics.clear', $invoice) }}" data-confirm="{{ __('Logistika xərci bütün sətirlərdən silinsin?') }}" data-confirm-action="{{ __('Sil') }}">
                     @csrf @method('DELETE')

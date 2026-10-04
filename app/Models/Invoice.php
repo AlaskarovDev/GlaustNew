@@ -125,7 +125,7 @@ class Invoice extends Model
 
     public function typeLabel(): string
     {
-        return self::TYPES[$this->type] ?? $this->type;
+        return __(self::TYPES[$this->type] ?? $this->type);
     }
 
     public function auditLabel(): string

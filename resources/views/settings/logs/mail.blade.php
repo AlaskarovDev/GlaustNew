@@ -1,5 +1,5 @@
 <x-layouts.app :title="__('Mail jurnalı')">
-    @php $kinds = ['reminder' => 'Xatırlatma', 'digest' => 'Gündəlik xülasə', 'invitation' => 'Dəvət', 'password_reset' => 'Şifrə bərpası', 'test' => 'Test']; @endphp
+    @php $kinds = ['reminder' => __('Xatırlatma'), 'digest' => __('Gündəlik xülasə'), 'invitation' => __('Dəvət'), 'password_reset' => __('Şifrə bərpası'), 'test' => 'Test']; @endphp
     <x-page-header :title="__('Tənzimləmələr')" icon="settings"/>
     @include('settings._nav')
     <div class="card overflow-hidden">
@@ -14,10 +14,10 @@
                 <tbody>
                 @forelse($logs as $m)
                     <tr>
-                        <td data-label="Tarix" class="font-mono text-xs whitespace-nowrap">{{ azdate($m->created_at, true) }}</td>
-                        <td data-label="Kimə" class="text-sm">{{ $m->to }}</td>
-                        <td data-label="Mövzu" class="max-w-[320px]"><span class="block truncate">{{ $m->subject }}</span>@if($m->error)<span class="block text-xs text-danger break-words">{{ \Illuminate\Support\Str::limit($m->error, 200) }}</span>@endif</td>
-                        <td data-label="Növ" class="text-xs">{{ $kinds[$m->kind] ?? $m->kind }}<div class="text-faint">{{ $m->transport === 'company' ? 'şirkət SMTP' : 'platforma' }}</div></td>
+                        <td data-label="{{ __('Tarix') }}" class="font-mono text-xs whitespace-nowrap">{{ azdate($m->created_at, true) }}</td>
+                        <td data-label="{{ __('Kimə') }}" class="text-sm">{{ $m->to }}</td>
+                        <td data-label="{{ __('Mövzu') }}" class="max-w-[320px]"><span class="block truncate">{{ $m->subject }}</span>@if($m->error)<span class="block text-xs text-danger break-words">{{ \Illuminate\Support\Str::limit($m->error, 200) }}</span>@endif</td>
+                        <td data-label="{{ __('Növ') }}" class="text-xs">{{ $kinds[$m->kind] ?? $m->kind }}<div class="text-faint">{{ $m->transport === 'company' ? __('şirkət SMTP') : 'platforma' }}</div></td>
                         <td data-label="Status">@if($m->status === 'sent')<span class="badge badge-green badge-dot">{{ __('Göndərildi') }}</span>@else<span class="badge badge-rose badge-dot">{{ __('Xəta') }}</span>@endif</td>
                     </tr>
                 @empty

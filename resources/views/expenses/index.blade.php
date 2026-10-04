@@ -16,9 +16,9 @@
     <div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6 stagger">
         <div class="card p-4" style="--i:0"><div class="text-xs text-muted">{{ __('Dövr üzrə xərc') }}</div><div class="text-xl font-semibold font-mono">{{ money($stats['total']) }}</div><div class="text-[11px] text-muted">{{ azdate($from) }} — {{ azdate($to) }} · AZN ekvivalenti</div></div>
         <div class="card p-4" style="--i:1"><div class="text-xs text-muted">{{ __('Ödənilib') }}</div><div class="text-xl font-semibold font-mono text-success">{{ money($stats['paid']) }}</div>
-            <div class="text-[11px] text-muted">Hesabdan: {{ money($stats['bank']) }} · Nağd: {{ money($stats['cash']) }}</div></div>
+            <div class="text-[11px] text-muted">{{ __('Hesabdan:') }} {{ money($stats['bank']) }} {{ __('· Nağd:') }} {{ money($stats['cash']) }}</div></div>
         <div class="card p-4" style="--i:2"><div class="text-xs text-muted">{{ __('Ödənilməyib (dövr)') }}</div><div class="text-xl font-semibold font-mono text-saffron">{{ money($stats['unpaid']) }}</div>
-            @if($stats['overdue'])<div class="text-[11px] text-danger">{{ $stats['overdue'] }} xərcin ödəniş tarixi keçib</div>@endif</div>
+            @if($stats['overdue'])<div class="text-[11px] text-danger">{{ $stats['overdue'] }} {{ __('xərcin ödəniş tarixi keçib') }}</div>@endif</div>
         <div class="card p-4" style="--i:3"><div class="text-xs text-muted">{{ __('Bütün ödənilməmiş xərclər') }}</div><div class="text-xl font-semibold font-mono">{{ money($unpaidAll) }}</div>
             <a href="{{ route('expenses.index', ['status' => 'unpaid', 'from' => '2000-01-01', 'to' => today()->addYears(5)->toDateString()]) }}" class="text-[11px] text-brand-ink hover:underline">{{ __('Hamısına bax') }}</a></div>
     </div>
@@ -32,10 +32,10 @@
                     <select name="category_id" class="input"><option value="">{{ __('Hamısı') }}</option>@foreach($categories as $c)<option value="{{ $c->id }}" @selected(($filters['category_id'] ?? null) == $c->id)>{{ $c->name }}</option>@endforeach</select>
                 </x-field>
                 <x-field :label="__('Status')" name="status">
-                    <select name="status" class="input"><option value="">{{ __('Hamısı') }}</option>@foreach(\App\Models\Expense::STATUSES as $k => [$l])<option value="{{ $k }}" @selected(($filters['status'] ?? null) === $k)>{{ $l }}</option>@endforeach</select>
+                    <select name="status" class="input"><option value="">{{ __('Hamısı') }}</option>@foreach(\App\Models\Expense::STATUSES as $k => [$l])<option value="{{ $k }}" @selected(($filters['status'] ?? null) === $k)>{{ __($l) }}</option>@endforeach</select>
                 </x-field>
                 <x-field :label="__('Ödəniş üsulu')" name="method">
-                    <select name="method" class="input"><option value="">{{ __('Hamısı') }}</option>@foreach(\App\Models\Expense::METHODS as $k => $l)<option value="{{ $k }}" @selected(($filters['method'] ?? null) === $k)>{{ $l }}</option>@endforeach</select>
+                    <select name="method" class="input"><option value="">{{ __('Hamısı') }}</option>@foreach(\App\Models\Expense::METHODS as $k => $l)<option value="{{ $k }}" @selected(($filters['method'] ?? null) === $k)>{{ __($l) }}</option>@endforeach</select>
                 </x-field>
                 <div class="flex gap-2 sm:col-span-2 lg:col-span-3"><input name="q" value="{{ $filters['q'] ?? '' }}" placeholder="{{ __('Axtar…') }}" class="input flex-1 min-w-0" aria-label="{{ __('Axtar') }}"><button class="btn btn-primary btn-icon" aria-label="{{ __('Filtr') }}"><x-icon name="filter" class="size-4"/></button></div>
             </form>
@@ -52,21 +52,21 @@
                             <tbody>
                             @foreach($expenses as $e)
                                 <tr>
-                                    <td data-label="Tarix" class="font-mono text-xs whitespace-nowrap">{{ azdate($e->expense_date) }}</td>
-                                    <td data-label="Xərc" class="max-w-[300px]">
+                                    <td data-label="{{ __('Tarix') }}" class="font-mono text-xs whitespace-nowrap">{{ azdate($e->expense_date) }}</td>
+                                    <td data-label="{{ __('Xərc') }}" class="max-w-[300px]">
                                         <div class="font-medium text-ink line-clamp-2">{{ $e->description }}</div>
                                         <div class="text-[11px] text-muted">{{ $e->counterparty?->name }}@if($e->deal) · <a href="{{ route('deals.show', $e->deal) }}" class="hover:text-brand-ink">{{ $e->deal->code }}</a>@endif</div>
                                     </td>
-                                    <td data-label="Kateqoriya">@if($e->category)<span class="inline-flex items-center gap-1.5"><span class="size-2.5 rounded-full shrink-0" style="background: {{ $e->category->color ?: '#94a3b8' }}"></span>{{ $e->category->name }}</span>@else<span class="text-faint">—</span>@endif</td>
-                                    <td data-label="Məbləğ" class="num font-medium">{{ money($e->amount, $e->currency) }}@if($e->currency !== 'AZN' && $e->amount_azn !== null)<div class="text-[11px] text-faint">{{ money($e->amount_azn) }}</div>@endif</td>
+                                    <td data-label="{{ __('Kateqoriya') }}">@if($e->category)<span class="inline-flex items-center gap-1.5"><span class="size-2.5 rounded-full shrink-0" style="background: {{ $e->category->color ?: '#94a3b8' }}"></span>{{ $e->category->name }}</span>@else<span class="text-faint">—</span>@endif</td>
+                                    <td data-label="{{ __('Məbləğ') }}" class="num font-medium">{{ money($e->amount, $e->currency) }}@if($e->currency !== 'AZN' && $e->amount_azn !== null)<div class="text-[11px] text-faint">{{ money($e->amount_azn) }}</div>@endif</td>
                                     <td data-label="Status">
                                         @php [$sl, $st] = \App\Models\Expense::STATUSES[$e->status]; @endphp
                                         <span class="badge badge-{{ $e->isOverdue() ? 'rose' : $st }}">{{ $e->isOverdue() ? 'Gecikir' : $sl }}</span>
                                         @if(! $e->isPaid() && $e->due_date)<div class="text-[11px] text-muted mt-0.5">son: {{ azdate($e->due_date) }}</div>@endif
                                     </td>
-                                    <td data-label="Ödəniş" class="text-xs">
+                                    <td data-label="{{ __('Ödəniş') }}" class="text-xs">
                                         @if($e->isPaid())
-                                            {{ \App\Models\Expense::METHODS[$e->payment_method] }} · {{ azdate($e->paid_at) }}
+                                            {{ __(\App\Models\Expense::METHODS[$e->payment_method]) }} · {{ azdate($e->paid_at) }}
                                             @if($e->account)<div class="text-muted">{{ $e->account->name }}
                                                 @if($e->bank_transaction_id)@can('bank.view')<a href="{{ route('bank.transactions.show', $e->bank_transaction_id) }}" class="text-brand-ink hover:underline">{{ __('· çıxarış') }}</a>@endcan @endif</div>@endif
                                         @else — @endif
@@ -77,7 +77,7 @@
                                             <a href="{{ route('expenses.edit', $e) }}" class="btn btn-ghost btn-icon btn-sm" aria-label="{{ __('Redaktə') }}"><x-icon name="pencil" class="size-4"/></a>
                                         @endcan
                                         @can('expenses.delete')
-                                            <form method="POST" action="{{ route('expenses.destroy', $e) }}" class="inline" data-confirm="Xərc silinsin?{{ $e->bank_transaction_id ? ' Bank hesabından silinmə də ləğv olunacaq.' : '' }}" data-confirm-action="{{ __('Sil') }}">
+                                            <form method="POST" action="{{ route('expenses.destroy', $e) }}" class="inline" data-confirm="{{ __('Xərc silinsin?:v1', ['v1' => $e->bank_transaction_id ? __(' Bank hesabından silinmə də ləğv olunacaq.') : '']) }}" data-confirm-action="{{ __('Sil') }}">
                                                 @csrf @method('DELETE')<button class="btn btn-ghost btn-icon btn-sm text-danger" aria-label="{{ __('Sil') }}"><x-icon name="trash" class="size-4"/></button>
                                             </form>
                                         @endcan
@@ -102,7 +102,7 @@
                 @php $cat = $catNames[$cid] ?? null; @endphp
                 <a href="{{ route('expenses.index', $q + ['category_id' => $cid ?: null]) }}" class="block group">
                     <div class="flex items-baseline justify-between gap-2 text-sm">
-                        <span class="truncate group-hover:text-brand-ink">{{ $cat?->name ?? 'Kateqoriyasız' }}</span>
+                        <span class="truncate group-hover:text-brand-ink">{{ $cat?->name ?? __('Kateqoriyasız') }}</span>
                         <span class="font-mono text-xs">{{ money($sum) }}</span>
                     </div>
                     <div class="mt-1 h-1.5 rounded-full bg-surface-2 overflow-hidden"><div class="h-full rounded-full" style="width: {{ round($sum / $max * 100) }}%; background: {{ $cat?->color ?: 'var(--color-brand)' }}"></div></div>

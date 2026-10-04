@@ -77,7 +77,7 @@ class SalesDocument extends Model
 
     public function label(): string
     {
-        return self::KINDS[$this->kind][1];
+        return __(self::KINDS[$this->kind][1]);
     }
 
     /** Sum of the lines (each line total is quantity × unit price, to the kopeck). */

@@ -15,7 +15,7 @@ class CounterpartyImporter extends Importer
 
     public static function title(): string
     {
-        return 'Müştəri və təchizatçılar';
+        return __('Müştəri və təchizatçılar');
     }
 
     public static function ability(): string
@@ -25,26 +25,26 @@ class CounterpartyImporter extends Importer
 
     public static function description(): string
     {
-        return 'Ad, növ, VÖEN, rekvizitlər. Eyni VÖEN artıq varsa, sətir atlanır.';
+        return __('Ad, növ, VÖEN, rekvizitlər. Eyni VÖEN artıq varsa, sətir atlanır.');
     }
 
     public function fields(): array
     {
         return [
             'name' => ['label' => 'Ad', 'required' => true, 'aliases' => ['adı', 'şirkət', 'kontragent', 'name', 'company'], 'example' => '«Xəzər Logistika» MMC'],
-            'type' => ['label' => 'Növ', 'required' => true, 'aliases' => ['tip', 'type'], 'example' => 'Müştəri'],
-            'voen' => ['label' => 'VÖEN', 'aliases' => ['voen', 'vöen', 'tin', 'inn'], 'example' => '1234567891'],
-            'entity_type' => ['label' => 'Şəxs', 'aliases' => ['hüquqi/fiziki'], 'example' => 'Hüquqi şəxs'],
-            'country' => ['label' => 'Ölkə', 'aliases' => ['country'], 'example' => 'Azərbaycan'],
-            'city' => ['label' => 'Şəhər', 'aliases' => ['city'], 'example' => 'Bakı'],
-            'address' => ['label' => 'Ünvan', 'aliases' => ['address'], 'example' => 'Nizami küç. 10'],
-            'phone' => ['label' => 'Telefon', 'aliases' => ['tel', 'phone', 'mobil'], 'example' => '+994 12 555 55 55'],
+            'type' => ['label' => __('Növ'), 'required' => true, 'aliases' => ['tip', 'type'], 'example' => 'Müştəri'],
+            'voen' => ['label' => __('VÖEN'), 'aliases' => ['voen', 'vöen', 'tin', 'inn'], 'example' => '1234567891'],
+            'entity_type' => ['label' => __('Şəxs'), 'aliases' => ['hüquqi/fiziki'], 'example' => 'Hüquqi şəxs'],
+            'country' => ['label' => __('Ölkə'), 'aliases' => ['country'], 'example' => 'Azərbaycan'],
+            'city' => ['label' => __('Şəhər'), 'aliases' => ['city'], 'example' => 'Bakı'],
+            'address' => ['label' => __('Ünvan'), 'aliases' => ['address'], 'example' => 'Nizami küç. 10'],
+            'phone' => ['label' => __('Telefon'), 'aliases' => ['tel', 'phone', 'mobil'], 'example' => '+994 12 555 55 55'],
             'email' => ['label' => 'Email', 'aliases' => ['e-poçt', 'e-mail', 'mail'], 'example' => 'info@xezer.az'],
             'iban' => ['label' => 'IBAN', 'aliases' => ['hesab', 'account'], 'example' => ''],
             'bank_name' => ['label' => 'Bank', 'aliases' => ['bankın adı'], 'example' => 'Kapital Bank'],
             'swift' => ['label' => 'SWIFT', 'aliases' => ['bic', 'swift/bic'], 'example' => ''],
-            'tags' => ['label' => 'Etiketlər', 'aliases' => ['tags', 'etiket'], 'example' => 'VIP, idxal'],
-            'notes' => ['label' => 'Qeyd', 'aliases' => ['qeydlər', 'notes'], 'example' => ''],
+            'tags' => ['label' => __('Etiketlər'), 'aliases' => ['tags', 'etiket'], 'example' => 'VIP, idxal'],
+            'notes' => ['label' => __('Qeyd'), 'aliases' => ['qeydlər', 'notes'], 'example' => ''],
         ];
     }
 

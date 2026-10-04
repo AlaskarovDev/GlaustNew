@@ -6,7 +6,7 @@
             <div class="relative">
                 <input id="password" name="password" :type="show ? 'text' : 'password'" type="password" required autocomplete="current-password"
                        class="input pr-11 @error('password') is-invalid @enderror">
-                <button type="button" @click="show = !show" class="absolute inset-y-0 right-0 grid place-items-center w-10 text-muted hover:text-ink" :aria-label="show ? 'Şifrəni gizlə' : 'Şifrəni göstər'">
+                <button type="button" @click="show = !show" class="absolute inset-y-0 right-0 grid place-items-center w-10 text-muted hover:text-ink" :aria-label="show ? {{ \Illuminate\Support\Js::from(__('Şifrəni gizlə')) }} : {{ \Illuminate\Support\Js::from(__('Şifrəni göstər')) }}">
                     <x-icon name="eye" class="size-4" x-show="!show"/>
                     <x-icon name="eye-off" class="size-4" x-show="show" x-cloak/>
                 </button>

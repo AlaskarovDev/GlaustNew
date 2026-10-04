@@ -20,13 +20,13 @@ class SpreadsheetFile implements ValidationRule
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
         if (! $value instanceof UploadedFile || ! $value->isValid()) {
-            $fail(':attribute yüklənmədi. Yenidən cəhd edin.');
+            $fail(__(':attribute yüklənmədi. Yenidən cəhd edin.'));
 
             return;
         }
         $ext = strtolower($value->getClientOriginalExtension());
         if (! in_array($ext, $this->extensions, true)) {
-            $fail(':attribute bu növlərdən biri olmalıdır: '.implode(', ', $this->extensions).'.');
+            $fail(__(':attribute bu növlərdən biri olmalıdır: ').implode(', ', $this->extensions).'.');
 
             return;
         }
@@ -38,7 +38,7 @@ class SpreadsheetFile implements ValidationRule
             default => $head !== '' && ! str_starts_with($head, "PK\x03\x04") && ! str_contains($head, "\0"),
         };
         if (! $ok) {
-            $fail(':attribute .'.$ext.' faylı deyil (məzmunu uyğun gəlmir). Faylı Excel-də açıb «.xlsx» kimi yenidən yadda saxlayın.');
+            $fail(':attribute .'.$ext.__(' faylı deyil (məzmunu uyğun gəlmir). Faylı Excel-də açıb «.xlsx» kimi yenidən yadda saxlayın.'));
         }
     }
 }

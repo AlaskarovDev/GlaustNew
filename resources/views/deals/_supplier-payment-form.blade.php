@@ -15,7 +15,7 @@
             <h2 class="text-base font-semibold flex items-center gap-2"><x-icon name="arrow-up-right" class="size-5 text-danger"/> {{ __('Satıcıya ödəniş') }}</h2>
             <p class="text-xs text-muted">{{ __('Köçürmə tarixinə görə CBAR kursu, bankın kursu və bank komissiyası (EUR: 0,25%, ən az 25, ən çox 300 EUR)') }}</p>
         </div>
-        <button type="button" class="btn btn-secondary btn-sm" @click="open = !open"><span x-text="open ? 'Bağla' : 'Ödəniş et'"></span></button>
+        <button type="button" class="btn btn-secondary btn-sm" @click="open = !open"><span x-text="open ? {{ \Illuminate\Support\Js::from(__('Bağla')) }} : {{ \Illuminate\Support\Js::from(__('Ödəniş et')) }}"></span></button>
     </header>
     <form method="POST" action="{{ route('deals.payments.store', $deal) }}" x-show="open" x-collapse class="p-5" @if($list->isNotEmpty() && ! ($mine && $errors->any())) x-cloak @endif
           x-data="{
@@ -59,7 +59,7 @@
                 <div class="grid md:grid-cols-2 gap-4">
                     <div>
                         <span class="field-label">{{ __('Kimə') }}</span>
-                        <div class="input flex items-center gap-2 bg-surface-2 text-ink" aria-readonly="true"><x-icon name="building" class="size-4 text-muted shrink-0"/><span class="truncate">{{ $deal->supplier?->name ?? 'Satıcı seçilməyib' }}</span></div>
+                        <div class="input flex items-center gap-2 bg-surface-2 text-ink" aria-readonly="true"><x-icon name="building" class="size-4 text-muted shrink-0"/><span class="truncate">{{ $deal->supplier?->name ?? __('Satıcı seçilməyib') }}</span></div>
                         <p class="text-[11px] text-muted mt-1">{{ __('Məhsulu satan tərəf — avtomatik') }}</p>
                     </div>
                     <x-field :label="__('Köçürmə tarixi')" name="payment_date" required><input type="date" name="payment_date" x-model="date" max="{{ today()->toDateString() }}" class="input @error('payment_date') is-invalid @enderror" required></x-field>
@@ -68,7 +68,7 @@
                     </x-field>
                     <x-field :label="__('Məbləğ')" name="amount" required>
                         <input name="amount" x-model="amount" inputmode="decimal" class="input font-mono text-right @error('amount') is-invalid @enderror" required>
-                        @if($sellerDue)<p class="text-[11px] text-muted mt-1">Qalıq borc: {{ collect($sellerDue)->map(fn ($v, $c) => money($v, $c))->implode(' · ') }}</p>@endif
+                        @if($sellerDue)<p class="text-[11px] text-muted mt-1">{{ __('Qalıq borc:') }} {{ collect($sellerDue)->map(fn ($v, $c) => money($v, $c))->implode(' · ') }}</p>@endif
                     </x-field>
                 </div>
                 <div class="grid md:grid-cols-2 gap-4">
@@ -81,7 +81,7 @@
                     </x-field>
                     <div class="grid grid-cols-2 gap-4">
                         <x-field :label="__('İstinad / ödəniş tapşırığı №')" name="reference"><input name="reference" value="{{ $mine ? old('reference') : '' }}" class="input font-mono"></x-field>
-                        <x-field :label="__('Təyinat')" name="purpose"><input name="purpose" value="{{ $mine ? old('purpose') : '' }}" placeholder="Trade {{ $deal->code }} üzrə ödəniş" class="input"></x-field>
+                        <x-field :label="__('Təyinat')" name="purpose"><input name="purpose" value="{{ $mine ? old('purpose') : '' }}" placeholder="{{ __('Trade :v1 üzrə ödəniş', ['v1' => $deal->code]) }}" class="input"></x-field>
                     </div>
                 </div>
             </div>

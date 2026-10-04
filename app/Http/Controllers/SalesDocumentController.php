@@ -38,7 +38,7 @@ class SalesDocumentController extends Controller
     {
         $this->authorize('projects.update');
         if ($document->isLocked()) {
-            return back()->with('error', $document->kind === 'commercial' ? 'Kommersiya fakturası təsdiqdən sonra yaradılıb və dəyişdirilmir.' : 'Faktura təsdiqdədir və ya təsdiqlənib — sənəddə düzəliş əməliyyatlarına icazə dayandırılıb.');
+            return back()->with('error', $document->kind === 'commercial' ? __('Kommersiya fakturası təsdiqdən sonra yaradılıb və dəyişdirilmir.') : __('Faktura təsdiqdədir və ya təsdiqlənib — sənəddə düzəliş əməliyyatlarına icazə dayandırılıb.'));
         }
         $lines = array_values(array_filter((array) $request->input('lines', []), fn ($l) => is_array($l) && trim(implode('', array_map('strval', $l))) !== ''));
         foreach ($lines as &$l) {
@@ -69,8 +69,8 @@ class SalesDocumentController extends Controller
             'lines.*.uom' => ['nullable', 'string', 'max:16'],
             'lines.*.quantity' => ['required', 'numeric', 'min:0', 'max:999999999'],
             'lines.*.unit_price' => ['required', 'numeric', 'min:0', 'max:999999999'],
-        ], ['lines.min' => 'Sənəddə ən azı bir sətir olmalıdır.'], [
-            'number' => 'Nömrə', 'doc_date' => 'Tarix', 'lines.*.description' => 'Təsvir', 'lines.*.quantity' => 'Miqdar', 'lines.*.unit_price' => 'Qiymət',
+        ], ['lines.min' => __('Sənəddə ən azı bir sətir olmalıdır.')], [
+            'number' => __('Nömrə'), 'doc_date' => __('Tarix'), 'lines.*.description' => __('Təsvir'), 'lines.*.quantity' => __('Miqdar'), 'lines.*.unit_price' => __('Qiymət'),
         ]);
 
         $data['lines'] = array_map(fn ($l, $i) => [
@@ -87,7 +87,7 @@ class SalesDocumentController extends Controller
 
         $document->update($data);
 
-        return back()->with('success', $document->title().' '.$document->number.' yadda saxlanıldı. PDF son vəziyyətdən yaradılacaq.');
+        return back()->with('success', $document->title().' '.$document->number.__(' yadda saxlanıldı. PDF son vəziyyətdən yaradılacaq.'));
     }
 
     /** Replace the lines with the current calculation (header fields are kept). */
@@ -95,7 +95,7 @@ class SalesDocumentController extends Controller
     {
         $this->authorize('projects.update');
         if ($document->isLocked()) {
-            return back()->with('error', $document->kind === 'commercial' ? 'Kommersiya fakturası təsdiqdən sonra yaradılıb və dəyişdirilmir.' : 'Faktura təsdiqdədir və ya təsdiqlənib — sənəddə düzəliş əməliyyatlarına icazə dayandırılıb.');
+            return back()->with('error', $document->kind === 'commercial' ? __('Kommersiya fakturası təsdiqdən sonra yaradılıb və dəyişdirilmir.') : __('Faktura təsdiqdədir və ya təsdiqlənib — sənəddə düzəliş əməliyyatlarına icazə dayandırılıb.'));
         }
         try {
             $builder->refreshLines($document);
@@ -103,7 +103,7 @@ class SalesDocumentController extends Controller
             return back()->with('error', $e->getMessage());
         }
 
-        return back()->with('success', 'Sətirlər hesablamadan yeniləndi.');
+        return back()->with('success', __('Sətirlər hesablamadan yeniləndi.'));
     }
 
     public function pdf(Request $request, SalesDocument $document, PdfExporter $pdf): Response
@@ -126,11 +126,11 @@ class SalesDocumentController extends Controller
     {
         $this->authorize('projects.delete');
         if ($document->isLocked()) {
-            return back()->with('error', $document->kind === 'commercial' ? 'Kommersiya fakturası təsdiqdən sonra yaradılıb və dəyişdirilmir.' : 'Faktura təsdiqdədir və ya təsdiqlənib — sənəddə düzəliş əməliyyatlarına icazə dayandırılıb.');
+            return back()->with('error', $document->kind === 'commercial' ? __('Kommersiya fakturası təsdiqdən sonra yaradılıb və dəyişdirilmir.') : __('Faktura təsdiqdədir və ya təsdiqlənib — sənəddə düzəliş əməliyyatlarına icazə dayandırılıb.'));
         }
         $deal = $document->deal_id;
         $document->delete();
 
-        return redirect()->route('deals.show', $deal)->with('success', $document->title().' '.$document->number.' silindi. Fakturadan yenidən yaratmaq olar.');
+        return redirect()->route('deals.show', $deal)->with('success', $document->title().' '.$document->number.__(' silindi. Fakturadan yenidən yaratmaq olar.'));
     }
 }

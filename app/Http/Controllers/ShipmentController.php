@@ -55,12 +55,12 @@ class ShipmentController extends Controller
         $this->authorize('logistics.create');
         $shipment = DB::transaction(function () use ($request) {
             $shipment = Shipment::create($this->validated($request));
-            $shipment->history()->create(['status' => $shipment->status, 'changed_by' => $request->user()->id, 'note' => 'Yük yaradıldı']);
+            $shipment->history()->create(['status' => $shipment->status, 'changed_by' => $request->user()->id, 'note' => __('Yük yaradıldı')]);
 
             return $shipment;
         });
 
-        return redirect()->route('shipments.show', $shipment)->with('success', "Yük {$shipment->number} yaradıldı.");
+        return redirect()->route('shipments.show', $shipment)->with('success', __('Yük :v1 yaradıldı.', ['v1' => $shipment->number]));
     }
 
     public function show(Shipment $shipment): View
@@ -89,7 +89,7 @@ class ShipmentController extends Controller
             }
         });
 
-        return redirect()->route('shipments.show', $shipment)->with('success', 'Yük yeniləndi.');
+        return redirect()->route('shipments.show', $shipment)->with('success', __('Yük yeniləndi.'));
     }
 
     public function destroy(Shipment $shipment): RedirectResponse
@@ -97,7 +97,7 @@ class ShipmentController extends Controller
         $this->authorize('logistics.delete');
         $shipment->delete();
 
-        return redirect()->route('shipments.index')->with('success', "Yük {$shipment->number} silindi.");
+        return redirect()->route('shipments.index')->with('success', __('Yük :v1 silindi.', ['v1' => $shipment->number]));
     }
 
     public function status(Request $request, Shipment $shipment): RedirectResponse
@@ -127,7 +127,7 @@ class ShipmentController extends Controller
             'amount' => ['required', 'numeric', 'gt:0', 'max:999999999999'],
             'currency' => ['required', Rule::in(config('glaust.currencies'))],
             'note' => ['nullable', 'string', 'max:190'],
-        ], [], ['cost_type' => 'Xərc növü', 'cost_date' => 'Tarix']);
+        ], [], ['cost_type' => __('Xərc növü'), 'cost_date' => __('Tarix')]);
 
         try {
             $rate = $rates->rate($data['currency'], $data['cost_date']);
@@ -137,7 +137,7 @@ class ShipmentController extends Controller
 
         $shipment->costs()->create($data + ['cbar_rate' => $rate, 'amount_azn' => round($data['amount'] * $rate, 2)]);
 
-        return back()->with('success', 'Xərc əlavə edildi.');
+        return back()->with('success', __('Xərc əlavə edildi.'));
     }
 
     public function destroyCost(Shipment $shipment, ShipmentCost $cost): RedirectResponse
@@ -145,7 +145,7 @@ class ShipmentController extends Controller
         abort_unless($cost->shipment_id === $shipment->id, 404);
         $cost->delete();
 
-        return back()->with('success', 'Xərc silindi.');
+        return back()->with('success', __('Xərc silindi.'));
     }
 
     private function afterStatusChange(Shipment $shipment, int $userId, ?string $note): void
@@ -186,12 +186,12 @@ class ShipmentController extends Controller
             'contract_id' => ['nullable', 'integer', TenantExists::in('contracts')],
             'responsible_id' => ['nullable', 'integer', TenantExists::plain('users')],
             'notes' => ['nullable', 'string', 'max:5000'],
-        ], ['number.unique' => 'Bu nömrə ilə yük artıq var.'], [
-            'eta' => 'Gözlənilən çatma tarixi', 'loading_date' => 'Yüklənmə tarixi', 'carrier_id' => 'Daşıyıcı', 'weight_kg' => 'Çəki', 'volume_m3' => 'Həcm',
+        ], ['number.unique' => __('Bu nömrə ilə yük artıq var.')], [
+            'eta' => __('Gözlənilən çatma tarixi'), 'loading_date' => __('Yüklənmə tarixi'), 'carrier_id' => __('Daşıyıcı'), 'weight_kg' => __('Çəki'), 'volume_m3' => __('Həcm'),
         ]);
 
         if (! empty($data['carrier_id']) && ! \App\Models\Counterparty::find($data['carrier_id'])?->isSupplier()) {
-            throw ValidationException::withMessages(['carrier_id' => 'Daşıyıcı CRM-də təchizatçı kimi qeyd olunmalıdır.']);
+            throw ValidationException::withMessages(['carrier_id' => __('Daşıyıcı CRM-də təchizatçı kimi qeyd olunmalıdır.')]);
         }
 
         return $data;

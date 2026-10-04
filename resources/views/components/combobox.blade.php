@@ -1,4 +1,4 @@
-@props(['name', 'url', 'value' => null, 'display' => null, 'label' => null, 'placeholder' => 'Seçin…', 'required' => false, 'hint' => null, 'wrapper' => '', 'depends' => null, 'partyId' => null])
+@props(['name', 'url', 'value' => null, 'display' => null, 'label' => null, 'placeholder' => __('Seçin…'), 'required' => false, 'hint' => null, 'wrapper' => '', 'depends' => null, 'partyId' => null])
 @php
     $errorKey = str_replace(['[', ']'], ['.', ''], $name);
     $value = old($errorKey, $value);

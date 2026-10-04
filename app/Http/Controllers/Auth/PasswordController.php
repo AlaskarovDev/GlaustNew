@@ -27,7 +27,7 @@ class PasswordController extends Controller
         // Same answer whether or not the address exists (no account enumeration).
         Password::broker()->sendResetLink(['email' => Str::lower($request->input('email'))]);
 
-        return back()->with('status', 'Əgər bu email sistemdə qeydiyyatdadırsa, şifrəni yeniləmək üçün link göndərildi.');
+        return back()->with('status', __('Əgər bu email sistemdə qeydiyyatdadırsa, şifrəni yeniləmək üçün link göndərildi.'));
     }
 
     public function reset(Request $request, string $token): View
@@ -41,7 +41,7 @@ class PasswordController extends Controller
             'token' => ['required'],
             'email' => ['required', 'email'],
             'password' => ['required', 'confirmed', PasswordRule::defaults()],
-        ], [], ['password' => 'Şifrə']);
+        ], [], ['password' => __('Şifrə')]);
 
         $status = Password::broker()->reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
@@ -54,7 +54,7 @@ class PasswordController extends Controller
         );
 
         return $status === Password::PASSWORD_RESET
-            ? redirect()->route('login')->with('status', 'Şifrəniz yeniləndi. Yeni şifrə ilə daxil olun.')
-            : back()->withInput($request->only('email'))->withErrors(['email' => 'Link etibarsızdır və ya müddəti bitib.']);
+            ? redirect()->route('login')->with('status', __('Şifrəniz yeniləndi. Yeni şifrə ilə daxil olun.'))
+            : back()->withInput($request->only('email'))->withErrors(['email' => __('Link etibarsızdır və ya müddəti bitib.')]);
     }
 }

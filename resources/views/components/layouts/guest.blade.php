@@ -1,6 +1,6 @@
 @props(['title' => null, 'heading' => null, 'subheading' => null])
 <!DOCTYPE html>
-<html lang="az">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
     <meta http-equiv="Content-Security-Policy" content="{{ \App\Support\Csp::policy(true) }}">
@@ -16,6 +16,7 @@
             document.documentElement.classList.toggle('dark', dark);
         })();
     </script>
+    <script nonce="{{ Vite::cspNonce() }}">window.__i18n = @json(\App\Support\JsTranslations::all());</script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-dvh grid lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
@@ -42,7 +43,7 @@
                 yüklərin izlənməsi və hər səhər mailinizə gələn gündəlik iş siyahısı.') }}
             </p>
             <div class="mt-10 grid grid-cols-3 gap-3" style="--i:3">
-                @foreach([['coins', 'CBAR məzənnələri', 'hər gün avtomatik'], ['bell', 'Xatırlatmalar', 'panel və mail'], ['shield', 'Rollar və loglar', 'hər giriş qeydə alınır']] as [$i, $t, $s])
+                @foreach([['coins', __('CBAR məzənnələri'), __('hər gün avtomatik')], ['bell', __('Xatırlatmalar'), __('panel və mail')], ['shield', __('Rollar və loglar'), __('hər giriş qeydə alınır')]] as [$i, $t, $s])
                     <div class="rounded-xl border border-white/[0.07] bg-white/[0.03] p-4">
                         <x-icon :name="$i" class="size-5 text-teal-300"/>
                         <div class="mt-3 text-sm font-medium text-white">{{ $t }}</div>
@@ -52,11 +53,12 @@
             </div>
         </div>
 
-        <p class="relative text-xs text-slate-600">© {{ date('Y') }} TradeFlow · Bütün hüquqlar qorunur</p>
+        <p class="relative text-xs text-slate-600">© {{ date('Y') }} {{ __('TradeFlow · Bütün hüquqlar qorunur') }}</p>
     </aside>
 
     {{-- Form panel --}}
-    <main class="flex flex-col justify-center px-5 py-10 sm:px-10 lg:px-16 bg-canvas">
+    <main class="relative flex flex-col justify-center px-5 py-10 sm:px-10 lg:px-16 bg-canvas">
+        <x-locale-switcher compact class="absolute top-4 right-4 sm:top-6 sm:right-6 w-36"/>
         <div class="w-full max-w-[420px] mx-auto rise">
             <div class="lg:hidden flex items-center gap-2.5 mb-10">
                 <span class="grid place-items-center size-9 rounded-xl bg-gradient-to-br from-teal-400 to-teal-700 text-night">

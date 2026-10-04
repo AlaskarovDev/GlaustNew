@@ -37,7 +37,7 @@
                 <input id="azn-date" type="date" x-model="date" :max="today" class="input !h-8 !w-40">
                 <span class="text-xs text-danger" x-show="error" x-text="error"></span>
             </div>
-            <button type="button" class="btn btn-sm" :class="azn ? 'btn-primary' : 'btn-secondary'" @click="azn = !azn" :aria-pressed="azn"><span class="font-mono">₼</span> <span x-text="azn ? 'AZN-i gizlət' : 'AZN ilə göstər'"></span></button>
+            <button type="button" class="btn btn-sm" :class="azn ? 'btn-primary' : 'btn-secondary'" @click="azn = !azn" :aria-pressed="azn"><span class="font-mono">₼</span> <span x-text="azn ? {{ \Illuminate\Support\Js::from(__('AZN-i gizlət')) }} : {{ \Illuminate\Support\Js::from(__('AZN ilə göstər')) }}"></span></button>
         </div>
         <div class="grid grid-cols-2 xl:grid-cols-5 gap-4 stagger">
             <div class="card p-4" style="--i:0"><div class="text-xs text-muted">{{ __('Satıcının fakturası') }}</div><div class="text-xl font-semibold font-mono">{{ money($invoice->total, $invoice->currency) }}</div>
@@ -51,15 +51,15 @@
                     <div class="text-xl font-semibold text-faint">—</div><div class="text-[11px] text-faint">{{ __('hesablama bitəndə yaranır') }}</div>
                 @endif
             </div>
-            <div class="card p-4" style="--i:2"><div class="text-xs text-muted">{{ __('Sətir / miqdar') }}</div><div class="text-xl font-semibold font-mono">{{ $invoice->items->count() }}</div><div class="text-[11px] text-faint">{{ num($invoice->items->sum('quantity'), 2) }} cəmi miqdar</div></div>
+            <div class="card p-4" style="--i:2"><div class="text-xs text-muted">{{ __('Sətir / miqdar') }}</div><div class="text-xl font-semibold font-mono">{{ $invoice->items->count() }}</div><div class="text-[11px] text-faint">{{ num($invoice->items->sum('quantity'), 2) }} {{ __('cəmi miqdar') }}</div></div>
         <div class="card p-4" style="--i:3"><div class="text-xs text-muted">{{ __('Müqavilə') }}</div>
             @if($invoice->contract)<a href="{{ route('contracts.show', $invoice->contract) }}" class="block font-mono font-semibold hover:text-brand-ink">{{ $invoice->contract->number }}</a>@else<div>—</div>@endif
-            <div class="text-[11px] text-faint">{{ $invoice->type === 'supplier' ? 'alış müqaviləsi' : 'satış müqaviləsi' }}</div></div>
+            <div class="text-[11px] text-faint">{{ $invoice->type === 'supplier' ? __('alış müqaviləsi') : __('satış müqaviləsi') }}</div></div>
         <div class="card p-4" style="--i:4"><div class="text-xs text-muted">{{ __('Status') }}</div>
             @if(auth()->user()->can('projects.update') && ! $invoice->isLocked())
                 <form method="POST" action="{{ route('invoices.status', $invoice) }}" x-data class="mt-1">@csrf @method('PUT')
                     <select name="status" class="input !h-8 text-sm" @change="$el.form.requestSubmit()" aria-label="{{ __('Status') }}">
-                        @foreach(\App\Models\Invoice::STATUSES as $k => [$l])<option value="{{ $k }}" @selected($invoice->status === $k)>{{ $l }}</option>@endforeach
+                        @foreach(\App\Models\Invoice::STATUSES as $k => [$l])<option value="{{ $k }}" @selected($invoice->status === $k)>{{ __($l) }}</option>@endforeach
                     </select>
                 </form>
             @else
@@ -94,11 +94,11 @@
             'unit_price_rur_rounded' => $invoice->rubReady(), 'total_rur_rounded' => $invoice->rubReady(),
         ];
         $hints = [
-            'logistics' => 'Logistika xərcini daxil edin', 'unit_price_log' => '(Total + Logistics) / Quantity — logistika lazımdır',
-            'fee' => 'Total × komissiya faizi — faizi sağdakı paneldə tətbiq edin',
-            'unit_price_ccl_eur' => 'Total price CCL / Quantity — logistika və komissiya lazımdır', 'total_ccl_eur' => 'Total + Logistics + Komissiya — logistika və komissiya lazımdır',
-            'unit_price_rur' => 'UNIT PRICE CCL × RUB məzənnəsi', 'total_rur' => 'UNIT PRICE RUR × Quantity',
-            'unit_price_rur_rounded' => 'UNIT PRICE RUR 2 rəqəmə yuvarlaqlaşdırılmış', 'total_rur_rounded' => 'Yuvarlaq UNIT PRICE RUR × Quantity',
+            'logistics' => __('Logistika xərcini daxil edin'), 'unit_price_log' => __('(Total + Logistics) / Quantity — logistika lazımdır'),
+            'fee' => __('Total × komissiya faizi — faizi sağdakı paneldə tətbiq edin'),
+            'unit_price_ccl_eur' => __('Total price CCL / Quantity — logistika və komissiya lazımdır'), 'total_ccl_eur' => __('Total + Logistics + Komissiya — logistika və komissiya lazımdır'),
+            'unit_price_rur' => __('UNIT PRICE CCL × RUB məzənnəsi'), 'total_rur' => 'UNIT PRICE RUR × Quantity',
+            'unit_price_rur_rounded' => __('UNIT PRICE RUR 2 rəqəmə yuvarlaqlaşdırılmış'), 'total_rur_rounded' => 'Yuvarlaq UNIT PRICE RUR × Quantity',
         ];
         $cell = fn ($it, $k) => match ($k) {
             'logistics' => $it->logistics, 'unit_price_log' => $it->unitPriceLog(), 'fee' => $it->commission,
@@ -110,7 +110,7 @@
         $yellow = ['unit_price_rur_rounded', 'total_rur_rounded'];
         // The sheet's formulas, shown under each computed header (E = Quantity, H = Total).
         $formulas = [
-            'logistics' => 'H × logistika / H cəm', 'unit_price_log' => '(I + H) / E', 'fee' => 'H × faiz',
+            'logistics' => __('H × logistika / H cəm'), 'unit_price_log' => '(I + H) / E', 'fee' => __('H × faiz'),
             'unit_price_ccl_eur' => '(K + I + H) / E', 'total_ccl_eur' => 'L × E',
             'unit_price_rur' => 'L × '.$invoice->currency.'/RUB'.($invoice->fx_source === 'forecast' ? ' (proqnoz)' : ''), 'total_rur' => 'N × E',
             'unit_price_rur_rounded' => 'ROUND(N; 2)', 'total_rur_rounded' => 'P × E',
@@ -174,10 +174,10 @@
         </div>
         @if($pending)
             <p class="px-5 py-3 border-t border-line text-xs text-muted">
-                @if(! $invoice->hasLogistics() && ! $invoice->hasCommission()) Boz sütunlar logistika xərci və komissiya faizi daxil edildikdən sonra hesablanır.
-                @elseif(! $invoice->hasLogistics()) UNIT PRICE+LOG və CCL sütunları üçün logistika xərcini daxil edin.
-                @elseif(! $invoice->hasCommission()) Commission və CCL sütunları üçün sağdakı paneldə komissiya faizini tətbiq edin.
-                @elseif(! $invoice->hasRub()) RUR sütunları üçün «{{ $invoice->currency }} → RUB konvertasiya» addımında tarixi və kursu (CBAR və ya proqnoz) tətbiq edin.
+                @if(! $invoice->hasLogistics() && ! $invoice->hasCommission()) {{ __('Boz sütunlar logistika xərci və komissiya faizi daxil edildikdən sonra hesablanır.') }}
+                @elseif(! $invoice->hasLogistics()) {{ __('UNIT PRICE+LOG və CCL sütunları üçün logistika xərcini daxil edin.') }}
+                @elseif(! $invoice->hasCommission()) {{ __('Commission və CCL sütunları üçün sağdakı paneldə komissiya faizini tətbiq edin.') }}
+                @elseif(! $invoice->hasRub()) {{ __('RUR sütunları üçün «:currency → RUB konvertasiya» addımında tarixi və kursu (CBAR və ya proqnoz) tətbiq edin.', ['currency' => $invoice->currency]) }}
                 @endif
             </p>
         @endif
@@ -192,7 +192,7 @@
         <div class="space-y-6">
             @include('partials.attachments', ['model' => $invoice, 'type' => 'invoice', 'ability' => 'projects.update'])
             @if(auth()->user()->can('projects.delete') && ! $invoice->isLocked())
-                <x-delete-form :action="route('invoices.destroy', $invoice)" :label="__('Fakturanı sil')" :button="__('btn btn-ghost w-full text-danger hover:!bg-danger-soft')" :message="'Faktura '.$invoice->number.' və bütün sətirləri silinəcək.'"/>
+                <x-delete-form :action="route('invoices.destroy', $invoice)" :label="__('Fakturanı sil')" button="btn btn-ghost w-full text-danger hover:!bg-danger-soft" :message="__('Faktura ').$invoice->number.__(' və bütün sətirləri silinəcək.')"/>
             @endif
         </div>
     </div>

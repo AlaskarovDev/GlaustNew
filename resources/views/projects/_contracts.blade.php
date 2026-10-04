@@ -2,10 +2,10 @@
 @php
     $margin = $project->contractMargin();
     $sides = [
-        ['key' => 'sale', 'title' => 'Məhsulu alan tərəf', 'party' => $project->counterparty, 'contract' => $project->saleContract,
-         'icon' => 'arrow-up-right', 'tone' => 'bg-brand-soft text-brand', 'bar' => 'bg-brand', 'kindLabel' => 'Satış müqaviləsi', 'flow' => 'Daxil olub'],
-        ['key' => 'purchase', 'title' => 'Məhsulu satan tərəf', 'party' => $project->supplier, 'contract' => $project->purchaseContract,
-         'icon' => 'arrow-down-left', 'tone' => 'bg-saffron-soft text-saffron', 'bar' => 'bg-saffron', 'kindLabel' => 'Alış müqaviləsi', 'flow' => 'Ödənilib'],
+        ['key' => 'sale', 'title' => __('Məhsulu alan tərəf'), 'party' => $project->counterparty, 'contract' => $project->saleContract,
+         'icon' => 'arrow-up-right', 'tone' => 'bg-brand-soft text-brand', 'bar' => 'bg-brand', 'kindLabel' => __('Satış müqaviləsi'), 'flow' => __('Daxil olub')],
+        ['key' => 'purchase', 'title' => __('Məhsulu satan tərəf'), 'party' => $project->supplier, 'contract' => $project->purchaseContract,
+         'icon' => 'arrow-down-left', 'tone' => 'bg-saffron-soft text-saffron', 'bar' => 'bg-saffron', 'kindLabel' => __('Alış müqaviləsi'), 'flow' => __('Ödənilib')],
     ];
 @endphp
 <section aria-label="{{ __('Müqavilələr') }}">
@@ -50,7 +50,7 @@
                             <div><dt class="text-xs text-muted">{{ __('Bitmə') }}</dt>
                                 <dd class="font-mono">{{ azdate($c->end_date) }}
                                     @if($left !== null && in_array($c->status, ['signed', 'active']))
-                                        <span @class(['block text-[11px] font-sans', 'text-danger' => $left <= 7, 'text-saffron' => $left > 7 && $left <= 30, 'text-faint' => $left > 30])>{{ $left < 0 ? abs($left).' gün keçib' : $left.' gün qalıb' }}</span>
+                                        <span @class(['block text-[11px] font-sans', 'text-danger' => $left <= 7, 'text-saffron' => $left > 7 && $left <= 30, 'text-faint' => $left > 30])>{{ $left < 0 ? abs($left).__(' gün keçib') : $left.__(' gün qalıb') }}</span>
                                     @endif
                                 </dd></div>
                         </dl>
@@ -59,7 +59,7 @@
                                 <div class="flex justify-between text-xs mb-1.5"><span class="text-muted">{{ $s['flow'] }} (bank)</span><span class="font-mono">{{ money($settled[$s['key']]) }} · {{ $pct }}%</span></div>
                                 <div class="h-1.5 rounded-full bg-surface-2 overflow-hidden"><div class="h-full rounded-full {{ $over > 0.004 ? 'bg-danger' : $s['bar'] }}" style="width: {{ $pct }}%"></div></div>
                                 @if($over > 0.004)
-                                    <p class="mt-1.5 text-xs font-medium text-danger">Müqavilə məbləğindən {{ money($over) }} artıq {{ $s['key'] === 'sale' ? 'daxil olub' : 'ödənilib' }}</p>
+                                    <p class="mt-1.5 text-xs font-medium text-danger">{{ __('Müqavilə məbləğindən') }} {{ money($over) }} {{ __('artıq') }} {{ $s['key'] === 'sale' ? 'daxil olub' : __('ödənilib') }}</p>
                                 @endif
                             </div>
                         @endcan
@@ -72,7 +72,7 @@
                         <div class="flex-1 rounded-xl border-2 border-dashed border-line grid place-items-center text-center p-6">
                             <div>
                                 <x-icon name="signature" class="size-6 text-faint mx-auto"/>
-                                <p class="mt-2 text-sm text-muted">{{ $s['kindLabel'] }} bağlanmayıb</p>
+                                <p class="mt-2 text-sm text-muted">{{ $s['kindLabel'] }} {{ __('bağlanmayıb') }}</p>
                                 <div class="mt-4 flex flex-wrap justify-center gap-2">
                                     @can('projects.update')
                                         <a href="{{ route('projects.edit', $project) }}#{{ $s['key'] }}" class="btn btn-secondary btn-sm"><x-icon name="link" class="size-4"/> {{ __('Mövcudunu seç') }}</a>

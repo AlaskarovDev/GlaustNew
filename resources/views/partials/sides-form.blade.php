@@ -3,10 +3,10 @@
             <div class="grid xl:grid-cols-2 gap-6">
                 @foreach([
                     ['party' => 'counterparty_id', 'contract' => 'sale_contract_id', 'kind' => 'sale', 'role' => 'customer', 'icon' => 'arrow-up-right', 'tone' => 'bg-brand-soft text-brand', 'bar' => 'before:bg-brand',
-                     'title' => 'Məhsulu alan tərəf', 'sub' => 'Alıcı — məhsulu ona satırıq (satış müqaviləsi)', 'partyLabel' => 'Alıcı', 'contractLabel' => 'Satış müqaviləsi',
+                     'title' => __('Məhsulu alan tərəf'), 'sub' => __('Alıcı — məhsulu ona satırıq (satış müqaviləsi)'), 'partyLabel' => __('Alıcı'), 'contractLabel' => __('Satış müqaviləsi'),
                      'partyValue' => $holder->counterparty, 'contractValue' => $holder->saleContract],
                     ['party' => 'supplier_id', 'contract' => 'purchase_contract_id', 'kind' => 'purchase', 'role' => 'supplier', 'icon' => 'arrow-down-left', 'tone' => 'bg-saffron-soft text-saffron', 'bar' => 'before:bg-saffron',
-                     'title' => 'Məhsulu satan tərəf', 'sub' => 'Satıcı — məhsulu ondan alırıq (alış müqaviləsi)', 'partyLabel' => 'Satıcı', 'contractLabel' => 'Alış müqaviləsi',
+                     'title' => __('Məhsulu satan tərəf'), 'sub' => __('Satıcı — məhsulu ondan alırıq (alış müqaviləsi)'), 'partyLabel' => __('Satıcı'), 'contractLabel' => __('Alış müqaviləsi'),
                      'partyValue' => $holder->supplier, 'contractValue' => $holder->purchaseContract],
                 ] as $side)
                     <section id="{{ $side['kind'] }}" class="scroll-mt-24 card p-6 relative overflow-hidden before:absolute before:inset-x-0 before:top-0 before:h-1 {{ $side['bar'] }}">
@@ -21,9 +21,9 @@
                                         :depends="$side['party']" :party-id="$side['contractValue']?->counterparty_id"
                                         :value="$side['contractValue']?->id" :display="$side['contractValue'] ? $side['contractValue']->number.' · '.$side['contractValue']->subject : null"
                                         :placeholder="__('Mövcud müqaviləni seçin')"
-                                        hint="Siyahıda yalnız seçilmiş tərəfin {{ $side['kind'] === 'sale' ? 'satış' : 'alış' }} müqavilələri görünür. Müqavilə seçsəniz, tərəf avtomatik dolur."/>
+                                        hint="{{ __('Siyahıda yalnız seçilmiş tərəfin :v1 müqavilələri görünür. Müqavilə seçsəniz, tərəf avtomatik dolur.', ['v1' => $side['kind'] === 'sale' ? __('satış') : __('alış')]) }}"/>
                             @if($files)
-                                <x-field :label="$side['contractLabel'].' — imzalı PDF'" :name="$side['kind'].'_contract_file'" :hint="__('İstəyə bağlı. Fayl seçilmiş müqavilənin «Fayllar» bölməsinə əlavə olunur.')">
+                                <x-field :label="$side['contractLabel'].__(' — imzalı PDF')" :name="$side['kind'].'_contract_file'" :hint="__('İstəyə bağlı. Fayl seçilmiş müqavilənin «Fayllar» bölməsinə əlavə olunur.')">
                                     <input type="file" name="{{ $side['kind'] }}_contract_file" accept="application/pdf" class="input !h-auto py-2 text-sm">
                                 </x-field>
                                 @if($side['contractValue'])

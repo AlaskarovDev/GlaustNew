@@ -21,12 +21,12 @@ class ExchangeReport extends Report
 
     public static function title(): string
     {
-        return 'Kurs fərqi';
+        return __('Kurs fərqi');
     }
 
     public static function description(): string
     {
-        return 'Bankın faktiki məzənnəsi ilə CBAR arasındakı fərq və konvertasiyaların nəticəsi, AZN.';
+        return __('Bankın faktiki məzənnəsi ilə CBAR arasındakı fərq və konvertasiyaların nəticəsi, AZN.');
     }
 
     public static function icon(): string
@@ -49,7 +49,7 @@ class ExchangeReport extends Report
         $regular = BankTransaction::with('account:id,name', 'counterparty:id,name')->where('kind', 'regular')->where('currency', '!=', 'AZN')
             ->whereColumn('applied_rate', '!=', 'cbar_rate')->whereBetween('transaction_date', [$from, $to])->get()
             ->map(fn ($t) => [
-                'date' => $t->transaction_date, 'type' => $t->direction === 'in' ? 'Mədaxil' : 'Məxaric', 'account' => $t->account?->name,
+                'date' => $t->transaction_date, 'type' => $t->direction === 'in' ? __('Mədaxil') : __('Məxaric'), 'account' => $t->account?->name,
                 'detail' => $t->counterparty?->name ?? $t->purpose, 'amount' => (float) $t->amount, 'currency' => $t->currency,
                 'cbar' => (float) $t->cbar_rate, 'applied' => (float) $t->applied_rate, 'diff' => $t->exchangeDifference(),
             ]);
@@ -64,7 +64,7 @@ class ExchangeReport extends Report
                 }
 
                 return [
-                    'date' => $out->transaction_date, 'type' => 'Konvertasiya', 'account' => $out->account?->name.' → '.$in->account?->name,
+                    'date' => $out->transaction_date, 'type' => __('Konvertasiya'), 'account' => $out->account?->name.' → '.$in->account?->name,
                     'detail' => num($out->amount).' '.$out->currency.' → '.num($in->amount).' '.$in->currency,
                     'amount' => (float) $out->amount, 'currency' => $out->currency, 'cbar' => (float) $out->cbar_rate,
                     'applied' => $out->amount > 0 ? round($in->cbar_amount_azn / $out->amount, 8) : null,
@@ -78,15 +78,15 @@ class ExchangeReport extends Report
     public function columns(): array
     {
         return [
-            Column::make('Tarix', 'date', 'date'),
-            Column::make('Növ', 'type'),
-            Column::make('Hesab', 'account'),
-            Column::make('Təfərrüat', 'detail', width: 34),
-            Column::make('Məbləğ', 'amount', 'money'),
-            Column::make('Valyuta', 'currency'),
+            Column::make(__('Tarix'), 'date', 'date'),
+            Column::make(__('Növ'), 'type'),
+            Column::make(__('Hesab'), 'account'),
+            Column::make(__('Təfərrüat'), 'detail', width: 34),
+            Column::make(__('Məbləğ'), 'amount', 'money'),
+            Column::make(__('Valyuta'), 'currency'),
             Column::make('CBAR', 'cbar', 'rate'),
-            Column::make('Faktiki', 'applied', 'rate'),
-            Column::make('Kurs fərqi (AZN)', 'diff', 'money', total: true),
+            Column::make(__('Faktiki'), 'applied', 'rate'),
+            Column::make(__('Kurs fərqi (AZN)'), 'diff', 'money', total: true),
         ];
     }
 
@@ -102,14 +102,14 @@ class ExchangeReport extends Report
         $loss = $d->where('diff', '<', 0)->sum('diff');
 
         return [
-            ['label' => 'Müsbət fərq', 'value' => $gain, 'money' => true, 'tone' => 'success'],
-            ['label' => 'Mənfi fərq', 'value' => abs($loss), 'money' => true, 'tone' => 'danger'],
-            ['label' => 'Xalis nəticə', 'value' => $gain + $loss, 'money' => true, 'tone' => $gain + $loss >= 0 ? 'success' : 'danger'],
+            ['label' => __('Müsbət fərq'), 'value' => $gain, 'money' => true, 'tone' => 'success'],
+            ['label' => __('Mənfi fərq'), 'value' => abs($loss), 'money' => true, 'tone' => 'danger'],
+            ['label' => __('Xalis nəticə'), 'value' => $gain + $loss, 'money' => true, 'tone' => $gain + $loss >= 0 ? 'success' : 'danger'],
         ];
     }
 
     public function note(): ?string
     {
-        return 'Müsbət dəyər şirkət üçün CBAR-dan sərfəli kursu göstərir. Konvertasiyada hər iki tərəf öz tarixinin CBAR məzənnəsi ilə qiymətləndirilir.';
+        return __('Müsbət dəyər şirkət üçün CBAR-dan sərfəli kursu göstərir. Konvertasiyada hər iki tərəf öz tarixinin CBAR məzənnəsi ilə qiymətləndirilir.');
     }
 }

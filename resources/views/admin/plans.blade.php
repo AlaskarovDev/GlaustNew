@@ -5,7 +5,7 @@
         @foreach($plans->push(new \App\Models\Plan(['is_active' => true, 'modules' => config('glaust.plan_modules'), 'max_users' => 5, 'max_storage_mb' => 1024, 'monthly_price' => 0])) as $plan)
             <form method="POST" action="{{ $plan->exists ? route('admin.plans.update', $plan) : route('admin.plans.store') }}" @class(['card p-5 space-y-3', 'border-dashed' => ! $plan->exists])>
                 @csrf @if($plan->exists) @method('PUT') @endif
-                <div class="flex items-center justify-between"><h2 class="font-semibold">{{ $plan->exists ? $plan->name : 'Yeni tarif' }}</h2>@if($plan->exists)<span class="text-xs text-muted">{{ $plan->companies_count }} şirkət</span>@endif</div>
+                <div class="flex items-center justify-between"><h2 class="font-semibold">{{ $plan->exists ? $plan->name : 'Yeni tarif' }}</h2>@if($plan->exists)<span class="text-xs text-muted">{{ $plan->companies_count }} {{ __('şirkət') }}</span>@endif</div>
                 <div class="grid grid-cols-2 gap-3">
                     <x-input name="name" :label="__('Ad')" :value="$plan->name" required/>
                     <x-input name="code" :label="__('Kod')" :value="$plan->code" required class="font-mono"/>

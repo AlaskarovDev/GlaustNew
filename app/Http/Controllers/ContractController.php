@@ -59,13 +59,13 @@ class ContractController extends Controller
             $contract->setRelation('project', $project);
             if (in_array($request->query('kind'), ['sale', 'purchase'], true)) {
                 $contract->kind = $request->query('kind');
-                $contract->subject = ($contract->kind === 'sale' ? 'Məhsulun satışı — ' : 'Məhsulun alışı — ').$project->name;
+                $contract->subject = ($contract->kind === 'sale' ? __('Məhsulun satışı — ') : __('Məhsulun alışı — ')).$project->name;
             }
         }
         if ($parent = Contract::find($request->integer('parent_id'))) {
             $contract->fill(['parent_id' => $parent->id, 'counterparty_id' => $parent->counterparty_id, 'kind' => $parent->kind, 'currency' => $parent->currency, 'project_id' => $parent->project_id]);
             $contract->setRelation('counterparty', $parent->counterparty);
-            $contract->subject = 'Əlavə razılaşma — '.$parent->number;
+            $contract->subject = __('Əlavə razılaşma — ').$parent->number;
         }
 
         return view('contracts.form', ['contract' => $contract, 'payments' => []]);
@@ -83,7 +83,7 @@ class ContractController extends Controller
             return $contract;
         });
 
-        return redirect()->route('contracts.show', $contract)->with('success', "Müqavilə {$contract->number} yaradıldı.");
+        return redirect()->route('contracts.show', $contract)->with('success', __('Müqavilə :v1 yaradıldı.', ['v1' => $contract->number]));
     }
 
     public function show(Contract $contract): View
@@ -119,18 +119,18 @@ class ContractController extends Controller
             $this->fillProjectSlot($contract);
         });
 
-        return redirect()->route('contracts.show', $contract)->with('success', 'Müqavilə yeniləndi.');
+        return redirect()->route('contracts.show', $contract)->with('success', __('Müqavilə yeniləndi.'));
     }
 
     public function destroy(Contract $contract): RedirectResponse
     {
         $this->authorize('contracts.delete');
         if ($contract->transactions()->exists()) {
-            return back()->with('error', 'Bu müqaviləyə bağlı bank əməliyyatları var. Müqaviləni silmək əvəzinə statusunu «Ləğv» edin.');
+            return back()->with('error', __('Bu müqaviləyə bağlı bank əməliyyatları var. Müqaviləni silmək əvəzinə statusunu «Ləğv» edin.'));
         }
         $contract->delete();
 
-        return redirect()->route('contracts.index')->with('success', "Müqavilə {$contract->number} silindi.");
+        return redirect()->route('contracts.index')->with('success', __('Müqavilə :v1 silindi.', ['v1' => $contract->number]));
     }
 
     public function togglePayment(Contract $contract, ContractPayment $payment): RedirectResponse
@@ -138,14 +138,14 @@ class ContractController extends Controller
         abort_unless($payment->contract_id === $contract->id, 404);
         $payment->update(['paid_at' => $payment->paid_at ? null : now()]);
 
-        return back()->with('success', $payment->paid_at ? 'Ödəniş ödənilmiş kimi qeyd edildi.' : 'Ödəniş gözləmədə.');
+        return back()->with('success', $payment->paid_at ? __('Ödəniş ödənilmiş kimi qeyd edildi.') : __('Ödəniş gözləmədə.'));
     }
 
     public function pdf(Contract $contract, PdfExporter $pdf): Response
     {
         $contract->load(['counterparty.contacts', 'project', 'responsible', 'payments', 'amendments']);
 
-        return $pdf->render('contracts.pdf', ['contract' => $contract, 'title' => 'Müqavilə '.$contract->number], 'muqavile-'.$contract->number.'.pdf', false, true);
+        return $pdf->render('contracts.pdf', ['contract' => $contract, 'title' => __('Müqavilə ').$contract->number], 'muqavile-'.$contract->number.'.pdf', false, true);
     }
 
     /**
@@ -201,32 +201,32 @@ class ContractController extends Controller
             'payments.*.note' => ['nullable', 'string', 'max:190'],
             'payments.*.paid' => ['nullable', 'boolean'],
         ], [
-            'counterparty_id.required' => 'Müqavilə yalnız CRM-də olan müştəri və ya təchizatçı ilə bağlana bilər. Kontragent seçin.',
-            'counterparty_id.exists' => 'Seçilmiş kontragent sistemdə tapılmadı.',
-            'number.unique' => 'Bu nömrə ilə müqavilə artıq var.',
-        ], ['payments.*.due_date' => 'Ödəniş tarixi', 'payments.*.amount' => 'Ödəniş məbləği', 'parent_id' => 'Əsas müqavilə', 'responsible_id' => 'Məsul şəxs']);
+            'counterparty_id.required' => __('Müqavilə yalnız CRM-də olan müştəri və ya təchizatçı ilə bağlana bilər. Kontragent seçin.'),
+            'counterparty_id.exists' => __('Seçilmiş kontragent sistemdə tapılmadı.'),
+            'number.unique' => __('Bu nömrə ilə müqavilə artıq var.'),
+        ], ['payments.*.due_date' => __('Ödəniş tarixi'), 'payments.*.amount' => __('Ödəniş məbləği'), 'parent_id' => __('Əsas müqavilə'), 'responsible_id' => __('Məsul şəxs')]);
 
         $counterparty = Counterparty::findOrFail($data['counterparty_id']);
         if ($data['kind'] === 'sale' && ! $counterparty->isCustomer()) {
-            throw ValidationException::withMessages(['kind' => "«{$counterparty->name}» təchizatçıdır — onunla satış müqaviləsi bağlana bilməz. «Alış» seçin və ya kontragentin növünü dəyişin."]);
+            throw ValidationException::withMessages(['kind' => __('«:v1» təchizatçıdır — onunla satış müqaviləsi bağlana bilməz. «Alış» seçin və ya kontragentin növünü dəyişin.', ['v1' => $counterparty->name])]);
         }
         if ($data['kind'] === 'purchase' && ! $counterparty->isSupplier()) {
-            throw ValidationException::withMessages(['kind' => "«{$counterparty->name}» müştəridir — onunla alış müqaviləsi bağlana bilməz. «Satış» seçin və ya kontragentin növünü dəyişin."]);
+            throw ValidationException::withMessages(['kind' => __('«:v1» müştəridir — onunla alış müqaviləsi bağlana bilməz. «Satış» seçin və ya kontragentin növünü dəyişin.', ['v1' => $counterparty->name])]);
         }
         if (! empty($data['parent_id']) && Contract::find($data['parent_id'])?->counterparty_id !== $counterparty->id) {
-            throw ValidationException::withMessages(['parent_id' => 'Əlavə razılaşma eyni kontragentlə olan müqaviləyə bağlanmalıdır.']);
+            throw ValidationException::withMessages(['parent_id' => __('Əlavə razılaşma eyni kontragentlə olan müqaviləyə bağlanmalıdır.')]);
         }
 
         $scheduled = round(array_sum(array_column($payments, 'amount')), 2);
         if ($scheduled > round((float) $data['amount'], 2) + 0.004) {
-            throw ValidationException::withMessages(['payments' => 'Ödəniş qrafikinin cəmi ('.num($scheduled).') müqavilə məbləğindən ('.num($data['amount']).') çoxdur.']);
+            throw ValidationException::withMessages(['payments' => __('Ödəniş qrafikinin cəmi (').num($scheduled).__(') müqavilə məbləğindən (').num($data['amount']).__(') çoxdur.')]);
         }
 
         // Official CBAR rate on the contract date; no rate, no save.
         try {
             $rate = $this->rates->rate($data['currency'], $data['contract_date']);
         } catch (RateUnavailable $e) {
-            throw ValidationException::withMessages(['currency' => $e->getMessage().' Bir az sonra yenidən cəhd edin və ya tarixi yoxlayın.']);
+            throw ValidationException::withMessages(['currency' => $e->getMessage().__(' Bir az sonra yenidən cəhd edin və ya tarixi yoxlayın.')]);
         }
 
         $data['auto_renew'] = $request->boolean('auto_renew');

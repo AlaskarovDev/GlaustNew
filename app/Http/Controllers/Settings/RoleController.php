@@ -28,7 +28,7 @@ class RoleController extends Controller
         $this->authorize('users.create');
         Role::create($this->validated($request) + ['is_system' => false, 'is_admin' => false]);
 
-        return redirect()->route('settings.roles.index')->with('success', 'Rol yaradıldı.');
+        return redirect()->route('settings.roles.index')->with('success', __('Rol yaradıldı.'));
     }
 
     public function edit(Role $role): View
@@ -41,24 +41,24 @@ class RoleController extends Controller
     public function update(Request $request, Role $role): RedirectResponse
     {
         $this->authorize('users.update');
-        abort_if($role->is_admin, 403, 'Admin rolunun icazələri dəyişdirilmir.');
+        abort_if($role->is_admin, 403, __('Admin rolunun icazələri dəyişdirilmir.'));
         $role->update($this->validated($request, $role));
 
-        return redirect()->route('settings.roles.index')->with('success', 'Rol yeniləndi.');
+        return redirect()->route('settings.roles.index')->with('success', __('Rol yeniləndi.'));
     }
 
     public function destroy(Role $role): RedirectResponse
     {
         $this->authorize('users.delete');
         if ($role->is_system) {
-            return back()->with('error', 'Sistem rolları silinmir.');
+            return back()->with('error', __('Sistem rolları silinmir.'));
         }
         if ($role->users()->exists()) {
-            return back()->with('error', 'Bu rolda istifadəçilər var. Əvvəlcə onlara başqa rol verin.');
+            return back()->with('error', __('Bu rolda istifadəçilər var. Əvvəlcə onlara başqa rol verin.'));
         }
         $role->delete();
 
-        return back()->with('success', 'Rol silindi.');
+        return back()->with('success', __('Rol silindi.'));
     }
 
     private function validated(Request $request, ?Role $role = null): array
@@ -73,7 +73,7 @@ class RoleController extends Controller
             'name' => ['required', 'string', 'max:80', Rule::unique('roles')->where('company_id', tenant()->id)->ignore($role?->id)],
             'permissions' => ['array'],
             'permissions.*' => [Rule::in($allowed)],
-        ], ['name.unique' => 'Bu adda rol var.'], ['name' => 'Rolun adı']);
+        ], ['name.unique' => __('Bu adda rol var.')], ['name' => __('Rolun adı')]);
 
         $perms = array_values(array_unique($data['permissions'] ?? []));
         // Any action on a module implies seeing it.

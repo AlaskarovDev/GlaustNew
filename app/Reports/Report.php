@@ -35,8 +35,8 @@ abstract class Report
     public function filters(): array
     {
         return [
-            'from' => ['label' => 'Tarixdən', 'type' => 'date'],
-            'to' => ['label' => 'Tarixədək', 'type' => 'date'],
+            'from' => ['label' => __('Tarixdən'), 'type' => 'date'],
+            'to' => ['label' => __('Tarixədək'), 'type' => 'date'],
         ];
     }
 
@@ -83,7 +83,7 @@ abstract class Report
 
     public function filterSummary(): array
     {
-        $out = ['Dövr: '.$this->periodLabel()];
+        $out = [__('Dövr: ').$this->periodLabel()];
         foreach ($this->filters() as $key => $def) {
             if (in_array($key, ['from', 'to'], true) || ! $this->request->filled($key)) {
                 continue;

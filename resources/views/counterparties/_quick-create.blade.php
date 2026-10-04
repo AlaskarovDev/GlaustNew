@@ -9,7 +9,7 @@
                 if (!d.ok) { this.errors = d.errors || {}; if (d.message) toast('error', d.message); return; }
                 window.dispatchEvent(new CustomEvent('combobox:set:counterparty_id', { detail: d.item }));
                 window.dispatchEvent(new CustomEvent('combobox-change', { detail: { name: 'counterparty_id', item: d.item } }));
-                toast('success', d.item.label + ' əlavə edildi');
+                toast('success', d.item.label + ' ' + {{ \Illuminate\Support\Js::from(__('əlavə edildi')) }});
                 this.open = false;
                 this.form = { type: 'customer', entity_type: 'legal', name: '', voen: '', phone: '', email: '' };
             } catch (e) { toast('error', e.message); } finally { this.busy = false; }
@@ -26,7 +26,7 @@
         </div>
         <div class="grid sm:grid-cols-2 gap-4">
             <div class="sm:col-span-2 grid grid-cols-3 gap-2">
-                <template x-for="t in [['customer', 'Müştəri'], ['supplier', 'Təchizatçı'], ['both', 'Hər ikisi']]" :key="t[0]">
+                <template x-for="t in [['customer', {{ \Illuminate\Support\Js::from(__('Müştəri')) }}], ['supplier', {{ \Illuminate\Support\Js::from(__('Təchizatçı')) }}], ['both', {{ \Illuminate\Support\Js::from(__('Hər ikisi')) }}]]" :key="t[0]">
                     <label class="flex items-center justify-center h-10 rounded-lg border text-sm font-medium cursor-pointer transition-colors"
                            :class="form.type === t[0] ? 'border-brand bg-brand-soft text-brand-ink' : 'border-line text-ink-2 hover:border-line-strong'">
                         <input type="radio" class="sr-only" x-model="form.type" :value="t[0]"><span x-text="t[1]"></span>

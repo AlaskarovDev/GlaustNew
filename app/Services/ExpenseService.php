@@ -24,7 +24,7 @@ class ExpenseService
         $bank = $paid && ($data['payment_method'] ?? null) === 'bank';
         $account = $bank ? BankAccount::findOrFail($data['bank_account_id']) : null;
         if ($account && $account->currency !== $data['currency']) {
-            throw ValidationException::withMessages(['bank_account_id' => "Seçilən hesab {$account->currency} hesabıdır, xərc isə {$data['currency']} ilə. Eyni valyutalı hesab seçin."]);
+            throw ValidationException::withMessages(['bank_account_id' => __('Seçilən hesab :v1 hesabıdır, xərc isə :v2 ilə. Eyni valyutalı hesab seçin.', ['v1' => $account->currency, 'v2' => $data['currency']])]);
         }
 
         $rate = $this->rates->tryRate($data['currency'], $data['expense_date']);
@@ -50,7 +50,7 @@ class ExpenseService
                 return $expense;
             });
         } catch (RateUnavailable $e) {
-            throw ValidationException::withMessages(['paid_at' => $e->getMessage().' Xərc yadda saxlanmadı.']);
+            throw ValidationException::withMessages(['paid_at' => $e->getMessage().__(' Xərc yadda saxlanmadı.')]);
         }
     }
 

@@ -17,12 +17,12 @@ class LogisticsReport extends Report
 
     public static function title(): string
     {
-        return 'Logistika xərcləri və gecikmələr';
+        return __('Logistika xərcləri və gecikmələr');
     }
 
     public static function description(): string
     {
-        return 'Dövrdə yüklənən yüklər: xərclər növlər üzrə (AZN), planlı və faktiki çatma, gecikmə günləri.';
+        return __('Dövrdə yüklənən yüklər: xərclər növlər üzrə (AZN), planlı və faktiki çatma, gecikmə günləri.');
     }
 
     public static function icon(): string
@@ -38,8 +38,8 @@ class LogisticsReport extends Report
     public function filters(): array
     {
         return parent::filters() + [
-            'transport_mode' => ['label' => 'Nəqliyyat', 'type' => 'select', 'options' => config('glaust.transport_modes')],
-            'direction' => ['label' => 'İstiqamət', 'type' => 'select', 'options' => config('glaust.shipment_directions')],
+            'transport_mode' => ['label' => __('Nəqliyyat'), 'type' => 'select', 'options' => config('glaust.transport_modes')],
+            'direction' => ['label' => __('İstiqamət'), 'type' => 'select', 'options' => config('glaust.shipment_directions')],
         ];
     }
 
@@ -79,20 +79,20 @@ class LogisticsReport extends Report
     public function columns(): array
     {
         $cols = [
-            Column::make('Nömrə', 'number'),
-            Column::make('Marşrut', 'route', width: 30),
-            Column::make('Daşıyıcı', 'carrier'),
-            Column::make('Nəqliyyat', 'mode'),
-            Column::make('Yüklənmə', 'loading', 'date'),
-            Column::make('Plan çatma', 'eta', 'date'),
-            Column::make('Faktiki', 'arrived', 'date'),
-            Column::make('Gecikmə (gün)', 'delay', 'number'),
+            Column::make(__('Nömrə'), 'number'),
+            Column::make(__('Marşrut'), 'route', width: 30),
+            Column::make(__('Daşıyıcı'), 'carrier'),
+            Column::make(__('Nəqliyyat'), 'mode'),
+            Column::make(__('Yüklənmə'), 'loading', 'date'),
+            Column::make(__('Plan çatma'), 'eta', 'date'),
+            Column::make(__('Faktiki'), 'arrived', 'date'),
+            Column::make(__('Gecikmə (gün)'), 'delay', 'number'),
             Column::make('Status', 'status'),
         ];
         foreach (config('glaust.cost_types') as $k => $label) {
             $cols[] = Column::make($label.' (AZN)', 'c_'.$k, 'money', total: true);
         }
-        $cols[] = Column::make('Cəmi xərc', 'total', 'money', total: true);
+        $cols[] = Column::make(__('Cəmi xərc'), 'total', 'money', total: true);
 
         return $cols;
     }
@@ -108,10 +108,10 @@ class LogisticsReport extends Report
         $late = $d->filter(fn ($r) => ($r['delay'] ?? 0) > 0);
 
         return [
-            ['label' => 'Yük sayı', 'value' => $d->count()],
-            ['label' => 'Logistika xərci', 'value' => $d->sum('total'), 'money' => true],
-            ['label' => 'Gecikən yük', 'value' => $late->count(), 'tone' => $late->count() ? 'danger' : null],
-            ['label' => 'Orta gecikmə', 'value' => $late->count() ? round($late->avg('delay'), 1) : 0, 'suffix' => ' gün'],
+            ['label' => __('Yük sayı'), 'value' => $d->count()],
+            ['label' => __('Logistika xərci'), 'value' => $d->sum('total'), 'money' => true],
+            ['label' => __('Gecikən yük'), 'value' => $late->count(), 'tone' => $late->count() ? 'danger' : null],
+            ['label' => __('Orta gecikmə'), 'value' => $late->count() ? round($late->avg('delay'), 1) : 0, 'suffix' => __(' gün')],
         ];
     }
 
@@ -131,6 +131,6 @@ class LogisticsReport extends Report
             }
         }
 
-        return $series ? ['type' => 'donut', 'height' => 300, 'money' => true, 'labels' => $labels, 'series' => $series, 'totalLabel' => 'Xərc'] : null;
+        return $series ? ['type' => 'donut', 'height' => 300, 'money' => true, 'labels' => $labels, 'series' => $series, 'totalLabel' => __('Xərc')] : null;
     }
 }

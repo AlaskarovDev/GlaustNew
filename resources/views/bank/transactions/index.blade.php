@@ -33,10 +33,10 @@
         <div class="grid grid-cols-3 divide-x divide-line border-b border-line text-center">
             <div class="py-3"><div class="text-[11px] uppercase tracking-wider text-muted">{{ __('Mədaxil') }}</div><div class="font-mono font-semibold text-success">{{ money($totals['in']) }}</div></div>
             <div class="py-3"><div class="text-[11px] uppercase tracking-wider text-muted">{{ __('Məxaric') }}</div><div class="font-mono font-semibold text-danger">{{ money($totals['out']) }}</div></div>
-            <div class="py-3"><div class="text-[11px] uppercase tracking-wider text-muted">Fərq ({{ $totals['count'] }})</div><div class="font-mono font-semibold">{{ money($totals['in'] - $totals['out']) }}</div></div>
+            <div class="py-3"><div class="text-[11px] uppercase tracking-wider text-muted">{{ __('Fərq (') }}{{ $totals['count'] }})</div><div class="font-mono font-semibold">{{ money($totals['in'] - $totals['out']) }}</div></div>
         </div>
         @if($items->isEmpty())
-            <x-empty icon="bank" :title="$table->hasActiveFilters() ? 'Heç nə tapılmadı' : 'Hələ əməliyyat yoxdur'" :text="__('Mədaxil, məxaric və köçürmələri daxil edin və ya bank çıxarışını Excel-dən import edin.')"/>
+            <x-empty icon="bank" :title="$table->hasActiveFilters() ? __('Heç nə tapılmadı') : __('Hələ əməliyyat yoxdur')" :text="__('Mədaxil, məxaric və köçürmələri daxil edin və ya bank çıxarışını Excel-dən import edin.')"/>
         @else
             <div class="overflow-x-auto">
                 <table class="table-g table-stack">
@@ -47,22 +47,22 @@
                     <tbody>
                     @foreach($items as $t)
                         <tr>
-                            <td data-label="Tarix" class="font-mono text-xs whitespace-nowrap">{{ azdate($t->transaction_date) }}</td>
-                            <td data-label="Hesab" class="text-xs"><div class="text-ink-2">{{ $t->account?->name }}</div><div class="text-muted">{{ $t->account?->bank_name }}</div></td>
-                            <td data-label="Təyinat" class="max-w-[320px]">
+                            <td data-label="{{ __('Tarix') }}" class="font-mono text-xs whitespace-nowrap">{{ azdate($t->transaction_date) }}</td>
+                            <td data-label="{{ __('Hesab') }}" class="text-xs"><div class="text-ink-2">{{ $t->account?->name }}</div><div class="text-muted">{{ $t->account?->bank_name }}</div></td>
+                            <td data-label="{{ __('Təyinat') }}" class="max-w-[320px]">
                                 <a href="{{ route('bank.transactions.show', $t) }}" class="block hover:text-brand-ink">
                                     <span class="flex items-center gap-1.5">
                                         @if($t->kind !== 'regular')<span class="badge badge-violet !h-5 !text-[11px]">{{ config('glaust.transaction_kinds.'.$t->kind) }}</span>@endif
                                         <span class="font-medium text-ink truncate">{{ $t->counterparty?->name ?? ($t->purpose ?: '—') }}</span>
                                     </span>
                                     @if($t->counterparty && $t->purpose)<span class="block text-xs text-muted truncate">{{ $t->purpose }}</span>@endif
-                                    @if($t->contract)<span class="block text-xs text-muted">Müqavilə {{ $t->contract->number }}</span>@endif
+                                    @if($t->contract)<span class="block text-xs text-muted">{{ __('Müqavilə') }} {{ $t->contract->number }}</span>@endif
                                 </a>
                             </td>
-                            <td data-label="Kateqoriya">
+                            <td data-label="{{ __('Kateqoriya') }}">
                                 @if($t->category)<span class="inline-flex items-center gap-1.5 text-xs"><span class="size-2 rounded-full" style="background: {{ $t->category->color ?? '#94a3b8' }}"></span>{{ $t->category->name }}</span>@else<span class="text-faint">—</span>@endif
                             </td>
-                            <td data-label="Məbləğ" class="num whitespace-nowrap {{ $t->direction === 'in' ? 'text-success' : 'text-danger' }}">{{ $t->direction === 'in' ? '+' : '−' }}{{ money($t->amount, $t->currency) }}</td>
+                            <td data-label="{{ __('Məbləğ') }}" class="num whitespace-nowrap {{ $t->direction === 'in' ? 'text-success' : 'text-danger' }}">{{ $t->direction === 'in' ? '+' : '−' }}{{ money($t->amount, $t->currency) }}</td>
                             <td data-label="AZN" class="num text-ink-2">
                                 {{ money($t->amount_azn) }}
                                 @if($t->currency !== 'AZN')<div class="text-[11px] text-faint">{{ rate_fmt($t->applied_rate) }}</div>@endif

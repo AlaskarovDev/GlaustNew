@@ -1,4 +1,4 @@
-@props(['action', 'message' => 'Bu qeyd silinəcək. Davam edilsin?', 'label' => 'Sil', 'icon' => true, 'button' => 'btn btn-ghost btn-sm text-danger hover:!bg-danger-soft'])
+@props(['action', 'message' => __('Bu qeyd silinəcək. Davam edilsin?'), 'label' => __('Sil'), 'icon' => true, 'button' => 'btn btn-ghost btn-sm text-danger hover:!bg-danger-soft'])
 <form method="POST" action="{{ $action }}" data-confirm="{{ $message }}" data-confirm-title="Silinsin?" {{ $attributes->only('class') }}>
     @csrf
     @method('DELETE')

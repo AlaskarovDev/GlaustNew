@@ -3,8 +3,8 @@
     $accountsData = $accounts->map(fn ($a) => ['id' => $a->id, 'label' => $a->bank_name.' · '.$a->name, 'currency' => $a->currency, 'balance' => $a->currentBalance()])->values();
     $v = fn ($k, $d = null) => old($k, $expense->{$k} instanceof \DateTimeInterface ? $expense->{$k}->format('Y-m-d') : ($expense->{$k} ?? $d));
 @endphp
-<x-layouts.app :title="$editing ? 'Xərci redaktə et' : 'Yeni xərc'">
-    <x-page-header :title="$editing ? 'Xərci redaktə et' : 'Yeni xərc'" icon="receipt" :back="route('expenses.index')"/>
+<x-layouts.app :title="$editing ? __('Xərci redaktə et') : __('Yeni xərc')">
+    <x-page-header :title="$editing ? __('Xərci redaktə et') : __('Yeni xərc')" icon="receipt" :back="route('expenses.index')"/>
     @include('expenses._tabs')
 
     <form method="POST" action="{{ $editing ? route('expenses.update', $expense) : route('expenses.store') }}" class="grid lg:grid-cols-[minmax(0,1fr)_380px] gap-6 items-start max-w-6xl"

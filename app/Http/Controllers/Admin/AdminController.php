@@ -81,10 +81,10 @@ class AdminController extends Controller
             'address' => ['nullable', 'string', 'max:255'],
             'plan_id' => ['nullable', 'exists:plans,id'],
             'subscription_status' => ['required', Rule::in(['trial', 'active'])],
-        ], [], ['name' => 'Şirkətin adı']);
+        ], [], ['name' => __('Şirkətin adı')]);
         $company = $provisioner->createCompany($data, isset($data['plan_id']) ? Plan::find($data['plan_id']) : null, $data['subscription_status']);
 
-        return redirect()->route('admin.companies.show', $company)->with('success', "«{$company->name}» yaradıldı. İndi istifadəçiləri əlavə edin.");
+        return redirect()->route('admin.companies.show', $company)->with('success', __('«:v1» yaradıldı. İndi istifadəçiləri əlavə edin.', ['v1' => $company->name]));
     }
 
     public function storeUser(Request $request, Company $company, CompanyProvisioner $provisioner): RedirectResponse
@@ -92,7 +92,7 @@ class AdminController extends Controller
         $data = $this->validatedUser($request, $company);
         $user = $provisioner->addUser($company, $data, (int) $data['role_id']);
 
-        return back()->with('success', "{$user->name} əlavə edildi ({$user->email}).");
+        return back()->with('success', __(':v1 əlavə edildi (:v2).', ['v1' => $user->name, 'v2' => $user->email]));
     }
 
     public function updateUser(Request $request, Company $company, User $user): RedirectResponse
@@ -106,7 +106,7 @@ class AdminController extends Controller
         }
         $user->save();
 
-        return back()->with('success', "{$user->name} yeniləndi.".(! empty($data['password']) ? ' Yeni şifrə təyin edildi.' : ''));
+        return back()->with('success', __(':v1 yeniləndi.', ['v1' => $user->name]).(! empty($data['password']) ? __(' Yeni şifrə təyin edildi.') : ''));
     }
 
     private function validatedUser(Request $request, Company $company, ?User $user = null): array
@@ -120,7 +120,7 @@ class AdminController extends Controller
             'phone' => ['nullable', 'string', 'max:40'],
             'position' => ['nullable', 'string', 'max:120'],
             'role_id' => ['required', 'integer', Rule::exists('roles', 'id')->where('company_id', $company->id)],
-        ], [], ['name' => 'Ad', 'email' => 'Email', 'password' => 'Şifrə', 'phone' => 'Telefon', 'position' => 'Vəzifə', 'role_id' => 'Rol'])
+        ], [], ['name' => 'Ad', 'email' => 'Email', 'password' => __('Şifrə'), 'phone' => __('Telefon'), 'position' => __('Vəzifə'), 'role_id' => __('Rol')])
             + ['is_active' => $user ? $request->boolean('is_active') : true];
     }
 
@@ -134,7 +134,7 @@ class AdminController extends Controller
         ]);
         $company->update($data);
 
-        return back()->with('success', 'Abunə yeniləndi.');
+        return back()->with('success', __('Abunə yeniləndi.'));
     }
 
     public function plans(): View
@@ -146,14 +146,14 @@ class AdminController extends Controller
     {
         Plan::create($this->planData($request));
 
-        return back()->with('success', 'Tarif yaradıldı.');
+        return back()->with('success', __('Tarif yaradıldı.'));
     }
 
     public function updatePlan(Request $request, Plan $plan): RedirectResponse
     {
         $plan->update($this->planData($request, $plan));
 
-        return back()->with('success', 'Tarif yeniləndi.');
+        return back()->with('success', __('Tarif yeniləndi.'));
     }
 
     public function logs(Request $request): View

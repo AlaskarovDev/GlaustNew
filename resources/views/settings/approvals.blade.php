@@ -25,13 +25,13 @@
                     <template x-for="(s, i) in steps" :key="i">
                         <li class="flex flex-wrap items-center gap-3 rounded-xl border border-line bg-surface p-3">
                             <span class="grid place-items-center size-8 rounded-full bg-brand text-white font-mono text-sm font-semibold shrink-0" x-text="i + 1"></span>
-                            <select :name="`steps[${i}][user_id]`" x-model="s.user_id" class="input flex-1 min-w-[200px]" :aria-label="'Təsdiqləyən, addım ' + (i + 1)" required>
+                            <select :name="`steps[${i}][user_id]`" x-model="s.user_id" class="input flex-1 min-w-[200px]" :aria-label="{{ \Illuminate\Support\Js::from(__('Təsdiqləyən, addım ')) }} + (i + 1)" required>
                                 <option value="">{{ __('— Şəxs seçin —') }}</option>
                                 @foreach($users as $u)
                                     <option value="{{ $u->id }}">{{ $u->name }}{{ $u->position ? ' · '.$u->position : '' }}</option>
                                 @endforeach
                             </select>
-                            <input :name="`steps[${i}][title]`" x-model="s.title" placeholder="{{ __('Vəzifə / addım adı (məs: Maliyyə direktoru)') }}" class="input flex-1 min-w-[200px]" :aria-label="'Addım adı ' + (i + 1)">
+                            <input :name="`steps[${i}][title]`" x-model="s.title" placeholder="{{ __('Vəzifə / addım adı (məs: Maliyyə direktoru)') }}" class="input flex-1 min-w-[200px]" :aria-label="{{ \Illuminate\Support\Js::from(__('Addım adı ')) }} + (i + 1)">
                             <div class="flex items-center">
                                 <button type="button" class="btn btn-ghost btn-icon btn-sm" @click="move(i, -1)" :disabled="i === 0" aria-label="{{ __('Yuxarı') }}"><x-icon name="chevron-up" class="size-4"/></button>
                                 <button type="button" class="btn btn-ghost btn-icon btn-sm" @click="move(i, 1)" :disabled="i === steps.length - 1" aria-label="{{ __('Aşağı') }}"><x-icon name="chevron-down" class="size-4"/></button>

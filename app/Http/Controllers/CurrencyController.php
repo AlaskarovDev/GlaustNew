@@ -18,11 +18,11 @@ class CurrencyController extends Controller
         try {
             $date = $request->filled('date') ? $rates->normalize((string) $request->query('date')) : $today;
             if ($date->gt($today)) {
-                $error = 'Gələcək tarix üçün məzənnə dərc olunmur. Bugünkü məzənnələr göstərilir.';
+                $error = __('Gələcək tarix üçün məzənnə dərc olunmur. Bugünkü məzənnələr göstərilir.');
                 $date = $today;
             }
         } catch (\InvalidArgumentException) {
-            $error = 'Tarix düzgün deyil. Bugünkü məzənnələr göstərilir.';
+            $error = __('Tarix düzgün deyil. Bugünkü məzənnələr göstərilir.');
             $date = $today;
         }
 

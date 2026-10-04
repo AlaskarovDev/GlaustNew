@@ -6,7 +6,7 @@
     <x-page-header :title="$task->title" :back="$task->project ? route('projects.show', [$task->project, 'tab' => 'board']) : route('tasks.index')">
         <x-slot:actions>
             @if($canEdit && $task->status !== 'done')
-                <form method="POST" action="{{ route('tasks.move', $task) }}" x-data @submit.prevent="glaustApi(@js(route('tasks.move', $task)), { method: 'POST', body: { status: 'done' } }).then(d => { if (d.ok) { toast('success', 'Tapşırıq tamamlandı'); setTimeout(() => location.reload(), 400) } else toast('error', d.message) }).catch(e => toast('error', e.message))">
+                <form method="POST" action="{{ route('tasks.move', $task) }}" x-data @submit.prevent="glaustApi(@js(route('tasks.move', $task)), { method: 'POST', body: { status: 'done' } }).then(d => { if (d.ok) { toast('success', {{ \Illuminate\Support\Js::from(__('Tapşırıq tamamlandı')) }}); setTimeout(() => location.reload(), 400) } else toast('error', d.message) }).catch(e => toast('error', e.message))">
                     @csrf
                     <button class="btn btn-secondary"><x-icon name="check-circle" class="size-4 text-success"/> {{ __('Tamamla') }}</button>
                 </form>
@@ -22,7 +22,7 @@
         <x-status group="priority" :value="$task->priority" :dot="false"/>
         @if($task->project)<a href="{{ route('projects.show', $task->project) }}" class="badge badge-teal">{{ $task->project->code }} · {{ $task->project->name }}</a>@endif
         @if($task->milestone)<span class="badge badge-violet"><x-icon name="flag" class="size-3"/> {{ $task->milestone->name }}</span>@endif
-        @if($task->isOverdue())<span class="badge badge-rose">{{ (int) $task->due_date->diffInDays(today()) }} gün gecikir</span>@endif
+        @if($task->isOverdue())<span class="badge badge-rose">{{ (int) $task->due_date->diffInDays(today()) }} {{ __('gün gecikir') }}</span>@endif
     </div>
 
     <div class="grid lg:grid-cols-[minmax(0,1fr)_340px] gap-6 items-start">
@@ -85,7 +85,7 @@
                         <li class="flex gap-3">
                             <x-avatar :user="$c->user" size="sm"/>
                             <div class="flex-1 min-w-0 rounded-xl bg-surface-2 px-4 py-3">
-                                <div class="flex items-baseline gap-2"><span class="text-sm font-medium">{{ $c->user?->name ?? 'Silinmiş istifadəçi' }}</span><span class="text-xs text-faint">{{ $c->created_at->diffForHumans() }}</span></div>
+                                <div class="flex items-baseline gap-2"><span class="text-sm font-medium">{{ $c->user?->name ?? __('Silinmiş istifadəçi') }}</span><span class="text-xs text-faint">{{ $c->created_at->diffForHumans() }}</span></div>
                                 <p class="mt-1 text-sm text-ink-2 whitespace-pre-line break-words">{{ $c->body }}</p>
                             </div>
                         </li>
@@ -129,7 +129,7 @@
             @include('partials.attachments', ['model' => $task, 'type' => 'task', 'ability' => 'projects.view'])
 
             @can('projects.delete')
-                <x-delete-form :action="route('tasks.destroy', $task)" :label="__('Tapşırığı sil')" :button="__('btn btn-ghost w-full text-danger hover:!bg-danger-soft')" :message="__('Tapşırıq birdəfəlik silinəcək.')"/>
+                <x-delete-form :action="route('tasks.destroy', $task)" :label="__('Tapşırığı sil')" button="btn btn-ghost w-full text-danger hover:!bg-danger-soft" :message="__('Tapşırıq birdəfəlik silinəcək.')"/>
             @endcan
         </aside>
     </div>

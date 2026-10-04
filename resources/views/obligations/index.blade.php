@@ -15,7 +15,7 @@
                     <span class="block text-sm font-semibold mt-3">{{ $title }}</span>
                     <span class="block text-[11px] text-muted">{{ $sub }}</span>
                     <span class="block mt-3 font-mono text-lg font-semibold leading-snug">{{ $fmt($g['total']) }}</span>
-                    <span class="block text-[11px] text-muted mt-1">{{ $n }} Trade · {{ count($g['projects']) }} layihə</span>
+                    <span class="block text-[11px] text-muted mt-1">{{ $n }} Trade · {{ count($g['projects']) }} {{ __('layihə') }}</span>
                 </button>
             @endforeach
         </div>

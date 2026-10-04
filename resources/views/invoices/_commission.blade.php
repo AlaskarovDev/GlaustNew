@@ -18,7 +18,7 @@
             <h2 class="step-title">{{ __('Komissiya faizi') }}</h2>
             <p class="step-sub">{{ __('Hər sətir: Total × faiz') }}</p>
         </div>
-        <span @class(['badge ml-auto shrink-0', 'badge-green' => $invoice->hasCommission(), 'badge-slate' => ! $invoice->hasCommission()])>{{ $invoice->hasCommission() ? 'Tətbiq olunub' : 'Gözləyir' }}</span>
+        <span @class(['badge ml-auto shrink-0', 'badge-green' => $invoice->hasCommission(), 'badge-slate' => ! $invoice->hasCommission()])>{{ $invoice->hasCommission() ? __('Tətbiq olunub') : __('Gözləyir') }}</span>
     </header>
 
     @if($invoice->hasCommission())
@@ -46,7 +46,7 @@
 
         @if($invoice->hasCommission())
             <footer class="step-foot">
-                <button type="button" class="btn btn-secondary btn-sm" @click="editing = !editing"><x-icon name="pencil" class="size-3.5"/> <span x-text="editing ? 'Bağla' : 'Dəyiş'"></span></button>
+                <button type="button" class="btn btn-secondary btn-sm" @click="editing = !editing"><x-icon name="pencil" class="size-3.5"/> <span x-text="editing ? {{ \Illuminate\Support\Js::from(__('Bağla')) }} : {{ \Illuminate\Support\Js::from(__('Dəyiş')) }}"></span></button>
                 <span class="text-[11px] text-faint ml-auto">{{ azdate($invoice->commission_updated_at, true) }}</span>
                 <form method="POST" action="{{ route('invoices.commission.clear', $invoice) }}" data-confirm="{{ __('Komissiya bütün sətirlərdən silinsin?') }}" data-confirm-action="{{ __('Sil') }}">
                     @csrf @method('DELETE')

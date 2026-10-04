@@ -1,6 +1,6 @@
 <x-layouts.app :title="__('Mənim işlərim')">
     <x-page-header :title="__('Mənim işlərim')" icon="calendar-check"
-                   :subtitle="az_weekday($today).', '.$today->day.' '.az_month($today->month).' · bu gün '.$doneToday.' tapşırıq tamamlanıb'">
+                   :subtitle="az_weekday($today).', '.$today->day.' '.az_month($today->month).__(' · bu gün ').$doneToday.__(' tapşırıq tamamlanıb')">
         <x-slot:actions>
             @can('projects.create')
                 <a href="{{ route('tasks.create', ['assignee_id' => auth()->id()]) }}" class="btn btn-primary"><x-icon name="plus" class="size-4"/> {{ __('Tapşırıq') }}</a>
@@ -18,12 +18,12 @@
                         <span class="text-xs font-mono text-muted">{{ $tasks->count() }}</span>
                     </header>
                     @if($tasks->isEmpty())
-                        <p class="px-5 py-5 text-sm text-muted">{{ $key === 'overdue' ? 'Gecikmiş tapşırıq yoxdur. Əla!' : 'Tapşırıq yoxdur.' }}</p>
+                        <p class="px-5 py-5 text-sm text-muted">{{ $key === 'overdue' ? __('Gecikmiş tapşırıq yoxdur. Əla!') : __('Tapşırıq yoxdur.') }}</p>
                     @else
                         <ul class="divide-y divide-line">
                             @foreach($tasks as $task)
                                 <li class="flex items-center gap-3 px-5 py-3 hover:bg-surface-2 transition-colors">
-                                    <form method="POST" action="{{ route('tasks.move', $task) }}" x-data @submit.prevent="glaustApi('{{ route('tasks.move', $task) }}', { method: 'POST', body: { status: 'done' } }).then(() => { $el.closest('li').classList.add('opacity-40'); toast('success', 'Tamamlandı'); setTimeout(() => location.reload(), 500) }).catch(e => toast('error', e.message))">
+                                    <form method="POST" action="{{ route('tasks.move', $task) }}" x-data @submit.prevent="glaustApi('{{ route('tasks.move', $task) }}', { method: 'POST', body: { status: 'done' } }).then(() => { $el.closest('li').classList.add('opacity-40'); toast('success', {{ \Illuminate\Support\Js::from(__('Tamamlandı')) }}); setTimeout(() => location.reload(), 500) }).catch(e => toast('error', e.message))">
                                         @csrf
                                         <button class="grid place-items-center size-5 rounded-full border-2 border-line-strong text-transparent hover:border-brand hover:text-brand transition-colors" aria-label="Tamamla: {{ $task->title }}">
                                             <x-icon name="check" class="size-3" :stroke="3"/>
@@ -31,7 +31,7 @@
                                     </form>
                                     <a href="{{ route('tasks.show', $task) }}" class="min-w-0 flex-1">
                                         <span class="block text-sm font-medium truncate">{{ $task->title }}</span>
-                                        <span class="block text-xs text-muted truncate">{{ $task->project?->name ?? 'Layihəsiz' }} · <x-status group="task" :value="$task->status" :dot="false" class="!h-auto !p-0 !bg-transparent"/></span>
+                                        <span class="block text-xs text-muted truncate">{{ $task->project?->name ?? __('Layihəsiz') }} · <x-status group="task" :value="$task->status" :dot="false" class="!h-auto !p-0 !bg-transparent"/></span>
                                     </a>
                                     <x-status group="priority" :value="$task->priority" class="hidden sm:inline-flex"/>
                                     <span @class(['w-24 text-right text-xs font-mono shrink-0', 'text-danger' => $task->isOverdue(), 'text-muted' => ! $task->isOverdue()])>{{ azdate($task->due_date) }}</span>

@@ -28,7 +28,7 @@
                 <tbody>
                 @foreach($users as $u)
                     <tr @class(['opacity-60' => ! $u->is_active])>
-                        <td data-label="İstifadəçi">
+                        <td data-label="{{ __('İstifadəçi') }}">
                             <div class="flex items-center gap-3">
                                 <span class="relative"><x-avatar :user="$u"/>@if(in_array($u->id, $online))<span class="absolute -bottom-0.5 -right-0.5 size-3 rounded-full bg-success ring-2 ring-surface" title="{{ __('Onlayn') }}"></span>@endif</span>
                                 <div class="min-w-0 text-left">
@@ -37,9 +37,9 @@
                                 </div>
                             </div>
                         </td>
-                        <td data-label="Rol"><span @class(['badge', 'badge-teal' => $u->role?->is_admin, 'badge-slate' => ! $u->role?->is_admin])>{{ $u->role?->name ?? '—' }}</span>
+                        <td data-label="{{ __('Rol') }}"><span @class(['badge', 'badge-teal' => $u->role?->is_admin, 'badge-slate' => ! $u->role?->is_admin])>{{ $u->role?->name ?? '—' }}</span>
                             @if($u->hasTwoFactor())<span class="badge badge-green !h-5 ml-1" title="{{ __('2FA aktivdir') }}"><x-icon name="shield" class="size-3"/></span>@endif</td>
-                        <td data-label="Son giriş" class="text-xs"><span class="font-mono">{{ azdate($u->last_login_at, true) }}</span>@if($u->last_login_ip)<div class="text-faint font-mono">{{ $u->last_login_ip }}</div>@endif</td>
+                        <td data-label="{{ __('Son giriş') }}" class="text-xs"><span class="font-mono">{{ azdate($u->last_login_at, true) }}</span>@if($u->last_login_ip)<div class="text-faint font-mono">{{ $u->last_login_ip }}</div>@endif</td>
                         <td data-label="Status">
                             @if($u->invitation_token)<span class="badge badge-amber">{{ __('Dəvət gözləyir') }}</span>
                             @elseif($u->isLocked())<span class="badge badge-rose">{{ __('Kilidlənib') }}</span>
@@ -48,7 +48,7 @@
                         </td>
                         <td data-label="" class="whitespace-nowrap text-right">
                             <div x-data="{ open: false }" class="relative inline-block" @click.outside="open = false">
-                                <button type="button" class="btn btn-ghost btn-sm btn-icon" @click="open = !open" aria-label="Əməliyyatlar: {{ $u->name }}"><x-icon name="more" class="size-4"/></button>
+                                <button type="button" class="btn btn-ghost btn-sm btn-icon" @click="open = !open" aria-label="{{ __('Əməliyyatlar: :v1', ['v1' => $u->name]) }}"><x-icon name="more" class="size-4"/></button>
                                 <div x-cloak x-show="open" x-transition.origin.top.right class="absolute right-0 z-20 mt-1 w-56 card !shadow-[var(--shadow-pop)] p-1 text-left">
                                     @can('users.update')
                                         <a href="{{ route('settings.users.edit', $u->id) }}" class="flex items-center gap-2 px-3 h-9 rounded-lg text-sm hover:bg-surface-2"><x-icon name="pencil" class="size-4"/> {{ __('Redaktə') }}</a>
@@ -59,13 +59,13 @@
                                             <form method="POST" action="{{ route('settings.users.unlock', $u->id) }}">@csrf<button class="w-full flex items-center gap-2 px-3 h-9 rounded-lg text-sm hover:bg-surface-2"><x-icon name="key" class="size-4"/> {{ __('Kilidi aç') }}</button></form>
                                         @endif
                                         @if($u->id !== auth()->id())
-                                            <form method="POST" action="{{ route('settings.users.logout', $u->id) }}" data-confirm="{{ $u->name }} bütün cihazlardan çıxarılacaq." data-confirm-title="Məcburi çıxış" data-confirm-action="{{ __('Çıxar') }}">@csrf
+                                            <form method="POST" action="{{ route('settings.users.logout', $u->id) }}" data-confirm="{{ __(':v1 bütün cihazlardan çıxarılacaq.', ['v1' => $u->name]) }}" data-confirm-title="Məcburi çıxış" data-confirm-action="{{ __('Çıxar') }}">@csrf
                                                 <button class="w-full flex items-center gap-2 px-3 h-9 rounded-lg text-sm hover:bg-surface-2"><x-icon name="log-out" class="size-4"/> {{ __('Bütün sessiyaları bağla') }}</button></form>
                                         @endif
                                     @endcan
                                     @can('users.delete')
                                         @if($u->id !== auth()->id() && $u->is_active)
-                                            <form method="POST" action="{{ route('settings.users.destroy', $u->id) }}" data-confirm="{{ $u->name }} deaktiv ediləcək və sistemdən çıxarılacaq. Tarixçəsi qorunur." data-confirm-title="Deaktiv edilsin?" data-confirm-action="{{ __('Deaktiv et') }}">@csrf @method('DELETE')
+                                            <form method="POST" action="{{ route('settings.users.destroy', $u->id) }}" data-confirm="{{ __(':v1 deaktiv ediləcək və sistemdən çıxarılacaq. Tarixçəsi qorunur.', ['v1' => $u->name]) }}" data-confirm-title="Deaktiv edilsin?" data-confirm-action="{{ __('Deaktiv et') }}">@csrf @method('DELETE')
                                                 <button class="w-full flex items-center gap-2 px-3 h-9 rounded-lg text-sm text-danger hover:bg-danger-soft"><x-icon name="lock" class="size-4"/> {{ __('Deaktiv et') }}</button></form>
                                         @endif
                                     @endcan

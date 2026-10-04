@@ -16,7 +16,7 @@ class TaskImporter extends Importer
 
     public static function title(): string
     {
-        return 'Tapşırıqlar';
+        return __('Tapşırıqlar');
     }
 
     public static function ability(): string
@@ -26,21 +26,21 @@ class TaskImporter extends Importer
 
     public static function description(): string
     {
-        return 'Layihə kodu və məsul şəxsin emaili sistemdə olmalıdır.';
+        return __('Layihə kodu və məsul şəxsin emaili sistemdə olmalıdır.');
     }
 
     public function fields(): array
     {
         return [
-            'title' => ['label' => 'Tapşırıq', 'required' => true, 'aliases' => ['başlıq', 'ad', 'title', 'task'], 'example' => 'Layihə sənədlərini hazırlamaq'],
-            'project' => ['label' => 'Layihə kodu', 'aliases' => ['layihə', 'project'], 'example' => 'PRJ-2026-0001'],
-            'assignee' => ['label' => 'Məsul (email)', 'aliases' => ['məsul', 'icraçı', 'assignee'], 'example' => ''],
+            'title' => ['label' => __('Tapşırıq'), 'required' => true, 'aliases' => ['başlıq', 'ad', 'title', 'task'], 'example' => 'Layihə sənədlərini hazırlamaq'],
+            'project' => ['label' => __('Layihə kodu'), 'aliases' => ['layihə', 'project'], 'example' => 'PRJ-2026-0001'],
+            'assignee' => ['label' => __('Məsul (email)'), 'aliases' => ['məsul', 'icraçı', 'assignee'], 'example' => ''],
             'status' => ['label' => 'Status', 'aliases' => [], 'example' => 'Görüləcək'],
-            'priority' => ['label' => 'Prioritet', 'aliases' => [], 'example' => 'Yüksək'],
-            'start_date' => ['label' => 'Başlama', 'aliases' => ['başlama tarixi'], 'example' => '01.10.2026'],
-            'due_date' => ['label' => 'Son tarix', 'aliases' => ['deadline', 'bitmə'], 'example' => '15.10.2026'],
-            'estimated_hours' => ['label' => 'Plan (saat)', 'aliases' => ['saat', 'hours'], 'example' => '8'],
-            'description' => ['label' => 'Təsvir', 'aliases' => ['qeyd'], 'example' => ''],
+            'priority' => ['label' => __('Prioritet'), 'aliases' => [], 'example' => 'Yüksək'],
+            'start_date' => ['label' => __('Başlama'), 'aliases' => ['başlama tarixi'], 'example' => '01.10.2026'],
+            'due_date' => ['label' => __('Son tarix'), 'aliases' => ['deadline', 'bitmə'], 'example' => '15.10.2026'],
+            'estimated_hours' => ['label' => __('Plan (saat)'), 'aliases' => ['saat', 'hours'], 'example' => '8'],
+            'description' => ['label' => __('Təsvir'), 'aliases' => ['qeyd'], 'example' => ''],
         ];
     }
 
@@ -77,10 +77,10 @@ class TaskImporter extends Importer
     private function lookups(array $row): array
     {
         $project = filled($row['project'] ?? null)
-            ? (Project::where('code', $row['project'])->first() ?? throw new RowError("Layihə tapılmadı: {$row['project']}"))
+            ? (Project::where('code', $row['project'])->first() ?? throw new RowError(__('Layihə tapılmadı: :v1', ['v1' => $row['project']])))
             : null;
         $user = filled($row['assignee'] ?? null)
-            ? (User::forTenant()->where('email', strtolower((string) $row['assignee']))->first() ?? throw new RowError("İstifadəçi tapılmadı: {$row['assignee']}"))
+            ? (User::forTenant()->where('email', strtolower((string) $row['assignee']))->first() ?? throw new RowError(__('İstifadəçi tapılmadı: :v1', ['v1' => $row['assignee']])))
             : null;
 
         return [$project, $user];

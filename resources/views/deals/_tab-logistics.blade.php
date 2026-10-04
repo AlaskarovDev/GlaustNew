@@ -22,13 +22,13 @@
                 <div class="flex items-start justify-between gap-2">
                     <div><div class="text-xs text-muted">{{ __('Faktura') }}</div><div class="font-mono font-semibold">{{ $inv->number }}</div></div>
                     <div class="flex flex-wrap justify-end gap-1">
-                        <span @class(['badge', 'badge-amber' => $inv->logistics_mode === 'forecast', 'badge-green' => $inv->logistics_mode === 'actual'])>{{ \App\Models\Invoice::LOGISTICS_MODES[$inv->logistics_mode] }}</span>
-                        @if($inv->approval_status)@php [$al, $at] = \App\Models\Invoice::APPROVAL_STATUSES[$inv->approval_status]; @endphp<span class="badge badge-{{ $at }}">{{ $al }}</span>@endif
+                        <span @class(['badge', 'badge-amber' => $inv->logistics_mode === 'forecast', 'badge-green' => $inv->logistics_mode === 'actual'])>{{ __(\App\Models\Invoice::LOGISTICS_MODES[$inv->logistics_mode]) }}</span>
+                        @if($inv->approval_status)@php [$al, $at] = \App\Models\Invoice::APPROVAL_STATUSES[$inv->approval_status]; @endphp<span class="badge badge-{{ $at }}">{{ __($al) }}</span>@endif
                     </div>
                 </div>
                 <div class="mt-3 text-xl font-mono font-semibold">{{ money($inv->logistics_amount, $inv->logistics_currency) }}</div>
                 <div class="text-xs text-muted mt-1">
-                    @if($invActs->isNotEmpty())Aktlar: {!! $invActs->groupBy('currency')->map(fn ($g, $c) => e(money($g->sum('amount'), $c)))->implode(' · ') !!}@else Akt hələ yoxdur @endif
+                    @if($invActs->isNotEmpty()){{ __('Aktlar:') }} {!! $invActs->groupBy('currency')->map(fn ($g, $c) => e(money($g->sum('amount'), $c)))->implode(' · ') !!}@else {{ __('Akt hələ yoxdur') }} @endif
                 </div>
             </a>
         @endforeach
@@ -47,14 +47,14 @@
             <header class="flex flex-wrap items-start gap-3 px-5 py-4 border-b border-line">
                 <span class="grid place-items-center size-10 rounded-xl bg-saffron-soft text-saffron shrink-0"><x-icon name="truck" class="size-5"/></span>
                 <div class="min-w-0 flex-1">
-                    <div class="font-semibold">Akt № {{ $act->act_number }} <span class="text-xs text-muted font-normal">· {{ azdate($act->act_date) }}</span></div>
-                    <div class="text-xs text-muted">{{ $act->counterparty?->name ?? 'Logistika şirkəti göstərilməyib' }}
+                    <div class="font-semibold">{{ __('Akt №') }} {{ $act->act_number }} <span class="text-xs text-muted font-normal">· {{ azdate($act->act_date) }}</span></div>
+                    <div class="text-xs text-muted">{{ $act->counterparty?->name ?? __('Logistika şirkəti göstərilməyib') }}
                         @if($act->logistics_invoice_number) · invoys <span class="font-mono">{{ $act->logistics_invoice_number }}</span>@if($act->logistics_invoice_date) ({{ azdate($act->logistics_invoice_date) }})@endif @endif
                         @if($act->invoice) · faktura <span class="font-mono">{{ $act->invoice->number }}</span>@endif</div>
                 </div>
                 <div class="text-right">
                     <div class="font-mono text-lg font-semibold">{{ money($act->amount, $act->currency) }}</div>
-                    <span class="badge badge-{{ $st }}">{{ $sl }}</span>
+                    <span class="badge badge-{{ $st }}">{{ __($sl) }}</span>
                 </div>
             </header>
             <div class="grid lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -85,8 +85,8 @@
                             </table>
                         </div>
                     @else
-                        <p class="text-sm text-muted">Hələ ödəniş edilməyib.
-                            @if($act->planned_date) Planlaşdırılan köçürmə: <b class="text-ink">{{ azdate($act->planned_date) }}</b>@if($act->reminder_id) <span class="badge badge-blue ml-1"><x-icon name="bell" class="size-3"/> {{ __('xatırlatma') }}</span>@endif @endif
+                        <p class="text-sm text-muted">{{ __('Hələ ödəniş edilməyib.') }}
+                            @if($act->planned_date) {{ __('Planlaşdırılan köçürmə:') }} <b class="text-ink">{{ azdate($act->planned_date) }}</b>@if($act->reminder_id) <span class="badge badge-blue ml-1"><x-icon name="bell" class="size-3"/> {{ __('xatırlatma') }}</span>@endif @endif
                         </p>
                     @endif
                     <div class="flex flex-wrap items-center gap-2 pt-1">
@@ -101,7 +101,7 @@
                             @endcan
                         @endif
                         @can('projects.delete')
-                            <form method="POST" action="{{ route('deals.logistics-acts.destroy', [$deal, $act]) }}" class="ml-auto" data-confirm="Akt {{ $act->act_number }} silinsin? Ödənişləri, komissiyaları və bank hərəkətləri də silinəcək." data-confirm-action="{{ __('Sil') }}">
+                            <form method="POST" action="{{ route('deals.logistics-acts.destroy', [$deal, $act]) }}" class="ml-auto" data-confirm="{{ __('Akt :v1 silinsin? Ödənişləri, komissiyaları və bank hərəkətləri də silinəcək.', ['v1' => $act->act_number]) }}" data-confirm-action="{{ __('Sil') }}">
                                 @csrf @method('DELETE')<button class="btn btn-ghost btn-sm text-danger"><x-icon name="trash" class="size-4"/> {{ __('Aktı sil') }}</button>
                             </form>
                         @endcan
@@ -128,7 +128,7 @@
                           x-data="logisticsPay({ mode: 'pay', currency: @js($act->currency), amount: @js((string) $act->remaining()), today: @js($today), accounts: @js($accountsData), fees: @js($fees) })">
                         @csrf
                         <header class="flex items-start justify-between gap-4 px-6 py-4 border-b border-line">
-                            <div><h2 class="text-lg font-semibold">Akt № {{ $act->act_number }} — ödəniş</h2><p class="text-xs text-muted">Qalıq: {{ money($act->remaining(), $act->currency) }} · {{ $act->counterparty?->name }}</p></div>
+                            <div><h2 class="text-lg font-semibold">{{ __('Akt №') }} {{ $act->act_number }} {{ __('— ödəniş') }}</h2><p class="text-xs text-muted">{{ __('Qalıq:') }} {{ money($act->remaining(), $act->currency) }} · {{ $act->counterparty?->name }}</p></div>
                             <button type="button" class="btn btn-ghost btn-icon" @click="payOpen = false" aria-label="{{ __('Bağla') }}"><x-icon name="x" class="size-5"/></button>
                         </header>
                         <div class="overflow-y-auto p-6 space-y-5">
@@ -168,7 +168,7 @@
                   x-data="logisticsPay({ mode: 'new', currency: @js(old('currency', $withLogistics->first()?->logistics_currency ?? 'EUR')), amount: @js((string) old('amount', '')), actDate: @js(old('act_date', $today)), today: @js($today), plan: @js(old('payment_plan', 'today')), accounts: @js($accountsData), fees: @js($fees) })">
                 @csrf
                 <header class="flex items-start justify-between gap-4 px-6 py-4 border-b border-line">
-                    <div><h2 id="la-title" class="text-lg font-semibold">{{ __('Logistika aktı əlavə et') }}</h2><p class="text-xs text-muted">Trade {{ $deal->code }} · məbləğ akt tarixinin CBAR kursları ilə hesablanır</p></div>
+                    <div><h2 id="la-title" class="text-lg font-semibold">{{ __('Logistika aktı əlavə et') }}</h2><p class="text-xs text-muted">Trade {{ $deal->code }} {{ __('· məbləğ akt tarixinin CBAR kursları ilə hesablanır') }}</p></div>
                     <button type="button" class="btn btn-ghost btn-icon" @click="open = false" aria-label="{{ __('Bağla') }}"><x-icon name="x" class="size-5"/></button>
                 </header>
                 <div class="overflow-y-auto p-6 space-y-6">
@@ -227,7 +227,7 @@
                             <x-field :label="__('Köçürmə tarixi')" name="planned_date"><input type="date" name="planned_date" x-model="plannedDate" :disabled="plan !== 'later'" min="{{ $today }}" class="input"></x-field>
                             <input type="hidden" name="remind" :value="remind ? 1 : 0">
                             <button type="button" class="btn" :class="remind ? 'btn-primary' : 'btn-secondary'" @click="remind = !remind" :aria-pressed="remind">
-                                <x-icon name="bell" class="size-4"/> <span x-text="remind ? 'Xatırlatma əlavə olunacaq' : 'Xatırlatma əlavə et'"></span>
+                                <x-icon name="bell" class="size-4"/> <span x-text="remind ? {{ \Illuminate\Support\Js::from(__('Xatırlatma əlavə olunacaq')) }} : {{ \Illuminate\Support\Js::from(__('Xatırlatma əlavə et')) }}"></span>
                             </button>
                         </div>
                         <div x-show="plan === 'today'" class="rounded-xl border border-brand/25 bg-brand-soft/30 p-4">
@@ -240,7 +240,7 @@
                 </div>
                 <footer class="flex items-center justify-end gap-3 px-6 py-4 border-t border-line">
                     <button type="button" class="btn btn-secondary" @click="open = false">{{ __('Bağla') }}</button>
-                    <button class="btn btn-primary" :disabled="!canSubmit()"><x-icon name="check" class="size-4"/> <span x-text="plan === 'today' ? 'Aktı əlavə et və ödə' : 'Aktı əlavə et'"></span></button>
+                    <button class="btn btn-primary" :disabled="!canSubmit()"><x-icon name="check" class="size-4"/> <span x-text="plan === 'today' ? {{ \Illuminate\Support\Js::from(__('Aktı əlavə et və ödə')) }} : {{ \Illuminate\Support\Js::from(__('Aktı əlavə et')) }}"></span></button>
                 </footer>
             </form>
         </div>

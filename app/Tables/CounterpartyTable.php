@@ -16,9 +16,9 @@ class CounterpartyTable extends Table
     public function title(): string
     {
         return match ($this->request->query('type')) {
-            'customer' => 'Müştərilər',
-            'supplier' => 'Təchizatçılar',
-            default => 'Kontragentlər',
+            'customer' => __('Müştərilər'),
+            'supplier' => __('Təchizatçılar'),
+            default => __('Kontragentlər'),
         };
     }
 
@@ -33,8 +33,8 @@ class CounterpartyTable extends Table
     public function filters(): array
     {
         return [
-            'type' => ['label' => 'Növ', 'type' => 'select', 'options' => config('glaust.counterparty_types')],
-            'entity_type' => ['label' => 'Şəxs', 'type' => 'select', 'options' => config('glaust.entity_types')],
+            'type' => ['label' => __('Növ'), 'type' => 'select', 'options' => config('glaust.counterparty_types')],
+            'entity_type' => ['label' => __('Şəxs'), 'type' => 'select', 'options' => config('glaust.entity_types')],
         ];
     }
 
@@ -55,18 +55,18 @@ class CounterpartyTable extends Table
     {
         return [
             Column::make('Ad', 'name', width: 34),
-            Column::make('Növ', fn ($c) => $c->typeLabel()),
-            Column::make('VÖEN', 'voen'),
-            Column::make('Şəxs', fn ($c) => config('glaust.entity_types.'.$c->entity_type)),
-            Column::make('Ölkə', 'country'),
-            Column::make('Şəhər', 'city'),
-            Column::make('Telefon', 'phone'),
+            Column::make(__('Növ'), fn ($c) => $c->typeLabel()),
+            Column::make(__('VÖEN'), 'voen'),
+            Column::make(__('Şəxs'), fn ($c) => config('glaust.entity_types.'.$c->entity_type)),
+            Column::make(__('Ölkə'), 'country'),
+            Column::make(__('Şəhər'), 'city'),
+            Column::make(__('Telefon'), 'phone'),
             Column::make('Email', 'email'),
             Column::make('IBAN', 'iban'),
             Column::make('Bank', 'bank_name'),
-            Column::make('Əlaqə şəxsi', fn ($c) => $c->contacts->first()?->name),
-            Column::make('Aktiv müqavilə', 'active_contracts_count', 'number'),
-            Column::make('Etiketlər', 'tags'),
+            Column::make(__('Əlaqə şəxsi'), fn ($c) => $c->contacts->first()?->name),
+            Column::make(__('Aktiv müqavilə'), 'active_contracts_count', 'number'),
+            Column::make(__('Etiketlər'), 'tags'),
         ];
     }
 }

@@ -41,7 +41,7 @@ class UserController extends Controller
     {
         $this->authorize('users.create');
         if ($this->atLimit()) {
-            return redirect()->route('settings.users.index')->with('error', 'Tarif üzrə istifadəçi limiti dolub ('.tenant()->plan->max_users.').');
+            return redirect()->route('settings.users.index')->with('error', __('Tarif üzrə istifadəçi limiti dolub (').tenant()->plan->max_users.').');
         }
 
         return view('settings.users.form', ['user' => new User(['is_active' => true]), 'roles' => Role::orderBy('name')->pluck('name', 'id')]);
@@ -50,7 +50,7 @@ class UserController extends Controller
     public function store(Request $request, MailService $mail): RedirectResponse
     {
         $this->authorize('users.create');
-        abort_if($this->atLimit(), 403, 'İstifadəçi limiti dolub.');
+        abort_if($this->atLimit(), 403, __('İstifadəçi limiti dolub.'));
         $data = $this->validated($request);
 
         $token = Str::random(64);
@@ -63,8 +63,8 @@ class UserController extends Controller
         $sent = $this->sendInvite($user, $token, $mail);
 
         return redirect()->route('settings.users.index')->with($sent ? 'success' : 'warning', $sent
-            ? "Dəvət {$user->email} ünvanına göndərildi."
-            : 'İstifadəçi yaradıldı, amma dəvət maili göndərilmədi (Mail jurnalına baxın). Linki əl ilə ötürün: '.route('invitation.show', $token));
+            ? __('Dəvət :v1 ünvanına göndərildi.', ['v1' => $user->email])
+            : __('İstifadəçi yaradıldı, amma dəvət maili göndərilmədi (Mail jurnalına baxın). Linki əl ilə ötürün: ').route('invitation.show', $token));
     }
 
     public function edit(int $user): View
@@ -82,10 +82,10 @@ class UserController extends Controller
         $active = $request->boolean('is_active');
 
         if ($model->id === $request->user()->id && (! $active || (int) $data['role_id'] !== $model->role_id)) {
-            return back()->withErrors(['role_id' => 'Öz rolunuzu dəyişə və ya özünüzü deaktiv edə bilməzsiniz.']);
+            return back()->withErrors(['role_id' => __('Öz rolunuzu dəyişə və ya özünüzü deaktiv edə bilməzsiniz.')]);
         }
         if ($model->isCompanyAdmin() && (! $active || ! Role::find($data['role_id'])?->is_admin) && $this->adminCount() <= 1) {
-            return back()->withErrors(['role_id' => 'Şirkətdə ən azı bir aktiv admin qalmalıdır.']);
+            return back()->withErrors(['role_id' => __('Şirkətdə ən azı bir aktiv admin qalmalıdır.')]);
         }
 
         $model->fill($data);
@@ -97,7 +97,7 @@ class UserController extends Controller
             $log->forceLogoutEverywhere($model);
         }
 
-        return redirect()->route('settings.users.index')->with('success', 'İstifadəçi yeniləndi.');
+        return redirect()->route('settings.users.index')->with('success', __('İstifadəçi yeniləndi.'));
     }
 
     public function destroy(Request $request, int $user, AuthLogger $log): RedirectResponse
@@ -105,16 +105,16 @@ class UserController extends Controller
         $this->authorize('users.delete');
         $model = $this->find($user);
         if ($model->id === $request->user()->id) {
-            return back()->with('error', 'Özünüzü silə bilməzsiniz.');
+            return back()->with('error', __('Özünüzü silə bilməzsiniz.'));
         }
         if ($model->isCompanyAdmin() && $this->adminCount() <= 1) {
-            return back()->with('error', 'Sonuncu admini silmək olmaz.');
+            return back()->with('error', __('Sonuncu admini silmək olmaz.'));
         }
         // Deactivate rather than delete: history (tasks, audit, logs) keeps pointing at the person.
         $model->forceFill(['is_active' => false])->save();
         $log->forceLogoutEverywhere($model);
 
-        return back()->with('success', $model->name.' deaktiv edildi. Tarixçə qorunur.');
+        return back()->with('success', $model->name.__(' deaktiv edildi. Tarixçə qorunur.'));
     }
 
     public function resendInvite(int $user, MailService $mail): RedirectResponse
@@ -126,22 +126,22 @@ class UserController extends Controller
         $model->touch(); // restarts the 7-day validity window
 
         return $this->sendInvite($model, $token, $mail)
-            ? back()->with('success', "Dəvət yenidən {$model->email} ünvanına göndərildi.")
-            : back()->with('warning', 'Mail göndərilmədi. Linki əl ilə ötürün: '.route('invitation.show', $token));
+            ? back()->with('success', __('Dəvət yenidən :v1 ünvanına göndərildi.', ['v1' => $model->email]))
+            : back()->with('warning', __('Mail göndərilmədi. Linki əl ilə ötürün: ').route('invitation.show', $token));
     }
 
     public function forceLogout(int $user, AuthLogger $log): RedirectResponse
     {
         $n = $log->forceLogoutEverywhere($this->find($user));
 
-        return back()->with('success', "{$n} sessiya bağlandı. «Məni xatırla» da etibarsız edildi.");
+        return back()->with('success', __(':v1 sessiya bağlandı. «Məni xatırla» da etibarsız edildi.', ['v1' => $n]));
     }
 
     public function unlock(int $user): RedirectResponse
     {
         $this->find($user)->forceFill(['locked_until' => null, 'failed_attempts' => 0])->save();
 
-        return back()->with('success', 'Hesabın kilidi açıldı.');
+        return back()->with('success', __('Hesabın kilidi açıldı.'));
     }
 
     private function sendInvite(User $user, string $token, MailService $mail): bool
@@ -149,14 +149,14 @@ class UserController extends Controller
         $company = tenant();
 
         return $mail->send($company, $user->email, new SystemMail(
-            mailSubject: $company->name.' sizi TradeFlow-ə dəvət edir',
-            heading: 'Komandaya xoş gəldiniz!',
+            mailSubject: $company->name.__(' sizi TradeFlow-ə dəvət edir'),
+            heading: __('Komandaya xoş gəldiniz!'),
             lines: [
                 'Salam, '.$user->name.'!',
-                auth()->user()->name.' sizi «'.$company->name.'» şirkətinin TradeFlow hesabına '.$user->role?->name.' rolu ilə dəvət edib.',
-                'Aşağıdakı düymə ilə şifrənizi təyin edin. Link 7 gün etibarlıdır.',
+                auth()->user()->name.' sizi «'.$company->name.__('» şirkətinin TradeFlow hesabına ').$user->role?->name.__(' rolu ilə dəvət edib.'),
+                __('Aşağıdakı düymə ilə şifrənizi təyin edin. Link 7 gün etibarlıdır.'),
             ],
-            actionText: 'Dəvəti qəbul et',
+            actionText: __('Dəvəti qəbul et'),
             actionUrl: route('invitation.show', $token),
             companyName: $company->name,
         ), 'invitation', $user->id);
@@ -189,6 +189,6 @@ class UserController extends Controller
             'phone' => ['nullable', 'string', 'max:40'],
             'position' => ['nullable', 'string', 'max:120'],
             'role_id' => ['required', 'integer', TenantExists::plain('roles')],
-        ], ['email.unique' => 'Bu email ilə istifadəçi artıq var (bu və ya başqa şirkətdə).'], ['role_id' => 'Rol', 'position' => 'Vəzifə']);
+        ], ['email.unique' => __('Bu email ilə istifadəçi artıq var (bu və ya başqa şirkətdə).')], ['role_id' => __('Rol'), 'position' => __('Vəzifə')]);
     }
 }

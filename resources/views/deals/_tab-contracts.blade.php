@@ -1,6 +1,6 @@
 {{-- The deal's two contracts: purchase (with the seller) and sale (with the buyer). --}}
     <div class="grid xl:grid-cols-2 gap-6 mb-6">
-        @foreach([['Alış müqaviləsi', 'satıcı ilə', $deal->purchaseContract, 'bg-saffron'], ['Satış müqaviləsi', 'alıcı ilə', $deal->saleContract, 'bg-brand']] as [$title, $with, $c, $bar])
+        @foreach([[__('Alış müqaviləsi'), __('satıcı ilə'), $deal->purchaseContract, 'bg-saffron'], [__('Satış müqaviləsi'), __('alıcı ilə'), $deal->saleContract, 'bg-brand']] as [$title, $with, $c, $bar])
             <section class="card relative overflow-hidden">
                 <div class="absolute inset-x-0 top-0 h-1 {{ $bar }}"></div>
                 <header class="flex items-center justify-between px-5 pt-5">
@@ -27,7 +27,7 @@
                         </div>
                     </div>
                 @else
-                    <div class="px-5 py-6 text-sm text-muted">Seçilməyib. @can('projects.update')<a href="{{ route('deals.edit', $deal) }}" class="text-brand-ink hover:underline">{{ __('Müqavilə seçin') }}</a>@endcan</div>
+                    <div class="px-5 py-6 text-sm text-muted">{{ __('Seçilməyib.') }} @can('projects.update')<a href="{{ route('deals.edit', $deal) }}" class="text-brand-ink hover:underline">{{ __('Müqavilə seçin') }}</a>@endcan</div>
                 @endif
             </section>
         @endforeach

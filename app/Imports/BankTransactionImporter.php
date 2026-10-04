@@ -25,7 +25,7 @@ class BankTransactionImporter extends Importer
 
     public static function title(): string
     {
-        return 'Bank çıxarışı';
+        return __('Bank çıxarışı');
     }
 
     public static function ability(): string
@@ -35,7 +35,7 @@ class BankTransactionImporter extends Importer
 
     public static function description(): string
     {
-        return 'Seçilmiş hesaba əməliyyatlar. Təkrar sətirlər (eyni tarix, məbləğ, təyinat) atlanır. Məzənnə hər sətrin tarixinə görə CBAR-dan götürülür.';
+        return __('Seçilmiş hesaba əməliyyatlar. Təkrar sətirlər (eyni tarix, məbləğ, təyinat) atlanır. Məzənnə hər sətrin tarixinə görə CBAR-dan götürülür.');
     }
 
     public function needsAccount(): bool
@@ -46,13 +46,13 @@ class BankTransactionImporter extends Importer
     public function fields(): array
     {
         return [
-            'date' => ['label' => 'Tarix', 'required' => true, 'aliases' => ['əməliyyat tarixi', 'date', 'дата'], 'example' => '01.10.2026'],
-            'amount' => ['label' => 'Məbləğ', 'aliases' => ['amount', 'сумма', 'məbləğ (+/-)'], 'example' => '-1250,00'],
-            'credit' => ['label' => 'Mədaxil', 'aliases' => ['daxilolma', 'kredit', 'credit', 'приход'], 'example' => ''],
-            'debit' => ['label' => 'Məxaric', 'aliases' => ['debet', 'debit', 'расход', 'silinmə'], 'example' => ''],
-            'counterparty' => ['label' => 'Kontragent', 'aliases' => ['alan/göndərən', 'counterparty', 'контрагент', 'voen'], 'example' => '1234567891'],
-            'purpose' => ['label' => 'Təyinat', 'aliases' => ['ödənişin təyinatı', 'purpose', 'назначение', 'description'], 'example' => 'Müqavilə üzrə ödəniş'],
-            'reference' => ['label' => 'Sənəd №', 'aliases' => ['sənəd', 'reference', 'номер', 'ref'], 'example' => '000123'],
+            'date' => ['label' => __('Tarix'), 'required' => true, 'aliases' => ['əməliyyat tarixi', 'date', 'дата'], 'example' => '01.10.2026'],
+            'amount' => ['label' => __('Məbləğ'), 'aliases' => ['amount', 'сумма', 'məbləğ (+/-)'], 'example' => '-1250,00'],
+            'credit' => ['label' => __('Mədaxil'), 'aliases' => ['daxilolma', 'kredit', 'credit', 'приход'], 'example' => ''],
+            'debit' => ['label' => __('Məxaric'), 'aliases' => ['debet', 'debit', 'расход', 'silinmə'], 'example' => ''],
+            'counterparty' => ['label' => __('Kontragent'), 'aliases' => ['alan/göndərən', 'counterparty', 'контрагент', 'voen'], 'example' => '1234567891'],
+            'purpose' => ['label' => __('Təyinat'), 'aliases' => ['ödənişin təyinatı', 'purpose', 'назначение', 'description'], 'example' => 'Müqavilə üzrə ödəniş'],
+            'reference' => ['label' => __('Sənəd №'), 'aliases' => ['sənəd', 'reference', 'номер', 'ref'], 'example' => '000123'],
         ];
     }
 
@@ -79,7 +79,7 @@ class BankTransactionImporter extends Importer
     protected function validateRow(array $row): void
     {
         if (! $this->account) {
-            throw new RowError('Bank hesabı seçilməyib.');
+            throw new RowError(__('Bank hesabı seçilməyib.'));
         }
         $this->validate($row, ['date' => ['required', 'date', 'before_or_equal:today'], 'value' => ['required', 'numeric', 'gt:0']], ['value' => 'Məbləğ']);
     }
@@ -94,7 +94,7 @@ class BankTransactionImporter extends Importer
         $this->validateRow($row);
         $hash = $this->hash($row);
         if (BankTransaction::where('import_hash', $hash)->exists()) {
-            throw new RowError('Təkrar sətir: bu əməliyyat artıq daxil edilib.');
+            throw new RowError(__('Təkrar sətir: bu əməliyyat artıq daxil edilib.'));
         }
 
         $cp = null;

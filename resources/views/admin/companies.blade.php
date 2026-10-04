@@ -12,12 +12,12 @@
                 <thead><tr><th>{{ __('Şirkət') }}</th><th>{{ __('VÖEN') }}</th><th>{{ __('Tarif') }}</th><th>{{ __('İstifadəçi') }}</th><th>{{ __('Status') }}</th><th>{{ __('Bitmə') }}</th></tr></thead>
                 <tbody>@foreach($companies as $c)
                     <tr>
-                        <td data-label="Şirkət"><a href="{{ route('admin.companies.show', $c) }}" class="font-medium hover:text-brand-ink">{{ $c->name }}</a><div class="text-xs text-muted">{{ $c->email }}</div></td>
-                        <td data-label="VÖEN" class="font-mono text-xs">{{ $c->voen ?? '—' }}</td>
-                        <td data-label="Tarif">{{ $c->plan?->name ?? '—' }}</td>
-                        <td data-label="İstifadəçi" class="font-mono">{{ $c->users_count }}{{ $c->plan ? ' / '.$c->plan->max_users : '' }}</td>
+                        <td data-label="{{ __('Şirkət') }}"><a href="{{ route('admin.companies.show', $c) }}" class="font-medium hover:text-brand-ink">{{ $c->name }}</a><div class="text-xs text-muted">{{ $c->email }}</div></td>
+                        <td data-label="{{ __('VÖEN') }}" class="font-mono text-xs">{{ $c->voen ?? '—' }}</td>
+                        <td data-label="{{ __('Tarif') }}">{{ $c->plan?->name ?? '—' }}</td>
+                        <td data-label="{{ __('İstifadəçi') }}" class="font-mono">{{ $c->users_count }}{{ $c->plan ? ' / '.$c->plan->max_users : '' }}</td>
                         <td data-label="Status"><x-status group="subscription" :value="$c->subscription_status"/></td>
-                        <td data-label="Bitmə" class="font-mono text-xs">{{ azdate($c->subscription_status === 'trial' ? $c->trial_ends_at : $c->subscription_ends_at) }}</td>
+                        <td data-label="{{ __('Bitmə') }}" class="font-mono text-xs">{{ azdate($c->subscription_status === 'trial' ? $c->trial_ends_at : $c->subscription_ends_at) }}</td>
                     </tr>
                 @endforeach</tbody>
             </table>

@@ -1,6 +1,6 @@
 <x-layouts.app :title="$project->name" :wide="$tab === 'board'">
     @php $profit = \App\Support\ProjectForecast::profit($deals); @endphp
-    <x-page-header :title="$project->name" :back="route('projects.index')" :subtitle="'Layihə '.$project->code">
+    <x-page-header :title="$project->name" :back="route('projects.index')" :subtitle="__('Layihə ').$project->code">
         <x-slot:actions>
             @can('projects.update')
                 <a href="{{ route('projects.edit', $project) }}" class="btn btn-secondary"><x-icon name="pencil" class="size-4"/> {{ __('Redaktə') }}</a>
@@ -33,7 +33,7 @@
     </div>
 
     <nav class="flex gap-6 border-b border-line mb-6 overflow-x-auto" aria-label="{{ __('Layihə bölmələri') }}">
-        @foreach(['deals' => 'Trade-lər ('.$deals->count().')', 'finance' => 'Maliyyə', 'board' => 'Tapşırıqlar ('.$stats['total'].')', 'files' => 'Fayllar və tarixçə'] as $key => $label)
+        @foreach(['deals' => __('Trade-lər (').$deals->count().')', 'finance' => __('Maliyyə'), 'board' => __('Tapşırıqlar (').$stats['total'].')', 'files' => __('Fayllar və tarixçə')] as $key => $label)
             @if($key !== 'finance' || $finance)
                 <a href="{{ route('projects.show', [$project, 'tab' => $key]) }}" @class(['tab-link', 'is-active' => $tab === $key])>{{ $label }}</a>
             @endif
@@ -60,9 +60,9 @@
                             <x-status group="deal" :value="$d->status"/>
                         </div>
                         <div class="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-sm">
-                            <div class="min-w-0"><div class="text-[11px] text-muted">{{ __('Satıcı') }}</div><div class="truncate">{{ $d->supplier?->name ?? '—' }}</div><div class="text-[11px] font-mono text-faint">{{ $d->purchaseContract?->number ?? 'müqavilə yoxdur' }}</div></div>
+                            <div class="min-w-0"><div class="text-[11px] text-muted">{{ __('Satıcı') }}</div><div class="truncate">{{ $d->supplier?->name ?? '—' }}</div><div class="text-[11px] font-mono text-faint">{{ $d->purchaseContract?->number ?? __('müqavilə yoxdur') }}</div></div>
                             <x-icon name="arrow-right" class="size-4 text-faint"/>
-                            <div class="min-w-0"><div class="text-[11px] text-muted">{{ __('Alıcı') }}</div><div class="truncate">{{ $d->counterparty?->name ?? '—' }}</div><div class="text-[11px] font-mono text-faint">{{ $d->saleContract?->number ?? 'müqavilə yoxdur' }}</div></div>
+                            <div class="min-w-0"><div class="text-[11px] text-muted">{{ __('Alıcı') }}</div><div class="truncate">{{ $d->counterparty?->name ?? '—' }}</div><div class="text-[11px] font-mono text-faint">{{ $d->saleContract?->number ?? __('müqavilə yoxdur') }}</div></div>
                         </div>
                         @php $dealProfit = \App\Support\ProjectForecast::profit(collect([$d])); @endphp
                         <div class="mt-3 text-xs text-muted">{{ __('Proqnoz mənfəət:') }} <span @class(['font-mono font-medium', 'text-success' => $dealProfit > 0, 'text-danger' => $dealProfit !== null && $dealProfit < 0])>{{ $dealProfit === null ? '—' : '≈ '.money($dealProfit) }}</span></div>
@@ -85,10 +85,10 @@
         @endphp
         <div class="grid sm:grid-cols-3 gap-4 mb-6 stagger">
             <div class="card p-5" style="--i:0"><div class="text-xs text-muted">{{ __('Büdcə (AZN)') }}</div><div class="mt-1 text-2xl font-semibold font-mono">{{ $budget !== null ? money($budget) : '—' }}</div>
-                <div class="text-xs text-muted mt-1">{{ $project->currency !== 'AZN' ? money($project->budget, $project->currency).' · bugünkü CBAR məzənnəsi' : 'layihə büdcəsi' }}</div></div>
+                <div class="text-xs text-muted mt-1">{{ $project->currency !== 'AZN' ? money($project->budget, $project->currency).__(' · bugünkü CBAR məzənnəsi') : __('layihə büdcəsi') }}</div></div>
             <div class="card p-5" style="--i:1"><div class="text-xs text-muted">{{ __('Faktiki xərc') }}</div><div class="mt-1 text-2xl font-semibold font-mono text-danger">{{ money($finance['expense']) }}</div>
-                @if($used !== null)<div class="mt-2 h-1.5 rounded-full bg-surface-2 overflow-hidden"><div @class(['h-full rounded-full', 'bg-brand' => $used < 80, 'bg-saffron' => $used >= 80 && $used < 100, 'bg-danger' => $used >= 100]) style="width: {{ $used }}%"></div></div><div class="text-xs text-muted mt-1">büdcənin {{ $used }}%-i</div>@endif</div>
-            <div class="card p-5" style="--i:2"><div class="text-xs text-muted">{{ __('Daxilolma') }}</div><div class="mt-1 text-2xl font-semibold font-mono text-success">{{ money($finance['income']) }}</div><div class="text-xs text-muted mt-1">Nəticə: {{ money($finance['income'] - $finance['expense']) }}</div></div>
+                @if($used !== null)<div class="mt-2 h-1.5 rounded-full bg-surface-2 overflow-hidden"><div @class(['h-full rounded-full', 'bg-brand' => $used < 80, 'bg-saffron' => $used >= 80 && $used < 100, 'bg-danger' => $used >= 100]) style="width: {{ $used }}%"></div></div><div class="text-xs text-muted mt-1">{{ __('büdcənin') }} {{ $used }}%-i</div>@endif</div>
+            <div class="card p-5" style="--i:2"><div class="text-xs text-muted">{{ __('Daxilolma') }}</div><div class="mt-1 text-2xl font-semibold font-mono text-success">{{ money($finance['income']) }}</div><div class="text-xs text-muted mt-1">{{ __('Nəticə:') }} {{ money($finance['income'] - $finance['expense']) }}</div></div>
         </div>
         <div class="grid xl:grid-cols-2 gap-6">
             <section class="card overflow-hidden">
@@ -97,8 +97,8 @@
                 <div class="overflow-x-auto"><table class="table-g table-stack">
                     <thead><tr><th>{{ __('Tarix') }}</th><th>{{ __('Kontragent / təyinat') }}</th><th class="!text-right">AZN</th></tr></thead>
                     <tbody>@foreach($finance['transactions'] as $t)
-                        <tr><td data-label="Tarix" class="font-mono text-xs">{{ azdate($t->transaction_date) }}</td>
-                            <td data-label="Təyinat"><a href="{{ route('bank.transactions.show', $t) }}" class="hover:text-brand-ink">{{ $t->counterparty?->name ?? $t->purpose ?? '—' }}</a></td>
+                        <tr><td data-label="{{ __('Tarix') }}" class="font-mono text-xs">{{ azdate($t->transaction_date) }}</td>
+                            <td data-label="{{ __('Təyinat') }}"><a href="{{ route('bank.transactions.show', $t) }}" class="hover:text-brand-ink">{{ $t->counterparty?->name ?? $t->purpose ?? '—' }}</a></td>
                             <td data-label="AZN" class="num {{ $t->direction === 'in' ? 'text-success' : 'text-danger' }}">{{ $t->direction === 'in' ? '+' : '−' }}{{ money($t->amount_azn) }}</td></tr>
                     @endforeach</tbody></table></div>@endif
             </section>
@@ -108,9 +108,9 @@
                 <div class="overflow-x-auto"><table class="table-g table-stack">
                     <thead><tr><th>{{ __('Yük') }}</th><th>{{ __('Növ') }}</th><th class="!text-right">{{ __('Məbləğ') }}</th><th class="!text-right">AZN</th></tr></thead>
                     <tbody>@foreach($finance['costs'] as $c)
-                        <tr><td data-label="Yük"><a href="{{ route('shipments.show', $c->shipment) }}" class="font-mono text-xs hover:text-brand-ink">{{ $c->shipment->number }}</a></td>
-                            <td data-label="Növ">{{ config('glaust.cost_types.'.$c->cost_type) }}</td>
-                            <td data-label="Məbləğ" class="num">{{ money($c->amount, $c->currency) }}</td><td data-label="AZN" class="num">{{ money($c->amount_azn) }}</td></tr>
+                        <tr><td data-label="{{ __('Yük') }}"><a href="{{ route('shipments.show', $c->shipment) }}" class="font-mono text-xs hover:text-brand-ink">{{ $c->shipment->number }}</a></td>
+                            <td data-label="{{ __('Növ') }}">{{ config('glaust.cost_types.'.$c->cost_type) }}</td>
+                            <td data-label="{{ __('Məbləğ') }}" class="num">{{ money($c->amount, $c->currency) }}</td><td data-label="AZN" class="num">{{ money($c->amount_azn) }}</td></tr>
                     @endforeach</tbody></table></div>@endif
             </section>
         </div>
@@ -122,7 +122,7 @@
         </div>
         @can('projects.delete')
             <div class="mt-6 flex justify-end">
-                <x-delete-form :action="route('projects.destroy', $project)" :label="__('Layihəni sil')" :button="__('btn btn-ghost text-danger hover:!bg-danger-soft')" :message="'Layihə '.$project->code.' silinəcək (tapşırıqlar arxivdə qalır).'"/>
+                <x-delete-form :action="route('projects.destroy', $project)" :label="__('Layihəni sil')" button="btn btn-ghost text-danger hover:!bg-danger-soft" :message="__('Layihə ').$project->code.__(' silinəcək (tapşırıqlar arxivdə qalır).')"/>
             </div>
         @endcan
     @endif

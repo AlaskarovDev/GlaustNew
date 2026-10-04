@@ -23,7 +23,7 @@ check_body() { # url needle
 for i in $(seq 1 18); do [ "$(status "$SITE/login")" = "200" ] && [ "$(status "$SITE/up")" = "200" ] && break; sleep 5; done
 check_status "$SITE/up" 200
 check_status "$SITE/login" 200
-check_body "$SITE/login" "Glaust"
+check_body "$SITE/login" "TradeFlow"
 check_body "$SITE/login" "/build/assets/app-"
 
 # The CSS/JS referenced by the page are actually served.

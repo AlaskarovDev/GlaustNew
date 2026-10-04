@@ -173,4 +173,30 @@ class LogisticsActTest extends TestCase
             'parts' => [['act_amount' => '100', 'currency' => 'EUR', 'bank_account_id' => $eur->id, 'payment_date' => today()->addDay()->toDateString()]]])
             ->assertSessionHasErrors('parts.0.payment_date');
     }
+
+    /** A part entered as an amount in its own currency settles amount / bank rate of the act. */
+    public function test_part_as_amount_in_payment_currency(): void
+    {
+        [$admin, $inv, $deal, $carrier, $rub, $eur] = $this->world();
+        $azn = $this->inTenant($admin, fn () => BankAccount::create(['name' => 'AZN', 'bank_name' => 'Kapital Bank', 'currency' => 'AZN', 'opening_balance' => 50000, 'is_active' => true]));
+        $this->actingAs($admin);
+        $day = today()->subDay()->toDateString();
+        $this->post(route('deals.logistics-acts.store', $deal), [
+            'act_number' => 'LA-30', 'act_date' => $day, 'amount' => '10200', 'currency' => 'EUR', 'payment_plan' => 'today',
+            'parts' => [['amount' => '5 000', 'currency' => 'AZN', 'bank_account_id' => $azn->id, 'bank_rate' => '1,9129', 'payment_date' => $day]],
+        ])->assertSessionHasNoErrors();
+
+        $act = $this->inTenant($admin, fn () => LogisticsAct::with('payments')->firstOrFail());
+        $p = $act->payments->first();
+        $this->assertSame(5000.0, (float) $p->amount, 'exactly what was typed leaves the account');
+        $this->assertSame(round(5000 / 1.9129, 2), (float) $p->act_amount);
+        $this->assertSame(round(10200 - round(5000 / 1.9129, 2), 2), $act->remaining(), 'remaining debt in the act currency');
+        $this->assertSame('partial', $act->status());
+        $this->assertSame(round(50000 - 5000 - (float) $p->fee_amount, 2), $this->inTenant($admin, fn () => BankAccount::find($azn->id)->balance()));
+
+        // Without the bank rate an amount in another currency is refused.
+        $this->post(route('deals.logistics-acts.pay', [$deal, $act]), ['payment_date' => $day,
+            'parts' => [['amount' => '100', 'currency' => 'AZN', 'bank_account_id' => $azn->id, 'payment_date' => $day]]])
+            ->assertSessionHasErrors('parts.0.bank_rate');
+    }
 }

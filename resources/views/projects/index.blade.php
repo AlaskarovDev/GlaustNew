@@ -1,5 +1,5 @@
 <x-layouts.app title="Layihələr">
-    <x-page-header title="Layihələr" icon="folder" subtitle="Hər layihə: tərəflər, məsul şəxs, sövdələşmələr və proqnoz mənfəət">
+    <x-page-header title="Layihələr" icon="folder" subtitle="Hər layihə: tərəflər, məsul şəxs, Trade-lər və proqnoz mənfəət">
         <x-slot:actions>
             <div class="flex p-1 rounded-[10px] bg-surface border border-line" role="group" aria-label="Görünüş">
                 <a href="{{ request()->fullUrlWithQuery(['view' => 'grid', 'page' => null]) }}" @class(['btn btn-sm !h-8', 'bg-surface-2 text-ink' => $view === 'grid', 'btn-ghost text-muted' => $view !== 'grid']) aria-label="Kartlar"><x-icon name="dashboard" class="size-4"/></a>
@@ -24,7 +24,7 @@
 
     @if($items->isEmpty())
         <div class="card">
-            <x-empty icon="folder" :title="$table->hasActiveFilters() ? 'Heç nə tapılmadı' : 'Hələ layihə yoxdur'" text="Layihə yaradın: tərəfləri və müqavilələri seçin, sonra sövdələşmələr əlavə edin.">
+            <x-empty icon="folder" :title="$table->hasActiveFilters() ? 'Heç nə tapılmadı' : 'Hələ layihə yoxdur'" text="Layihə yaradın: tərəfləri və müqavilələri seçin, sonra Trade-lər əlavə edin.">
                 @can('projects.create')<a href="{{ route('projects.create') }}" class="btn btn-primary"><x-icon name="plus" class="size-4"/> Layihə yarat</a>@endcan
             </x-empty>
         </div>
@@ -44,11 +44,11 @@
 
                     <div class="mt-4 grid grid-cols-2 gap-3">
                         <div class="rounded-xl bg-surface-2 px-3 py-2.5">
-                            <div class="text-[11px] text-muted">Sövdələşmələr</div>
+                            <div class="text-[11px] text-muted">Trade-lər</div>
                             <div class="font-mono text-lg font-semibold">{{ $p->deals_count }}</div>
                             <div class="text-[11px] {{ $p->active_deals_count ? 'text-brand-ink' : 'text-faint' }}">{{ $p->active_deals_count }} davam edir</div>
                         </div>
-                        <div class="rounded-xl bg-surface-2 px-3 py-2.5" title="Təxmini: satıcı fakturalarına əlavə etdiyimiz komissiya (bugünkü CBAR ilə AZN) − sövdələşmələrə yazılan xərclər (bank komissiyası və s.)">
+                        <div class="rounded-xl bg-surface-2 px-3 py-2.5" title="Təxmini: satıcı fakturalarına əlavə etdiyimiz komissiya (bugünkü CBAR ilə AZN) − Trade-lərə yazılan xərclər (bank komissiyası və s.)">
                             <div class="text-[11px] text-muted">Proqnoz mənfəət</div>
                             <div @class(['font-mono text-lg font-semibold', 'text-success' => $profit > 0, 'text-danger' => $profit !== null && $profit < 0, 'text-faint' => $profit === null])>{{ $profit === null ? '—' : '≈ '.money($profit) }}</div>
                             <div class="text-[11px] text-faint">{{ $profit === null ? 'komissiya hələ yoxdur' : 'bugünkü CBAR ilə' }}</div>
@@ -69,7 +69,7 @@
                 <table class="table-g table-stack">
                     <thead><tr>
                         <x-th :table="$table" sort="code">Kod</x-th><x-th :table="$table" sort="name">Ad</x-th><th>Satıcı → Alıcı</th><th>Məsul şəxs</th>
-                        <th class="!text-right">Sövdələşmələr</th><th class="!text-right">Proqnoz mənfəət</th>
+                        <th class="!text-right">Trade-lər</th><th class="!text-right">Proqnoz mənfəət</th>
                     </tr></thead>
                     <tbody>
                     @foreach($items as $p)
@@ -79,7 +79,7 @@
                             <td data-label="Ad"><a href="{{ route('projects.show', $p) }}" class="font-medium text-ink hover:text-brand-ink">{{ $p->name }}</a></td>
                             <td data-label="Tərəflər" class="text-sm">{{ $p->supplier?->name ?? '—' }} <span class="text-faint">→</span> {{ $p->counterparty?->name ?? '—' }}</td>
                             <td data-label="Məsul"><span class="inline-flex items-center gap-2"><x-avatar :user="$p->manager" size="xs"/>{{ $p->manager?->name ?? '—' }}</span></td>
-                            <td data-label="Sövdələşmələr" class="num">{{ $p->deals_count }}<div class="text-[11px] text-muted">{{ $p->active_deals_count }} davam edir</div></td>
+                            <td data-label="Trade-lər" class="num">{{ $p->deals_count }}<div class="text-[11px] text-muted">{{ $p->active_deals_count }} davam edir</div></td>
                             <td data-label="Mənfəət" @class(['num', 'text-success' => $profit > 0, 'text-danger' => $profit !== null && $profit < 0])>{{ $profit === null ? '—' : '≈ '.money($profit) }}</td>
                         </tr>
                     @endforeach

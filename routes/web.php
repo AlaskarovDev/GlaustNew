@@ -108,7 +108,7 @@ Route::middleware(['auth', 'tenant'])->group(function () {
         Route::put('/projects/{project}/milestones/{milestone}', [ProjectController::class, 'updateMilestone'])->name('projects.milestones.update');
         Route::delete('/projects/{project}/milestones/{milestone}', [ProjectController::class, 'destroyMilestone'])->name('projects.milestones.destroy');
 
-        // Sövdələşmələr (deals) and their invoices
+        // Trade-lər (deals) and their invoices
         Route::get('/projects/{project}/deals/create', [DealController::class, 'create'])->name('deals.create');
         Route::post('/projects/{project}/deals', [DealController::class, 'store'])->name('deals.store');
         Route::get('/deals/{deal}', [DealController::class, 'show'])->name('deals.show');

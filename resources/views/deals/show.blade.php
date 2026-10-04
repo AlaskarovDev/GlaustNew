@@ -1,11 +1,11 @@
-<x-layouts.app :title="'Sövdələşmə '.$deal->code">
+<x-layouts.app :title="'Trade '.$deal->code">
     @php
         $supplierInvoices = $deal->invoices->where('type', 'supplier');
         $customerInvoices = $deal->invoices->where('type', 'customer');
         $importErrors = session('import_errors', []);
     @endphp
     <x-page-header :title="$deal->title" :back="route('projects.show', [$deal->project, 'tab' => 'deals'])"
-                   :subtitle="'Sövdələşmə '.$deal->code.' · '.azdate($deal->deal_date).' · Layihə '.$deal->project->code">
+                   :subtitle="'Trade '.$deal->code.' · '.azdate($deal->deal_date).' · Layihə '.$deal->project->code">
         <x-slot:actions>
             @can('projects.update')
                 <a href="{{ route('deals.edit', $deal) }}" class="btn btn-secondary"><x-icon name="pencil" class="size-4"/> Redaktə</a>
@@ -20,7 +20,7 @@
     </div>
 
     {{-- Flow: seller -> us -> buyer --}}
-    <ol class="grid md:grid-cols-[1fr_auto_1fr_auto_1fr] items-stretch gap-3 mb-6" aria-label="Sövdələşmə axını">
+    <ol class="grid md:grid-cols-[1fr_auto_1fr_auto_1fr] items-stretch gap-3 mb-6" aria-label="Trade axını">
         <li class="card p-4">
             <div class="text-xs text-muted">Satıcı (məhsulu ondan alırıq)</div>
             <div class="font-semibold truncate">{{ $deal->supplier?->name ?? '—' }}</div>
@@ -52,7 +52,7 @@
     @endphp
     @include('deals._obligations')
 
-    <nav class="deal-steps mb-6" aria-label="Sövdələşmə bölmələri">
+    <nav class="deal-steps mb-6" aria-label="Trade bölmələri">
         @foreach($tabs as $key => [$no, $label, $count])
             <a href="{{ route('deals.show', [$deal, 'tab' => $key]) }}" @class(['deal-step', 'is-active' => $tab === $key]) @if($tab === $key) aria-current="page" @endif>
                 <span class="deal-step-no">@if($no){{ $no }}@else<x-icon name="signature" class="size-4"/>@endif</span>
@@ -79,7 +79,7 @@
             @if($deal->notes)<section class="card p-5"><h2 class="text-sm font-semibold mb-2">Qeydlər</h2><p class="text-sm whitespace-pre-line">{{ $deal->notes }}</p></section>@endif
             @include('partials.attachments', ['model' => $deal, 'type' => 'deal', 'ability' => 'projects.update'])
             @can('projects.delete')
-                <x-delete-form :action="route('deals.destroy', $deal)" label="Sövdələşməni sil" button="btn btn-ghost w-full text-danger hover:!bg-danger-soft" :message="'Sövdələşmə '.$deal->code.' silinəcək. Fakturası olan sövdələşmə silinmir.'"/>
+                <x-delete-form :action="route('deals.destroy', $deal)" label="Trade-i sil" button="btn btn-ghost w-full text-danger hover:!bg-danger-soft" :message="'Trade '.$deal->code.' silinəcək. Fakturası olan Trade silinmir.'"/>
             @endcan
         </div>
     </div>

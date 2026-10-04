@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-/** Sövdələşmə: one buy-and-resell lot of a project (see the deals migration). */
+/** Trade: one buy-and-resell lot of a project (see the deals migration). */
 class Deal extends Model
 {
     use Auditable, BelongsToCompany, HasAttachments, SoftDeletes;

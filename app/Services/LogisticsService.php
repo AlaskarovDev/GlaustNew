@@ -62,11 +62,23 @@ class LogisticsService
     public function pay(LogisticsAct $act, array $parts, string $date, ?string $reference = null): array
     {
         $act->loadMissing('payments', 'deal', 'counterparty');
+        // A part given as an amount in its own currency settles amount / bank rate of the act.
+        foreach ($parts as $i => &$p) {
+            if ((! isset($p['act_amount']) || $p['act_amount'] === null) && isset($p['amount'])) {
+                $same = $p['currency'] === $act->currency;
+                if (! $same && empty($p['bank_rate'])) {
+                    throw ValidationException::withMessages(["parts.$i.bank_rate" => ($i + 1)."-ci hissə: bankın kursunu daxil edin (1 {$act->currency} = ? {$p['currency']})."]);
+                }
+                $p['act_amount'] = round((float) $p['amount'] / ($same ? 1 : (float) $p['bank_rate']), 2);
+                $p['paid'] = round((float) $p['amount'], 2);
+            }
+        }
+        unset($p);
         $total = round(array_sum(array_map(fn ($p) => (float) $p['act_amount'], $parts)), 2);
         if ($total <= 0) {
             throw ValidationException::withMessages(['parts' => 'Ödəniş hissələrinin məbləğini daxil edin.']);
         }
-        if ($total > $act->remaining() + 0.01) {
+        if ($total > $act->remaining() + 0.05) {
             throw ValidationException::withMessages(['parts' => 'Hissələrin cəmi ('.money($total, $act->currency).') aktın qalığından ('.money($act->remaining(), $act->currency).') çoxdur.']);
         }
 
@@ -89,7 +101,7 @@ class LogisticsService
                 }
                 $cross = $cbarAct / $cbar;
                 $bankRate = $same ? 1.0 : (float) $p['bank_rate'];
-                $amount = round($share * $bankRate, 2);
+                $amount = isset($p['paid']) ? $p['paid'] : round($share * $bankRate, 2); // what actually left the account
                 $amountCbar = round($share * $cross, 2);
                 $rule = BankFee::for($cur, $amount, $cbar, $eur);
                 $fee = isset($p['fee_amount']) && $p['fee_amount'] !== null && $p['fee_amount'] !== '' ? round((float) $p['fee_amount'], 2) : ($rule['amount'] ?? 0.0);
@@ -133,7 +145,7 @@ class LogisticsService
         $act->loadMissing('deal');
         $r = Reminder::firstOrCreate(['dedupe_key' => 'logistics-act:'.$act->id.':'.$act->planned_date->toDateString()], [
             'user_id' => auth()->id(), 'source' => 'logistics_payment',
-            'title' => 'Logistika ödənişi: akt '.$act->act_number, 'body' => money($act->amount, $act->currency).' · Sövdələşmə '.$act->deal->code,
+            'title' => 'Logistika ödənişi: akt '.$act->act_number, 'body' => money($act->amount, $act->currency).' · Trade '.$act->deal->code,
             'url' => route('deals.show', [$act->deal_id, 'tab' => 'logistics'], false), 'remindable_type' => 'logistics_act', 'remindable_id' => $act->id,
             'remind_at' => $act->planned_date->copy()->setTime(9, 0),
         ]);

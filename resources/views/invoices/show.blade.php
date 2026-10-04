@@ -1,7 +1,7 @@
 <x-layouts.app :title="$invoice->typeLabel().' '.$invoice->number" wide>
     @php $later = array_filter($columns, fn ($c) => ! $c[1]); @endphp
     <x-page-header :title="$invoice->typeLabel().' № '.$invoice->number" :back="route('deals.show', $invoice->deal)"
-                   :subtitle="($invoice->counterparty?->name ?? '').' · '.azdate($invoice->invoice_date).' · Sövdələşmə '.$invoice->deal->code">
+                   :subtitle="($invoice->counterparty?->name ?? '').' · '.azdate($invoice->invoice_date).' · Trade '.$invoice->deal->code">
         <x-slot:actions>
             <a href="{{ route('invoices.export', [$invoice, 'format' => 'xlsx']) }}" class="btn btn-secondary"><x-icon name="sheet" class="size-4 text-success"/> Excel</a>
             <a href="{{ route('invoices.export', [$invoice, 'format' => 'pdf']) }}" class="btn btn-secondary"><x-icon name="file-pdf" class="size-4 text-danger"/> PDF</a>

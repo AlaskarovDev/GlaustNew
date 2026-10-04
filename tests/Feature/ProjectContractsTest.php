@@ -31,7 +31,7 @@ class ProjectContractsTest extends TestCase
 
     private function payload(array $extra): array
     {
-        return array_merge(['code' => 'PRJ-1', 'name' => 'Sövdələşmə layihəsi', 'status' => 'active', 'priority' => 'medium', 'currency' => 'AZN'], $extra);
+        return array_merge(['code' => 'PRJ-1', 'name' => 'Trade layihəsi', 'status' => 'active', 'priority' => 'medium', 'currency' => 'AZN'], $extra);
     }
 
     public function test_project_links_both_contracts_and_shows_margin(): void
@@ -53,7 +53,7 @@ class ProjectContractsTest extends TestCase
         // The project opens on its deals, with both companies and contracts on top (no overview page).
         $this->get(route('projects.show', $project))->assertOk()
             ->assertSee('Satıcı (məhsulu ondan alırıq)')->assertSee('Alıcı (məhsulu ona satırıq)')->assertSee('Məsul şəxs')
-            ->assertSee('S-1')->assertSee('P-1')->assertSee('Yeni sövdələşmə')->assertDontSee('Mərhələlər')->assertDontSee('Yaxın tapşırıqlar');
+            ->assertSee('S-1')->assertSee('P-1')->assertSee('Yeni Trade')->assertDontSee('Mərhələlər')->assertDontSee('Yaxın tapşırıqlar');
         $this->get(route('projects.index'))->assertOk()->assertSee('Proqnoz mənfəət')->assertSee('davam edir')->assertDontSee('Planlaşdırılıb');
         $this->get(route('projects.edit', $project))->assertOk()->assertSee('S-1 · Məhsul');
     }

@@ -47,7 +47,7 @@
                     <x-combobox name="counterparty_id" label="Kimə (kontragent)" :url="route('ajax.lookup', 'counterparties')" :value="$expense->counterparty_id" :display="$expense->counterparty?->name" placeholder="İstəyə bağlı"/>
                     <x-combobox name="project_id" label="Layihə" :url="route('ajax.lookup', 'projects')" :value="$expense->project_id" :display="$expense->project?->name" placeholder="İstəyə bağlı"/>
                 </div>
-                @if($expense->deal_id)<input type="hidden" name="deal_id" value="{{ $expense->deal_id }}"><p class="text-xs text-muted">Sövdələşmə: <b>{{ $expense->deal?->code }}</b></p>@endif
+                @if($expense->deal_id)<input type="hidden" name="deal_id" value="{{ $expense->deal_id }}"><p class="text-xs text-muted">Trade: <b>{{ $expense->deal?->code }}</b></p>@endif
                 <div class="grid sm:grid-cols-2 gap-4">
                     <x-field label="İstinad / sənəd №" name="reference"><input name="reference" value="{{ $v('reference') }}" class="input font-mono"></x-field>
                     <x-field label="Qeyd" name="notes"><input name="notes" value="{{ $v('notes') }}" class="input"></x-field>

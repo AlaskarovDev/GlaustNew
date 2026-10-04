@@ -16,7 +16,7 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Tests\TestCase;
 
-/** Sövdələşmə: project lot with buyer + seller contracts and the seller's proforma imported from Excel. */
+/** Trade: project lot with buyer + seller contracts and the seller's proforma imported from Excel. */
 class DealInvoiceTest extends TestCase
 {
     use RefreshDatabase;
@@ -38,7 +38,7 @@ class DealInvoiceTest extends TestCase
                 'subject' => 'Boya', 'amount' => 100000, 'currency' => 'EUR', 'cbar_rate' => 1.9, 'amount_azn' => 190000, 'status' => 'active']);
             $sale = $mk($buyer, 'sale', 'S-1');
             $purchase = $mk($seller, 'purchase', 'P-1');
-            $project = Project::create(['code' => 'PRJ-1', 'name' => 'Boya sövdələşməni', 'status' => 'active', 'priority' => 'medium', 'currency' => 'EUR',
+            $project = Project::create(['code' => 'PRJ-1', 'name' => 'Boya Trade-i', 'status' => 'active', 'priority' => 'medium', 'currency' => 'EUR',
                 'counterparty_id' => $buyer->id, 'sale_contract_id' => $sale->id, 'supplier_id' => $seller->id, 'purchase_contract_id' => $purchase->id]);
 
             return compact('buyer', 'seller', 'sale', 'purchase', 'project');
@@ -86,7 +86,7 @@ class DealInvoiceTest extends TestCase
         ])->assertSessionHasNoErrors();
 
         $deal = $this->inTenant($admin, fn () => Deal::firstOrFail());
-        $this->assertMatchesRegularExpression('/^SV-\d{4}-0001$/', $deal->code);
+        $this->assertMatchesRegularExpression('/^TR-\d{4}-0001$/', $deal->code);
         $this->assertSame($d['seller']->id, $deal->supplier_id);
         $this->assertSame(1, $this->inTenant($admin, fn () => $d['purchase']->attachments()->count()), 'signed PDF kept on the contract');
         // Opens on the invoices tab; the contracts (and their signed PDFs) are one tab away.

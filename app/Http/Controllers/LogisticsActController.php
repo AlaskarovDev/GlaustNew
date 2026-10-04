@@ -93,9 +93,9 @@ class LogisticsActController extends Controller
     /** parts[i][act_amount|currency|bank_account_id|bank_rate|fee_amount] -> validated list */
     private function parts(Request $request): array
     {
-        $parts = array_values(array_filter((array) $request->input('parts', []), fn ($p) => is_array($p) && trim((string) ($p['act_amount'] ?? '')) !== ''));
+        $parts = array_values(array_filter((array) $request->input('parts', []), fn ($p) => is_array($p) && (trim((string) ($p['amount'] ?? '')) !== '' || trim((string) ($p['act_amount'] ?? '')) !== '')));
         foreach ($parts as &$p) {
-            foreach (['act_amount', 'bank_rate', 'fee_amount'] as $k) {
+            foreach (['amount', 'act_amount', 'bank_rate', 'fee_amount'] as $k) {
                 $p[$k] = isset($p[$k]) && $p[$k] !== '' ? parse_number($p[$k]) : null;
             }
         }
@@ -104,7 +104,9 @@ class LogisticsActController extends Controller
 
         return $request->validate([
             'parts' => ['required', 'array', 'min:1', 'max:10'],
-            'parts.*.act_amount' => ['required', 'numeric', 'gt:0'],
+            // amount = paid in the part's currency (the form); act_amount = share of the act (also accepted)
+            'parts.*.amount' => ['required_without:parts.*.act_amount', 'nullable', 'numeric', 'gt:0'],
+            'parts.*.act_amount' => ['required_without:parts.*.amount', 'nullable', 'numeric', 'gt:0'],
             'parts.*.currency' => ['required', Rule::in(config('glaust.currencies'))],
             'parts.*.bank_account_id' => ['required', 'integer', TenantExists::in('bank_accounts')],
             'parts.*.bank_rate' => ['nullable', 'numeric', 'gt:0', 'max:10000000'],
@@ -112,7 +114,7 @@ class LogisticsActController extends Controller
             'parts.*.payment_date' => ['nullable', 'date', 'before_or_equal:today'],
         ], ['parts.required' => 'Ən azı bir ödəniş hissəsi daxil edin.', 'parts.*.payment_date.before_or_equal' => 'Hissənin ödəniş tarixi gələcək ola bilməz.'], [
             'parts.*.payment_date' => 'Ödəniş tarixi',
-            'parts.*.act_amount' => 'Hissənin məbləği', 'parts.*.bank_account_id' => 'Bank hesabı', 'parts.*.bank_rate' => 'Bankın kursu',
+            'parts.*.act_amount' => 'Hissənin məbləği', 'parts.*.amount' => 'Ödənilən məbləğ', 'parts.*.bank_account_id' => 'Bank hesabı', 'parts.*.bank_rate' => 'Bankın kursu',
         ])['parts'];
     }
 }

@@ -168,7 +168,7 @@
                   x-data="logisticsPay({ mode: 'new', currency: @js(old('currency', $withLogistics->first()?->logistics_currency ?? 'EUR')), amount: @js((string) old('amount', '')), actDate: @js(old('act_date', $today)), today: @js($today), plan: @js(old('payment_plan', 'today')), accounts: @js($accountsData), fees: @js($fees) })">
                 @csrf
                 <header class="flex items-start justify-between gap-4 px-6 py-4 border-b border-line">
-                    <div><h2 id="la-title" class="text-lg font-semibold">Logistika aktı əlavə et</h2><p class="text-xs text-muted">Sövdələşmə {{ $deal->code }} · məbləğ akt tarixinin CBAR kursları ilə hesablanır</p></div>
+                    <div><h2 id="la-title" class="text-lg font-semibold">Logistika aktı əlavə et</h2><p class="text-xs text-muted">Trade {{ $deal->code }} · məbləğ akt tarixinin CBAR kursları ilə hesablanır</p></div>
                     <button type="button" class="btn btn-ghost btn-icon" @click="open = false" aria-label="Bağla"><x-icon name="x" class="size-5"/></button>
                 </header>
                 <div class="overflow-y-auto p-6 space-y-6">

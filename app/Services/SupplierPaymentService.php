@@ -26,7 +26,7 @@ class SupplierPaymentService
     public function pay(Deal $deal, array $d): SupplierPayment
     {
         if (! $deal->supplier_id) {
-            throw ValidationException::withMessages(['amount' => 'Əvvəlcə sövdələşmədə satıcını seçin.']);
+            throw ValidationException::withMessages(['amount' => 'Əvvəlcə Trade-də satıcını seçin.']);
         }
         $account = BankAccount::findOrFail($d['bank_account_id']);
         $cur = $d['currency'];
@@ -53,7 +53,7 @@ class SupplierPaymentService
         $feeAcc = round($fee * $bankRate, 2);
 
         return DB::transaction(function () use ($deal, $d, $account, $cur, $amount, $cbar, $cbarAcc, $cross, $bankRate, $accCbar, $accBank, $diff, $rule, $fee, $feeAcc) {
-            $purpose = ($d['purpose'] ?? null) ?: 'Sövdələşmə '.$deal->code.' üzrə satıcıya ödəniş: '.number_format($amount, 2, '.', ' ').' '.$cur;
+            $purpose = ($d['purpose'] ?? null) ?: 'Trade '.$deal->code.' üzrə satıcıya ödəniş: '.number_format($amount, 2, '.', ' ').' '.$cur;
             $tx = $this->ledger->record($account, [
                 'direction' => 'out', 'transaction_date' => $d['payment_date'], 'amount' => $accBank,
                 'counterparty_id' => $deal->supplier_id, 'contract_id' => $deal->purchase_contract_id, 'project_id' => $deal->project_id, 'deal_id' => $deal->id,

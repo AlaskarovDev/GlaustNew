@@ -10,7 +10,7 @@
 @endphp
 <x-layouts.app :title="$doc->title().' '.$doc->number" wide>
     <x-page-header :title="$doc->title().' № '.$doc->number" :back="route('deals.show', [$doc->deal, 'tab' => 'invoices'])"
-                   :subtitle="$doc->label().' · '.($doc->counterparty?->name ?? '').' · Sövdələşmə '.$doc->deal?->code">
+                   :subtitle="$doc->label().' · '.($doc->counterparty?->name ?? '').' · Trade '.$doc->deal?->code">
         <x-slot:actions>
             @if($sibling)
                 <a href="{{ route('sales-documents.show', $sibling) }}" class="btn btn-secondary"><x-icon name="contract" class="size-4"/> {{ $sibling->title() }}</a>

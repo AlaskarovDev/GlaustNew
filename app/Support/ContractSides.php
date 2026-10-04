@@ -9,7 +9,7 @@ use Illuminate\Validation\ValidationException;
 /**
  * Buyer side: a customer and one of ITS sale contracts. Supplier side: a supplier and
  * one of ITS purchase contracts. A contract chosen without a party brings its party along.
- * Used by projects and deals (sövdələşmələr); field names are the same in both.
+ * Used by projects and deals (Trade-lər); field names are the same in both.
  */
 class ContractSides
 {

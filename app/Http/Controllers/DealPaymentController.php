@@ -32,7 +32,7 @@ class DealPaymentController extends Controller
         $out = false;
         $partyId = $out ? $deal->supplier_id : $deal->counterparty_id;
         if (! $partyId) {
-            return back()->with('error', $out ? 'Əvvəlcə sövdələşmədə satıcını seçin.' : 'Əvvəlcə sövdələşmədə alıcını (məhsulu satdığımız tərəfi) seçin.');
+            return back()->with('error', $out ? 'Əvvəlcə Trade-də satıcını seçin.' : 'Əvvəlcə Trade-də alıcını (məhsulu satdığımız tərəfi) seçin.');
         }
         $request->merge(['amount' => parse_number($request->input('amount')), 'applied_rate' => parse_number($request->input('applied_rate'))]);
         $data = $request->validate([
@@ -59,7 +59,7 @@ class DealPaymentController extends Controller
                 'contract_id' => $out ? $deal->purchase_contract_id : $deal->sale_contract_id,
                 'project_id' => $deal->project_id,
                 'deal_id' => $deal->id,
-                'purpose' => ($data['purpose'] ?? null) ?: 'Sövdələşmə '.$deal->code.($out ? ' üzrə satıcıya ödəniş' : ' üzrə alıcının ödənişi'),
+                'purpose' => ($data['purpose'] ?? null) ?: 'Trade '.$deal->code.($out ? ' üzrə satıcıya ödəniş' : ' üzrə alıcının ödənişi'),
                 'reference' => $data['reference'] ?? null,
             ], $data['applied_rate'] ?? null);
         } catch (RateUnavailable $e) {

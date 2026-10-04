@@ -18,7 +18,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
-/** Sövdələşmə: a buy-and-resell lot of a project, with both contracts and its invoices. */
+/** Trade: a buy-and-resell lot of a project, with both contracts and its invoices. */
 class DealController extends Controller
 {
     public function create(Request $request, Project $project, NumberGenerator $numbers): View
@@ -28,7 +28,7 @@ class DealController extends Controller
 
         // The project's sides are the natural default for its first lot.
         $deal = new Deal([
-            'code' => $numbers->next('deal'), 'title' => 'Sövdələşmə — '.$project->name, 'deal_date' => today(), 'currency' => 'EUR',
+            'code' => $numbers->next('deal'), 'title' => 'Trade — '.$project->name, 'deal_date' => today(), 'currency' => 'EUR',
             'status' => 'draft', 'responsible_id' => $request->user()->id,
             'counterparty_id' => $project->counterparty_id, 'sale_contract_id' => $project->sale_contract_id,
             'supplier_id' => $project->supplier_id, 'purchase_contract_id' => $project->purchase_contract_id,
@@ -54,7 +54,7 @@ class DealController extends Controller
             return $deal;
         });
 
-        return redirect()->route('deals.show', $deal)->with('success', "Sövdələşmə {$deal->code} yaradıldı. İndi təchizatçı fakturasını Excel-dən import edin.");
+        return redirect()->route('deals.show', $deal)->with('success', "Trade {$deal->code} yaradıldı. İndi təchizatçı fakturasını Excel-dən import edin.");
     }
 
     /** Tabs follow the order of the work: invoices (buy, calculate, documents) -> income (buyer pays) -> logistics. */
@@ -101,19 +101,19 @@ class DealController extends Controller
             $this->storeContractFiles($request, $deal);
         });
 
-        return redirect()->route('deals.show', $deal)->with('success', 'Sövdələşmə yeniləndi.');
+        return redirect()->route('deals.show', $deal)->with('success', 'Trade yeniləndi.');
     }
 
     public function destroy(Deal $deal): RedirectResponse
     {
         $this->authorize('projects.delete');
         if ($deal->invoices()->exists()) {
-            return back()->with('error', 'Sövdələşmədə fakturalar var. Əvvəlcə fakturaları silin.');
+            return back()->with('error', 'Trade-də fakturalar var. Əvvəlcə fakturaları silin.');
         }
         $project = $deal->project_id;
         $deal->delete();
 
-        return redirect()->route('projects.show', [$project, 'tab' => 'deals'])->with('success', "Sövdələşmə {$deal->code} silindi.");
+        return redirect()->route('projects.show', [$project, 'tab' => 'deals'])->with('success', "Trade {$deal->code} silindi.");
     }
 
     private function validated(Request $request, ?Deal $deal = null): array
@@ -128,7 +128,7 @@ class DealController extends Controller
             'notes' => ['nullable', 'string', 'max:5000'],
             'sale_contract_file' => ['nullable', 'file', 'mimes:pdf', 'max:'.config('glaust.upload.max_kb')],
             'purchase_contract_file' => ['nullable', 'file', 'mimes:pdf', 'max:'.config('glaust.upload.max_kb')],
-        ], ContractSides::rules()), ['code.unique' => 'Bu kodla sövdələşmə artıq var.'], ContractSides::attributes() + [
+        ], ContractSides::rules()), ['code.unique' => 'Bu kodla Trade artıq var.'], ContractSides::attributes() + [
             'code' => 'Kod', 'title' => 'Ad', 'deal_date' => 'Tarix', 'sale_contract_file' => 'Satış müqaviləsinin PDF-i', 'purchase_contract_file' => 'Alış müqaviləsinin PDF-i',
         ]);
 

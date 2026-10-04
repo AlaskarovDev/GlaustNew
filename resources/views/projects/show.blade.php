@@ -6,7 +6,7 @@
                 <a href="{{ route('projects.edit', $project) }}" class="btn btn-secondary"><x-icon name="pencil" class="size-4"/> Redaktə</a>
             @endcan
             @can('projects.create')
-                <a href="{{ route('deals.create', $project) }}" class="btn btn-primary"><x-icon name="plus" class="size-4"/> Yeni sövdələşmə</a>
+                <a href="{{ route('deals.create', $project) }}" class="btn btn-primary"><x-icon name="plus" class="size-4"/> Yeni Trade</a>
             @endcan
         </x-slot:actions>
     </x-page-header>
@@ -22,7 +22,7 @@
         <div class="card p-4 bg-brand-soft/40 border-brand/30 min-w-0">
             <div class="text-xs text-muted">Məsul şəxs</div>
             <div class="flex items-center gap-2 mt-0.5">@if($project->manager)<x-avatar :user="$project->manager" size="sm"/><span class="font-semibold truncate">{{ $project->manager->name }}</span>@else<span class="font-semibold">—</span>@endif</div>
-            <div class="text-xs text-muted mt-1" title="Komissiya (bugünkü CBAR ilə AZN) − sövdələşmələrə yazılan xərclər">Proqnoz mənfəət: <span @class(['font-mono font-medium', 'text-success' => $profit > 0, 'text-danger' => $profit !== null && $profit < 0])>{{ $profit === null ? '—' : '≈ '.money($profit) }}</span></div>
+            <div class="text-xs text-muted mt-1" title="Komissiya (bugünkü CBAR ilə AZN) − Trade-lərə yazılan xərclər">Proqnoz mənfəət: <span @class(['font-mono font-medium', 'text-success' => $profit > 0, 'text-danger' => $profit !== null && $profit < 0])>{{ $profit === null ? '—' : '≈ '.money($profit) }}</span></div>
         </div>
         <div class="hidden md:grid place-items-center text-faint"><x-icon name="arrow-right" class="size-5"/></div>
         <div class="card p-4 min-w-0">
@@ -33,7 +33,7 @@
     </div>
 
     <nav class="flex gap-6 border-b border-line mb-6 overflow-x-auto" aria-label="Layihə bölmələri">
-        @foreach(['deals' => 'Sövdələşmələr ('.$deals->count().')', 'finance' => 'Maliyyə', 'board' => 'Tapşırıqlar ('.$stats['total'].')', 'files' => 'Fayllar və tarixçə'] as $key => $label)
+        @foreach(['deals' => 'Trade-lər ('.$deals->count().')', 'finance' => 'Maliyyə', 'board' => 'Tapşırıqlar ('.$stats['total'].')', 'files' => 'Fayllar və tarixçə'] as $key => $label)
             @if($key !== 'finance' || $finance)
                 <a href="{{ route('projects.show', [$project, 'tab' => $key]) }}" @class(['tab-link', 'is-active' => $tab === $key])>{{ $label }}</a>
             @endif
@@ -42,11 +42,11 @@
 
     @if($tab === 'deals')
         <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
-            <p class="text-sm text-muted max-w-2xl">Sövdələşmə — məhsulun satıcıdan alınıb alıcıya satıldığı bir partiyadır: hər iki tərəflə müqavilələr, fakturalar, ödənişlər və logistika bir yerdə.</p>
+            <p class="text-sm text-muted max-w-2xl">Trade — məhsulun satıcıdan alınıb alıcıya satıldığı bir partiyadır: hər iki tərəflə müqavilələr, fakturalar, ödənişlər və logistika bir yerdə.</p>
         </div>
         @if($deals->isEmpty())
-            <div class="card"><x-empty icon="package" title="Hələ sövdələşmə yoxdur" text="Yeni sövdələşmə yaradın: tərəflər və müqavilələr layihədən avtomatik gələcək, sonra satıcının fakturasını Excel-dən import edəcəksiniz.">
-                @can('projects.create')<a href="{{ route('deals.create', $project) }}" class="btn btn-primary"><x-icon name="plus" class="size-4"/> Sövdələşmə yarat</a>@endcan
+            <div class="card"><x-empty icon="package" title="Hələ Trade yoxdur" text="Yeni Trade yaradın: tərəflər və müqavilələr layihədən avtomatik gələcək, sonra satıcının fakturasını Excel-dən import edəcəksiniz.">
+                @can('projects.create')<a href="{{ route('deals.create', $project) }}" class="btn btn-primary"><x-icon name="plus" class="size-4"/> Trade yarat</a>@endcan
             </x-empty></div>
         @else
             <div class="grid lg:grid-cols-2 gap-5 stagger">

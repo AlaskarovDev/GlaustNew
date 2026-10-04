@@ -63,7 +63,7 @@ class ProjectTable extends Table
             Column::make('Satan tərəf', 'supplier.name'),
             Column::make('Alan tərəf', 'counterparty.name'),
             Column::make('Məsul şəxs', 'manager.name'),
-            Column::make('Sövdələşmələr', 'deals_count', 'number', total: true),
+            Column::make('Trade-lər', 'deals_count', 'number', total: true),
             Column::make('Davam edən', 'active_deals_count', 'number', total: true),
             Column::make('Proqnoz mənfəət (AZN)', fn ($p) => \App\Support\ProjectForecast::profit($p->deals), 'money', total: true),
         ];

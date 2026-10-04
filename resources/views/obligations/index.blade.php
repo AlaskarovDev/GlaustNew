@@ -3,7 +3,7 @@
         $fmt = fn (array $byCur, string $empty = '0') => $byCur ? collect($byCur)->map(fn ($v, $c) => money($v, $c))->implode(' · ') : $empty;
         $first = collect($groups)->search(fn ($g) => $g['total']) ?: 'pay';
     @endphp
-    <x-page-header title="Öhdəliklərim" icon="scale" subtitle="Bütün sövdələşmələr üzrə: kimə nə qədər ödəməliyəm, kimi məhsulla təmin etməliyəm, kimdən nə qədər ödəniş gəlməlidir — hər valyutada ayrıca"/>
+    <x-page-header title="Öhdəliklərim" icon="scale" subtitle="Bütün Trade-lər üzrə: kimə nə qədər ödəməliyəm, kimi məhsulla təmin etməliyəm, kimdən nə qədər ödəniş gəlməlidir — hər valyutada ayrıca"/>
 
     <div x-data="{ sel: @js(request('group', $first)) }">
         <div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6" role="tablist" aria-label="Öhdəlik növləri">
@@ -15,7 +15,7 @@
                     <span class="block text-sm font-semibold mt-3">{{ $title }}</span>
                     <span class="block text-[11px] text-muted">{{ $sub }}</span>
                     <span class="block mt-3 font-mono text-lg font-semibold leading-snug">{{ $fmt($g['total']) }}</span>
-                    <span class="block text-[11px] text-muted mt-1">{{ $n }} sövdələşmə · {{ count($g['projects']) }} layihə</span>
+                    <span class="block text-[11px] text-muted mt-1">{{ $n }} Trade · {{ count($g['projects']) }} layihə</span>
                 </button>
             @endforeach
         </div>

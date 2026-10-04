@@ -363,8 +363,8 @@ Alpine.data('combobox', (cfg) => ({
 /* ---------- logistics act & its payment terms ----------
  * One component for "add a logistics act" (mode new) and "pay an act" (mode pay).
  * The act is valued at CBAR of its date in AZN / RUB / EUR. Payment terms: all RUB, all EUR or
- * split into any number of parts; each part = a share of the act (act currency), its currency,
- * an account in that currency, the bank's rate (act currency -> part currency), and the bank fee
+ * split into any number of parts; each part = an amount in its own currency on its own date, from an
+ * account in that currency, the bank's rate (act currency -> part currency), and the bank fee
  * (glaust.bank_fees: own rule, or the EUR rule with its limits converted at CBAR) added on top.
  */
 Alpine.data('logisticsPay', (cfg) => ({
@@ -418,7 +418,10 @@ Alpine.data('logisticsPay', (cfg) => ({
         return a && b ? this.r2(this.num(this.amount) * a / b) : null;
     },
     total() { return this.num(this.amount); },
-    // payment terms
+    // ---- payment terms ----
+    // A part is an amount in its own currency, paid on its own date from an account in that currency.
+    // How much of the act it settles = amount / bank rate (act currency -> part currency); until the bank
+    // rate is entered the CBAR rate of the part's date gives an estimate, shown as such.
     setTerms(t) {
         this.terms = t;
         const total = this.total();
@@ -430,30 +433,42 @@ Alpine.data('logisticsPay', (cfg) => ({
         }
         this.load();
     },
-    part(currency, share) {
+    part(currency, target) {
         const acc = this.accounts.find((a) => a.currency === currency);
-        // each part carries its own payment date: when and how much was paid stays visible
-        return { currency, share: share ? String(share) : '', account: acc ? String(acc.id) : '', bankRate: '', fee: '', feeTouched: false, date: this.payDate };
+        return {
+            currency, target: target || 0, amount: '', amountTouched: false,
+            account: acc ? String(acc.id) : '', bankRate: '', fee: '', feeTouched: false,
+            date: this.mode === 'pay' ? this.payDate : '',   // new act: the date is asked for first
+        };
     },
-    addPart() { this.parts.push(this.part(this.parts.at(-1)?.currency || 'RUB', this.r2(Math.max(0, this.unallocated())))); this.load(); },
+    addPart() { this.parts.push(this.part(this.parts.at(-1)?.currency || 'RUB', Math.max(0, this.remaining() ?? 0))); this.load(); },
     removePart(i) { this.parts.splice(i, 1); if (!this.parts.length) this.terms = ''; },
-    reflow() { if (this.terms && this.terms !== 'split' && this.parts.length === 1) this.parts[0].share = String(this.total() || ''); },
+    reflow() { if (this.terms && this.terms !== 'split' && this.parts.length === 1) this.parts[0].target = this.total(); },
     changeCurrency(p) {
         if (!this.options(p.currency).some((a) => String(a.id) === p.account)) p.account = this.options(p.currency)[0] ? String(this.options(p.currency)[0].id) : '';
         p.bankRate = ''; p.feeTouched = false;
         this.load();
     },
+    setAmount(p, v) { p.amount = v; p.amountTouched = v !== ''; },
     options(cur) { return this.accounts.filter((a) => a.currency === cur); },
     account(p) { return this.accounts.find((a) => String(a.id) === String(p.account)); },
-    allocated() { return this.r2(this.parts.reduce((s, p) => s + this.num(p.share), 0)); },
-    unallocated() { return this.r2(this.total() - this.allocated()); },
     same(p) { return p.currency === this.currency; },
     pd(p) { return p.date || this.payDate; },
-    cross(p) { const a = this.rate(this.currency, this.pd(p)), b = this.rate(p.currency, this.pd(p)); return a && b ? a / b : null; },
-    applied(p) { return this.same(p) ? 1 : this.num(p.bankRate); },
-    pay(p) { return this.applied(p) ? this.r2(this.num(p.share) * this.applied(p)) : null; },
-    payCbar(p) { return this.cross(p) ? this.r2(this.num(p.share) * this.cross(p)) : null; },
-    diff(p) { return this.pay(p) !== null && this.payCbar(p) !== null ? this.r2(this.pay(p) - this.payCbar(p)) : null; },
+    cross(p) { if (!p.date) return null; const a = this.rate(this.currency, p.date), b = this.rate(p.currency, p.date); return a && b ? a / b : null; },
+    bank(p) { return this.same(p) ? 1 : (this.num(p.bankRate) || null); },
+    // the rate used for this part: the bank's when entered, otherwise CBAR (estimate)
+    used(p) { return this.bank(p) ?? this.cross(p); },
+    estimated(p) { return !this.same(p) && !this.bank(p); },
+    pay(p) {
+        if (p.amountTouched) return this.num(p.amount) || null;
+        const r = this.used(p);
+        return r && p.target ? this.r2(p.target * r) : null;
+    },
+    amountShown(p) { return p.amountTouched ? p.amount : (this.pay(p) ?? ''); },
+    covered(p) { const r = this.used(p), x = this.pay(p); return r && x ? this.r2(x / r) : null; },   // in the act currency
+    coveredCbar(p) { const r = this.cross(p), x = this.pay(p); return r && x ? this.r2(x / r) : null; },
+    payCbar(p) { const c = this.covered(p), r = this.cross(p); return c !== null && r ? this.r2(c * r) : null; },
+    diff(p) { return this.bank(p) && !this.same(p) && this.pay(p) !== null && this.payCbar(p) !== null ? this.r2(this.pay(p) - this.payCbar(p)) : null; },
     rule(p) {
         const own = this.fees[p.currency];
         if (own) return { percent: own.percent, min: own.minimum, max: own.maximum ?? null };
@@ -472,13 +487,18 @@ Alpine.data('logisticsPay', (cfg) => ({
     fee(p) { return p.feeTouched ? this.num(p.fee) : this.ruleFee(p); },
     feeIn(p, cur) { const a = this.rate(p.currency, this.pd(p)), b = this.rate(cur, this.pd(p)); return a && b ? this.r2(this.fee(p) * a / b) : null; },
     debit(p) { return this.pay(p) !== null ? this.r2(this.pay(p) + this.fee(p)) : null; },
-    partOk(p) { return this.num(p.share) > 0 && p.account && p.date && p.date <= this.today && (this.same(p) || this.num(p.bankRate) > 0); },
+    // totals in the act currency
+    settled() { return this.r2(this.parts.reduce((s, p) => s + (this.covered(p) ?? 0), 0)); },
+    remaining() { return this.r2(this.total() - this.settled()); },
+    remainingAfter(i) { return this.r2(this.total() - this.parts.slice(0, i + 1).reduce((s, p) => s + (this.covered(p) ?? 0), 0)); },
+    anyEstimate() { return this.parts.some((p) => this.pay(p) !== null && this.estimated(p)); },
+    partOk(p) { return !!p.date && p.date <= this.today && this.pay(p) > 0 && !!p.account && !!this.bank(p); },
     // the payment date of every part follows the common date until a part gets its own
     syncDates(old) { this.parts.forEach((p) => { if (!p.date || p.date === old) p.date = this.payDate; }); },
     canSubmit() {
         if (this.mode === 'new' && (!this.total() || !this.currency)) return false;
         if (this.mode === 'new' && this.plan === 'later') return !!this.plannedDate;
-        return this.parts.length > 0 && this.parts.every((p) => this.partOk(p)) && this.allocated() > 0 && this.unallocated() >= -0.009;
+        return this.parts.length > 0 && this.parts.every((p) => this.partOk(p)) && this.settled() > 0 && this.remaining() >= -0.05;
     },
 }));
 

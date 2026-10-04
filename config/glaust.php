@@ -132,8 +132,8 @@ return [
             ['Bank hesabları üzrə mədaxil / məxaric', 'Valyutalar üzrə və AZN ekvivalentində', 'Dövr və hesab filtri, gözlənilən ödənişlər']],
         'purchases' => ['Alış hesabatları', 'package', 'Satıcılardan alışlar: fakturalar, ödənişlər, qalıq borclar.',
             ['Satıcı fakturaları (faktura valyutasında)', 'Satıcılara ödənişlər, bank komissiyaları', 'Satıcı üzrə qalıq borc və təhvil öhdəliyi']],
-        'projects' => ['Layihə hesabatları', 'folder', 'Layihə və sövdələşmə üzrə gəlir, xərc və nəticə.',
-            ['Sövdələşmələr: alış, logistika, komissiya, satış', 'Alıcıdan daxilolma, satıcıya ödəniş', 'Layihə üzrə marja']],
+        'projects' => ['Layihə hesabatları', 'folder', 'Layihə və Trade üzrə gəlir, xərc və nəticə.',
+            ['Trade-lər: alış, logistika, komissiya, satış', 'Alıcıdan daxilolma, satıcıya ödəniş', 'Layihə üzrə marja']],
         'fx' => ['Kurs fərqləri', 'transfer', 'CBAR və bank kursları arasındakı fərqlər — bütün əməliyyatlar üzrə.',
             ['Valyuta alış-satışı', 'Satıcıya ödənişlər və alıcıdan daxilolmalar', 'Valyutalar və dövr üzrə itki / qazanc (AZN)']],
         'profit' => ['Mənfəət və zərər', 'chart', 'Gəlirlər, xərclər və nəticə.',
@@ -141,7 +141,7 @@ return [
         'expenses' => ['Xərclər hesabatı', 'receipt', 'Xərclər kateqoriya, dövr, layihə və ödəniş üsulu üzrə.',
             ['Kateqoriyalar üzrə cəm və pay', 'Ödənilmiş / ödənilməmiş', 'Nağd / bank köçürməsi']],
         'summary' => ['Yekun hesabat', 'layers', 'Şirkətin ümumi vəziyyəti bir səhifədə.',
-            ['Pul qalıqları və öhdəliklər', 'Dövrün mənfəəti və kurs fərqləri', 'Açıq sövdələşmələr və layihələr']],
+            ['Pul qalıqları və öhdəliklər', 'Dövrün mənfəəti və kurs fərqləri', 'Açıq Trade-lər və layihələr']],
     ],
 
     // The bank's fee on an outgoing payment to a seller, per payment currency: percent of the
@@ -173,7 +173,7 @@ return [
             'project' => 'PRJ-{Y}-{SEQ:4}',
             'contract' => 'MQ-{Y}-{SEQ:4}',
             'shipment' => 'YK-{Y}-{SEQ:4}',
-            'deal' => 'SV-{Y}-{SEQ:4}',
+            'deal' => 'TR-{Y}-{SEQ:4}',
         ],
     ],
 

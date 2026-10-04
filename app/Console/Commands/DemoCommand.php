@@ -30,7 +30,7 @@ use Illuminate\Support\Str;
  */
 class DemoCommand extends Command
 {
-    protected $signature = 'glaust:demo {--companies=2} {--password=} {--days=90 : CBAR history to load first} {--deals-only : add demo deals (sövdələşmələr) to existing demo companies}';
+    protected $signature = 'glaust:demo {--companies=2} {--password=} {--days=90 : CBAR history to load first} {--deals-only : add demo deals (Trade-lər) to existing demo companies}';
 
     protected $description = 'Create demo companies with users, CRM, projects, contracts, bank and logistics data';
 
@@ -61,7 +61,7 @@ class DemoCommand extends Command
         if ($this->option('deals-only')) {
             foreach (Company::whereIn('name', self::COMPANY_NAMES)->get() as $company) {
                 $n = $tenant->runAs($company, fn () => $this->seedDeals());
-                $this->info("{$company->name}: {$n} sövdələşmə");
+                $this->info("{$company->name}: {$n} Trade");
             }
 
             return self::SUCCESS;
@@ -192,7 +192,7 @@ class DemoCommand extends Command
             $end = $i < 4 ? $today->addDays([3, 12, 25, 40][$i]) : $date->addDays(mt_rand(120, 365));
             $contract = Contract::create([
                 'number' => $numbers->next('contract'), 'contract_date' => $date->toDateString(), 'counterparty_id' => $cp->id,
-                'kind' => $sale ? 'sale' : 'purchase', 'subject' => $sale ? 'Xidmətlərin göstərilməsi — '.$projects[$i % 10]->name : 'Avadanlıq və materialların sövdələşməni',
+                'kind' => $sale ? 'sale' : 'purchase', 'subject' => $sale ? 'Xidmətlərin göstərilməsi — '.$projects[$i % 10]->name : 'Avadanlıq və materialların Trade-i',
                 'amount' => $amount, 'currency' => $currency, 'cbar_rate' => $rate, 'rate_date' => $date->toDateString(), 'amount_azn' => round($amount * $rate, 2),
                 'start_date' => $date->toDateString(), 'end_date' => $end->toDateString(), 'status' => $i === 14 ? 'draft' : ($i === 13 ? 'completed' : 'active'),
                 'project_id' => $projects[$i % 10]->id, 'responsible_id' => $users[$sale ? 1 : 2]->id, 'payment_terms' => '30% avans, qalan hissə təhvildən sonra 15 gün ərzində',
@@ -277,7 +277,7 @@ class DemoCommand extends Command
     }
 
     /**
-     * Sövdələşmələr for projects that have both contracts: one lot each, with a seller's
+     * Trade-lər for projects that have both contracts: one lot each, with a seller's
      * proforma like the company's real working sheet (EUR, CBAR rate of a stored day).
      */
     private function seedDeals(): int

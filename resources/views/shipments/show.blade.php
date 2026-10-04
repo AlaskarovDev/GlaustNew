@@ -8,7 +8,7 @@
     <x-page-header :title="'Yük '.$shipment->number" :subtitle="$shipment->origin.' → '.$shipment->destination" :back="route('shipments.index')">
         <x-slot:actions>
             @can('logistics.update')
-                <a href="{{ route('shipments.edit', $shipment) }}" class="btn btn-primary"><x-icon name="pencil" class="size-4"/> Redaktə</a>
+                <a href="{{ route('shipments.edit', $shipment) }}" class="btn btn-primary"><x-icon name="pencil" class="size-4"/> {{ __('Redaktə') }}</a>
             @endcan
         </x-slot:actions>
     </x-page-header>
@@ -21,7 +21,7 @@
             <span class="badge badge-slate">{{ config('glaust.shipment_directions.'.$shipment->direction) }}</span>
             @if($shipment->isDelayed())<span class="badge badge-rose">{{ (int) $shipment->eta->diffInDays(today()) }} gün gecikir</span>@endif
         </div>
-        <ol class="grid grid-cols-6 gap-1 sm:gap-2" aria-label="Status zənciri">
+        <ol class="grid grid-cols-6 gap-1 sm:gap-2" aria-label="{{ __('Status zənciri') }}">
             @foreach($flow as $i => $s)
                 <li class="relative">
                     <div @class(['h-1.5 rounded-full transition-colors duration-500', 'bg-brand' => $i <= $step, 'bg-surface-2' => $i > $step])></div>
@@ -39,7 +39,7 @@
                 <form method="POST" action="{{ route('shipments.status', $shipment) }}" class="mt-5 flex flex-col sm:flex-row gap-2">
                     @csrf
                     <input type="hidden" name="status" value="{{ $flow[min($step + 1, count($flow) - 1)] }}">
-                    <input name="note" class="input flex-1" placeholder="Qeyd (istəyə bağlı): məs. sərhəddən keçdi" aria-label="Qeyd">
+                    <input name="note" class="input flex-1" placeholder="{{ __('Qeyd (istəyə bağlı): məs. sərhəddən keçdi') }}" aria-label="{{ __('Qeyd') }}">
                     <button class="btn btn-primary shrink-0"><x-icon name="arrow-right" class="size-4"/> «{{ status_label('shipment', $flow[min($step + 1, count($flow) - 1)]) }}» et</button>
                 </form>
             @endif
@@ -50,15 +50,15 @@
         <div class="space-y-6 min-w-0">
             <section class="card overflow-hidden">
                 <header class="flex items-center justify-between px-5 h-14 border-b border-line">
-                    <h2 class="text-sm font-semibold">Logistika xərcləri</h2>
+                    <h2 class="text-sm font-semibold">{{ __('Logistika xərcləri') }}</h2>
                     <span class="font-mono text-sm font-semibold">{{ money($costTotal) }}</span>
                 </header>
                 @if($shipment->costs->isEmpty())
-                    <p class="px-5 py-5 text-sm text-muted">Xərc qeyd edilməyib.</p>
+                    <p class="px-5 py-5 text-sm text-muted">{{ __('Xərc qeyd edilməyib.') }}</p>
                 @else
                     <div class="overflow-x-auto">
                     <table class="table-g table-stack">
-                        <thead><tr><th>Tarix</th><th>Növ</th><th>Kontragent</th><th class="!text-right">Məbləğ</th><th class="!text-right">AZN</th><th></th></tr></thead>
+                        <thead><tr><th>{{ __('Tarix') }}</th><th>{{ __('Növ') }}</th><th>{{ __('Kontragent') }}</th><th class="!text-right">{{ __('Məbləğ') }}</th><th class="!text-right">AZN</th><th></th></tr></thead>
                         <tbody>
                         @foreach($shipment->costs as $c)
                             <tr>
@@ -67,7 +67,7 @@
                                 <td data-label="Kontragent" class="text-xs">{{ $c->counterparty?->name ?? '—' }}</td>
                                 <td data-label="Məbləğ" class="num">{{ money($c->amount, $c->currency) }}</td>
                                 <td data-label="AZN" class="num">{{ money($c->amount_azn) }}@if($c->currency !== 'AZN')<div class="text-[11px] text-faint">{{ rate_fmt($c->cbar_rate) }}</div>@endif</td>
-                                <td data-label="" class="text-right">@can('logistics.update')<x-delete-form :action="route('shipments.costs.destroy', [$shipment, $c])" label="" message="Xərc silinsin?"/>@endcan</td>
+                                <td data-label="" class="text-right">@can('logistics.update')<x-delete-form :action="route('shipments.costs.destroy', [$shipment, $c])" label="" :message="__('Xərc silinsin?')"/>@endcan</td>
                             </tr>
                         @endforeach
                         </tbody>
@@ -77,19 +77,19 @@
                 @can('logistics.update')
                     <form method="POST" action="{{ route('shipments.costs.store', $shipment) }}" class="p-4 border-t border-line bg-surface-2/60 grid sm:grid-cols-6 gap-2">
                         @csrf
-                        <select name="cost_type" class="input sm:col-span-2" aria-label="Xərc növü">@foreach(config('glaust.cost_types') as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach</select>
-                        <input type="date" name="cost_date" value="{{ today()->format('Y-m-d') }}" max="{{ today()->format('Y-m-d') }}" class="input font-mono sm:col-span-2" aria-label="Tarix" required>
-                        <input name="amount" class="input font-mono text-right" placeholder="Məbləğ" inputmode="decimal" aria-label="Məbləğ" required>
-                        <select name="currency" class="input" aria-label="Valyuta">@foreach(config('glaust.currencies') as $cur)<option>{{ $cur }}</option>@endforeach</select>
-                        <input name="note" class="input sm:col-span-4" placeholder="Qeyd" aria-label="Qeyd">
-                        <button class="btn btn-secondary sm:col-span-2"><x-icon name="plus" class="size-4"/> Xərc əlavə et</button>
+                        <select name="cost_type" class="input sm:col-span-2" aria-label="{{ __('Xərc növü') }}">@foreach(config('glaust.cost_types') as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach</select>
+                        <input type="date" name="cost_date" value="{{ today()->format('Y-m-d') }}" max="{{ today()->format('Y-m-d') }}" class="input font-mono sm:col-span-2" aria-label="{{ __('Tarix') }}" required>
+                        <input name="amount" class="input font-mono text-right" placeholder="{{ __('Məbləğ') }}" inputmode="decimal" aria-label="{{ __('Məbləğ') }}" required>
+                        <select name="currency" class="input" aria-label="{{ __('Valyuta') }}">@foreach(config('glaust.currencies') as $cur)<option>{{ $cur }}</option>@endforeach</select>
+                        <input name="note" class="input sm:col-span-4" placeholder="{{ __('Qeyd') }}" aria-label="{{ __('Qeyd') }}">
+                        <button class="btn btn-secondary sm:col-span-2"><x-icon name="plus" class="size-4"/> {{ __('Xərc əlavə et') }}</button>
                         @if($errors->hasAny(['amount', 'currency', 'cost_date']))<p class="field-error sm:col-span-6">{{ $errors->first('currency') ?: $errors->first('amount') ?: $errors->first('cost_date') }}</p>@endif
                     </form>
                 @endcan
             </section>
 
             <section class="card p-6">
-                <h2 class="text-sm font-semibold mb-4">Status tarixçəsi</h2>
+                <h2 class="text-sm font-semibold mb-4">{{ __('Status tarixçəsi') }}</h2>
                 <ol class="relative border-l-2 border-line ml-2 space-y-5">
                     @foreach($shipment->history as $h)
                         <li class="ml-5">
@@ -122,10 +122,10 @@
                     <div class="flex justify-between gap-4"><span class="text-muted shrink-0">{{ $k }}</span><span class="text-right min-w-0 break-words">{!! $v !!}</span></div>
                 @endforeach
             </section>
-            @if($shipment->notes)<section class="card p-5"><h2 class="text-sm font-semibold mb-2">Qeydlər</h2><p class="text-sm whitespace-pre-line">{{ $shipment->notes }}</p></section>@endif
+            @if($shipment->notes)<section class="card p-5"><h2 class="text-sm font-semibold mb-2">{{ __('Qeydlər') }}</h2><p class="text-sm whitespace-pre-line">{{ $shipment->notes }}</p></section>@endif
             @include('partials.attachments', ['model' => $shipment, 'type' => 'shipment', 'ability' => 'logistics.update'])
             @can('logistics.delete')
-                <x-delete-form :action="route('shipments.destroy', $shipment)" label="Yükü sil" button="btn btn-ghost w-full text-danger hover:!bg-danger-soft" :message="'Yük '.$shipment->number.' silinəcək.'"/>
+                <x-delete-form :action="route('shipments.destroy', $shipment)" :label="__('Yükü sil')" :button="__('btn btn-ghost w-full text-danger hover:!bg-danger-soft')" :message="'Yük '.$shipment->number.' silinəcək.'"/>
             @endcan
         </aside>
     </div>

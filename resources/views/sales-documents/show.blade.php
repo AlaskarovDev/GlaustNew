@@ -15,8 +15,8 @@
             @if($sibling)
                 <a href="{{ route('sales-documents.show', $sibling) }}" class="btn btn-secondary"><x-icon name="contract" class="size-4"/> {{ $sibling->title() }}</a>
             @endif
-            <a href="{{ route('sales-documents.pdf', [$doc, 'inline' => 1]) }}" target="_blank" rel="noopener" class="btn btn-secondary"><x-icon name="eye" class="size-4"/> PDF-ə bax</a>
-            <a href="{{ route('sales-documents.pdf', $doc) }}" class="btn btn-primary"><x-icon name="file-pdf" class="size-4"/> PDF yüklə</a>
+            <a href="{{ route('sales-documents.pdf', [$doc, 'inline' => 1]) }}" target="_blank" rel="noopener" class="btn btn-secondary"><x-icon name="eye" class="size-4"/> {{ __('PDF-ə bax') }}</a>
+            <a href="{{ route('sales-documents.pdf', $doc) }}" class="btn btn-primary"><x-icon name="file-pdf" class="size-4"/> {{ __('PDF yüklə') }}</a>
         </x-slot:actions>
     </x-page-header>
 
@@ -33,8 +33,8 @@
     <div class="rounded-xl border border-brand/25 bg-brand-soft/50 px-4 py-3 mb-4 flex flex-wrap items-start gap-3 text-sm">
         <x-icon name="pencil" class="size-4 text-brand-ink mt-0.5 shrink-0"/>
         <div class="flex-1 min-w-[220px]">
-            <b class="text-brand-ink">Redaktə edilə bilən sənəd.</b>
-            Hesablamadan avtomatik yaradılıb; bütün sahələr və sətirlər dəyişdirilə bilər. PDF hər dəfə son yadda saxlanmış vəziyyətdən yaradılır, dəyişikliklər aşağıdakı tarixçədə qalır.
+            <b class="text-brand-ink">{{ __('Redaktə edilə bilən sənəd.') }}</b>
+            {{ __('Hesablamadan avtomatik yaradılıb; bütün sahələr və sətirlər dəyişdirilə bilər. PDF hər dəfə son yadda saxlanmış vəziyyətdən yaradılır, dəyişikliklər aşağıdakı tarixçədə qalır.') }}
         </div>
         <span class="text-xs text-muted">Son dəyişiklik: {{ azdate($doc->updated_at, true) }}{{ $doc->editor ? ' · '.$doc->editor->name : '' }}</span>
     </div>
@@ -43,10 +43,10 @@
     @if($stale && $canEdit)
         <div class="rounded-xl border border-saffron/40 bg-saffron-soft/50 px-4 py-3 mb-4 flex flex-wrap items-center gap-3 text-sm" role="status">
             <x-icon name="alert" class="size-4 text-saffron shrink-0"/>
-            <span class="flex-1 min-w-[220px]">Sətirlər faktura <b>{{ $doc->sourceInvoice?->number }}</b>-in hazırkı hesablamasından fərqlənir (əl ilə dəyişilib və ya hesablama yenilənib).</span>
-            <form method="POST" action="{{ route('sales-documents.refresh', $doc) }}" data-confirm="Sətirlər hesablamadan yenidən yazılsın? Sətirlərdə əl ilə edilən dəyişikliklər itəcək (rekvizitlər qalır)." data-confirm-action="Yenilə">
+            <span class="flex-1 min-w-[220px]">{{ __('Sətirlər faktura') }} <b>{{ $doc->sourceInvoice?->number }}</b>{{ __('-in hazırkı hesablamasından fərqlənir (əl ilə dəyişilib və ya hesablama yenilənib).') }}</span>
+            <form method="POST" action="{{ route('sales-documents.refresh', $doc) }}" data-confirm="{{ __('Sətirlər hesablamadan yenidən yazılsın? Sətirlərdə əl ilə edilən dəyişikliklər itəcək (rekvizitlər qalır).') }}" data-confirm-action="{{ __('Yenilə') }}">
                 @csrf
-                <button class="btn btn-secondary btn-sm"><x-icon name="refresh" class="size-4"/> Hesablamadan yenilə</button>
+                <button class="btn btn-secondary btn-sm"><x-icon name="refresh" class="size-4"/> {{ __('Hesablamadan yenilə') }}</button>
             </form>
         </div>
     @endif
@@ -70,7 +70,7 @@
         <fieldset @disabled(! $canEdit) class="space-y-6 min-w-0">
             <div class="grid lg:grid-cols-2 gap-6">
                 <section class="card p-5 space-y-4">
-                    <h2 class="text-sm font-semibold">Rekvizitlər</h2>
+                    <h2 class="text-sm font-semibold">{{ __('Rekvizitlər') }}</h2>
                     <div class="grid sm:grid-cols-2 gap-4">
                         <x-field :label="$pf ? 'Proforma Inv. Number' : 'Спецификация №'" name="number" required>
                             <input name="number" value="{{ old('number', $doc->number) }}" class="input font-mono @error('number') is-invalid @enderror" required>
@@ -86,7 +86,7 @@
                         </x-field>
                     </div>
                     @if($pf)
-                        <x-field label="Başlıqdakı şirkət adı" name="heading" hint="PDF-in yuxarı sol küncündə böyük hərflərlə">
+                        <x-field :label="__('Başlıqdakı şirkət adı')" name="heading" :hint="__('PDF-in yuxarı sol küncündə böyük hərflərlə')">
                             <input name="heading" value="{{ old('heading', $doc->heading) }}" class="input">
                         </x-field>
                     @endif
@@ -94,9 +94,9 @@
 
                 <section class="card p-5 space-y-4">
                     @if($pf)
-                        <h2 class="text-sm font-semibold">Tərəflər</h2>
+                        <h2 class="text-sm font-semibold">{{ __('Tərəflər') }}</h2>
                         <div class="grid sm:grid-cols-2 gap-4">
-                            <x-field label="SELLER" name="seller_block" hint="Hər sətir PDF-də ayrıca sətir olur">
+                            <x-field label="SELLER" name="seller_block" :hint="__('Hər sətir PDF-də ayrıca sətir olur')">
                                 <textarea name="seller_block" rows="6" class="input text-[13px]">{{ old('seller_block', $doc->seller_block) }}</textarea>
                             </x-field>
                             <x-field label="CUSTOMER" name="customer_block">
@@ -104,7 +104,7 @@
                             </x-field>
                         </div>
                     @else
-                        <h2 class="text-sm font-semibold">İmzalar</h2>
+                        <h2 class="text-sm font-semibold">{{ __('İmzalar') }}</h2>
                         <x-field label="От ПРОДАВЦА" name="seller_signatory">
                             <input name="seller_signatory" value="{{ old('seller_signatory', $doc->seller_signatory) }}" placeholder="Генеральный директор …" class="input">
                         </x-field>
@@ -118,10 +118,10 @@
             <section class="card overflow-hidden">
                 <header class="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-line">
                     <div>
-                        <h2 class="text-sm font-semibold">Sətirlər <span class="font-mono text-muted font-normal" x-text="lines.length"></span></h2>
-                        <p class="text-xs text-muted">Məbləğ = miqdar × qiymət, qəpiyə qədər. Sətir əlavə etmək, silmək və yerini dəyişmək olar.</p>
+                        <h2 class="text-sm font-semibold">{{ __('Sətirlər') }} <span class="font-mono text-muted font-normal" x-text="lines.length"></span></h2>
+                        <p class="text-xs text-muted">{{ __('Məbləğ = miqdar × qiymət, qəpiyə qədər. Sətir əlavə etmək, silmək və yerini dəyişmək olar.') }}</p>
                     </div>
-                    @if($canEdit)<button type="button" class="btn btn-secondary btn-sm" @click="add()"><x-icon name="plus" class="size-4"/> Sətir əlavə et</button>@endif
+                    @if($canEdit)<button type="button" class="btn btn-secondary btn-sm" @click="add()"><x-icon name="plus" class="size-4"/> {{ __('Sətir əlavə et') }}</button>@endif
                 </header>
                 @error('lines')<p class="field-error px-5 pt-3">{{ $message }}</p>@enderror
                 @foreach($errors->get('lines.*') as $msgs)<p class="field-error px-5 pt-1">{{ $msgs[0] }}</p>@endforeach
@@ -131,12 +131,12 @@
                         <tr>
                             <th class="w-12">{{ $pf ? 'Item #' : 'Поз.' }}</th>
                             <th class="min-w-[240px]">{{ $pf ? 'Description' : 'Наименование товара' }}</th>
-                            @if($pf)<th class="w-32">Custom Code</th>@endif
+                            @if($pf)<th class="w-32">{{ __('Custom Code') }}</th>@endif
                             <th class="w-28 !text-right">{{ $pf ? 'QTY' : 'Количество' }}</th>
                             <th class="w-24">{{ $pf ? 'UOM' : 'Ед. изм.' }}</th>
                             <th class="w-32 !text-right">{{ $pf ? 'Unit Price '.$doc->currency : 'Цена, руб.' }}</th>
                             <th class="w-36 !text-right">{{ $pf ? 'Total Price '.$doc->currency : 'Сумма, руб.' }}</th>
-                            <th class="w-20"><span class="sr-only">Əməliyyat</span></th>
+                            <th class="w-20"><span class="sr-only">{{ __('Əməliyyat') }}</span></th>
                         </tr>
                         </thead>
                         <tbody>
@@ -152,8 +152,8 @@
                                 <td class="pt-2">
                                     @if($canEdit)
                                         <div class="flex items-center gap-0.5">
-                                            <button type="button" class="btn btn-ghost btn-icon btn-sm" @click="move(i, -1)" :disabled="i === 0" aria-label="Yuxarı"><x-icon name="chevron-up" class="size-4"/></button>
-                                            <button type="button" class="btn btn-ghost btn-icon btn-sm text-danger" @click="remove(i)" :disabled="lines.length === 1" aria-label="Sətri sil"><x-icon name="trash" class="size-4"/></button>
+                                            <button type="button" class="btn btn-ghost btn-icon btn-sm" @click="move(i, -1)" :disabled="i === 0" aria-label="{{ __('Yuxarı') }}"><x-icon name="chevron-up" class="size-4"/></button>
+                                            <button type="button" class="btn btn-ghost btn-icon btn-sm text-danger" @click="remove(i)" :disabled="lines.length === 1" aria-label="{{ __('Sətri sil') }}"><x-icon name="trash" class="size-4"/></button>
                                         </div>
                                     @endif
                                 </td>
@@ -181,17 +181,17 @@
                             <input name="delivery_terms" value="{{ old('delivery_terms', $doc->delivery_terms) }}" placeholder="{{ $pf ? 'DAP Moscow, 21 weeks (150 days)' : 'DAP 21 недель (150 календарных дней)' }}" class="input">
                         </x-field>
                     </div>
-                    <x-field label="Əlavə qeyd (PDF-də görünür)" name="notes">
+                    <x-field :label="__('Əlavə qeyd (PDF-də görünür)')" name="notes">
                         <textarea name="notes" rows="2" class="input">{{ old('notes', $doc->notes) }}</textarea>
                     </x-field>
                 </section>
 
                 <section class="card p-5 space-y-3">
-                    <h2 class="text-sm font-semibold">Cəm</h2>
+                    <h2 class="text-sm font-semibold">{{ __('Cəm') }}</h2>
                     @if($pf)
                         <div class="grid grid-cols-2 gap-3">
-                            <x-field label="Freight" name="freight"><input name="freight" x-model="freight" inputmode="decimal" placeholder="-" class="input font-mono text-right"></x-field>
-                            <x-field label="Insurance" name="insurance"><input name="insurance" x-model="insurance" inputmode="decimal" placeholder="-" class="input font-mono text-right"></x-field>
+                            <x-field :label="__('Freight')" name="freight"><input name="freight" x-model="freight" inputmode="decimal" placeholder="-" class="input font-mono text-right"></x-field>
+                            <x-field :label="__('Insurance')" name="insurance"><input name="insurance" x-model="insurance" inputmode="decimal" placeholder="-" class="input font-mono text-right"></x-field>
                         </div>
                     @endif
                     <div class="flex items-baseline justify-between rounded-lg bg-surface-2 px-3 py-2.5">
@@ -200,12 +200,12 @@
                     </div>
                     <template x-if="diff() !== null">
                         <div class="text-xs rounded-lg px-3 py-2" :class="diff() === 0 ? 'bg-success-soft text-success' : 'bg-danger-soft text-danger'">
-                            Proforma cəmi: <span class="font-mono" x-text="fmt(proformaTotal)"></span> ·
+                            {{ __('Proforma cəmi:') }} <span class="font-mono" x-text="fmt(proformaTotal)"></span> ·
                             <span x-text="diff() === 0 ? 'eynidir' : 'fərq: ' + (diff() > 0 ? '+' : '') + fmt(diff())"></span>
                         </div>
                     </template>
                     @unless($pf)
-                        <p class="text-[11px] text-muted">Sözlə: {{ \App\Support\RuMoney::words($doc->grandTotal(), $doc->currency) }} <span class="text-faint">(yadda saxladıqdan sonra yenilənir)</span></p>
+                        <p class="text-[11px] text-muted">Sözlə: {{ \App\Support\RuMoney::words($doc->grandTotal(), $doc->currency) }} <span class="text-faint">{{ __('(yadda saxladıqdan sonra yenilənir)') }}</span></p>
                     @endunless
                 </section>
             </div>
@@ -214,8 +214,8 @@
         @if($canEdit)
             <div class="sticky bottom-4 z-20 flex justify-end">
                 <div class="card !shadow-[var(--shadow-pop)] flex items-center gap-3 px-4 py-3">
-                    <span class="text-sm text-muted hidden sm:inline">Cəmi: <span class="font-mono text-ink" x-text="fmt(total()) + ' {{ $doc->currency }}'"></span></span>
-                    <button class="btn btn-primary"><x-icon name="check" class="size-4"/> Yadda saxla</button>
+                    <span class="text-sm text-muted hidden sm:inline">{{ __('Cəmi:') }} <span class="font-mono text-ink" x-text="fmt(total()) + ' {{ $doc->currency }}'"></span></span>
+                    <button class="btn btn-primary"><x-icon name="check" class="size-4"/> {{ __('Yadda saxla') }}</button>
                 </div>
             </div>
         @endif
@@ -227,12 +227,12 @@
             @if($doc->sourceInvoice)
                 <a href="{{ route('invoices.show', $doc->sourceInvoice) }}" class="card card-hover p-4 flex items-center gap-3 text-sm">
                     <x-icon name="sheet" class="size-5 text-success"/>
-                    <span class="flex-1">Hesablama: satıcının fakturası <b class="font-mono">{{ $doc->sourceInvoice->number }}</b></span>
+                    <span class="flex-1">{{ __('Hesablama: satıcının fakturası') }} <b class="font-mono">{{ $doc->sourceInvoice->number }}</b></span>
                     <x-icon name="chevron-right" class="size-4 text-muted"/>
                 </a>
             @endif
             @if(auth()->user()->can('projects.delete') && ! $doc->isLocked())
-                <x-delete-form :action="route('sales-documents.destroy', $doc)" :label="$doc->title().' sil'" button="btn btn-ghost w-full text-danger hover:!bg-danger-soft" :message="$doc->title().' '.$doc->number.' silinəcək. Fakturadan yenidən yaratmaq olar.'"/>
+                <x-delete-form :action="route('sales-documents.destroy', $doc)" :label="$doc->title().' sil'" :button="__('btn btn-ghost w-full text-danger hover:!bg-danger-soft')" :message="$doc->title().' '.$doc->number.' silinəcək. Fakturadan yenidən yaratmaq olar.'"/>
             @endif
         </div>
     </div>

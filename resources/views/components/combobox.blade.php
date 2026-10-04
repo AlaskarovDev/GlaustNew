@@ -13,7 +13,7 @@
                 <x-icon name="chevron-down" class="size-4 text-muted shrink-0"/>
             </button>
             @unless($required)
-                <button type="button" x-show="value" x-cloak @click="pick(null)" class="grid place-items-center size-7 mr-1.5 rounded-md text-faint hover:text-ink hover:bg-surface-2" aria-label="Təmizlə"><x-icon name="x" class="size-4"/></button>
+                <button type="button" x-show="value" x-cloak @click="pick(null)" class="grid place-items-center size-7 mr-1.5 rounded-md text-faint hover:text-ink hover:bg-surface-2" aria-label="{{ __('Təmizlə') }}"><x-icon name="x" class="size-4"/></button>
             @else
                 <span class="w-2"></span>
             @endunless
@@ -21,7 +21,7 @@
         <div x-cloak x-show="open" x-transition.origin.top class="absolute z-40 mt-1.5 w-full min-w-[260px] card !shadow-[var(--shadow-pop)] overflow-hidden">
             <div class="p-2 border-b border-line">
                 <input x-ref="q" x-model="query" @input="fetch()" @keydown.arrow-down.prevent="move(1)" @keydown.arrow-up.prevent="move(-1)"
-                       @keydown.enter.prevent="items[active] && pick(items[active])" class="input !h-9" placeholder="Axtar…" aria-label="Axtar">
+                       @keydown.enter.prevent="items[active] && pick(items[active])" class="input !h-9" placeholder="{{ __('Axtar…') }}" aria-label="{{ __('Axtar') }}">
             </div>
             <ul class="max-h-64 overflow-y-auto p-1" role="listbox">
                 <template x-for="(item, i) in items" :key="item.id">
@@ -31,8 +31,8 @@
                         <x-icon name="check" class="size-4 text-brand" x-show="item.id == value"/>
                     </li>
                 </template>
-                <li x-show="loading" class="px-3 py-3 text-sm text-muted">Yüklənir…</li>
-                <li x-show="!loading && !items.length" class="px-3 py-3 text-sm text-muted">Nəticə yoxdur</li>
+                <li x-show="loading" class="px-3 py-3 text-sm text-muted">{{ __('Yüklənir…') }}</li>
+                <li x-show="!loading && !items.length" class="px-3 py-3 text-sm text-muted">{{ __('Nəticə yoxdur') }}</li>
             </ul>
             @isset($footer)
                 <div class="border-t border-line p-1.5">{{ $footer }}</div>

@@ -1,4 +1,4 @@
-<x-layouts.app title="Bank əməliyyatı">
+<x-layouts.app :title="__('Bank əməliyyatı')">
     @php
         $in = $tx->direction === 'in';
         $title = $tx->kind === 'regular' ? ($in ? 'Mədaxil' : 'Məxaric') : config('glaust.transaction_kinds.'.$tx->kind);
@@ -7,11 +7,11 @@
         <x-slot:actions>
             @can('bank.update')
                 @unless($tx->transfer_group)
-                    <a href="{{ route('bank.transactions.edit', $tx) }}" class="btn btn-primary"><x-icon name="pencil" class="size-4"/> Redaktə</a>
+                    <a href="{{ route('bank.transactions.edit', $tx) }}" class="btn btn-primary"><x-icon name="pencil" class="size-4"/> {{ __('Redaktə') }}</a>
                 @endunless
             @endcan
             @can('bank.delete')
-                <x-delete-form :action="route('bank.transactions.destroy', $tx)" button="btn btn-secondary text-danger" :message="$tx->transfer_group ? 'Köçürmənin hər iki tərəfi silinəcək.' : 'Əməliyyat silinəcək.'"/>
+                <x-delete-form :action="route('bank.transactions.destroy', $tx)" :button="__('btn btn-secondary text-danger')" :message="$tx->transfer_group ? 'Köçürmənin hər iki tərəfi silinəcək.' : 'Əməliyyat silinəcək.'"/>
             @endcan
         </x-slot:actions>
     </x-page-header>
@@ -29,18 +29,18 @@
                     </div>
                 </div>
                 <dl class="mt-6 pt-6 border-t border-line grid sm:grid-cols-2 gap-x-8 gap-y-3 text-sm">
-                    <div class="flex justify-between gap-4"><dt class="text-muted">CBAR məzənnəsi</dt><dd class="font-mono">{{ rate_fmt($tx->cbar_rate) }}</dd></div>
-                    <div class="flex justify-between gap-4"><dt class="text-muted">Tətbiq olunan</dt><dd class="font-mono">{{ rate_fmt($tx->applied_rate) }}</dd></div>
-                    <div class="flex justify-between gap-4"><dt class="text-muted">AZN (tətbiq olunan)</dt><dd class="font-mono font-semibold">{{ money($tx->amount_azn) }}</dd></div>
+                    <div class="flex justify-between gap-4"><dt class="text-muted">{{ __('CBAR məzənnəsi') }}</dt><dd class="font-mono">{{ rate_fmt($tx->cbar_rate) }}</dd></div>
+                    <div class="flex justify-between gap-4"><dt class="text-muted">{{ __('Tətbiq olunan') }}</dt><dd class="font-mono">{{ rate_fmt($tx->applied_rate) }}</dd></div>
+                    <div class="flex justify-between gap-4"><dt class="text-muted">{{ __('AZN (tətbiq olunan)') }}</dt><dd class="font-mono font-semibold">{{ money($tx->amount_azn) }}</dd></div>
                     <div class="flex justify-between gap-4"><dt class="text-muted">AZN (CBAR)</dt><dd class="font-mono">{{ money($tx->cbar_amount_azn) }}</dd></div>
                     @if($tx->kind === 'regular' && $tx->currency !== 'AZN')
                         @php $diff = $tx->exchangeDifference(); @endphp
-                        <div class="flex justify-between gap-4 sm:col-span-2"><dt class="text-muted">Kurs fərqi</dt><dd @class(['font-mono font-semibold', 'text-success' => $diff > 0, 'text-danger' => $diff < 0])>{{ $diff > 0 ? '+' : '' }}{{ money($diff) }}</dd></div>
+                        <div class="flex justify-between gap-4 sm:col-span-2"><dt class="text-muted">{{ __('Kurs fərqi') }}</dt><dd @class(['font-mono font-semibold', 'text-success' => $diff > 0, 'text-danger' => $diff < 0])>{{ $diff > 0 ? '+' : '' }}{{ money($diff) }}</dd></div>
                     @endif
-                    <div class="flex justify-between gap-4"><dt class="text-muted">Təyinat</dt><dd class="text-right">{{ $tx->purpose ?? '—' }}</dd></div>
-                    <div class="flex justify-between gap-4"><dt class="text-muted">Sənəd №</dt><dd class="font-mono">{{ $tx->reference ?? '—' }}</dd></div>
-                    <div class="flex justify-between gap-4"><dt class="text-muted">Kateqoriya</dt><dd>{{ $tx->category?->name ?? '—' }}</dd></div>
-                    <div class="flex justify-between gap-4"><dt class="text-muted">Daxil edən</dt><dd>{{ $tx->creator?->name ?? '—' }}</dd></div>
+                    <div class="flex justify-between gap-4"><dt class="text-muted">{{ __('Təyinat') }}</dt><dd class="text-right">{{ $tx->purpose ?? '—' }}</dd></div>
+                    <div class="flex justify-between gap-4"><dt class="text-muted">{{ __('Sənəd №') }}</dt><dd class="font-mono">{{ $tx->reference ?? '—' }}</dd></div>
+                    <div class="flex justify-between gap-4"><dt class="text-muted">{{ __('Kateqoriya') }}</dt><dd>{{ $tx->category?->name ?? '—' }}</dd></div>
+                    <div class="flex justify-between gap-4"><dt class="text-muted">{{ __('Daxil edən') }}</dt><dd>{{ $tx->creator?->name ?? '—' }}</dd></div>
                 </dl>
             </section>
 
@@ -54,7 +54,7 @@
                         <div class="font-mono font-semibold {{ $counterpart->direction === 'in' ? 'text-success' : 'text-danger' }}">{{ $counterpart->direction === 'in' ? '+' : '−' }}{{ money($counterpart->amount, $counterpart->currency) }}</div>
                     </a>
                     @if($result !== null)
-                        <p class="mt-3 text-sm">Konvertasiyanın nəticəsi (CBAR ilə müqayisədə):
+                        <p class="mt-3 text-sm">{{ __('Konvertasiyanın nəticəsi (CBAR ilə müqayisədə):') }}
                             <span @class(['font-mono font-semibold', 'text-success' => $result > 0, 'text-danger' => $result < 0])>{{ $result > 0 ? '+' : '' }}{{ money($result) }}</span></p>
                     @endif
                 </section>
@@ -65,9 +65,9 @@
 
         <aside class="space-y-6 lg:sticky lg:top-24">
             <section class="card p-5 text-sm space-y-3">
-                <div class="flex justify-between gap-3"><span class="text-muted">Kontragent</span>@if($tx->counterparty)<a href="{{ route('counterparties.show', $tx->counterparty) }}" class="text-brand-ink hover:underline text-right">{{ $tx->counterparty->name }}</a>@else<span>—</span>@endif</div>
-                <div class="flex justify-between gap-3"><span class="text-muted">Müqavilə</span>@if($tx->contract)<a href="{{ route('contracts.show', $tx->contract) }}" class="text-brand-ink hover:underline font-mono">{{ $tx->contract->number }}</a>@else<span>—</span>@endif</div>
-                <div class="flex justify-between gap-3"><span class="text-muted">Layihə</span>@if($tx->project)<a href="{{ route('projects.show', $tx->project) }}" class="text-brand-ink hover:underline">{{ $tx->project->code }}</a>@else<span>—</span>@endif</div>
+                <div class="flex justify-between gap-3"><span class="text-muted">{{ __('Kontragent') }}</span>@if($tx->counterparty)<a href="{{ route('counterparties.show', $tx->counterparty) }}" class="text-brand-ink hover:underline text-right">{{ $tx->counterparty->name }}</a>@else<span>—</span>@endif</div>
+                <div class="flex justify-between gap-3"><span class="text-muted">{{ __('Müqavilə') }}</span>@if($tx->contract)<a href="{{ route('contracts.show', $tx->contract) }}" class="text-brand-ink hover:underline font-mono">{{ $tx->contract->number }}</a>@else<span>—</span>@endif</div>
+                <div class="flex justify-between gap-3"><span class="text-muted">{{ __('Layihə') }}</span>@if($tx->project)<a href="{{ route('projects.show', $tx->project) }}" class="text-brand-ink hover:underline">{{ $tx->project->code }}</a>@else<span>—</span>@endif</div>
             </section>
             @include('partials.attachments', ['model' => $tx, 'type' => 'bank_transaction', 'ability' => 'bank.update'])
         </aside>

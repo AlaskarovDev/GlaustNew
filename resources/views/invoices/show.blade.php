@@ -3,7 +3,7 @@
     <x-page-header :title="$invoice->typeLabel().' № '.$invoice->number" :back="route('deals.show', $invoice->deal)"
                    :subtitle="($invoice->counterparty?->name ?? '').' · '.azdate($invoice->invoice_date).' · Trade '.$invoice->deal->code">
         <x-slot:actions>
-            <a href="{{ route('invoices.export', [$invoice, 'format' => 'xlsx']) }}" class="btn btn-secondary"><x-icon name="sheet" class="size-4 text-success"/> Excel</a>
+            <a href="{{ route('invoices.export', [$invoice, 'format' => 'xlsx']) }}" class="btn btn-secondary"><x-icon name="sheet" class="size-4 text-success"/> {{ __('Excel') }}</a>
             <a href="{{ route('invoices.export', [$invoice, 'format' => 'pdf']) }}" class="btn btn-secondary"><x-icon name="file-pdf" class="size-4 text-danger"/> PDF</a>
         </x-slot:actions>
     </x-page-header>
@@ -33,32 +33,32 @@
          }" x-init="$watch('azn', v => v && load()); $watch('date', () => azn && load())">
         <div class="flex flex-wrap items-center justify-end gap-2 mb-2">
             <div x-show="azn" x-cloak class="flex items-center gap-2 text-sm">
-                <label for="azn-date" class="text-muted">CBAR kursu tarixi</label>
+                <label for="azn-date" class="text-muted">{{ __('CBAR kursu tarixi') }}</label>
                 <input id="azn-date" type="date" x-model="date" :max="today" class="input !h-8 !w-40">
                 <span class="text-xs text-danger" x-show="error" x-text="error"></span>
             </div>
             <button type="button" class="btn btn-sm" :class="azn ? 'btn-primary' : 'btn-secondary'" @click="azn = !azn" :aria-pressed="azn"><span class="font-mono">₼</span> <span x-text="azn ? 'AZN-i gizlət' : 'AZN ilə göstər'"></span></button>
         </div>
         <div class="grid grid-cols-2 xl:grid-cols-5 gap-4 stagger">
-            <div class="card p-4" style="--i:0"><div class="text-xs text-muted">Satıcının fakturası</div><div class="text-xl font-semibold font-mono">{{ money($invoice->total, $invoice->currency) }}</div>
+            <div class="card p-4" style="--i:0"><div class="text-xs text-muted">{{ __('Satıcının fakturası') }}</div><div class="text-xl font-semibold font-mono">{{ money($invoice->total, $invoice->currency) }}</div>
                 <div class="text-[11px] text-muted mt-0.5" x-show="azn" x-cloak><span x-show="loading">…</span><span x-show="!loading" x-text="inAzn({{ (float) $invoice->total }}, @js($invoice->currency))"></span></div></div>
-            <div class="card p-4" style="--i:1"><div class="text-xs text-muted">Alıcıya fakturamız</div>
+            <div class="card p-4" style="--i:1"><div class="text-xs text-muted">{{ __('Alıcıya fakturamız') }}</div>
                 @if($ourInvoice)
                     <a href="{{ route('sales-documents.show', $ourInvoice) }}" class="block text-xl font-semibold font-mono hover:text-brand-ink">{{ money($ourTotal, $ourInvoice->currency) }}</a>
                     <div class="text-[11px] text-muted mt-0.5" x-show="azn" x-cloak><span x-show="loading">…</span><span x-show="!loading" x-text="inAzn({{ (float) $ourTotal }}, @js($ourInvoice->currency))"></span></div>
                     <div class="text-[11px] text-faint" x-show="!azn">Proforma {{ $ourInvoice->number }}</div>
                 @else
-                    <div class="text-xl font-semibold text-faint">—</div><div class="text-[11px] text-faint">hesablama bitəndə yaranır</div>
+                    <div class="text-xl font-semibold text-faint">—</div><div class="text-[11px] text-faint">{{ __('hesablama bitəndə yaranır') }}</div>
                 @endif
             </div>
-            <div class="card p-4" style="--i:2"><div class="text-xs text-muted">Sətir / miqdar</div><div class="text-xl font-semibold font-mono">{{ $invoice->items->count() }}</div><div class="text-[11px] text-faint">{{ num($invoice->items->sum('quantity'), 2) }} cəmi miqdar</div></div>
-        <div class="card p-4" style="--i:3"><div class="text-xs text-muted">Müqavilə</div>
+            <div class="card p-4" style="--i:2"><div class="text-xs text-muted">{{ __('Sətir / miqdar') }}</div><div class="text-xl font-semibold font-mono">{{ $invoice->items->count() }}</div><div class="text-[11px] text-faint">{{ num($invoice->items->sum('quantity'), 2) }} cəmi miqdar</div></div>
+        <div class="card p-4" style="--i:3"><div class="text-xs text-muted">{{ __('Müqavilə') }}</div>
             @if($invoice->contract)<a href="{{ route('contracts.show', $invoice->contract) }}" class="block font-mono font-semibold hover:text-brand-ink">{{ $invoice->contract->number }}</a>@else<div>—</div>@endif
             <div class="text-[11px] text-faint">{{ $invoice->type === 'supplier' ? 'alış müqaviləsi' : 'satış müqaviləsi' }}</div></div>
-        <div class="card p-4" style="--i:4"><div class="text-xs text-muted">Status</div>
+        <div class="card p-4" style="--i:4"><div class="text-xs text-muted">{{ __('Status') }}</div>
             @if(auth()->user()->can('projects.update') && ! $invoice->isLocked())
                 <form method="POST" action="{{ route('invoices.status', $invoice) }}" x-data class="mt-1">@csrf @method('PUT')
-                    <select name="status" class="input !h-8 text-sm" @change="$el.form.requestSubmit()" aria-label="Status">
+                    <select name="status" class="input !h-8 text-sm" @change="$el.form.requestSubmit()" aria-label="{{ __('Status') }}">
                         @foreach(\App\Models\Invoice::STATUSES as $k => [$l])<option value="{{ $k }}" @selected($invoice->status === $k)>{{ $l }}</option>@endforeach
                     </select>
                 </form>
@@ -72,8 +72,8 @@
     @if($invoice->type === 'supplier')
         @include('invoices._approval')
         <div class="flex items-baseline justify-between gap-3 mb-3">
-            <h2 class="text-sm font-semibold text-ink-2">Hesablama addımları</h2>
-            <p class="text-xs text-muted">Hər addım tətbiq olunduqca cədvəldəki uyğun sütunlar dolur</p>
+            <h2 class="text-sm font-semibold text-ink-2">{{ __('Hesablama addımları') }}</h2>
+            <p class="text-xs text-muted">{{ __('Hər addım tətbiq olunduqca cədvəldəki uyğun sütunlar dolur') }}</p>
         </div>
         <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6 items-stretch">
             @include('invoices._logistics')
@@ -157,7 +157,7 @@
                 </tbody>
                 <tfoot>
                 <tr class="bg-surface-2 font-semibold">
-                    <td class="px-4 py-3" colspan="4">Cəmi</td>
+                    <td class="px-4 py-3" colspan="4">{{ __('Cəmi') }}</td>
                     <td class="px-4 py-3 text-right font-mono">{{ num($invoice->items->sum('quantity'), 2) }}</td>
                     <td colspan="2"></td>
                     <td class="px-4 py-3 text-right font-mono">{{ num($invoice->items->sum('total')) }}</td>
@@ -192,7 +192,7 @@
         <div class="space-y-6">
             @include('partials.attachments', ['model' => $invoice, 'type' => 'invoice', 'ability' => 'projects.update'])
             @if(auth()->user()->can('projects.delete') && ! $invoice->isLocked())
-                <x-delete-form :action="route('invoices.destroy', $invoice)" label="Fakturanı sil" button="btn btn-ghost w-full text-danger hover:!bg-danger-soft" :message="'Faktura '.$invoice->number.' və bütün sətirləri silinəcək.'"/>
+                <x-delete-form :action="route('invoices.destroy', $invoice)" :label="__('Fakturanı sil')" :button="__('btn btn-ghost w-full text-danger hover:!bg-danger-soft')" :message="'Faktura '.$invoice->number.' və bütün sətirləri silinəcək.'"/>
             @endif
         </div>
     </div>

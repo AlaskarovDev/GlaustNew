@@ -10,17 +10,17 @@
 
 {{-- Logistics payment as set and approved on the invoices --}}
 <div class="flex items-baseline justify-between gap-3 mb-3">
-    <h2 class="text-sm font-semibold text-ink-2">Fakturada qeyd olunan logistika ödənişi</h2>
+    <h2 class="text-sm font-semibold text-ink-2">{{ __('Fakturada qeyd olunan logistika ödənişi') }}</h2>
 </div>
 @if($withLogistics->isEmpty())
-    <div class="card p-5 mb-6 text-sm text-muted">Satıcının fakturasında logistika xərci hələ daxil edilməyib — «Fakturalar» addımında fakturanı açıb logistika xərcini daxil edin.</div>
+    <div class="card p-5 mb-6 text-sm text-muted">{{ __('Satıcının fakturasında logistika xərci hələ daxil edilməyib — «Fakturalar» addımında fakturanı açıb logistika xərcini daxil edin.') }}</div>
 @else
     <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
         @foreach($withLogistics as $inv)
             @php $invActs = $acts->where('invoice_id', $inv->id); @endphp
             <a href="{{ route('invoices.show', $inv) }}" class="card card-hover p-4 block">
                 <div class="flex items-start justify-between gap-2">
-                    <div><div class="text-xs text-muted">Faktura</div><div class="font-mono font-semibold">{{ $inv->number }}</div></div>
+                    <div><div class="text-xs text-muted">{{ __('Faktura') }}</div><div class="font-mono font-semibold">{{ $inv->number }}</div></div>
                     <div class="flex flex-wrap justify-end gap-1">
                         <span @class(['badge', 'badge-amber' => $inv->logistics_mode === 'forecast', 'badge-green' => $inv->logistics_mode === 'actual'])>{{ \App\Models\Invoice::LOGISTICS_MODES[$inv->logistics_mode] }}</span>
                         @if($inv->approval_status)@php [$al, $at] = \App\Models\Invoice::APPROVAL_STATUSES[$inv->approval_status]; @endphp<span class="badge badge-{{ $at }}">{{ $al }}</span>@endif
@@ -37,7 +37,7 @@
 
 {{-- Acts --}}
 <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
-    <h2 class="text-sm font-semibold text-ink-2">Logistika aktları <span class="font-mono text-muted font-normal">{{ $acts->count() }}</span></h2>
+    <h2 class="text-sm font-semibold text-ink-2">{{ __('Logistika aktları') }} <span class="font-mono text-muted font-normal">{{ $acts->count() }}</span></h2>
 </div>
 
 <div class="space-y-4 mb-6">
@@ -62,7 +62,7 @@
                     @if($act->payments->isNotEmpty())
                         <div class="overflow-x-auto">
                             <table class="table-g text-[13px]">
-                                <thead><tr><th>Tarix</th><th class="!text-right">Aktdan</th><th class="!text-right">Köçürülüb</th><th class="!text-right">Bank / CBAR kursu</th><th class="!text-right">Komissiya</th><th>Hesab</th><th class="w-10"></th></tr></thead>
+                                <thead><tr><th>{{ __('Tarix') }}</th><th class="!text-right">{{ __('Aktdan') }}</th><th class="!text-right">{{ __('Köçürülüb') }}</th><th class="!text-right">{{ __('Bank / CBAR kursu') }}</th><th class="!text-right">{{ __('Komissiya') }}</th><th>{{ __('Hesab') }}</th><th class="w-10"></th></tr></thead>
                                 <tbody>
                                 @foreach($act->payments as $p)
                                     <tr>
@@ -74,8 +74,8 @@
                                         <td class="text-xs">{{ $p->account?->name }}<div class="text-faint">−{{ money($p->totalDebit(), $p->currency) }}</div></td>
                                         <td class="text-right">
                                             @can('bank.delete')
-                                                <form method="POST" action="{{ route('deals.logistics-payments.destroy', [$deal, $p]) }}" data-confirm="Bu ödəniş hissəsi ləğv edilsin? Hesabdan silinmə və komissiya da silinəcək." data-confirm-action="Ləğv et">
-                                                    @csrf @method('DELETE')<button class="btn btn-ghost btn-icon btn-sm text-danger" aria-label="Hissəni ləğv et"><x-icon name="trash" class="size-4"/></button>
+                                                <form method="POST" action="{{ route('deals.logistics-payments.destroy', [$deal, $p]) }}" data-confirm="{{ __('Bu ödəniş hissəsi ləğv edilsin? Hesabdan silinmə və komissiya da silinəcək.') }}" data-confirm-action="{{ __('Ləğv et') }}">
+                                                    @csrf @method('DELETE')<button class="btn btn-ghost btn-icon btn-sm text-danger" aria-label="{{ __('Hissəni ləğv et') }}"><x-icon name="trash" class="size-4"/></button>
                                                 </form>
                                             @endcan
                                         </td>
@@ -86,23 +86,23 @@
                         </div>
                     @else
                         <p class="text-sm text-muted">Hələ ödəniş edilməyib.
-                            @if($act->planned_date) Planlaşdırılan köçürmə: <b class="text-ink">{{ azdate($act->planned_date) }}</b>@if($act->reminder_id) <span class="badge badge-blue ml-1"><x-icon name="bell" class="size-3"/> xatırlatma</span>@endif @endif
+                            @if($act->planned_date) Planlaşdırılan köçürmə: <b class="text-ink">{{ azdate($act->planned_date) }}</b>@if($act->reminder_id) <span class="badge badge-blue ml-1"><x-icon name="bell" class="size-3"/> {{ __('xatırlatma') }}</span>@endif @endif
                         </p>
                     @endif
                     <div class="flex flex-wrap items-center gap-2 pt-1">
                         @if($act->remaining() > 0)
-                            @can('bank.create')<button type="button" class="btn btn-primary btn-sm" @click="payOpen = true"><x-icon name="send" class="size-4"/> Ödəniş et</button>@endcan
+                            @can('bank.create')<button type="button" class="btn btn-primary btn-sm" @click="payOpen = true"><x-icon name="send" class="size-4"/> {{ __('Ödəniş et') }}</button>@endcan
                             @can('projects.update')
                                 <form method="POST" action="{{ route('deals.logistics-acts.remind', [$deal, $act]) }}" class="flex items-center gap-2">
                                     @csrf
-                                    <input type="date" name="planned_date" min="{{ $today }}" value="{{ $act->planned_date?->toDateString() }}" class="input !h-8 !w-40 text-sm" aria-label="Köçürmə tarixi" required>
-                                    <button class="btn btn-secondary btn-sm"><x-icon name="bell" class="size-4"/> Xatırlatma</button>
+                                    <input type="date" name="planned_date" min="{{ $today }}" value="{{ $act->planned_date?->toDateString() }}" class="input !h-8 !w-40 text-sm" aria-label="{{ __('Köçürmə tarixi') }}" required>
+                                    <button class="btn btn-secondary btn-sm"><x-icon name="bell" class="size-4"/> {{ __('Xatırlatma') }}</button>
                                 </form>
                             @endcan
                         @endif
                         @can('projects.delete')
-                            <form method="POST" action="{{ route('deals.logistics-acts.destroy', [$deal, $act]) }}" class="ml-auto" data-confirm="Akt {{ $act->act_number }} silinsin? Ödənişləri, komissiyaları və bank hərəkətləri də silinəcək." data-confirm-action="Sil">
-                                @csrf @method('DELETE')<button class="btn btn-ghost btn-sm text-danger"><x-icon name="trash" class="size-4"/> Aktı sil</button>
+                            <form method="POST" action="{{ route('deals.logistics-acts.destroy', [$deal, $act]) }}" class="ml-auto" data-confirm="Akt {{ $act->act_number }} silinsin? Ödənişləri, komissiyaları və bank hərəkətləri də silinəcək." data-confirm-action="{{ __('Sil') }}">
+                                @csrf @method('DELETE')<button class="btn btn-ghost btn-sm text-danger"><x-icon name="trash" class="size-4"/> {{ __('Aktı sil') }}</button>
                             </form>
                         @endcan
                     </div>
@@ -113,8 +113,8 @@
                     <div class="flex justify-between"><span class="text-muted">RUB</span><span class="font-mono">{{ money($act->amount_rub, 'RUB') }}</span></div>
                     <div class="flex justify-between"><span class="text-muted">EUR</span><span class="font-mono">{{ money($act->amount_eur, 'EUR') }}</span></div>
                     <div class="text-[11px] text-faint pt-1">1 {{ $act->currency }} = {{ rate_fmt($act->cbar_rate) }} ₼ · 1 RUB = {{ rate_fmt($act->cbar_rub) }} ₼ · 1 EUR = {{ rate_fmt($act->cbar_eur) }} ₼</div>
-                    <div class="flex justify-between pt-2 mt-1 border-t border-line"><span class="text-muted">Ödənilib</span><span class="font-mono">{{ money($act->paid(), $act->currency) }}</span></div>
-                    <div class="flex justify-between font-semibold"><span>Qalıq</span><span class="font-mono">{{ money($act->remaining(), $act->currency) }}</span></div>
+                    <div class="flex justify-between pt-2 mt-1 border-t border-line"><span class="text-muted">{{ __('Ödənilib') }}</span><span class="font-mono">{{ money($act->paid(), $act->currency) }}</span></div>
+                    <div class="flex justify-between font-semibold"><span>{{ __('Qalıq') }}</span><span class="font-mono">{{ money($act->remaining(), $act->currency) }}</span></div>
                 </aside>
             </div>
 
@@ -129,18 +129,18 @@
                         @csrf
                         <header class="flex items-start justify-between gap-4 px-6 py-4 border-b border-line">
                             <div><h2 class="text-lg font-semibold">Akt № {{ $act->act_number }} — ödəniş</h2><p class="text-xs text-muted">Qalıq: {{ money($act->remaining(), $act->currency) }} · {{ $act->counterparty?->name }}</p></div>
-                            <button type="button" class="btn btn-ghost btn-icon" @click="payOpen = false" aria-label="Bağla"><x-icon name="x" class="size-5"/></button>
+                            <button type="button" class="btn btn-ghost btn-icon" @click="payOpen = false" aria-label="{{ __('Bağla') }}"><x-icon name="x" class="size-5"/></button>
                         </header>
                         <div class="overflow-y-auto p-6 space-y-5">
                             <div class="grid sm:grid-cols-2 gap-4">
-                                <x-field label="Köçürmə tarixi" name="payment_date" required><input type="date" name="payment_date" x-model="payDate" max="{{ $today }}" class="input" required></x-field>
-                                <x-field label="İstinad / ödəniş tapşırığı №" name="reference"><input name="reference" class="input font-mono"></x-field>
+                                <x-field :label="__('Köçürmə tarixi')" name="payment_date" required><input type="date" name="payment_date" x-model="payDate" max="{{ $today }}" class="input" required></x-field>
+                                <x-field :label="__('İstinad / ödəniş tapşırığı №')" name="reference"><input name="reference" class="input font-mono"></x-field>
                             </div>
                             @include('deals._logistics-terms')
                         </div>
                         <footer class="flex items-center justify-end gap-3 px-6 py-4 border-t border-line">
-                            <button type="button" class="btn btn-secondary" @click="payOpen = false">Bağla</button>
-                            <button class="btn btn-primary" :disabled="!canSubmit()"><x-icon name="check" class="size-4"/> Ödənişi icra et</button>
+                            <button type="button" class="btn btn-secondary" @click="payOpen = false">{{ __('Bağla') }}</button>
+                            <button class="btn btn-primary" :disabled="!canSubmit()"><x-icon name="check" class="size-4"/> {{ __('Ödənişi icra et') }}</button>
                         </footer>
                     </form>
                 </div>
@@ -150,14 +150,14 @@
     @endforeach
 
     @if($acts->isEmpty())
-        <div class="card p-6 text-center text-sm text-muted border-dashed">Hələ logistika aktı yoxdur.</div>
+        <div class="card p-6 text-center text-sm text-muted border-dashed">{{ __('Hələ logistika aktı yoxdur.') }}</div>
     @endif
 </div>
 
 {{-- Add an act --}}
 @can('projects.update')
     <div x-data="{ open: {{ $failedNew ? 'true' : 'false' }} }">
-        <button type="button" class="btn btn-primary" @click="open = true"><x-icon name="plus" class="size-4"/> Logistika aktı əlavə et</button>
+        <button type="button" class="btn btn-primary" @click="open = true"><x-icon name="plus" class="size-4"/> {{ __('Logistika aktı əlavə et') }}</button>
 
         {{-- Teleported to <body>: an animated (transformed) ancestor would trap position:fixed under the sticky header. --}}
         <template x-teleport="body">
@@ -168,8 +168,8 @@
                   x-data="logisticsPay({ mode: 'new', currency: @js(old('currency', $withLogistics->first()?->logistics_currency ?? 'EUR')), amount: @js((string) old('amount', '')), actDate: @js(old('act_date', $today)), today: @js($today), plan: @js(old('payment_plan', 'today')), accounts: @js($accountsData), fees: @js($fees) })">
                 @csrf
                 <header class="flex items-start justify-between gap-4 px-6 py-4 border-b border-line">
-                    <div><h2 id="la-title" class="text-lg font-semibold">Logistika aktı əlavə et</h2><p class="text-xs text-muted">Trade {{ $deal->code }} · məbləğ akt tarixinin CBAR kursları ilə hesablanır</p></div>
-                    <button type="button" class="btn btn-ghost btn-icon" @click="open = false" aria-label="Bağla"><x-icon name="x" class="size-5"/></button>
+                    <div><h2 id="la-title" class="text-lg font-semibold">{{ __('Logistika aktı əlavə et') }}</h2><p class="text-xs text-muted">Trade {{ $deal->code }} · məbləğ akt tarixinin CBAR kursları ilə hesablanır</p></div>
+                    <button type="button" class="btn btn-ghost btn-icon" @click="open = false" aria-label="{{ __('Bağla') }}"><x-icon name="x" class="size-5"/></button>
                 </header>
                 <div class="overflow-y-auto p-6 space-y-6">
                     @if($failedNew)
@@ -177,21 +177,21 @@
                     @endif
                     <div class="grid lg:grid-cols-[minmax(0,1fr)_280px] gap-6">
                         <div class="space-y-4 min-w-0">
-                            <x-combobox name="counterparty_id" label="Logistika şirkəti" :url="route('ajax.lookup', 'counterparties')" placeholder="CRM-dən seçin"/>
+                            <x-combobox name="counterparty_id" :label="__('Logistika şirkəti')" :url="route('ajax.lookup', 'counterparties')" :placeholder="__('CRM-dən seçin')"/>
                             <div class="grid sm:grid-cols-2 gap-4">
-                                <x-field label="Akt nömrəsi" name="act_number" required><input name="act_number" value="{{ old('act_number') }}" class="input font-mono" required></x-field>
-                                <x-field label="Akt tarixi" name="act_date" required><input type="date" name="act_date" x-model="actDate" max="{{ $today }}" class="input" required></x-field>
+                                <x-field :label="__('Akt nömrəsi')" name="act_number" required><input name="act_number" value="{{ old('act_number') }}" class="input font-mono" required></x-field>
+                                <x-field :label="__('Akt tarixi')" name="act_date" required><input type="date" name="act_date" x-model="actDate" max="{{ $today }}" class="input" required></x-field>
                             </div>
                             <div class="grid grid-cols-[1fr_110px] gap-3">
-                                <x-field label="Ödənişin məbləği" name="amount" required><input name="amount" x-model="amount" inputmode="decimal" class="input font-mono text-right" required></x-field>
-                                <x-field label="Valyuta" name="currency" required><select name="currency" x-model="currency" class="input">@foreach(config('glaust.currencies') as $c)<option value="{{ $c }}">{{ $c }}</option>@endforeach</select></x-field>
+                                <x-field :label="__('Ödənişin məbləği')" name="amount" required><input name="amount" x-model="amount" inputmode="decimal" class="input font-mono text-right" required></x-field>
+                                <x-field :label="__('Valyuta')" name="currency" required><select name="currency" x-model="currency" class="input">@foreach(config('glaust.currencies') as $c)<option value="{{ $c }}">{{ $c }}</option>@endforeach</select></x-field>
                             </div>
                             <div class="grid sm:grid-cols-2 gap-4">
-                                <x-field label="Logistikanın invoys nömrəsi" name="logistics_invoice_number"><input name="logistics_invoice_number" value="{{ old('logistics_invoice_number') }}" class="input font-mono" placeholder="varsa"></x-field>
-                                <x-field label="Invoys tarixi" name="logistics_invoice_date"><input type="date" name="logistics_invoice_date" value="{{ old('logistics_invoice_date') }}" class="input"></x-field>
+                                <x-field :label="__('Logistikanın invoys nömrəsi')" name="logistics_invoice_number"><input name="logistics_invoice_number" value="{{ old('logistics_invoice_number') }}" class="input font-mono" placeholder="{{ __('varsa') }}"></x-field>
+                                <x-field :label="__('Invoys tarixi')" name="logistics_invoice_date"><input type="date" name="logistics_invoice_date" value="{{ old('logistics_invoice_date') }}" class="input"></x-field>
                             </div>
                             @if($withLogistics->count() > 1)
-                                <x-field label="Hansı fakturanın logistikası" name="invoice_id">
+                                <x-field :label="__('Hansı fakturanın logistikası')" name="invoice_id">
                                     <select name="invoice_id" class="input">@foreach($withLogistics as $inv)<option value="{{ $inv->id }}">{{ $inv->number }} · {{ money($inv->logistics_amount, $inv->logistics_currency) }}</option>@endforeach</select>
                                 </x-field>
                             @elseif($withLogistics->count() === 1)
@@ -217,29 +217,29 @@
 
                     {{-- When --}}
                     <div class="space-y-3">
-                        <span class="field-label">Köçürmə</span>
+                        <span class="field-label">{{ __('Köçürmə') }}</span>
                         <input type="hidden" name="payment_plan" :value="plan">
                         <div class="segmented max-w-md">
-                            <label :class="plan === 'today' && 'is-on'"><input type="radio" value="today" x-model="plan" class="sr-only"> Bu gün ediləcək</label>
-                            <label :class="plan === 'later' && 'is-on'"><input type="radio" value="later" x-model="plan" class="sr-only"> Başqa tarixdə</label>
+                            <label :class="plan === 'today' && 'is-on'"><input type="radio" value="today" x-model="plan" class="sr-only"> {{ __('Bu gün ediləcək') }}</label>
+                            <label :class="plan === 'later' && 'is-on'"><input type="radio" value="later" x-model="plan" class="sr-only"> {{ __('Başqa tarixdə') }}</label>
                         </div>
                         <div x-show="plan === 'later'" x-cloak class="flex flex-wrap items-end gap-3">
-                            <x-field label="Köçürmə tarixi" name="planned_date"><input type="date" name="planned_date" x-model="plannedDate" :disabled="plan !== 'later'" min="{{ $today }}" class="input"></x-field>
+                            <x-field :label="__('Köçürmə tarixi')" name="planned_date"><input type="date" name="planned_date" x-model="plannedDate" :disabled="plan !== 'later'" min="{{ $today }}" class="input"></x-field>
                             <input type="hidden" name="remind" :value="remind ? 1 : 0">
                             <button type="button" class="btn" :class="remind ? 'btn-primary' : 'btn-secondary'" @click="remind = !remind" :aria-pressed="remind">
                                 <x-icon name="bell" class="size-4"/> <span x-text="remind ? 'Xatırlatma əlavə olunacaq' : 'Xatırlatma əlavə et'"></span>
                             </button>
                         </div>
                         <div x-show="plan === 'today'" class="rounded-xl border border-brand/25 bg-brand-soft/30 p-4">
-                            <h3 class="text-sm font-semibold mb-3">Köçürmə şərtləri</h3>
-                            <x-field label="İstinad / ödəniş tapşırığı №" name="reference" class="mb-4 max-w-xs"><input name="reference" class="input font-mono"></x-field>
+                            <h3 class="text-sm font-semibold mb-3">{{ __('Köçürmə şərtləri') }}</h3>
+                            <x-field :label="__('İstinad / ödəniş tapşırığı №')" name="reference" class="mb-4 max-w-xs"><input name="reference" class="input font-mono"></x-field>
                             @include('deals._logistics-terms')
-                            <p class="text-xs text-muted mt-3" x-show="!terms">Ödəniş şəklini seçin. Aktı ödənişsiz saxlamaq üçün «Başqa tarixdə» seçin.</p>
+                            <p class="text-xs text-muted mt-3" x-show="!terms">{{ __('Ödəniş şəklini seçin. Aktı ödənişsiz saxlamaq üçün «Başqa tarixdə» seçin.') }}</p>
                         </div>
                     </div>
                 </div>
                 <footer class="flex items-center justify-end gap-3 px-6 py-4 border-t border-line">
-                    <button type="button" class="btn btn-secondary" @click="open = false">Bağla</button>
+                    <button type="button" class="btn btn-secondary" @click="open = false">{{ __('Bağla') }}</button>
                     <button class="btn btn-primary" :disabled="!canSubmit()"><x-icon name="check" class="size-4"/> <span x-text="plan === 'today' ? 'Aktı əlavə et və ödə' : 'Aktı əlavə et'"></span></button>
                 </footer>
             </form>

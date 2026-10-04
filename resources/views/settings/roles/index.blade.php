@@ -1,7 +1,7 @@
-<x-layouts.app title="Rollar">
-    <x-page-header title="Tənzimləmələr" icon="settings">
+<x-layouts.app :title="__('Rollar')">
+    <x-page-header :title="__('Tənzimləmələr')" icon="settings">
         <x-slot:actions>
-            @can('users.create')<a href="{{ route('settings.roles.create') }}" class="btn btn-primary"><x-icon name="plus" class="size-4"/> Yeni rol</a>@endcan
+            @can('users.create')<a href="{{ route('settings.roles.create') }}" class="btn btn-primary"><x-icon name="plus" class="size-4"/> {{ __('Yeni rol') }}</a>@endcan
         </x-slot:actions>
     </x-page-header>
     @include('settings._nav')
@@ -14,18 +14,18 @@
                         <h2 class="font-semibold">{{ $r->name }}</h2>
                         <div class="text-xs text-muted mt-0.5">{{ $r->users_count }} istifadəçi {{ $r->is_system ? '· sistem rolu' : '' }}</div>
                     </div>
-                    @if($r->is_admin)<span class="badge badge-teal"><x-icon name="crown" class="size-3"/> Tam icazə</span>@endif
+                    @if($r->is_admin)<span class="badge badge-teal"><x-icon name="crown" class="size-3"/> {{ __('Tam icazə') }}</span>@endif
                 </div>
                 <div class="mt-4 flex flex-wrap gap-1.5 flex-1">
                     @if($r->is_admin)
-                        <span class="text-sm text-muted">Bütün modullar və əməliyyatlar.</span>
+                        <span class="text-sm text-muted">{{ __('Bütün modullar və əməliyyatlar.') }}</span>
                     @else
                         @foreach($perms as $m)<span class="badge badge-slate">{{ config("glaust.modules.$m.label", $m) }}</span>@endforeach
                     @endif
                 </div>
                 @unless($r->is_admin)
                     <div class="mt-4 pt-4 border-t border-line flex gap-2">
-                        @can('users.update')<a href="{{ route('settings.roles.edit', $r) }}" class="btn btn-secondary btn-sm"><x-icon name="pencil" class="size-4"/> İcazələr</a>@endcan
+                        @can('users.update')<a href="{{ route('settings.roles.edit', $r) }}" class="btn btn-secondary btn-sm"><x-icon name="pencil" class="size-4"/> {{ __('İcazələr') }}</a>@endcan
                         @can('users.delete')@unless($r->is_system)<x-delete-form :action="route('settings.roles.destroy', $r)" class="ml-auto" :message="'«'.$r->name.'» rolu silinsin?'"/>@endunless @endcan
                     </div>
                 @endunless

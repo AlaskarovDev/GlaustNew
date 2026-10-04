@@ -17,7 +17,7 @@
         <div class="max-w-[1400px] mx-auto h-16 px-4 sm:px-6 flex items-center gap-6">
             <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2.5 shrink-0">
                 <span class="grid place-items-center size-8 rounded-lg bg-gradient-to-br from-amber-300 to-amber-600 text-night"><x-icon name="crown" class="size-4"/></span>
-                <span class="font-semibold text-white">TradeFlow <span class="text-slate-500 font-normal">Platforma</span></span>
+                <span class="font-semibold text-white">{{ __('TradeFlow') }} <span class="text-slate-500 font-normal">{{ __('Platforma') }}</span></span>
             </a>
             <nav class="flex gap-1 overflow-x-auto">
                 @foreach($links as [$r, $i, $l])
@@ -25,9 +25,9 @@
                 @endforeach
             </nav>
             @if(auth()->user()?->company_id)
-                <a href="{{ route('dashboard') }}" class="nav-link !h-9 ml-auto"><x-icon name="arrow-left" class="size-4"/> <span class="hidden sm:inline">Şirkətə qayıt</span></a>
+                <a href="{{ route('dashboard') }}" class="nav-link !h-9 ml-auto"><x-icon name="arrow-left" class="size-4"/> <span class="hidden sm:inline">{{ __('Şirkətə qayıt') }}</span></a>
             @endif
-            <form method="POST" action="{{ route('logout') }}" class="{{ auth()->user()?->company_id ? '' : 'ml-auto' }}">@csrf<button class="nav-link !h-9"><x-icon name="log-out" class="size-4"/> <span class="hidden sm:inline">Çıxış</span></button></form>
+            <form method="POST" action="{{ route('logout') }}" class="{{ auth()->user()?->company_id ? '' : 'ml-auto' }}">@csrf<button class="nav-link !h-9"><x-icon name="log-out" class="size-4"/> <span class="hidden sm:inline">{{ __('Çıxış') }}</span></button></form>
         </div>
     </header>
     <main class="page-enter max-w-[1400px] mx-auto px-4 sm:px-6 py-8">{{ $slot }}</main>
@@ -42,7 +42,7 @@
     <div x-data x-cloak x-show="$store.confirm.open" class="fixed inset-0 z-[80] grid place-items-center p-4" role="alertdialog" aria-modal="true">
         <div class="absolute inset-0 bg-night/50" @click="$store.confirm.cancel()"></div>
         <div class="relative w-full max-w-md card p-6"><h2 class="font-semibold" x-text="$store.confirm.title"></h2><p class="mt-1 text-sm text-muted" x-text="$store.confirm.message"></p>
-            <div class="mt-6 flex justify-end gap-2"><button class="btn btn-secondary" @click="$store.confirm.cancel()">Ləğv et</button><button class="btn btn-danger" @click="$store.confirm.accept()" x-text="$store.confirm.action"></button></div></div>
+            <div class="mt-6 flex justify-end gap-2"><button class="btn btn-secondary" @click="$store.confirm.cancel()">{{ __('Ləğv et') }}</button><button class="btn btn-danger" @click="$store.confirm.accept()" x-text="$store.confirm.action"></button></div></div>
     </div>
     <script type="application/json" id="glaust-flash">@json($flash)</script>
 </body>

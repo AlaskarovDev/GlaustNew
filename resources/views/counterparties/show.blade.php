@@ -6,13 +6,13 @@
     <x-page-header :title="$counterparty->name" :back="route('counterparties.index')">
         <x-slot:actions>
             @can('contracts.create')
-                <a href="{{ route('contracts.create', ['counterparty_id' => $counterparty->id]) }}" class="btn btn-secondary"><x-icon name="signature" class="size-4"/> Müqavilə bağla</a>
+                <a href="{{ route('contracts.create', ['counterparty_id' => $counterparty->id]) }}" class="btn btn-secondary"><x-icon name="signature" class="size-4"/> {{ __('Müqavilə bağla') }}</a>
             @endcan
             @can('crm.update')
-                <a href="{{ route('counterparties.edit', $counterparty) }}" class="btn btn-secondary"><x-icon name="pencil" class="size-4"/> Redaktə</a>
+                <a href="{{ route('counterparties.edit', $counterparty) }}" class="btn btn-secondary"><x-icon name="pencil" class="size-4"/> {{ __('Redaktə') }}</a>
             @endcan
             @can('crm.delete')
-                <x-delete-form :action="route('counterparties.destroy', $counterparty)" button="btn btn-secondary text-danger" :message="'«'.$counterparty->name.'» silinəcək. Açıq müqaviləsi varsa silinməyəcək.'"/>
+                <x-delete-form :action="route('counterparties.destroy', $counterparty)" :button="__('btn btn-secondary text-danger')" :message="'«'.$counterparty->name.'» silinəcək. Açıq müqaviləsi varsa silinməyəcək.'"/>
             @endcan
         </x-slot:actions>
     </x-page-header>
@@ -25,26 +25,26 @@
     </div>
 
     <div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6 stagger">
-        <div class="card p-5" style="--i:0"><div class="text-xs text-muted">Aktiv müqavilələr</div><div class="mt-1 text-2xl font-semibold font-mono">{{ $activeContracts->count() }}</div><div class="text-xs text-muted mt-1">≈ {{ money($activeContracts->sum('amount_azn')) }}</div></div>
-        <div class="card p-5" style="--i:1"><div class="text-xs text-muted">Daxilolma (bütün dövr)</div><div class="mt-1 text-2xl font-semibold font-mono text-success">{{ money($in) }}</div><div class="text-xs text-muted mt-1">{{ $turnover['in']->n ?? 0 }} əməliyyat</div></div>
-        <div class="card p-5" style="--i:2"><div class="text-xs text-muted">Məxaric (bütün dövr)</div><div class="mt-1 text-2xl font-semibold font-mono text-danger">{{ money($out) }}</div><div class="text-xs text-muted mt-1">{{ $turnover['out']->n ?? 0 }} əməliyyat</div></div>
-        <div class="card p-5" style="--i:3"><div class="text-xs text-muted">Ümumi dövriyyə</div><div class="mt-1 text-2xl font-semibold font-mono">{{ money($in + $out) }}</div><div class="text-xs text-muted mt-1">Saldo: {{ money($in - $out) }}</div></div>
+        <div class="card p-5" style="--i:0"><div class="text-xs text-muted">{{ __('Aktiv müqavilələr') }}</div><div class="mt-1 text-2xl font-semibold font-mono">{{ $activeContracts->count() }}</div><div class="text-xs text-muted mt-1">≈ {{ money($activeContracts->sum('amount_azn')) }}</div></div>
+        <div class="card p-5" style="--i:1"><div class="text-xs text-muted">{{ __('Daxilolma (bütün dövr)') }}</div><div class="mt-1 text-2xl font-semibold font-mono text-success">{{ money($in) }}</div><div class="text-xs text-muted mt-1">{{ $turnover['in']->n ?? 0 }} əməliyyat</div></div>
+        <div class="card p-5" style="--i:2"><div class="text-xs text-muted">{{ __('Məxaric (bütün dövr)') }}</div><div class="mt-1 text-2xl font-semibold font-mono text-danger">{{ money($out) }}</div><div class="text-xs text-muted mt-1">{{ $turnover['out']->n ?? 0 }} əməliyyat</div></div>
+        <div class="card p-5" style="--i:3"><div class="text-xs text-muted">{{ __('Ümumi dövriyyə') }}</div><div class="mt-1 text-2xl font-semibold font-mono">{{ money($in + $out) }}</div><div class="text-xs text-muted mt-1">Saldo: {{ money($in - $out) }}</div></div>
     </div>
 
     <div class="grid lg:grid-cols-[minmax(0,1fr)_340px] gap-6 items-start">
         <div class="space-y-6 min-w-0">
             <section class="card overflow-hidden">
                 <header class="flex items-center justify-between px-5 h-14 border-b border-line">
-                    <h2 class="text-sm font-semibold">Müqavilələr <span class="text-muted font-mono font-normal">{{ $contracts->count() }}</span></h2>
+                    <h2 class="text-sm font-semibold">{{ __('Müqavilələr') }} <span class="text-muted font-mono font-normal">{{ $contracts->count() }}</span></h2>
                 </header>
                 @if($contracts->isEmpty())
-                    <x-empty icon="signature" title="Müqavilə yoxdur" class="!py-10">
-                        @can('contracts.create')<a href="{{ route('contracts.create', ['counterparty_id' => $counterparty->id]) }}" class="btn btn-primary btn-sm">Müqavilə bağla</a>@endcan
+                    <x-empty icon="signature" :title="__('Müqavilə yoxdur')" class="!py-10">
+                        @can('contracts.create')<a href="{{ route('contracts.create', ['counterparty_id' => $counterparty->id]) }}" class="btn btn-primary btn-sm">{{ __('Müqavilə bağla') }}</a>@endcan
                     </x-empty>
                 @else
                     <div class="overflow-x-auto">
                     <table class="table-g table-stack">
-                        <thead><tr><th>Nömrə</th><th>Növ</th><th>Mövzu</th><th>Bitmə</th><th class="!text-right">Məbləğ</th><th>Status</th></tr></thead>
+                        <thead><tr><th>{{ __('Nömrə') }}</th><th>{{ __('Növ') }}</th><th>{{ __('Mövzu') }}</th><th>{{ __('Bitmə') }}</th><th class="!text-right">{{ __('Məbləğ') }}</th><th>{{ __('Status') }}</th></tr></thead>
                         <tbody>
                         @foreach($contracts as $c)
                             <tr>
@@ -64,7 +64,7 @@
 
             @if($projects->isNotEmpty())
                 <section class="card overflow-hidden">
-                    <header class="px-5 h-14 flex items-center border-b border-line"><h2 class="text-sm font-semibold">Layihələr <span class="text-muted font-mono font-normal">{{ $projects->count() }}</span></h2></header>
+                    <header class="px-5 h-14 flex items-center border-b border-line"><h2 class="text-sm font-semibold">{{ __('Layihələr') }} <span class="text-muted font-mono font-normal">{{ $projects->count() }}</span></h2></header>
                     <ul class="divide-y divide-line">
                         @foreach($projects as $p)
                             <li><a href="{{ route('projects.show', $p) }}" class="flex items-center gap-4 px-5 py-3 hover:bg-surface-2">
@@ -81,15 +81,15 @@
             @can('bank.view')
                 <section class="card overflow-hidden">
                     <header class="flex items-center justify-between px-5 h-14 border-b border-line">
-                        <h2 class="text-sm font-semibold">Son bank əməliyyatları</h2>
-                        <a href="{{ route('bank.transactions.index', ['counterparty_id' => $counterparty->id]) }}" class="text-xs font-medium text-brand-ink hover:underline">Hamısı</a>
+                        <h2 class="text-sm font-semibold">{{ __('Son bank əməliyyatları') }}</h2>
+                        <a href="{{ route('bank.transactions.index', ['counterparty_id' => $counterparty->id]) }}" class="text-xs font-medium text-brand-ink hover:underline">{{ __('Hamısı') }}</a>
                     </header>
                     @if($transactions->isEmpty())
-                        <p class="px-5 py-6 text-sm text-muted">Əməliyyat yoxdur.</p>
+                        <p class="px-5 py-6 text-sm text-muted">{{ __('Əməliyyat yoxdur.') }}</p>
                     @else
                         <div class="overflow-x-auto">
                         <table class="table-g table-stack">
-                            <thead><tr><th>Tarix</th><th>Hesab</th><th>Təyinat</th><th class="!text-right">Məbləğ</th><th class="!text-right">AZN</th></tr></thead>
+                            <thead><tr><th>{{ __('Tarix') }}</th><th>{{ __('Hesab') }}</th><th>{{ __('Təyinat') }}</th><th class="!text-right">{{ __('Məbləğ') }}</th><th class="!text-right">AZN</th></tr></thead>
                             <tbody>
                             @foreach($transactions as $t)
                                 <tr>
@@ -109,7 +109,7 @@
 
             @if($shipments->isNotEmpty())
                 <section class="card overflow-hidden">
-                    <header class="px-5 h-14 flex items-center border-b border-line"><h2 class="text-sm font-semibold">Daşıdığı yüklər</h2></header>
+                    <header class="px-5 h-14 flex items-center border-b border-line"><h2 class="text-sm font-semibold">{{ __('Daşıdığı yüklər') }}</h2></header>
                     <ul class="divide-y divide-line">
                         @foreach($shipments as $s)
                             <li><a href="{{ route('shipments.show', $s) }}" class="flex items-center gap-4 px-5 py-3 hover:bg-surface-2 text-sm">
@@ -127,7 +127,7 @@
 
         <aside class="space-y-6 lg:sticky lg:top-24">
             <section class="card p-5 text-sm space-y-3">
-                <h2 class="font-semibold">Rekvizitlər</h2>
+                <h2 class="font-semibold">{{ __('Rekvizitlər') }}</h2>
                 @foreach([['map-pin', collect([$counterparty->address, $counterparty->city, $counterparty->country])->filter()->implode(', ')], ['phone', $counterparty->phone], ['mail', $counterparty->email], ['globe', $counterparty->website]] as [$icon, $val])
                     @if($val)
                         <div class="flex gap-2.5"><x-icon :name="$icon" class="size-4 text-faint mt-0.5 shrink-0"/><span class="break-words min-w-0">{{ $val }}</span></div>
@@ -143,7 +143,7 @@
             </section>
 
             <section class="card p-5">
-                <h2 class="text-sm font-semibold mb-3">Əlaqə şəxsləri</h2>
+                <h2 class="text-sm font-semibold mb-3">{{ __('Əlaqə şəxsləri') }}</h2>
                 @forelse($counterparty->contacts as $p)
                     <div class="flex items-start gap-3 py-2.5 border-t border-line first:border-0 first:pt-0">
                         <span class="grid place-items-center size-8 rounded-full bg-surface-2 text-xs font-semibold text-muted shrink-0">{{ mb_substr($p->name, 0, 1) }}</span>
@@ -155,12 +155,12 @@
                         </div>
                     </div>
                 @empty
-                    <p class="text-sm text-muted">Əlavə edilməyib.</p>
+                    <p class="text-sm text-muted">{{ __('Əlavə edilməyib.') }}</p>
                 @endforelse
             </section>
 
             @if($counterparty->notes)
-                <section class="card p-5"><h2 class="text-sm font-semibold mb-2">Qeydlər</h2><p class="text-sm text-ink-2 whitespace-pre-line">{{ $counterparty->notes }}</p></section>
+                <section class="card p-5"><h2 class="text-sm font-semibold mb-2">{{ __('Qeydlər') }}</h2><p class="text-sm text-ink-2 whitespace-pre-line">{{ $counterparty->notes }}</p></section>
             @endif
 
             @include('partials.attachments', ['model' => $counterparty, 'type' => 'counterparty', 'ability' => 'crm.update'])

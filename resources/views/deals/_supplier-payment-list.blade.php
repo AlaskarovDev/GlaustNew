@@ -2,13 +2,13 @@
 @php $list = $deal->supplierPayments; @endphp
 <section class="card overflow-hidden mb-6">
     <header class="px-5 py-4 border-b border-line">
-        <h2 class="text-base font-semibold">Satıcıya ödənişlər <span class="text-muted font-mono font-normal text-sm">{{ $list->count() }}</span></h2>
-        <p class="text-xs text-muted">Hər ödəniş üzrə CBAR və bank kursu, hesabdan silinən məbləğ və bank komissiyası saxlanılır</p>
+        <h2 class="text-base font-semibold">{{ __('Satıcıya ödənişlər') }} <span class="text-muted font-mono font-normal text-sm">{{ $list->count() }}</span></h2>
+        <p class="text-xs text-muted">{{ __('Hər ödəniş üzrə CBAR və bank kursu, hesabdan silinən məbləğ və bank komissiyası saxlanılır') }}</p>
     </header>
     @if($list->isNotEmpty())
         <div class="overflow-x-auto">
             <table class="table-g table-stack text-[13px]">
-                <thead><tr><th>Tarix</th><th class="!text-right">Ödəniş</th><th>Hesab</th><th class="!text-right">CBAR / bank kursu</th><th class="!text-right">Hesabdan</th><th class="!text-right">Komissiya</th><th class="!text-right">CBAR fərqi</th><th class="w-20"></th></tr></thead>
+                <thead><tr><th>{{ __('Tarix') }}</th><th class="!text-right">{{ __('Ödəniş') }}</th><th>{{ __('Hesab') }}</th><th class="!text-right">{{ __('CBAR / bank kursu') }}</th><th class="!text-right">{{ __('Hesabdan') }}</th><th class="!text-right">{{ __('Komissiya') }}</th><th class="!text-right">{{ __('CBAR fərqi') }}</th><th class="w-20"></th></tr></thead>
                 <tbody>
                 @foreach($list as $p)
                     <tr>
@@ -20,10 +20,10 @@
                         <td data-label="Komissiya" class="num text-xs">{{ money($p->fee_amount, $p->currency) }}@if($p->currency !== $p->account_currency)<div class="text-faint">{{ money($p->fee_account_amount, $p->account_currency) }}</div>@endif</td>
                         <td data-label="CBAR fərqi" @class(['num text-xs', 'text-danger' => $p->difference > 0, 'text-success' => $p->difference < 0])>{{ (float) $p->difference ? ($p->difference > 0 ? '−' : '+').money(abs($p->difference), $p->account_currency) : '—' }}</td>
                         <td class="text-right whitespace-nowrap">
-                            @if($p->transaction_id)@can('bank.view')<a href="{{ route('bank.transactions.show', $p->transaction_id) }}" class="btn btn-ghost btn-icon btn-sm" aria-label="Bank əməliyyatı" title="Bank əməliyyatı"><x-icon name="external" class="size-4"/></a>@endcan @endif
+                            @if($p->transaction_id)@can('bank.view')<a href="{{ route('bank.transactions.show', $p->transaction_id) }}" class="btn btn-ghost btn-icon btn-sm" aria-label="{{ __('Bank əməliyyatı') }}" title="{{ __('Bank əməliyyatı') }}"><x-icon name="external" class="size-4"/></a>@endcan @endif
                             @can('bank.delete')
-                                <form method="POST" action="{{ route('deals.supplier-payments.destroy', [$deal, $p]) }}" class="inline" data-confirm="Ödəniş ({{ money($p->amount, $p->currency) }}) ləğv edilsin? Hesabdan silinmə və komissiya da silinəcək." data-confirm-action="Ləğv et">
-                                    @csrf @method('DELETE')<button class="btn btn-ghost btn-icon btn-sm text-danger" aria-label="Ödənişi ləğv et"><x-icon name="trash" class="size-4"/></button>
+                                <form method="POST" action="{{ route('deals.supplier-payments.destroy', [$deal, $p]) }}" class="inline" data-confirm="Ödəniş ({{ money($p->amount, $p->currency) }}) ləğv edilsin? Hesabdan silinmə və komissiya da silinəcək." data-confirm-action="{{ __('Ləğv et') }}">
+                                    @csrf @method('DELETE')<button class="btn btn-ghost btn-icon btn-sm text-danger" aria-label="{{ __('Ödənişi ləğv et') }}"><x-icon name="trash" class="size-4"/></button>
                                 </form>
                             @endcan
                         </td>
@@ -33,6 +33,6 @@
             </table>
         </div>
     @else
-        <p class="px-5 py-5 text-sm text-muted">Satıcıya hələ ödəniş edilməyib.</p>
+        <p class="px-5 py-5 text-sm text-muted">{{ __('Satıcıya hələ ödəniş edilməyib.') }}</p>
     @endif
 </section>

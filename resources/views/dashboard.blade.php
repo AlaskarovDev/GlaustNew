@@ -1,4 +1,4 @@
-<x-layouts.app title="İdarə paneli">
+<x-layouts.app :title="__('İdarə paneli')">
 @php
     $user = auth()->user();
     $tones = [
@@ -72,16 +72,16 @@
     <div x-cloak x-show="editing" x-collapse>
         <div class="card p-4 mb-6">
             <div class="flex items-center justify-between mb-3">
-                <div class="text-sm font-semibold">Vidjetlər <span class="text-muted font-normal">— göstər/gizlət və sırasını dəyiş</span></div>
-                <button type="button" class="btn btn-primary btn-sm" @click="save()"><x-icon name="check" class="size-4"/> Yadda saxla</button>
+                <div class="text-sm font-semibold">{{ __('Vidjetlər') }} <span class="text-muted font-normal">{{ __('— göstər/gizlət və sırasını dəyiş') }}</span></div>
+                <button type="button" class="btn btn-primary btn-sm" @click="save()"><x-icon name="check" class="size-4"/> {{ __('Yadda saxla') }}</button>
             </div>
             <ul class="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 <template x-for="key in order" :key="key">
                     <li class="flex items-center gap-2 h-11 px-3 rounded-lg border border-line bg-surface-2">
                         <input type="checkbox" class="checkbox" :checked="visible(key)" @change="toggle(key)" :id="'w-' + key">
                         <label :for="'w-' + key" class="text-sm flex-1 truncate cursor-pointer" x-text="all[key]"></label>
-                        <button type="button" class="btn btn-ghost btn-sm btn-icon !size-7" @click="move(key, -1)" aria-label="Yuxarı"><x-icon name="chevron-up" class="size-4"/></button>
-                        <button type="button" class="btn btn-ghost btn-sm btn-icon !size-7" @click="move(key, 1)" aria-label="Aşağı"><x-icon name="chevron-down" class="size-4"/></button>
+                        <button type="button" class="btn btn-ghost btn-sm btn-icon !size-7" @click="move(key, -1)" aria-label="{{ __('Yuxarı') }}"><x-icon name="chevron-up" class="size-4"/></button>
+                        <button type="button" class="btn btn-ghost btn-sm btn-icon !size-7" @click="move(key, 1)" aria-label="{{ __('Aşağı') }}"><x-icon name="chevron-down" class="size-4"/></button>
                     </li>
                 </template>
             </ul>
@@ -91,7 +91,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 stagger">
 
         {{-- KPIs --}}
-        <section class="{{ $span['kpis'] }}" x-show="visible('kpis')" :style="{ order: pos('kpis') }" style="--i:0" aria-label="Əsas göstəricilər">
+        <section class="{{ $span['kpis'] }}" x-show="visible('kpis')" :style="{ order: pos('kpis') }" style="--i:0" aria-label="{{ __('Əsas göstəricilər') }}">
             <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 gap-4">
                 @foreach($kpis as $i => $kpi)
                     <a href="{{ $kpi['url'] }}" class="card card-hover p-5 group rise" style="--i:{{ $i }}">
@@ -114,7 +114,7 @@
         </section>
 
         {{-- Shortcuts --}}
-        <section class="{{ $span['shortcuts'] }}" x-show="visible('shortcuts')" :style="{ order: pos('shortcuts') }" style="--i:1" aria-label="Qısa yollar">
+        <section class="{{ $span['shortcuts'] }}" x-show="visible('shortcuts')" :style="{ order: pos('shortcuts') }" style="--i:1" aria-label="{{ __('Qısa yollar') }}">
             <div class="card p-2.5">
                 <div class="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-1.5">
                     @foreach($shortcuts as [$label, $icon, $route, $params, $ability, $keys])
@@ -135,12 +135,12 @@
         <section class="{{ $span['cashflow'] }} card p-5 lg:p-6" x-show="visible('cashflow')" :style="{ order: pos('cashflow') }" style="--i:2">
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                    <h2 class="text-base font-semibold">Gəlir və xərc</h2>
-                    <p class="text-xs text-muted mt-0.5">Son 12 ay · bank əməliyyatları CBAR məzənnəsi ilə AZN-də · daxili köçürmələr daxil deyil</p>
+                    <h2 class="text-base font-semibold">{{ __('Gəlir və xərc') }}</h2>
+                    <p class="text-xs text-muted mt-0.5">{{ __('Son 12 ay · bank əməliyyatları CBAR məzənnəsi ilə AZN-də · daxili köçürmələr daxil deyil') }}</p>
                 </div>
                 <div class="flex gap-5 text-right">
-                    <div><div class="text-[11px] text-muted uppercase tracking-wider">Daxilolma</div><div class="font-mono font-semibold text-success">{{ money($cashflow['totalIn']) }}</div></div>
-                    <div><div class="text-[11px] text-muted uppercase tracking-wider">Məxaric</div><div class="font-mono font-semibold text-danger">{{ money($cashflow['totalOut']) }}</div></div>
+                    <div><div class="text-[11px] text-muted uppercase tracking-wider">{{ __('Daxilolma') }}</div><div class="font-mono font-semibold text-success">{{ money($cashflow['totalIn']) }}</div></div>
+                    <div><div class="text-[11px] text-muted uppercase tracking-wider">{{ __('Məxaric') }}</div><div class="font-mono font-semibold text-danger">{{ money($cashflow['totalOut']) }}</div></div>
                 </div>
             </div>
             <div class="mt-4 -mx-2 h-[300px]" x-chart="{{ json_encode($charts['cashflow']) }}"><div class="skeleton h-full mx-2"></div></div>
@@ -151,15 +151,15 @@
         @isset($projectStatus)
         <section class="{{ $span['projects'] }} card p-5 lg:p-6" x-show="visible('projects')" :style="{ order: pos('projects') }" style="--i:3">
             <div class="flex items-center justify-between">
-                <h2 class="text-base font-semibold">Layihələrin statusu</h2>
-                <a href="{{ route('projects.index') }}" class="text-xs font-medium text-brand-ink hover:underline">Hamısı</a>
+                <h2 class="text-base font-semibold">{{ __('Layihələrin statusu') }}</h2>
+                <a href="{{ route('projects.index') }}" class="text-xs font-medium text-brand-ink hover:underline">{{ __('Hamısı') }}</a>
             </div>
             @if($projectStatus['total'])
                 <div class="mt-2 h-[300px]" x-chart="{{ json_encode($charts['projects']) }}">
                     <div class="skeleton size-48 rounded-full mx-auto mt-8"></div>
                 </div>
             @else
-                <x-empty icon="folder" title="Layihə yoxdur" text="İlk layihənizi yaradın.">@can('projects.create')<a href="{{ route('projects.create') }}" class="btn btn-primary btn-sm"><x-icon name="plus" class="size-4"/> Layihə</a>@endcan</x-empty>
+                <x-empty icon="folder" :title="__('Layihə yoxdur')" :text="__('İlk layihənizi yaradın.')">@can('projects.create')<a href="{{ route('projects.create') }}" class="btn btn-primary btn-sm"><x-icon name="plus" class="size-4"/> {{ __('Layihə') }}</a>@endcan</x-empty>
             @endif
         </section>
         @endisset
@@ -167,12 +167,12 @@
         {{-- My tasks --}}
         <section class="{{ $span['my_tasks'] }} card p-5 lg:p-6 flex flex-col" x-show="visible('my_tasks')" :style="{ order: pos('my_tasks') }" style="--i:4">
             <div class="flex items-center justify-between">
-                <h2 class="text-base font-semibold">Bugünkü işlərim</h2>
-                <a href="{{ route('my-work') }}" class="text-xs font-medium text-brand-ink hover:underline">Hamısı</a>
+                <h2 class="text-base font-semibold">{{ __('Bugünkü işlərim') }}</h2>
+                <a href="{{ route('my-work') }}" class="text-xs font-medium text-brand-ink hover:underline">{{ __('Hamısı') }}</a>
             </div>
             @php $list = collect($myDay['tasks']['overdue'])->map(fn ($t) => $t + ['late' => true])->merge($myDay['tasks']['today'])->take(7); @endphp
             @if($list->isEmpty())
-                <x-empty icon="check-circle" title="Bu gün üçün tapşırıq yoxdur" class="!py-8 flex-1"/>
+                <x-empty icon="check-circle" :title="__('Bu gün üçün tapşırıq yoxdur')" class="!py-8 flex-1"/>
             @else
                 <ul class="mt-3 -mx-2 flex-1">
                     @foreach($list as $t)
@@ -194,12 +194,12 @@
         {{-- Budget vs actual --}}
         @isset($budget)
         <section class="{{ $span['budget'] }} card p-5 lg:p-6" x-show="visible('budget')" :style="{ order: pos('budget') }" style="--i:5">
-            <h2 class="text-base font-semibold">Büdcə və faktiki xərc</h2>
-            <p class="text-xs text-muted mt-0.5">Aktiv layihələr · AZN · faktiki = layihəyə bağlı bank məxarici + logistika xərcləri</p>
+            <h2 class="text-base font-semibold">{{ __('Büdcə və faktiki xərc') }}</h2>
+            <p class="text-xs text-muted mt-0.5">{{ __('Aktiv layihələr · AZN · faktiki = layihəyə bağlı bank məxarici + logistika xərcləri') }}</p>
             @if(count($budget['categories']))
                 <div class="mt-4 -mx-2 h-[280px]" x-chart="{{ json_encode($charts['budget']) }}"><div class="skeleton h-full mx-2"></div></div>
             @else
-                <x-empty icon="target" title="Büdcəli aktiv layihə yoxdur" class="!py-10"/>
+                <x-empty icon="target" :title="__('Büdcəli aktiv layihə yoxdur')" class="!py-10"/>
             @endif
             @if($budget['skipped'])
                 <p class="mt-2 text-xs text-saffron">Məzənnə tapılmadığı üçün göstərilmədi: {{ implode(', ', $budget['skipped']) }}</p>
@@ -212,11 +212,11 @@
         <section class="{{ $span['balances'] }} card p-5 lg:p-6" x-show="visible('balances')" :style="{ order: pos('balances') }" style="--i:6">
             <div class="flex items-start justify-between gap-3">
                 <div>
-                    <h2 class="text-base font-semibold">Bank hesabları</h2>
-                    <p class="text-xs text-muted mt-0.5">Qalıqlar və bugünkü CBAR məzənnəsi ilə AZN ekvivalenti</p>
+                    <h2 class="text-base font-semibold">{{ __('Bank hesabları') }}</h2>
+                    <p class="text-xs text-muted mt-0.5">{{ __('Qalıqlar və bugünkü CBAR məzənnəsi ilə AZN ekvivalenti') }}</p>
                 </div>
                 <div class="text-right">
-                    <div class="text-[11px] text-muted uppercase tracking-wider">Cəmi</div>
+                    <div class="text-[11px] text-muted uppercase tracking-wider">{{ __('Cəmi') }}</div>
                     <div class="font-mono font-semibold text-lg"><span x-countup="{{ $balances['total'] }}" data-decimals="2" data-suffix=" ₼">{{ money($balances['total']) }}</span></div>
                 </div>
             </div>
@@ -239,7 +239,7 @@
                     @endforeach
                 </ul>
             @else
-                <x-empty icon="bank" title="Bank hesabı əlavə edilməyib" class="!py-10">@can('bank.create')<a href="{{ route('bank.accounts.create') }}" class="btn btn-secondary btn-sm">Hesab əlavə et</a>@endcan</x-empty>
+                <x-empty icon="bank" :title="__('Bank hesabı əlavə edilməyib')" class="!py-10">@can('bank.create')<a href="{{ route('bank.accounts.create') }}" class="btn btn-secondary btn-sm">{{ __('Hesab əlavə et') }}</a>@endcan</x-empty>
             @endif
         </section>
         @endisset
@@ -247,12 +247,12 @@
         {{-- Top counterparties --}}
         @isset($top)
         <section class="{{ $span['top'] }} card p-5 lg:p-6" x-show="visible('top')" :style="{ order: pos('top') }" style="--i:7">
-            <h2 class="text-base font-semibold">TOP-5 kontragent</h2>
-            <p class="text-xs text-muted mt-0.5">Son 12 ayda dövriyyə (daxilolma + məxaric), AZN</p>
+            <h2 class="text-base font-semibold">{{ __('TOP-5 kontragent') }}</h2>
+            <p class="text-xs text-muted mt-0.5">{{ __('Son 12 ayda dövriyyə (daxilolma + məxaric), AZN') }}</p>
             @if(count($top['labels']))
                 <div class="mt-3 -mx-2 h-[260px]" x-chart="{{ json_encode($charts['top']) }}"><div class="skeleton h-full mx-2"></div></div>
             @else
-                <x-empty icon="users" title="Hələ dövriyyə yoxdur" text="Bank əməliyyatlarını kontragentlə bağladıqca burada görünəcək." class="!py-10"/>
+                <x-empty icon="users" :title="__('Hələ dövriyyə yoxdur')" :text="__('Bank əməliyyatlarını kontragentlə bağladıqca burada görünəcək.')" class="!py-10"/>
             @endif
         </section>
         @endisset
@@ -261,8 +261,8 @@
         @isset($logistics)
         <section class="{{ $span['logistics'] }} card p-5 lg:p-6" x-show="visible('logistics')" :style="{ order: pos('logistics') }" style="--i:8">
             <div class="flex items-center justify-between">
-                <h2 class="text-base font-semibold">Logistika</h2>
-                <a href="{{ route('shipments.index') }}" class="text-xs font-medium text-brand-ink hover:underline">Yüklər</a>
+                <h2 class="text-base font-semibold">{{ __('Logistika') }}</h2>
+                <a href="{{ route('shipments.index') }}" class="text-xs font-medium text-brand-ink hover:underline">{{ __('Yüklər') }}</a>
             </div>
             @php $totalShip = array_sum($logistics); @endphp
             <ul class="mt-4 space-y-2.5">
@@ -286,10 +286,10 @@
         <section class="{{ $span['rates'] }} card p-5 lg:p-6" x-show="visible('rates')" :style="{ order: pos('rates') }" style="--i:9">
             <div class="flex items-center justify-between">
                 <div>
-                    <h2 class="text-base font-semibold">Məzənnə dinamikası</h2>
-                    <p class="text-xs text-muted mt-0.5">Son 30 gün · Azərbaycan Respublikasının Mərkəzi Bankı · 1 vahid üçün AZN</p>
+                    <h2 class="text-base font-semibold">{{ __('Məzənnə dinamikası') }}</h2>
+                    <p class="text-xs text-muted mt-0.5">{{ __('Son 30 gün · Azərbaycan Respublikasının Mərkəzi Bankı · 1 vahid üçün AZN') }}</p>
                 </div>
-                <a href="{{ route('currency.index') }}" class="text-xs font-medium text-brand-ink hover:underline">Bütün valyutalar</a>
+                <a href="{{ route('currency.index') }}" class="text-xs font-medium text-brand-ink hover:underline">{{ __('Bütün valyutalar') }}</a>
             </div>
             <div class="mt-4 grid sm:grid-cols-3 gap-3">
                 @foreach($rateHistory as $code => $points)
@@ -313,7 +313,7 @@
                             @endphp
                             <div class="mt-2 h-[64px] -mx-1" x-chart="{{ json_encode($spark) }}"></div>
                         @else
-                            <div class="mt-2 h-[64px] grid place-items-center text-xs text-muted">Tarixçə toplanır…</div>
+                            <div class="mt-2 h-[64px] grid place-items-center text-xs text-muted">{{ __('Tarixçə toplanır…') }}</div>
                         @endif
                     </div>
                 @endforeach
@@ -323,11 +323,11 @@
         {{-- Activity --}}
         <section class="{{ $span['activity'] }} card" x-show="visible('activity')" :style="{ order: pos('activity') }" style="--i:10">
             <div class="flex items-center justify-between px-5 lg:px-6 pt-5">
-                <h2 class="text-base font-semibold">Son fəaliyyətlər</h2>
-                @can('logs.view')<a href="{{ route('settings.logs.audit') }}" class="text-xs font-medium text-brand-ink hover:underline">Audit jurnalı</a>@endcan
+                <h2 class="text-base font-semibold">{{ __('Son fəaliyyətlər') }}</h2>
+                @can('logs.view')<a href="{{ route('settings.logs.audit') }}" class="text-xs font-medium text-brand-ink hover:underline">{{ __('Audit jurnalı') }}</a>@endcan
             </div>
             @if($activity->isEmpty())
-                <x-empty icon="history" title="Hələ fəaliyyət yoxdur" class="!py-10"/>
+                <x-empty icon="history" :title="__('Hələ fəaliyyət yoxdur')" class="!py-10"/>
             @else
                 <ol class="px-5 lg:px-6 py-4 grid md:grid-cols-2 gap-x-10">
                     @foreach($activity as $a)

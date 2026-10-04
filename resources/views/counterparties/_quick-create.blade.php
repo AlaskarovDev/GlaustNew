@@ -21,8 +21,8 @@
     <form x-show="open" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
           @submit.prevent="submit()" class="relative w-full max-w-lg card !shadow-[var(--shadow-pop)] p-6" x-trap.noscroll="open">
         <div class="flex items-center justify-between mb-5">
-            <h2 id="qc-title" class="text-lg font-semibold">Yeni kontragent</h2>
-            <button type="button" class="btn btn-ghost btn-icon" @click="open = false" aria-label="Bağla"><x-icon name="x" class="size-5"/></button>
+            <h2 id="qc-title" class="text-lg font-semibold">{{ __('Yeni kontragent') }}</h2>
+            <button type="button" class="btn btn-ghost btn-icon" @click="open = false" aria-label="{{ __('Bağla') }}"><x-icon name="x" class="size-5"/></button>
         </div>
         <div class="grid sm:grid-cols-2 gap-4">
             <div class="sm:col-span-2 grid grid-cols-3 gap-2">
@@ -34,33 +34,33 @@
                 </template>
             </div>
             <div class="sm:col-span-2">
-                <label class="field-label" for="qc-name">Ad <span class="text-danger">*</span></label>
+                <label class="field-label" for="qc-name">{{ __('Ad') }} <span class="text-danger">*</span></label>
                 <input id="qc-name" x-ref="name" class="input" x-model="form.name" required :class="errors.name && 'is-invalid'">
                 <p class="field-error" x-show="errors.name" x-text="errors.name?.[0]"></p>
             </div>
             <div>
-                <label class="field-label" for="qc-entity">Şəxs</label>
-                <select id="qc-entity" class="input" x-model="form.entity_type"><option value="legal">Hüquqi şəxs</option><option value="individual">Fiziki şəxs</option></select>
+                <label class="field-label" for="qc-entity">{{ __('Şəxs') }}</label>
+                <select id="qc-entity" class="input" x-model="form.entity_type"><option value="legal">{{ __('Hüquqi şəxs') }}</option><option value="individual">{{ __('Fiziki şəxs') }}</option></select>
             </div>
             <div>
-                <label class="field-label" for="qc-voen">VÖEN</label>
+                <label class="field-label" for="qc-voen">{{ __('VÖEN') }}</label>
                 <input id="qc-voen" class="input font-mono" x-model="form.voen" maxlength="10" inputmode="numeric" :class="errors.voen && 'is-invalid'">
                 <p class="field-error" x-show="errors.voen" x-text="errors.voen?.[0]"></p>
             </div>
             <div>
-                <label class="field-label" for="qc-phone">Telefon</label>
+                <label class="field-label" for="qc-phone">{{ __('Telefon') }}</label>
                 <input id="qc-phone" class="input" x-model="form.phone">
             </div>
             <div>
-                <label class="field-label" for="qc-email">Email</label>
+                <label class="field-label" for="qc-email">{{ __('Email') }}</label>
                 <input id="qc-email" type="email" class="input" x-model="form.email" :class="errors.email && 'is-invalid'">
                 <p class="field-error" x-show="errors.email" x-text="errors.email?.[0]"></p>
             </div>
         </div>
-        <p class="mt-4 text-xs text-muted">Digər rekvizitləri (IBAN, ünvan, əlaqə şəxsləri) sonra CRM-də əlavə edə bilərsiniz.</p>
+        <p class="mt-4 text-xs text-muted">{{ __('Digər rekvizitləri (IBAN, ünvan, əlaqə şəxsləri) sonra CRM-də əlavə edə bilərsiniz.') }}</p>
         <div class="mt-6 flex justify-end gap-2">
-            <button type="button" class="btn btn-secondary" @click="open = false">Ləğv et</button>
-            <button class="btn btn-primary" :disabled="busy"><x-icon name="check" class="size-4"/> Əlavə et və seç</button>
+            <button type="button" class="btn btn-secondary" @click="open = false">{{ __('Ləğv et') }}</button>
+            <button class="btn btn-primary" :disabled="busy"><x-icon name="check" class="size-4"/> {{ __('Əlavə et və seç') }}</button>
         </div>
     </form>
 </div>

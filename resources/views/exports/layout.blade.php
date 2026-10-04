@@ -31,7 +31,7 @@
 <header>
     <table width="100%"><tr>
         <td class="brand">{{ $company?->name ?? 'TradeFlow' }} <span>·</span> <span style="color:#667085;font-weight:normal;font-size:9px">{{ $company?->voen ? 'VÖEN '.$company->voen : '' }}</span></td>
-        <td class="meta">TradeFlow<br>{{ now()->format('d.m.Y H:i') }}</td>
+        <td class="meta">{{ __('TradeFlow') }}<br>{{ now()->format('d.m.Y H:i') }}</td>
     </tr></table>
 </header>
 <footer>

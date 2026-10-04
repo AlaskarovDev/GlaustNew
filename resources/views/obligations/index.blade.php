@@ -1,12 +1,12 @@
-<x-layouts.app title="Öhdəliklərim">
+<x-layouts.app :title="__('Öhdəliklərim')">
     @php
         $fmt = fn (array $byCur, string $empty = '0') => $byCur ? collect($byCur)->map(fn ($v, $c) => money($v, $c))->implode(' · ') : $empty;
         $first = collect($groups)->search(fn ($g) => $g['total']) ?: 'pay';
     @endphp
-    <x-page-header title="Öhdəliklərim" icon="scale" subtitle="Bütün Trade-lər üzrə: kimə nə qədər ödəməliyəm, kimi məhsulla təmin etməliyəm, kimdən nə qədər ödəniş gəlməlidir — hər valyutada ayrıca"/>
+    <x-page-header :title="__('Öhdəliklərim')" icon="scale" :subtitle="__('Bütün Trade-lər üzrə: kimə nə qədər ödəməliyəm, kimi məhsulla təmin etməliyəm, kimdən nə qədər ödəniş gəlməlidir — hər valyutada ayrıca')"/>
 
     <div x-data="{ sel: @js(request('group', $first)) }">
-        <div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6" role="tablist" aria-label="Öhdəlik növləri">
+        <div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6" role="tablist" aria-label="{{ __('Öhdəlik növləri') }}">
             @foreach($meta as $key => [$title, $sub, $icon, $tone])
                 @php $g = $groups[$key]; $n = collect($g['projects'])->sum(fn ($p) => count($p['deals'])); @endphp
                 <button type="button" role="tab" :aria-selected="sel === '{{ $key }}'" @click="sel = '{{ $key }}'"
@@ -25,10 +25,10 @@
             <section x-show="sel === '{{ $key }}'" @if($key !== $first) x-cloak @endif role="tabpanel" aria-label="{{ $title }}">
                 <div class="flex items-baseline justify-between gap-3 mb-3">
                     <h2 class="text-base font-semibold">{{ $title }}</h2>
-                    <span class="text-sm text-muted">Cəmi: <b class="font-mono text-ink">{{ $fmt($g['total']) }}</b></span>
+                    <span class="text-sm text-muted">{{ __('Cəmi:') }} <b class="font-mono text-ink">{{ $fmt($g['total']) }}</b></span>
                 </div>
                 @if(! $g['projects'])
-                    <div class="card"><x-empty icon="check-circle" title="Öhdəlik yoxdur" text="Bu növ üzrə açıq öhdəlik yoxdur."/></div>
+                    <div class="card"><x-empty icon="check-circle" :title="__('Öhdəlik yoxdur')" :text="__('Bu növ üzrə açıq öhdəlik yoxdur.')"/></div>
                 @else
                     <div class="space-y-4">
                         @foreach($g['projects'] as $p)
@@ -49,7 +49,7 @@
                                                 <div class="text-xs text-muted">{{ $row['what'] }} · <span class="text-ink-2">{{ $row['who'] ?? '—' }}</span></div>
                                             </div>
                                             <span class="font-mono font-semibold text-sm">{{ $fmt($row['amounts']) }}</span>
-                                            <a href="{{ route('projects.show', [$p['project'], 'tab' => 'deals']) }}#deal-{{ $row['deal']->id }}" class="btn btn-secondary btn-sm">Ətraflı bax <x-icon name="arrow-right" class="size-3.5"/></a>
+                                            <a href="{{ route('projects.show', [$p['project'], 'tab' => 'deals']) }}#deal-{{ $row['deal']->id }}" class="btn btn-secondary btn-sm">{{ __('Ətraflı bax') }} <x-icon name="arrow-right" class="size-3.5"/></a>
                                         </li>
                                     @endforeach
                                 </ul>

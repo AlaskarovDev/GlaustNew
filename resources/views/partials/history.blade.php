@@ -10,7 +10,7 @@
 @endphp
 <section class="card overflow-hidden" x-data="{ open: false }">
     <button type="button" class="w-full flex items-center justify-between px-5 h-14 text-left" @click="open = !open" :aria-expanded="open">
-        <h2 class="text-sm font-semibold flex items-center gap-2"><x-icon name="history" class="size-4 text-muted"/> Dəyişiklik tarixçəsi <span class="text-muted font-mono font-normal">{{ $history->count() }}</span></h2>
+        <h2 class="text-sm font-semibold flex items-center gap-2"><x-icon name="history" class="size-4 text-muted"/> {{ __('Dəyişiklik tarixçəsi') }} <span class="text-muted font-mono font-normal">{{ $history->count() }}</span></h2>
         <x-icon name="chevron-down" class="size-4 text-muted transition-transform" ::class="open && 'rotate-180'"/>
     </button>
     <div x-show="open" x-collapse x-cloak>
@@ -33,7 +33,7 @@
                     </div>
                 </li>
             @empty
-                <li class="text-sm text-muted">Tarixçə yoxdur.</li>
+                <li class="text-sm text-muted">{{ __('Tarixçə yoxdur.') }}</li>
             @endforelse
         </ol>
     </div>

@@ -1,14 +1,14 @@
 @if ($paginator->hasPages())
-    <nav role="navigation" aria-label="Səhifələmə" class="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-line">
+    <nav role="navigation" aria-label="{{ __('Səhifələmə') }}" class="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-line">
         <p class="text-sm text-muted">
             <span class="font-mono tabular text-ink-2">{{ $paginator->firstItem() }}–{{ $paginator->lastItem() }}</span>
-            / <span class="font-mono tabular text-ink-2">{{ $paginator->total() }}</span> qeyd
+            / <span class="font-mono tabular text-ink-2">{{ $paginator->total() }}</span> {{ __('qeyd') }}
         </p>
         <div class="flex items-center gap-1">
             @if ($paginator->onFirstPage())
                 <span class="btn btn-ghost btn-sm btn-icon opacity-40" aria-disabled="true"><x-icon name="chevron-left" class="size-4"/></span>
             @else
-                <a href="{{ $paginator->previousPageUrl() }}" rel="prev" class="btn btn-ghost btn-sm btn-icon" aria-label="Əvvəlki"><x-icon name="chevron-left" class="size-4"/></a>
+                <a href="{{ $paginator->previousPageUrl() }}" rel="prev" class="btn btn-ghost btn-sm btn-icon" aria-label="{{ __('Əvvəlki') }}"><x-icon name="chevron-left" class="size-4"/></a>
             @endif
             @foreach ($elements as $element)
                 @if (is_string($element))
@@ -25,7 +25,7 @@
                 @endif
             @endforeach
             @if ($paginator->hasMorePages())
-                <a href="{{ $paginator->nextPageUrl() }}" rel="next" class="btn btn-ghost btn-sm btn-icon" aria-label="Növbəti"><x-icon name="chevron-right" class="size-4"/></a>
+                <a href="{{ $paginator->nextPageUrl() }}" rel="next" class="btn btn-ghost btn-sm btn-icon" aria-label="{{ __('Növbəti') }}"><x-icon name="chevron-right" class="size-4"/></a>
             @else
                 <span class="btn btn-ghost btn-sm btn-icon opacity-40" aria-disabled="true"><x-icon name="chevron-right" class="size-4"/></span>
             @endif

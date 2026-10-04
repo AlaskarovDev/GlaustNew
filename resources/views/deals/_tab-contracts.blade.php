@@ -12,22 +12,22 @@
                         <a href="{{ route('contracts.show', $c) }}" class="font-mono font-semibold hover:text-brand-ink">{{ $c->number }}</a>
                         <div class="text-sm text-ink-2">{{ $c->subject }}</div>
                         <div class="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
-                            <span><span class="text-muted">Məbləğ:</span> <span class="font-mono">{{ money($c->amount, $c->currency) }}</span></span>
+                            <span><span class="text-muted">{{ __('Məbləğ:') }}</span> <span class="font-mono">{{ money($c->amount, $c->currency) }}</span></span>
                             <span><span class="text-muted">AZN:</span> <span class="font-mono">{{ money($c->amount_azn) }}</span></span>
-                            <span><span class="text-muted">Tarix:</span> <span class="font-mono">{{ azdate($c->contract_date) }}</span></span>
+                            <span><span class="text-muted">{{ __('Tarix:') }}</span> <span class="font-mono">{{ azdate($c->contract_date) }}</span></span>
                         </div>
                         <div class="mt-4 space-y-1.5">
-                            <div class="text-xs font-medium text-muted">Müqavilə sənədləri</div>
+                            <div class="text-xs font-medium text-muted">{{ __('Müqavilə sənədləri') }}</div>
                             @forelse($c->attachments as $f)
                                 <a href="{{ route('attachments.download', $f) }}" class="flex items-center gap-2 text-sm hover:text-brand-ink"><x-icon name="file-pdf" class="size-4 text-danger"/> {{ $f->original_name }} <span class="text-xs text-faint">{{ $f->humanSize() }}</span></a>
                             @empty
-                                <p class="text-xs text-faint">İmzalı PDF yüklənməyib — «Redaktə» ilə əlavə edin.</p>
+                                <p class="text-xs text-faint">{{ __('İmzalı PDF yüklənməyib — «Redaktə» ilə əlavə edin.') }}</p>
                             @endforelse
-                            <a href="{{ route('contracts.pdf', $c) }}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-medium text-brand-ink hover:underline"><x-icon name="printer" class="size-3.5"/> Müqavilə kartı (PDF)</a>
+                            <a href="{{ route('contracts.pdf', $c) }}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-medium text-brand-ink hover:underline"><x-icon name="printer" class="size-3.5"/> {{ __('Müqavilə kartı (PDF)') }}</a>
                         </div>
                     </div>
                 @else
-                    <div class="px-5 py-6 text-sm text-muted">Seçilməyib. @can('projects.update')<a href="{{ route('deals.edit', $deal) }}" class="text-brand-ink hover:underline">Müqavilə seçin</a>@endcan</div>
+                    <div class="px-5 py-6 text-sm text-muted">Seçilməyib. @can('projects.update')<a href="{{ route('deals.edit', $deal) }}" class="text-brand-ink hover:underline">{{ __('Müqavilə seçin') }}</a>@endcan</div>
                 @endif
             </section>
         @endforeach

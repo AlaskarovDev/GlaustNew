@@ -38,13 +38,13 @@
     <header class="step-head">
         <span class="step-no">1</span>
         <div class="min-w-0">
-            <h2 class="step-title">Logistika xərci</h2>
+            <h2 class="step-title">{{ __('Logistika xərci') }}</h2>
             <p class="step-sub">Total/{{ $invoice->currency }} payına görə bölünür</p>
         </div>
         @if($invoice->hasLogistics())
             <span @class(['badge ml-auto shrink-0', 'badge-amber' => $invoice->logistics_mode === 'forecast', 'badge-green' => $invoice->logistics_mode === 'actual'])>{{ \App\Models\Invoice::LOGISTICS_MODES[$invoice->logistics_mode] }}</span>
         @else
-            <span class="badge badge-slate ml-auto shrink-0">Gözləyir</span>
+            <span class="badge badge-slate ml-auto shrink-0">{{ __('Gözləyir') }}</span>
         @endif
     </header>
 
@@ -64,21 +64,21 @@
         <form method="POST" action="{{ route('invoices.logistics', $invoice) }}" x-show="editing" x-collapse {{ $invoice->hasLogistics() && ! $failed ? 'x-cloak' : '' }} class="step-form">
             @csrf
             <input type="hidden" name="logistics_method" :value="method">
-            <div class="segmented" role="radiogroup" aria-label="Xərcin növü">
+            <div class="segmented" role="radiogroup" aria-label="{{ __('Xərcin növü') }}">
                 @foreach(\App\Models\Invoice::LOGISTICS_MODES as $k => $l)
                     <label :class="mode === '{{ $k }}' && 'is-on'"><input type="radio" name="logistics_mode" value="{{ $k }}" x-model="mode" class="sr-only"> {{ $l }}</label>
                 @endforeach
             </div>
-            <div class="segmented" role="radiogroup" aria-label="Necə daxil edilsin">
-                <label :class="method === 'total' && 'is-on'"><input type="radio" value="total" x-model="method" class="sr-only"> Ümumi məbləğ</label>
-                <label :class="method === 'per_item' && 'is-on'"><input type="radio" value="per_item" x-model="method" class="sr-only"> Hər məhsul üzrə</label>
+            <div class="segmented" role="radiogroup" aria-label="{{ __('Necə daxil edilsin') }}">
+                <label :class="method === 'total' && 'is-on'"><input type="radio" value="total" x-model="method" class="sr-only"> {{ __('Ümumi məbləğ') }}</label>
+                <label :class="method === 'per_item' && 'is-on'"><input type="radio" value="per_item" x-model="method" class="sr-only"> {{ __('Hər məhsul üzrə') }}</label>
             </div>
 
             <div x-show="method === 'total'" class="space-y-1.5">
-                <label class="field-label" for="lg-amount">Ümumi logistika xərci</label>
+                <label class="field-label" for="lg-amount">{{ __('Ümumi logistika xərci') }}</label>
                 <div class="flex gap-2">
                     <input id="lg-amount" name="logistics_amount" x-model="amount" :disabled="method !== 'total'" inputmode="decimal" placeholder="10 200" class="input flex-1 min-w-0 font-mono text-right @error('logistics_amount') is-invalid @enderror">
-                    <select name="logistics_currency" x-model="currency" :disabled="method !== 'total'" class="input !w-24 shrink-0" aria-label="Valyuta">
+                    <select name="logistics_currency" x-model="currency" :disabled="method !== 'total'" class="input !w-24 shrink-0" aria-label="{{ __('Valyuta') }}">
                         @foreach($currencies as $c)<option value="{{ $c }}">{{ $c }}</option>@endforeach
                     </select>
                 </div>
@@ -89,13 +89,13 @@
 
             <div x-show="method === 'per_item'" x-cloak class="space-y-1.5">
                 <button type="button" class="btn btn-secondary w-full" @click="modal = true"><x-icon name="list" class="size-4"/> Məhsullar üzrə daxil et ({{ $invoice->items->count() }})</button>
-                <p class="text-xs text-muted text-center" x-show="perItemTotal() > 0">Cəmi: <span class="font-mono text-ink" x-text="fmt(perItemTotal()) + ' ' + (lockedCurrency() || '')"></span></p>
-                <p class="text-xs text-saffron text-center" x-show="!complete()">Bütün sətirlər üçün məbləğ və valyuta daxil edin.</p>
+                <p class="text-xs text-muted text-center" x-show="perItemTotal() > 0">{{ __('Cəmi:') }} <span class="font-mono text-ink" x-text="fmt(perItemTotal()) + ' ' + (lockedCurrency() || '')"></span></p>
+                <p class="text-xs text-saffron text-center" x-show="!complete()">{{ __('Bütün sətirlər üçün məbləğ və valyuta daxil edin.') }}</p>
             </div>
             @error('item_currency')<p class="field-error">{{ $message }}</p>@enderror
             @foreach($errors->get('items.*') as $msgs)<p class="field-error">{{ $msgs[0] }}</p>@endforeach
 
-            <button class="btn btn-primary w-full" :disabled="method === 'per_item' && !complete()"><x-icon name="check" class="size-4"/> Bölüşdür və yadda saxla</button>
+            <button class="btn btn-primary w-full" :disabled="method === 'per_item' && !complete()"><x-icon name="check" class="size-4"/> {{ __('Bölüşdür və yadda saxla') }}</button>
 
             {{-- Modal (inside the form: its inputs are submitted) --}}
             <div x-cloak x-show="modal" class="fixed inset-0 z-[75] grid place-items-center p-4" role="dialog" aria-modal="true" aria-labelledby="lg-title" @keydown.escape.window="modal = false">
@@ -104,14 +104,14 @@
                      class="relative w-full max-w-4xl max-h-[90vh] card !shadow-[var(--shadow-pop)] flex flex-col" x-trap.noscroll="modal">
                     <header class="flex items-start justify-between gap-4 px-6 py-4 border-b border-line">
                         <div>
-                            <h2 id="lg-title" class="text-lg font-semibold">Məhsullar üzrə logistika xərci</h2>
-                            <p class="text-xs text-muted">Hər məhsul üçün məbləğ və valyuta. Bütün məhsullarda <b>eyni valyuta</b> olmalıdır.</p>
+                            <h2 id="lg-title" class="text-lg font-semibold">{{ __('Məhsullar üzrə logistika xərci') }}</h2>
+                            <p class="text-xs text-muted">{{ __('Hər məhsul üçün məbləğ və valyuta. Bütün məhsullarda') }} <b>{{ __('eyni valyuta') }}</b> {{ __('olmalıdır.') }}</p>
                         </div>
-                        <button type="button" class="btn btn-ghost btn-icon" @click="modal = false" aria-label="Bağla"><x-icon name="x" class="size-5"/></button>
+                        <button type="button" class="btn btn-ghost btn-icon" @click="modal = false" aria-label="{{ __('Bağla') }}"><x-icon name="x" class="size-5"/></button>
                     </header>
                     <div class="overflow-y-auto">
                         <table class="table-g text-[13px]">
-                            <thead lang="en"><tr><th>N</th><th>Description</th><th class="!text-right">Quantity</th><th class="!text-right">Total/{{ $invoice->currency }}</th><th class="!text-right w-40">Xərc</th><th class="w-28">Valyuta</th></tr></thead>
+                            <thead lang="en"><tr><th>N</th><th>{{ __('Description') }}</th><th class="!text-right">{{ __('Quantity') }}</th><th class="!text-right">Total/{{ $invoice->currency }}</th><th class="!text-right w-40">{{ __('Xərc') }}</th><th class="w-28">{{ __('Valyuta') }}</th></tr></thead>
                             <tbody>
                             <template x-for="row in rows" :key="row.id">
                                 <tr>
@@ -132,11 +132,11 @@
                         </table>
                     </div>
                     <footer class="flex flex-wrap items-center gap-3 px-6 py-4 border-t border-line">
-                        <span class="text-sm">Cəmi: <span class="font-mono font-semibold" x-text="fmt(perItemTotal()) + ' ' + (lockedCurrency() || '')"></span></span>
-                        <button type="button" class="btn btn-ghost btn-sm" x-show="lockedCurrency()" @click="fillCurrency()">Hamısına <span x-text="lockedCurrency()"></span> seç</button>
+                        <span class="text-sm">{{ __('Cəmi:') }} <span class="font-mono font-semibold" x-text="fmt(perItemTotal()) + ' ' + (lockedCurrency() || '')"></span></span>
+                        <button type="button" class="btn btn-ghost btn-sm" x-show="lockedCurrency()" @click="fillCurrency()">{{ __('Hamısına') }} <span x-text="lockedCurrency()"></span> {{ __('seç') }}</button>
                         <span class="ml-auto"></span>
-                        <button type="button" class="btn btn-secondary" @click="modal = false">Bağla</button>
-                        <button class="btn btn-primary" :disabled="!complete()"><x-icon name="check" class="size-4"/> Yadda saxla</button>
+                        <button type="button" class="btn btn-secondary" @click="modal = false">{{ __('Bağla') }}</button>
+                        <button class="btn btn-primary" :disabled="!complete()"><x-icon name="check" class="size-4"/> {{ __('Yadda saxla') }}</button>
                     </footer>
                 </div>
             </div>
@@ -146,9 +146,9 @@
             <footer class="step-foot">
                 <button type="button" class="btn btn-secondary btn-sm" @click="editing = !editing"><x-icon name="pencil" class="size-3.5"/> <span x-text="editing ? 'Bağla' : 'Dəyiş'"></span></button>
                 <span class="text-[11px] text-faint ml-auto">{{ azdate($invoice->logistics_updated_at, true) }}</span>
-                <form method="POST" action="{{ route('invoices.logistics.clear', $invoice) }}" data-confirm="Logistika xərci bütün sətirlərdən silinsin?" data-confirm-action="Sil">
+                <form method="POST" action="{{ route('invoices.logistics.clear', $invoice) }}" data-confirm="{{ __('Logistika xərci bütün sətirlərdən silinsin?') }}" data-confirm-action="{{ __('Sil') }}">
                     @csrf @method('DELETE')
-                    <button class="btn btn-ghost btn-icon btn-sm text-danger hover:!bg-danger-soft" aria-label="Logistika xərcini sil" title="Sil"><x-icon name="trash" class="size-4"/></button>
+                    <button class="btn btn-ghost btn-icon btn-sm text-danger hover:!bg-danger-soft" aria-label="{{ __('Logistika xərcini sil') }}" title="{{ __('Sil') }}"><x-icon name="trash" class="size-4"/></button>
                 </form>
             </footer>
         @endif

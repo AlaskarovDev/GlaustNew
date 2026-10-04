@@ -9,10 +9,10 @@
         <x-slot:actions>
             <a href="{{ route('contracts.pdf', $contract) }}" target="_blank" class="btn btn-secondary"><x-icon name="printer" class="size-4"/> PDF</a>
             @can('contracts.create')
-                <a href="{{ route('contracts.create', ['parent_id' => $contract->id]) }}" class="btn btn-secondary"><x-icon name="plus" class="size-4"/> Əlavə razılaşma</a>
+                <a href="{{ route('contracts.create', ['parent_id' => $contract->id]) }}" class="btn btn-secondary"><x-icon name="plus" class="size-4"/> {{ __('Əlavə razılaşma') }}</a>
             @endcan
             @can('contracts.update')
-                <a href="{{ route('contracts.edit', $contract) }}" class="btn btn-primary"><x-icon name="pencil" class="size-4"/> Redaktə</a>
+                <a href="{{ route('contracts.edit', $contract) }}" class="btn btn-primary"><x-icon name="pencil" class="size-4"/> {{ __('Redaktə') }}</a>
             @endcan
         </x-slot:actions>
     </x-page-header>
@@ -20,7 +20,7 @@
     <div class="flex flex-wrap items-center gap-2 -mt-4 mb-6">
         <x-status group="contract" :value="$contract->status"/>
         <span class="badge {{ $contract->kind === 'sale' ? 'badge-teal' : 'badge-amber' }}">{{ $contract->kind === 'sale' ? 'Satış müqaviləsi' : 'Alış müqaviləsi' }}</span>
-        @if($contract->auto_renew)<span class="badge badge-blue"><x-icon name="refresh" class="size-3"/> Avtomatik uzadılır</span>@endif
+        @if($contract->auto_renew)<span class="badge badge-blue"><x-icon name="refresh" class="size-3"/> {{ __('Avtomatik uzadılır') }}</span>@endif
         @if($contract->parent)<a href="{{ route('contracts.show', $contract->parent) }}" class="badge badge-violet">Əsas müqavilə: {{ $contract->parent->number }}</a>@endif
         @if(in_array($contract->status, ['signed', 'active']) && $left !== null)
             <span @class(['badge', 'badge-rose' => $left <= 7, 'badge-amber' => $left > 7 && $left <= 30, 'badge-slate' => $left > 30])>
@@ -34,7 +34,7 @@
             <section class="card p-6">
                 <div class="grid sm:grid-cols-3 gap-6">
                     <div>
-                        <div class="text-xs text-muted">Müqavilə məbləği</div>
+                        <div class="text-xs text-muted">{{ __('Müqavilə məbləği') }}</div>
                         <div class="mt-1 text-2xl font-semibold font-mono">{{ money($contract->amount, $contract->currency) }}</div>
                         @if($contract->currency !== 'AZN')
                             <div class="mt-1 text-xs text-muted">≈ {{ money($contract->amount_azn) }} · CBAR {{ rate_fmt($contract->cbar_rate) }} ({{ azdate($contract->rate_date) }})</div>
@@ -46,29 +46,29 @@
                         <div class="mt-1 text-xs text-muted">Qalıq ≈ {{ money(max(0, $contract->amount_azn - $settled)) }}</div>
                     </div>
                     <div>
-                        <div class="text-xs text-muted">İcra</div>
+                        <div class="text-xs text-muted">{{ __('İcra') }}</div>
                         <div class="mt-1 text-2xl font-semibold font-mono">{{ $pct }}%</div>
                         <div class="mt-2 h-2 rounded-full bg-surface-2 overflow-hidden"><div class="h-full rounded-full bg-brand rise" style="width: {{ $pct }}%"></div></div>
                     </div>
                 </div>
                 <dl class="mt-6 pt-6 border-t border-line grid sm:grid-cols-2 gap-x-8 gap-y-3 text-sm">
-                    <div class="flex justify-between gap-4"><dt class="text-muted">Müqavilə tarixi</dt><dd class="font-mono">{{ azdate($contract->contract_date) }}</dd></div>
-                    <div class="flex justify-between gap-4"><dt class="text-muted">Müddət</dt><dd class="font-mono">{{ azdate($contract->start_date) }} — {{ azdate($contract->end_date) }}</dd></div>
-                    <div class="flex justify-between gap-4"><dt class="text-muted">Layihə</dt><dd>@if($contract->project)<a href="{{ route('projects.show', $contract->project) }}" class="text-brand-ink hover:underline">{{ $contract->project->code }} · {{ $contract->project->name }}</a>@else — @endif</dd></div>
-                    <div class="flex justify-between gap-4"><dt class="text-muted">Məsul şəxs</dt><dd>{{ $contract->responsible?->name ?? '—' }}</dd></div>
-                    @if($contract->payment_terms)<div class="sm:col-span-2 flex justify-between gap-4"><dt class="text-muted shrink-0">Ödəniş şərtləri</dt><dd class="text-right">{{ $contract->payment_terms }}</dd></div>@endif
+                    <div class="flex justify-between gap-4"><dt class="text-muted">{{ __('Müqavilə tarixi') }}</dt><dd class="font-mono">{{ azdate($contract->contract_date) }}</dd></div>
+                    <div class="flex justify-between gap-4"><dt class="text-muted">{{ __('Müddət') }}</dt><dd class="font-mono">{{ azdate($contract->start_date) }} — {{ azdate($contract->end_date) }}</dd></div>
+                    <div class="flex justify-between gap-4"><dt class="text-muted">{{ __('Layihə') }}</dt><dd>@if($contract->project)<a href="{{ route('projects.show', $contract->project) }}" class="text-brand-ink hover:underline">{{ $contract->project->code }} · {{ $contract->project->name }}</a>@else — @endif</dd></div>
+                    <div class="flex justify-between gap-4"><dt class="text-muted">{{ __('Məsul şəxs') }}</dt><dd>{{ $contract->responsible?->name ?? '—' }}</dd></div>
+                    @if($contract->payment_terms)<div class="sm:col-span-2 flex justify-between gap-4"><dt class="text-muted shrink-0">{{ __('Ödəniş şərtləri') }}</dt><dd class="text-right">{{ $contract->payment_terms }}</dd></div>@endif
                 </dl>
             </section>
 
             <section class="card overflow-hidden">
                 <header class="flex items-center justify-between px-5 h-14 border-b border-line">
-                    <h2 class="text-sm font-semibold">Ödəniş qrafiki</h2>
+                    <h2 class="text-sm font-semibold">{{ __('Ödəniş qrafiki') }}</h2>
                     @if($contract->payments->isNotEmpty())
                         <span class="text-xs text-muted font-mono">{{ money($paid, $contract->currency) }} / {{ money($scheduled, $contract->currency) }}</span>
                     @endif
                 </header>
                 @if($contract->payments->isEmpty())
-                    <p class="px-5 py-6 text-sm text-muted">Ödəniş qrafiki yoxdur.</p>
+                    <p class="px-5 py-6 text-sm text-muted">{{ __('Ödəniş qrafiki yoxdur.') }}</p>
                 @else
                     <ol class="divide-y divide-line">
                         @foreach($contract->payments as $i => $p)
@@ -98,17 +98,17 @@
             @can('bank.view')
                 <section class="card overflow-hidden">
                     <header class="flex items-center justify-between px-5 h-14 border-b border-line">
-                        <h2 class="text-sm font-semibold">Bank əməliyyatları <span class="text-muted font-mono font-normal">{{ $transactions->count() }}</span></h2>
+                        <h2 class="text-sm font-semibold">{{ __('Bank əməliyyatları') }} <span class="text-muted font-mono font-normal">{{ $transactions->count() }}</span></h2>
                         @can('bank.create')
-                            <a href="{{ route('bank.transactions.create', ['contract_id' => $contract->id, 'counterparty_id' => $contract->counterparty_id, 'direction' => $contract->kind === 'sale' ? 'in' : 'out']) }}" class="btn btn-secondary btn-sm"><x-icon name="plus" class="size-4"/> Əməliyyat</a>
+                            <a href="{{ route('bank.transactions.create', ['contract_id' => $contract->id, 'counterparty_id' => $contract->counterparty_id, 'direction' => $contract->kind === 'sale' ? 'in' : 'out']) }}" class="btn btn-secondary btn-sm"><x-icon name="plus" class="size-4"/> {{ __('Əməliyyat') }}</a>
                         @endcan
                     </header>
                     @if($transactions->isEmpty())
-                        <p class="px-5 py-6 text-sm text-muted">Bu müqavilə üzrə əməliyyat yoxdur.</p>
+                        <p class="px-5 py-6 text-sm text-muted">{{ __('Bu müqavilə üzrə əməliyyat yoxdur.') }}</p>
                     @else
                         <div class="overflow-x-auto">
                         <table class="table-g table-stack">
-                            <thead><tr><th>Tarix</th><th>Hesab</th><th>Təyinat</th><th class="!text-right">Məbləğ</th><th class="!text-right">AZN</th></tr></thead>
+                            <thead><tr><th>{{ __('Tarix') }}</th><th>{{ __('Hesab') }}</th><th>{{ __('Təyinat') }}</th><th class="!text-right">{{ __('Məbləğ') }}</th><th class="!text-right">AZN</th></tr></thead>
                             <tbody>
                             @foreach($transactions as $t)
                                 <tr>
@@ -128,7 +128,7 @@
 
             @if($contract->amendments->isNotEmpty())
                 <section class="card overflow-hidden">
-                    <header class="px-5 h-14 flex items-center border-b border-line"><h2 class="text-sm font-semibold">Əlavə razılaşmalar</h2></header>
+                    <header class="px-5 h-14 flex items-center border-b border-line"><h2 class="text-sm font-semibold">{{ __('Əlavə razılaşmalar') }}</h2></header>
                     <ul class="divide-y divide-line">
                         @foreach($contract->amendments as $a)
                             <li><a href="{{ route('contracts.show', $a) }}" class="flex items-center gap-4 px-5 py-3 hover:bg-surface-2 text-sm">
@@ -153,14 +153,14 @@
                         <span class="block text-xs text-muted font-mono">{{ $contract->counterparty->voen ? 'VÖEN '.$contract->counterparty->voen : '' }}</span>
                     </span>
                 </a>
-                @if($contract->counterparty->trashed())<p class="mt-2 text-xs text-danger">Bu kontragent CRM-dən silinib.</p>@endif
+                @if($contract->counterparty->trashed())<p class="mt-2 text-xs text-danger">{{ __('Bu kontragent CRM-dən silinib.') }}</p>@endif
             </section>
             @if($contract->notes)
-                <section class="card p-5"><h2 class="text-sm font-semibold mb-2">Qeydlər</h2><p class="text-sm text-ink-2 whitespace-pre-line">{{ $contract->notes }}</p></section>
+                <section class="card p-5"><h2 class="text-sm font-semibold mb-2">{{ __('Qeydlər') }}</h2><p class="text-sm text-ink-2 whitespace-pre-line">{{ $contract->notes }}</p></section>
             @endif
             @include('partials.attachments', ['model' => $contract, 'type' => 'contract', 'ability' => 'contracts.update'])
             @can('contracts.delete')
-                <x-delete-form :action="route('contracts.destroy', $contract)" label="Müqaviləni sil" button="btn btn-ghost w-full text-danger hover:!bg-danger-soft" :message="'Müqavilə '.$contract->number.' silinəcək.'"/>
+                <x-delete-form :action="route('contracts.destroy', $contract)" :label="__('Müqaviləni sil')" :button="__('btn btn-ghost w-full text-danger hover:!bg-danger-soft')" :message="'Müqavilə '.$contract->number.' silinəcək.'"/>
             @endcan
         </aside>
     </div>

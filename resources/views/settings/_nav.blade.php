@@ -14,8 +14,8 @@
         $u->can('logs.view') ? ['settings.logs.mail', 'Mail jurnalı'] : null,
     ]);
 @endphp
-<nav class="flex gap-6 border-b border-line mb-6 overflow-x-auto" aria-label="Tənzimləmələr">
-    <a href="{{ route('settings.index') }}" @class(['tab-link', 'is-active' => request()->routeIs('settings.index')])>Ümumi baxış</a>
+<nav class="flex gap-6 border-b border-line mb-6 overflow-x-auto" aria-label="{{ __('Tənzimləmələr') }}">
+    <a href="{{ route('settings.index') }}" @class(['tab-link', 'is-active' => request()->routeIs('settings.index')])>{{ __('Ümumi baxış') }}</a>
     @foreach($links as $l)
         <a href="{{ route($l[0]) }}" @class(['tab-link', 'is-active' => request()->routeIs($l[2] ?? $l[0])])>{{ $l[1] }}</a>
     @endforeach

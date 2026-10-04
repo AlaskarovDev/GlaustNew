@@ -1,7 +1,7 @@
 {{-- $model (HasAttachments), $type (morph alias), $ability (permission to upload/delete) --}}
 <section class="card p-5" x-data="{ name: '' }">
     <div class="flex items-center justify-between mb-3">
-        <h2 class="text-sm font-semibold flex items-center gap-2"><x-icon name="paperclip" class="size-4 text-muted"/> Fayllar <span class="text-muted font-mono font-normal">{{ $model->attachments->count() }}</span></h2>
+        <h2 class="text-sm font-semibold flex items-center gap-2"><x-icon name="paperclip" class="size-4 text-muted"/> {{ __('Fayllar') }} <span class="text-muted font-mono font-normal">{{ $model->attachments->count() }}</span></h2>
     </div>
     <ul class="space-y-1.5">
         @forelse($model->attachments as $file)
@@ -12,11 +12,11 @@
                     <span class="block text-[11px] text-muted">{{ $file->humanSize() }} · {{ azdate($file->created_at) }} · {{ $file->uploader?->name }}</span>
                 </a>
                 @can($ability)
-                    <x-delete-form :action="route('attachments.destroy', $file)" label="" :message="'«'.$file->original_name.'» silinsin?'" button="btn btn-ghost btn-sm btn-icon text-faint hover:text-danger"/>
+                    <x-delete-form :action="route('attachments.destroy', $file)" label="" :message="'«'.$file->original_name.'» silinsin?'" :button="__('btn btn-ghost btn-sm btn-icon text-faint hover:text-danger')"/>
                 @endcan
             </li>
         @empty
-            <li class="text-sm text-muted">Fayl yoxdur.</li>
+            <li class="text-sm text-muted">{{ __('Fayl yoxdur.') }}</li>
         @endforelse
     </ul>
     @can($ability)

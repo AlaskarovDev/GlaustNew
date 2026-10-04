@@ -11,7 +11,7 @@
     <x-page-header :title="$class::title()" :subtitle="$class::description()" :icon="$class::icon()" :back="route('reports.index')">
         <x-slot:actions>
             @can('reports.export')
-                <a href="{{ route('reports.export', [$class::key()] + request()->query() + ['format' => 'xlsx']) }}" class="btn btn-secondary"><x-icon name="sheet" class="size-4 text-success"/> Excel</a>
+                <a href="{{ route('reports.export', [$class::key()] + request()->query() + ['format' => 'xlsx']) }}" class="btn btn-secondary"><x-icon name="sheet" class="size-4 text-success"/> {{ __('Excel') }}</a>
                 <a href="{{ route('reports.export', [$class::key()] + request()->query() + ['format' => 'pdf']) }}" class="btn btn-secondary"><x-icon name="file-pdf" class="size-4 text-danger"/> PDF</a>
             @endcan
         </x-slot:actions>
@@ -24,7 +24,7 @@
                     {{ $def['label'] }}
                     @if($def['type'] === 'select')
                         <select name="{{ $key }}" class="input !h-9 min-w-[180px] text-[13px]">
-                            <option value="">— hamısı —</option>
+                            <option value="">{{ __('— hamısı —') }}</option>
                             @foreach($def['options'] as $v => $t)<option value="{{ $v }}" @selected((string) request($key) === (string) $v)>{{ $t }}</option>@endforeach
                         </select>
                     @else
@@ -32,8 +32,8 @@
                     @endif
                 </label>
             @endforeach
-            <button class="btn btn-primary btn-sm h-9"><x-icon name="refresh" class="size-4"/> Hesabla</button>
-            @if(request()->query())<a href="{{ url()->current() }}" class="btn btn-ghost btn-sm h-9">Sıfırla</a>@endif
+            <button class="btn btn-primary btn-sm h-9"><x-icon name="refresh" class="size-4"/> {{ __('Hesabla') }}</button>
+            @if(request()->query())<a href="{{ url()->current() }}" class="btn btn-ghost btn-sm h-9">{{ __('Sıfırla') }}</a>@endif
             <div class="ml-auto flex flex-wrap gap-1.5 text-xs">
                 @foreach(['Bu ay' => [now()->startOfMonth(), now()], 'Keçən ay' => [now()->subMonthNoOverflow()->startOfMonth(), now()->subMonthNoOverflow()->endOfMonth()], 'Bu rüb' => [now()->firstOfQuarter(), now()], 'Bu il' => [now()->startOfYear(), now()]] as $l => [$f, $t])
                     @if(isset($filters['from']))
@@ -73,7 +73,7 @@
 
     <section class="card overflow-hidden">
         @if($rows->isEmpty())
-            <x-empty icon="chart" title="Seçilmiş dövr üçün məlumat yoxdur" text="Tarix aralığını və ya filtrləri dəyişin."/>
+            <x-empty icon="chart" :title="__('Seçilmiş dövr üçün məlumat yoxdur')" :text="__('Tarix aralığını və ya filtrləri dəyişin.')"/>
         @else
             <div class="overflow-x-auto">
                 <table class="table-g table-stack">

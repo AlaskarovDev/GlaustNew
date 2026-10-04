@@ -3,7 +3,7 @@
     <div class="min-w-0">
         @if($back)
             <a href="{{ $back }}" class="inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink mb-2 transition-colors">
-                <x-icon name="arrow-left" class="size-4"/> Geri
+                <x-icon name="arrow-left" class="size-4"/> {{ __('Geri') }}
             </a>
         @endif
         <div class="flex items-center gap-3">

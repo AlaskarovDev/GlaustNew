@@ -1,16 +1,16 @@
-<x-layouts.app title="Bank hesabları">
-    <x-page-header title="Bank hesabları" icon="wallet" subtitle="Şirkətin bankları və onların daxilində valyuta üzrə hesablar">
+<x-layouts.app :title="__('Bank hesabları')">
+    <x-page-header :title="__('Bank hesabları')" icon="wallet" :subtitle="__('Şirkətin bankları və onların daxilində valyuta üzrə hesablar')">
         <x-slot:actions>
             @can('bank.create')
-                <a href="{{ route('bank.accounts.create') }}" class="btn btn-primary"><x-icon name="plus" class="size-4"/> Hesab əlavə et</a>
+                <a href="{{ route('bank.accounts.create') }}" class="btn btn-primary"><x-icon name="plus" class="size-4"/> {{ __('Hesab əlavə et') }}</a>
             @endcan
         </x-slot:actions>
     </x-page-header>
     @include('bank._tabs')
 
     @if($accounts->isEmpty())
-        <div class="card"><x-empty icon="bank" title="Bank hesabı yoxdur" text="Bank hesablarınızı və başlanğıc qalıqları daxil edin.">
-            @can('bank.create')<a href="{{ route('bank.accounts.create') }}" class="btn btn-primary"><x-icon name="plus" class="size-4"/> Hesab əlavə et</a>@endcan
+        <div class="card"><x-empty icon="bank" :title="__('Bank hesabı yoxdur')" :text="__('Bank hesablarınızı və başlanğıc qalıqları daxil edin.')">
+            @can('bank.create')<a href="{{ route('bank.accounts.create') }}" class="btn btn-primary"><x-icon name="plus" class="size-4"/> {{ __('Hesab əlavə et') }}</a>@endcan
         </x-empty></div>
     @else
         @php
@@ -19,7 +19,7 @@
         @endphp
         <div class="card p-5 mb-6 flex flex-wrap items-center justify-between gap-4">
             <div>
-                <div class="text-xs text-muted">Aktiv hesablar üzrə cəmi (bugünkü CBAR məzənnəsi ilə)</div>
+                <div class="text-xs text-muted">{{ __('Aktiv hesablar üzrə cəmi (bugünkü CBAR məzənnəsi ilə)') }}</div>
                 <div class="text-2xl font-semibold font-mono"><span x-data x-countup="{{ $total }}" data-decimals="2" data-suffix=" ₼">{{ money($total) }}</span></div>
             </div>
             <div class="flex flex-wrap gap-2">
@@ -29,7 +29,7 @@
                     <span class="badge badge-teal font-mono">{{ money($g->sum(fn ($a) => $a->currentBalance()), $cur) }}</span>
                 @endforeach
             </div>
-            @if($accounts->whereNull('azn')->isNotEmpty())<span class="badge badge-amber w-full sm:w-auto">Bəzi valyutalar üçün məzənnə tapılmadı — cəmə daxil deyil</span>@endif
+            @if($accounts->whereNull('azn')->isNotEmpty())<span class="badge badge-amber w-full sm:w-auto">{{ __('Bəzi valyutalar üçün məzənnə tapılmadı — cəmə daxil deyil') }}</span>@endif
         </div>
 
         <div class="space-y-6 stagger">
@@ -42,7 +42,7 @@
                             <p class="text-xs text-muted">{{ $list->count() }} hesab · {{ $list->pluck('currency')->unique()->sort()->implode(', ') }}</p>
                         </div>
                         <div class="text-right">
-                            <div class="text-[11px] text-muted">Cəmi, AZN ekvivalenti</div>
+                            <div class="text-[11px] text-muted">{{ __('Cəmi, AZN ekvivalenti') }}</div>
                             <div class="font-mono font-semibold">{{ money($list->where('is_active', true)->sum('azn')) }}</div>
                         </div>
                     </header>
@@ -53,7 +53,7 @@
                                 <span class="grid place-items-center w-14 h-9 rounded-lg bg-surface-2 font-mono text-sm font-semibold shrink-0">{{ $a->currency }}</span>
                                 <div class="min-w-0 flex-1">
                                     <a href="{{ route('bank.accounts.statement', $a) }}" class="font-medium hover:text-brand-ink">{{ $a->name }}</a>
-                                    @unless($a->is_active)<span class="badge badge-slate ml-1">Deaktiv</span>@endunless
+                                    @unless($a->is_active)<span class="badge badge-slate ml-1">{{ __('Deaktiv') }}</span>@endunless
                                     <div class="text-xs text-muted font-mono break-all">{{ $a->iban ? trim(chunk_split($a->iban, 4, ' ')) : 'IBAN göstərilməyib' }}</div>
                                 </div>
                                 <div class="text-right min-w-[150px]">
@@ -61,8 +61,8 @@
                                     <div class="text-[11px] text-muted">{{ $a->azn !== null ? '≈ '.money($a->azn) : 'məzənnə tapılmadı' }} · {{ $a->transactions_count }} əməliyyat</div>
                                 </div>
                                 <div class="flex items-center gap-1 ml-auto">
-                                    <a href="{{ route('bank.accounts.statement', $a) }}" class="btn btn-secondary btn-sm"><x-icon name="list" class="size-4"/> Çıxarış</a>
-                                    @can('bank.update')<a href="{{ route('bank.accounts.edit', $a) }}" class="btn btn-ghost btn-sm btn-icon" aria-label="Redaktə"><x-icon name="pencil" class="size-4"/></a>@endcan
+                                    <a href="{{ route('bank.accounts.statement', $a) }}" class="btn btn-secondary btn-sm"><x-icon name="list" class="size-4"/> {{ __('Çıxarış') }}</a>
+                                    @can('bank.update')<a href="{{ route('bank.accounts.edit', $a) }}" class="btn btn-ghost btn-sm btn-icon" aria-label="{{ __('Redaktə') }}"><x-icon name="pencil" class="size-4"/></a>@endcan
                                     @can('bank.delete')<x-delete-form :action="route('bank.accounts.destroy', $a)" label="" :message="'«'.$a->name.'» silinsin? Əməliyyatı olan hesab yalnız deaktiv edilir.'"/>@endcan
                                 </div>
                             </li>

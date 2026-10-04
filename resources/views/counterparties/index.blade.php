@@ -1,17 +1,17 @@
 <x-layouts.app title="CRM">
-    <x-page-header title="CRM" icon="users" subtitle="Müştərilər və təchizatçılar — müqavilələr yalnız burada olan kontragentlərlə bağlanır">
+    <x-page-header title="CRM" icon="users" :subtitle="__('Müştərilər və təchizatçılar — müqavilələr yalnız burada olan kontragentlərlə bağlanır')">
         <x-slot:actions>
             @can('crm.import')
-                <a href="{{ route('imports.index', ['type' => 'counterparties']) }}" class="btn btn-secondary"><x-icon name="upload" class="size-4"/> Import</a>
+                <a href="{{ route('imports.index', ['type' => 'counterparties']) }}" class="btn btn-secondary"><x-icon name="upload" class="size-4"/> {{ __('Import') }}</a>
             @endcan
             @can('crm.create')
-                <a href="{{ route('counterparties.create', ['type' => 'supplier']) }}" class="btn btn-secondary"><x-icon name="building" class="size-4"/> Təchizatçı</a>
-                <a href="{{ route('counterparties.create', ['type' => 'customer']) }}" class="btn btn-primary"><x-icon name="user-plus" class="size-4"/> Müştəri</a>
+                <a href="{{ route('counterparties.create', ['type' => 'supplier']) }}" class="btn btn-secondary"><x-icon name="building" class="size-4"/> {{ __('Təchizatçı') }}</a>
+                <a href="{{ route('counterparties.create', ['type' => 'customer']) }}" class="btn btn-primary"><x-icon name="user-plus" class="size-4"/> {{ __('Müştəri') }}</a>
             @endcan
         </x-slot:actions>
     </x-page-header>
 
-    <nav class="flex gap-6 border-b border-line mb-5 overflow-x-auto" aria-label="Kontragent növü">
+    <nav class="flex gap-6 border-b border-line mb-5 overflow-x-auto" aria-label="{{ __('Kontragent növü') }}">
         @foreach(['' => ['Hamısı', $counts['all']], 'customer' => ['Müştərilər', $counts['customer']], 'supplier' => ['Təchizatçılar', $counts['supplier']]] as $type => [$label, $n])
             <a href="{{ route('counterparties.index', array_filter(['type' => $type])) }}" @class(['tab-link', 'is-active' => (string) request('type') === $type])>
                 {{ $label }} <span class="ml-1 text-xs font-mono text-faint">{{ $n }}</span>
@@ -20,23 +20,23 @@
     </nav>
 
     <div class="card overflow-hidden">
-        <x-filter-bar :table="$table" export-route="counterparties.export" export-ability="crm.export" placeholder="Ad, VÖEN, email, telefon, etiket…"/>
+        <x-filter-bar :table="$table" export-route="counterparties.export" export-ability="crm.export" :placeholder="__('Ad, VÖEN, email, telefon, etiket…')"/>
         @if($items->isEmpty())
             <x-empty icon="users" :title="$table->hasActiveFilters() ? 'Heç nə tapılmadı' : 'Hələ kontragent yoxdur'"
                      :text="$table->hasActiveFilters() ? 'Filtrləri dəyişin və ya sıfırlayın.' : 'Müştəri və təchizatçılarınızı əlavə edin və ya Excel-dən import edin.'">
-                @can('crm.create')<a href="{{ route('counterparties.create') }}" class="btn btn-primary"><x-icon name="plus" class="size-4"/> Kontragent əlavə et</a>@endcan
+                @can('crm.create')<a href="{{ route('counterparties.create') }}" class="btn btn-primary"><x-icon name="plus" class="size-4"/> {{ __('Kontragent əlavə et') }}</a>@endcan
             </x-empty>
         @else
             <div class="overflow-x-auto">
                 <table class="table-g table-stack">
                     <thead>
                     <tr>
-                        <x-th :table="$table" sort="name">Ad</x-th>
-                        <th>Növ</th>
-                        <th>VÖEN</th>
-                        <th>Əlaqə</th>
-                        <x-th :table="$table" sort="contracts" num>Müqavilələr</x-th>
-                        <th class="w-10"><span class="sr-only">Əməliyyatlar</span></th>
+                        <x-th :table="$table" sort="name">{{ __('Ad') }}</x-th>
+                        <th>{{ __('Növ') }}</th>
+                        <th>{{ __('VÖEN') }}</th>
+                        <th>{{ __('Əlaqə') }}</th>
+                        <x-th :table="$table" sort="contracts" num>{{ __('Müqavilələr') }}</x-th>
+                        <th class="w-10"><span class="sr-only">{{ __('Əməliyyatlar') }}</span></th>
                     </tr>
                     </thead>
                     <tbody>

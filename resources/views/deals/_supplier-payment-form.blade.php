@@ -12,8 +12,8 @@
 <section class="card mb-6" x-data="{ open: {{ ($mine && $errors->any()) || $list->isEmpty() ? 'true' : 'false' }} }">
     <header class="flex flex-wrap items-center justify-between gap-3 px-5 py-4" :class="open && 'border-b border-line'">
         <div>
-            <h2 class="text-base font-semibold flex items-center gap-2"><x-icon name="arrow-up-right" class="size-5 text-danger"/> Satıcıya ödəniş</h2>
-            <p class="text-xs text-muted">Köçürmə tarixinə görə CBAR kursu, bankın kursu və bank komissiyası (EUR: 0,25%, ən az 25, ən çox 300 EUR)</p>
+            <h2 class="text-base font-semibold flex items-center gap-2"><x-icon name="arrow-up-right" class="size-5 text-danger"/> {{ __('Satıcıya ödəniş') }}</h2>
+            <p class="text-xs text-muted">{{ __('Köçürmə tarixinə görə CBAR kursu, bankın kursu və bank komissiyası (EUR: 0,25%, ən az 25, ən çox 300 EUR)') }}</p>
         </div>
         <button type="button" class="btn btn-secondary btn-sm" @click="open = !open"><span x-text="open ? 'Bağla' : 'Ödəniş et'"></span></button>
     </header>
@@ -58,30 +58,30 @@
             <div class="space-y-5 min-w-0">
                 <div class="grid md:grid-cols-2 gap-4">
                     <div>
-                        <span class="field-label">Kimə</span>
+                        <span class="field-label">{{ __('Kimə') }}</span>
                         <div class="input flex items-center gap-2 bg-surface-2 text-ink" aria-readonly="true"><x-icon name="building" class="size-4 text-muted shrink-0"/><span class="truncate">{{ $deal->supplier?->name ?? 'Satıcı seçilməyib' }}</span></div>
-                        <p class="text-[11px] text-muted mt-1">Məhsulu satan tərəf — avtomatik</p>
+                        <p class="text-[11px] text-muted mt-1">{{ __('Məhsulu satan tərəf — avtomatik') }}</p>
                     </div>
-                    <x-field label="Köçürmə tarixi" name="payment_date" required><input type="date" name="payment_date" x-model="date" max="{{ today()->toDateString() }}" class="input @error('payment_date') is-invalid @enderror" required></x-field>
-                    <x-field label="Ödəniş valyutası" name="currency" required>
+                    <x-field :label="__('Köçürmə tarixi')" name="payment_date" required><input type="date" name="payment_date" x-model="date" max="{{ today()->toDateString() }}" class="input @error('payment_date') is-invalid @enderror" required></x-field>
+                    <x-field :label="__('Ödəniş valyutası')" name="currency" required>
                         <select name="currency" x-model="cur" class="input">@foreach(config('glaust.currencies') as $c)<option value="{{ $c }}">{{ $c }}</option>@endforeach</select>
                     </x-field>
-                    <x-field label="Məbləğ" name="amount" required>
+                    <x-field :label="__('Məbləğ')" name="amount" required>
                         <input name="amount" x-model="amount" inputmode="decimal" class="input font-mono text-right @error('amount') is-invalid @enderror" required>
                         @if($sellerDue)<p class="text-[11px] text-muted mt-1">Qalıq borc: {{ collect($sellerDue)->map(fn ($v, $c) => money($v, $c))->implode(' · ') }}</p>@endif
                     </x-field>
                 </div>
                 <div class="grid md:grid-cols-2 gap-4">
-                    <x-field label="Silinəcək bank hesabımız" name="bank_account_id" required>
+                    <x-field :label="__('Silinəcək bank hesabımız')" name="bank_account_id" required>
                         <select name="bank_account_id" x-model="account" class="input @error('bank_account_id') is-invalid @enderror" required>
                             <template x-for="a in accounts" :key="a.id"><option :value="String(a.id)" x-text="a.label + ' (' + a.currency + ')'"></option></template>
                         </select>
                         <p class="text-[11px] mt-1" x-show="acc() && total() !== null" :class="acc() && acc().balance - total() < 0 ? 'text-danger' : 'text-muted'">
-                            Qalıq: <span class="font-mono" x-text="acc() && fmt(acc().balance)"></span> → <span class="font-mono" x-text="acc() && total() !== null && fmt(acc().balance - total())"></span> <span x-text="accCur()"></span></p>
+                            {{ __('Qalıq:') }} <span class="font-mono" x-text="acc() && fmt(acc().balance)"></span> → <span class="font-mono" x-text="acc() && total() !== null && fmt(acc().balance - total())"></span> <span x-text="accCur()"></span></p>
                     </x-field>
                     <div class="grid grid-cols-2 gap-4">
-                        <x-field label="İstinad / ödəniş tapşırığı №" name="reference"><input name="reference" value="{{ $mine ? old('reference') : '' }}" class="input font-mono"></x-field>
-                        <x-field label="Təyinat" name="purpose"><input name="purpose" value="{{ $mine ? old('purpose') : '' }}" placeholder="Trade {{ $deal->code }} üzrə ödəniş" class="input"></x-field>
+                        <x-field :label="__('İstinad / ödəniş tapşırığı №')" name="reference"><input name="reference" value="{{ $mine ? old('reference') : '' }}" class="input font-mono"></x-field>
+                        <x-field :label="__('Təyinat')" name="purpose"><input name="purpose" value="{{ $mine ? old('purpose') : '' }}" placeholder="Trade {{ $deal->code }} üzrə ödəniş" class="input"></x-field>
                     </div>
                 </div>
             </div>
@@ -89,38 +89,38 @@
             {{-- CBAR vs bank, fee, total debit --}}
             <div class="rounded-xl border border-line overflow-hidden self-start">
                 <div class="px-4 py-3 bg-surface-2/60 border-b border-line">
-                    <div class="text-xs text-muted">CBAR kursu · <span x-text="date ? date.split('-').reverse().join('.') : '—'"></span></div>
-                    <div class="font-mono font-semibold mt-0.5"><span x-show="loading" class="text-faint">yüklənir…</span>
+                    <div class="text-xs text-muted">{{ __('CBAR kursu ·') }} <span x-text="date ? date.split('-').reverse().join('.') : '—'"></span></div>
+                    <div class="font-mono font-semibold mt-0.5"><span x-show="loading" class="text-faint">{{ __('yüklənir…') }}</span>
                         <span x-show="!loading && cross() && !same()">1 <span x-text="cur"></span> = <span x-text="rf(cross())"></span> <span x-text="accCur()"></span></span>
-                        <span x-show="!loading && same()" class="font-sans text-sm font-normal text-muted">Hesab <span x-text="cur"></span> valyutasındadır — çevirmə yoxdur</span></div>
+                        <span x-show="!loading && same()" class="font-sans text-sm font-normal text-muted">{{ __('Hesab') }} <span x-text="cur"></span> {{ __('valyutasındadır — çevirmə yoxdur') }}</span></div>
                     <div class="text-[11px] text-danger" x-show="error" x-text="error"></div>
                 </div>
                 <dl class="px-4 py-3 space-y-2 text-sm">
-                    <div class="flex justify-between gap-3" x-show="!same()"><dt class="text-muted">CBAR ilə hesabdan</dt><dd class="font-mono" x-text="accCbar() !== null ? fmt(accCbar()) + ' ' + accCur() : '—'"></dd></div>
+                    <div class="flex justify-between gap-3" x-show="!same()"><dt class="text-muted">{{ __('CBAR ilə hesabdan') }}</dt><dd class="font-mono" x-text="accCbar() !== null ? fmt(accCbar()) + ' ' + accCur() : '—'"></dd></div>
                 </dl>
                 <div class="px-4 pb-3" x-show="accCur() && !same()">
-                    <label class="field-label" for="sp-rate">Bankın kursu: 1 <span x-text="cur"></span> = ? <span x-text="accCur()"></span> <span class="text-danger">*</span></label>
+                    <label class="field-label" for="sp-rate">{{ __('Bankın kursu: 1') }} <span x-text="cur"></span> = ? <span x-text="accCur()"></span> <span class="text-danger">*</span></label>
                     <input id="sp-rate" name="bank_rate" x-model="bankRate" :disabled="same()" inputmode="decimal" :placeholder="cross() ? rf(cross()) : ''" class="input font-mono text-right @error('bank_rate') is-invalid @enderror">
                     @error('bank_rate')<p class="field-error">{{ $message }}</p>@enderror
                 </div>
                 <dl class="px-4 py-3 border-t border-line space-y-2 text-sm">
-                    <div class="flex justify-between gap-3"><dt class="text-muted">Ödəniş (bank kursu ilə)</dt><dd class="font-mono" x-text="accBank() !== null ? fmt(accBank()) + ' ' + accCur() : '—'"></dd></div>
-                    <div class="flex justify-between gap-3" x-show="!same() && diff() !== null"><dt class="text-muted">CBAR ilə fərq</dt>
-                        <dd class="font-mono" :class="diff() > 0 ? 'text-danger' : (diff() < 0 ? 'text-success' : '')" x-text="(diff() > 0 ? '−' : (diff() < 0 ? '+' : '')) + fmt(Math.abs(diff())) + ' ' + accCur()"></dd></div>
+                    <div class="flex justify-between gap-3"><dt class="text-muted">{{ __('Ödəniş (bank kursu ilə)') }}</dt><dd class="font-mono" x-text="accBank() !== null ? fmt(accBank()) + ' ' + accCur() : '—'"></dd></div>
+                    <div class="flex justify-between gap-3" x-show="!same() && diff() !== null"><dt class="text-muted">{{ __('CBAR ilə fərq') }}</dt>
+                        <dd class="font-mono" :class="diff() > {{ __('0 ? \'text-danger\' : (diff()') }} < 0 ? 'text-success' : '')" x-text="(diff() > {{ __('0 ? \'−\' : (diff()') }} < 0 ? '+' : '')) + fmt(Math.abs(diff())) + ' ' + accCur()"></dd></div>
                 </dl>
                 <div class="px-4 py-3 border-t border-line space-y-1.5">
-                    <label class="field-label" for="sp-fee">Bank komissiyası (<span x-text="cur"></span>)</label>
+                    <label class="field-label" for="sp-fee">{{ __('Bank komissiyası (') }}<span x-text="cur"></span>)</label>
                     <input id="sp-fee" name="fee_amount" :value="feeTouched ? fee : (ruleFee() || '')" @input="fee = $event.target.value; feeTouched = true" inputmode="decimal" class="input font-mono text-right">
-                    <p class="text-[11px] text-muted" x-show="rule()">Qayda: <span x-text="rule() && String(rule().percent).replace('.', ',')"></span>% — ən az <span x-text="rule() && rule().minimum"></span>, ən çox <span x-text="rule() && rule().maximum"></span> <span x-text="cur"></span>
-                        <button type="button" class="underline ml-1" x-show="feeTouched" @click="feeTouched = false; fee = ''">qaydaya qaytar</button></p>
-                    <p class="text-[11px] text-muted" x-show="!same() && feeAcc()">= <span class="font-mono" x-text="fmt(feeAcc()) + ' ' + accCur()"></span>, «Xərclər»də «Bank komissiyası» kimi yazılacaq</p>
+                    <p class="text-[11px] text-muted" x-show="rule()">{{ __('Qayda:') }} <span x-text="rule() && String(rule().percent).replace('.', ',')"></span>{{ __('% — ən az') }} <span x-text="rule() && rule().minimum"></span>{{ __(', ən çox') }} <span x-text="rule() && rule().maximum"></span> <span x-text="cur"></span>
+                        <button type="button" class="underline ml-1" x-show="feeTouched" @click="feeTouched = false; fee = ''">{{ __('qaydaya qaytar') }}</button></p>
+                    <p class="text-[11px] text-muted" x-show="!same() && feeAcc()">= <span class="font-mono" x-text="fmt(feeAcc()) + ' ' + accCur()"></span>{{ __(', «Xərclər»də «Bank komissiyası» kimi yazılacaq') }}</p>
                 </div>
                 <div class="px-4 py-3 border-t border-line bg-surface-2/60 flex items-baseline justify-between">
-                    <span class="text-sm font-semibold">Hesabdan cəmi silinəcək</span>
+                    <span class="text-sm font-semibold">{{ __('Hesabdan cəmi silinəcək') }}</span>
                     <span class="font-mono text-lg font-semibold" x-text="total() !== null ? fmt(total()) + ' ' + accCur() : '—'"></span>
                 </div>
                 <div class="p-4">
-                    <button class="btn btn-primary w-full" :disabled="total() === null || !num(amount)"><x-icon name="check" class="size-4"/> Ödənişi icra et</button>
+                    <button class="btn btn-primary w-full" :disabled="total() === null || !num(amount)"><x-icon name="check" class="size-4"/> {{ __('Ödənişi icra et') }}</button>
                 </div>
             </div>
         </div>

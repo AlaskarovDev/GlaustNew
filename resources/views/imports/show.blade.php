@@ -3,28 +3,28 @@
 
     @if($import->status === 'uploaded')
         <ol class="flex items-center gap-3 mb-6 text-sm">
-            <li class="flex items-center gap-2 text-muted"><span class="grid place-items-center size-6 rounded-full bg-success text-white"><x-icon name="check" class="size-3.5" :stroke="3"/></span> Fayl yükləndi</li>
+            <li class="flex items-center gap-2 text-muted"><span class="grid place-items-center size-6 rounded-full bg-success text-white"><x-icon name="check" class="size-3.5" :stroke="3"/></span> {{ __('Fayl yükləndi') }}</li>
             <li class="h-px w-8 bg-line-strong"></li>
-            <li class="flex items-center gap-2 font-medium"><span class="grid place-items-center size-6 rounded-full bg-brand text-white text-xs">2</span> Sütunları uyğunlaşdır və yoxla</li>
+            <li class="flex items-center gap-2 font-medium"><span class="grid place-items-center size-6 rounded-full bg-brand text-white text-xs">2</span> {{ __('Sütunları uyğunlaşdır və yoxla') }}</li>
             <li class="h-px w-8 bg-line-strong"></li>
-            <li class="flex items-center gap-2 text-muted"><span class="grid place-items-center size-6 rounded-full bg-surface-2 text-xs">3</span> Import</li>
+            <li class="flex items-center gap-2 text-muted"><span class="grid place-items-center size-6 rounded-full bg-surface-2 text-xs">3</span> {{ __('Import') }}</li>
         </ol>
 
         <form method="GET" action="{{ route('imports.show', $import) }}" class="card p-6 mb-6" id="mapping-form">
             <input type="hidden" name="map" value="1">
             <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
                 <div>
-                    <h2 class="text-base font-semibold">Sütunların uyğunlaşdırılması</h2>
-                    <p class="text-xs text-muted">Sistem başlıqlara görə avtomatik seçib — yoxlayın və lazım olsa dəyişin.</p>
+                    <h2 class="text-base font-semibold">{{ __('Sütunların uyğunlaşdırılması') }}</h2>
+                    <p class="text-xs text-muted">{{ __('Sistem başlıqlara görə avtomatik seçib — yoxlayın və lazım olsa dəyişin.') }}</p>
                 </div>
-                <button class="btn btn-secondary btn-sm"><x-icon name="refresh" class="size-4"/> Önizləməni yenilə</button>
+                <button class="btn btn-secondary btn-sm"><x-icon name="refresh" class="size-4"/> {{ __('Önizləməni yenilə') }}</button>
             </div>
             <div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-x-5 gap-y-3">
                 @foreach($fields as $key => $def)
                     <label class="flex items-center gap-3">
                         <span class="w-36 shrink-0 text-sm {{ ! empty($def['required']) ? 'font-medium' : 'text-ink-2' }}">{{ $def['label'] }}@if(! empty($def['required']))<span class="text-danger">*</span>@endif</span>
                         <select name="map[{{ $key }}]" class="input !h-9 text-[13px] {{ ! empty($def['required']) && ! isset($import->mapping[$key]) ? 'is-invalid' : '' }}">
-                            <option value="">— istifadə etmə —</option>
+                            <option value="">{{ __('— istifadə etmə —') }}</option>
                             @foreach($headers as $i => $h)
                                 <option value="{{ $i }}" @selected(isset($import->mapping[$key]) && (int) $import->mapping[$key] === $i)>{{ $h !== null && $h !== '' ? $h : 'Sütun '.($i + 1) }}</option>
                             @endforeach
@@ -45,12 +45,12 @@
             </header>
             <div class="overflow-x-auto">
                 <table class="table-g text-xs">
-                    <thead><tr><th>Sətir</th><th>Yoxlama</th>@foreach($fields as $key => $def)@if(isset($import->mapping[$key]))<th>{{ $def['label'] }}</th>@endif @endforeach</tr></thead>
+                    <thead><tr><th>{{ __('Sətir') }}</th><th>{{ __('Yoxlama') }}</th>@foreach($fields as $key => $def)@if(isset($import->mapping[$key]))<th>{{ $def['label'] }}</th>@endif @endforeach</tr></thead>
                     <tbody>
                     @foreach($preview as $p)
                         <tr @class(['bg-danger-soft/40' => $p['error']])>
                             <td class="font-mono">{{ $p['line'] }}</td>
-                            <td class="min-w-[180px]">@if($p['error'])<span class="text-danger">{{ $p['error'] }}</span>@else<span class="text-success inline-flex items-center gap-1"><x-icon name="check" class="size-3.5"/> hazırdır</span>@endif</td>
+                            <td class="min-w-[180px]">@if($p['error'])<span class="text-danger">{{ $p['error'] }}</span>@else<span class="text-success inline-flex items-center gap-1"><x-icon name="check" class="size-3.5"/> {{ __('hazırdır') }}</span>@endif</td>
                             @foreach($fields as $key => $def)
                                 @if(isset($import->mapping[$key]))
                                     <td class="max-w-[200px] truncate">{{ is_scalar($p['values'][$key] ?? null) ? $p['values'][$key] : '' }}</td>
@@ -73,7 +73,7 @@
                     <span class="text-danger flex items-center gap-2"><x-icon name="alert" class="size-4"/> Məcburi sahələr uyğunlaşdırılmayıb: {{ $missing->map(fn ($k) => $fields[$k]['label'])->implode(', ') }}</span>
                 @else
                     Yalnız xətasız sətirlər yazılacaq. Xətalı sətirlər səbəbi ilə ayrıca Excel faylında qaytarılacaq.
-                    @if($import->total_rows > \App\Imports\ImportRunner::SYNC_LIMIT)<span class="text-muted">Fayl böyük olduğu üçün arxa planda emal olunacaq.</span>@endif
+                    @if($import->total_rows > \App\Imports\ImportRunner::SYNC_LIMIT)<span class="text-muted">{{ __('Fayl böyük olduğu üçün arxa planda emal olunacaq.') }}</span>@endif
                 @endif
             </div>
             <button class="btn btn-primary" :disabled="busy" @disabled($missing->isNotEmpty())>
@@ -86,24 +86,24 @@
             @if(in_array($import->status, ['queued', 'processing']))
                 <div class="flex items-center gap-4">
                     <span class="size-10 rounded-full border-4 border-brand border-t-transparent animate-spin"></span>
-                    <div><div class="font-semibold">Import davam edir…</div><div class="text-sm text-muted">{{ $import->total_rows }} sətir emal olunur. Səhifəni bir az sonra yeniləyin.</div></div>
+                    <div><div class="font-semibold">{{ __('Import davam edir…') }}</div><div class="text-sm text-muted">{{ $import->total_rows }} sətir emal olunur. Səhifəni bir az sonra yeniləyin.</div></div>
                 </div>
             @elseif($import->status === 'failed')
-                <x-empty icon="alert" title="Import uğursuz oldu" :text="$import->message"/>
+                <x-empty icon="alert" :title="__('Import uğursuz oldu')" :text="$import->message"/>
             @else
                 <div class="grid grid-cols-3 gap-4 text-center">
-                    <div><div class="text-3xl font-semibold font-mono">{{ $import->total_rows }}</div><div class="text-xs text-muted">sətir</div></div>
-                    <div><div class="text-3xl font-semibold font-mono text-success">{{ $import->imported_rows }}</div><div class="text-xs text-muted">import edildi</div></div>
-                    <div><div class="text-3xl font-semibold font-mono {{ $import->failed_rows ? 'text-danger' : '' }}">{{ $import->failed_rows }}</div><div class="text-xs text-muted">xətalı</div></div>
+                    <div><div class="text-3xl font-semibold font-mono">{{ $import->total_rows }}</div><div class="text-xs text-muted">{{ __('sətir') }}</div></div>
+                    <div><div class="text-3xl font-semibold font-mono text-success">{{ $import->imported_rows }}</div><div class="text-xs text-muted">{{ __('import edildi') }}</div></div>
+                    <div><div class="text-3xl font-semibold font-mono {{ $import->failed_rows ? 'text-danger' : '' }}">{{ $import->failed_rows }}</div><div class="text-xs text-muted">{{ __('xətalı') }}</div></div>
                 </div>
                 @if($import->error_path)
                     <div class="mt-6 flex flex-col sm:flex-row items-center gap-3 rounded-xl bg-danger-soft/50 border border-danger/20 p-4">
                         <x-icon name="sheet" class="size-6 text-danger"/>
-                        <p class="text-sm flex-1">Xətalı sətirlər «Xəta» sütunu ilə ayrıca faylda. Düzəldib yenidən yükləyə bilərsiniz.</p>
-                        <a href="{{ route('imports.errors', $import) }}" class="btn btn-secondary"><x-icon name="download" class="size-4"/> Xətalar faylı</a>
+                        <p class="text-sm flex-1">{{ __('Xətalı sətirlər «Xəta» sütunu ilə ayrıca faylda. Düzəldib yenidən yükləyə bilərsiniz.') }}</p>
+                        <a href="{{ route('imports.errors', $import) }}" class="btn btn-secondary"><x-icon name="download" class="size-4"/> {{ __('Xətalar faylı') }}</a>
                     </div>
                 @endif
-                <div class="mt-6 flex gap-2"><a href="{{ route('imports.index', ['type' => $import->type]) }}" class="btn btn-primary">Yeni import</a></div>
+                <div class="mt-6 flex gap-2"><a href="{{ route('imports.index', ['type' => $import->type]) }}" class="btn btn-primary">{{ __('Yeni import') }}</a></div>
             @endif
         </section>
     @endif

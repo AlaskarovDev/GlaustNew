@@ -1,12 +1,12 @@
-<x-layouts.app title="Logistika">
+<x-layouts.app :title="__('Logistika')">
     @php $modeIcons = ['road' => 'truck', 'rail' => 'train', 'sea' => 'ship', 'air' => 'plane']; @endphp
-    <x-page-header title="Logistika əməliyyatları" icon="truck" subtitle="Yüklər, daşıyıcılar, statuslar və logistika xərcləri">
+    <x-page-header :title="__('Logistika əməliyyatları')" icon="truck" :subtitle="__('Yüklər, daşıyıcılar, statuslar və logistika xərcləri')">
         <x-slot:actions>
             @can('logistics.import')
-                <a href="{{ route('imports.index', ['type' => 'shipments']) }}" class="btn btn-secondary"><x-icon name="upload" class="size-4"/> Import</a>
+                <a href="{{ route('imports.index', ['type' => 'shipments']) }}" class="btn btn-secondary"><x-icon name="upload" class="size-4"/> {{ __('Import') }}</a>
             @endcan
             @can('logistics.create')
-                <a href="{{ route('shipments.create') }}" class="btn btn-primary"><x-icon name="plus" class="size-4"/> Yeni yük</a>
+                <a href="{{ route('shipments.create') }}" class="btn btn-primary"><x-icon name="plus" class="size-4"/> {{ __('Yeni yük') }}</a>
             @endcan
         </x-slot:actions>
     </x-page-header>
@@ -24,22 +24,22 @@
     </div>
     @if($delayed)
         <a href="{{ route('shipments.index', ['status' => 'delayed']) }}" class="flex items-center gap-3 card border-danger/30 bg-danger-soft/40 px-4 py-3 mb-5 text-sm hover:bg-danger-soft/70 transition-colors">
-            <x-icon name="alert" class="size-5 text-danger"/><span><b>{{ $delayed }}</b> yük gözlənilən çatma tarixini keçib.</span><x-icon name="arrow-right" class="size-4 ml-auto text-danger"/>
+            <x-icon name="alert" class="size-5 text-danger"/><span><b>{{ $delayed }}</b> {{ __('yük gözlənilən çatma tarixini keçib.') }}</span><x-icon name="arrow-right" class="size-4 ml-auto text-danger"/>
         </a>
     @endif
 
     <div class="card overflow-hidden">
-        <x-filter-bar :table="$table" export-route="shipments.export" export-ability="logistics.export" placeholder="Nömrə, marşrut, konteyner, CMR, daşıyıcı…"/>
+        <x-filter-bar :table="$table" export-route="shipments.export" export-ability="logistics.export" :placeholder="__('Nömrə, marşrut, konteyner, CMR, daşıyıcı…')"/>
         @if($items->isEmpty())
-            <x-empty icon="package" :title="$table->hasActiveFilters() ? 'Heç nə tapılmadı' : 'Hələ yük yoxdur'" text="Yükləri qeyd edin, statusu dəyişdikcə tarixçə avtomatik saxlanılır.">
-                @can('logistics.create')<a href="{{ route('shipments.create') }}" class="btn btn-primary"><x-icon name="plus" class="size-4"/> Yük əlavə et</a>@endcan
+            <x-empty icon="package" :title="$table->hasActiveFilters() ? 'Heç nə tapılmadı' : 'Hələ yük yoxdur'" :text="__('Yükləri qeyd edin, statusu dəyişdikcə tarixçə avtomatik saxlanılır.')">
+                @can('logistics.create')<a href="{{ route('shipments.create') }}" class="btn btn-primary"><x-icon name="plus" class="size-4"/> {{ __('Yük əlavə et') }}</a>@endcan
             </x-empty>
         @else
             <div class="overflow-x-auto">
                 <table class="table-g table-stack">
                     <thead><tr>
-                        <x-th :table="$table" sort="number">Nömrə</x-th><th>Marşrut</th><th>Daşıyıcı</th>
-                        <x-th :table="$table" sort="eta">Çatma</x-th><th class="!text-right">Xərclər</th><th>Status</th>
+                        <x-th :table="$table" sort="number">{{ __('Nömrə') }}</x-th><th>{{ __('Marşrut') }}</th><th>{{ __('Daşıyıcı') }}</th>
+                        <x-th :table="$table" sort="eta">{{ __('Çatma') }}</x-th><th class="!text-right">{{ __('Xərclər') }}</th><th>{{ __('Status') }}</th>
                     </tr></thead>
                     <tbody>
                     @foreach($items as $s)

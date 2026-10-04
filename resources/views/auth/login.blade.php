@@ -1,8 +1,8 @@
-<x-layouts.guest title="Giriş" heading="Xoş gəlmisiniz" subheading="Hesabınıza daxil olun.">
+<x-layouts.guest :title="__('Giriş')" :heading="__('Xoş gəlmisiniz')" :subheading="__('Hesabınıza daxil olun.')">
     <form method="POST" action="{{ route('login') }}" class="space-y-5" x-data="{ show: false, busy: false }" @submit="busy = true">
         @csrf
-        <x-input name="email" type="email" label="Email" required autocomplete="username" autofocus placeholder="ad@sirket.az"/>
-        <x-field label="Şifrə" name="password" :required="true">
+        <x-input name="email" type="email" :label="__('Email')" required autocomplete="username" autofocus placeholder="ad@sirket.az"/>
+        <x-field :label="__('Şifrə')" name="password" :required="true">
             <div class="relative">
                 <input id="password" name="password" :type="show ? 'text' : 'password'" type="password" required autocomplete="current-password"
                        class="input pr-11 @error('password') is-invalid @enderror">
@@ -14,11 +14,11 @@
         </x-field>
         {{-- Only password recovery under the password; companies and users are created by the platform admin. --}}
         <div class="flex justify-end">
-            <a href="{{ route('password.request') }}" class="text-sm font-medium text-brand-ink hover:underline">Şifrəni unutmusunuz?</a>
+            <a href="{{ route('password.request') }}" class="text-sm font-medium text-brand-ink hover:underline">{{ __('Şifrəni unutmusunuz?') }}</a>
         </div>
         <button class="btn btn-primary w-full h-11" :disabled="busy">
             <span x-show="busy" x-cloak class="size-4 rounded-full border-2 border-current border-t-transparent animate-spin"></span>
-            Daxil ol
+            {{ __('Daxil ol') }}
         </button>
     </form>
 </x-layouts.guest>

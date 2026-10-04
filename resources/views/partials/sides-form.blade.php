@@ -16,19 +16,19 @@
                         </div>
                         <div class="space-y-4">
                             <x-combobox :name="$side['party']" :label="$side['partyLabel']" :url="route('ajax.lookup', ['counterparties', 'role' => $side['role']])"
-                                        :value="$side['partyValue']?->id" :display="$side['partyValue']?->name" placeholder="CRM-dən seçin"/>
+                                        :value="$side['partyValue']?->id" :display="$side['partyValue']?->name" :placeholder="__('CRM-dən seçin')"/>
                             <x-combobox :name="$side['contract']" :label="$side['contractLabel']" :url="route('ajax.lookup', ['contracts', 'kind' => $side['kind']])"
                                         :depends="$side['party']" :party-id="$side['contractValue']?->counterparty_id"
                                         :value="$side['contractValue']?->id" :display="$side['contractValue'] ? $side['contractValue']->number.' · '.$side['contractValue']->subject : null"
-                                        placeholder="Mövcud müqaviləni seçin"
+                                        :placeholder="__('Mövcud müqaviləni seçin')"
                                         hint="Siyahıda yalnız seçilmiş tərəfin {{ $side['kind'] === 'sale' ? 'satış' : 'alış' }} müqavilələri görünür. Müqavilə seçsəniz, tərəf avtomatik dolur."/>
                             @if($files)
-                                <x-field :label="$side['contractLabel'].' — imzalı PDF'" :name="$side['kind'].'_contract_file'" hint="İstəyə bağlı. Fayl seçilmiş müqavilənin «Fayllar» bölməsinə əlavə olunur.">
+                                <x-field :label="$side['contractLabel'].' — imzalı PDF'" :name="$side['kind'].'_contract_file'" :hint="__('İstəyə bağlı. Fayl seçilmiş müqavilənin «Fayllar» bölməsinə əlavə olunur.')">
                                     <input type="file" name="{{ $side['kind'] }}_contract_file" accept="application/pdf" class="input !h-auto py-2 text-sm">
                                 </x-field>
                                 @if($side['contractValue'])
                                     <a href="{{ route('contracts.pdf', $side['contractValue']) }}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-medium text-brand-ink hover:underline">
-                                        <x-icon name="printer" class="size-3.5"/> Müqavilə kartını PDF kimi yüklə
+                                        <x-icon name="printer" class="size-3.5"/> {{ __('Müqavilə kartını PDF kimi yüklə') }}
                                     </a>
                                 @endif
                             @endif

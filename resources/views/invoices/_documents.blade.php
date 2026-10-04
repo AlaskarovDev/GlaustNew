@@ -3,8 +3,8 @@
 <section class="card mb-6 overflow-hidden" id="documents">
     <header class="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-line">
         <div>
-            <h2 class="text-base font-semibold flex items-center gap-2"><x-icon name="send" class="size-5 text-brand"/> Alıcı üçün sənədlər</h2>
-            <p class="text-xs text-muted">3 addım tamamlananda avtomatik yaradılır; sonra hər sahə redaktə edilə və PDF yenidən yüklənə bilər.</p>
+            <h2 class="text-base font-semibold flex items-center gap-2"><x-icon name="send" class="size-5 text-brand"/> {{ __('Alıcı üçün sənədlər') }}</h2>
+            <p class="text-xs text-muted">{{ __('3 addım tamamlananda avtomatik yaradılır; sonra hər sahə redaktə edilə və PDF yenidən yüklənə bilər.') }}</p>
         </div>
         @if(session('documents_created'))
             <span class="badge badge-green">Yeni yaradıldı: {{ implode(', ', session('documents_created')) }}</span>
@@ -20,7 +20,7 @@
                         <div class="font-semibold">{{ $d->title() }} <span class="font-mono">{{ $d->number }}</span></div>
                         <div class="text-xs text-muted">{{ $d->label() }} · {{ azdate($d->doc_date) }} · <span class="font-mono text-ink">{{ money($d->grandTotal(), $d->currency) }}</span></div>
                         <div class="mt-3 flex flex-wrap gap-2">
-                            <a href="{{ route('sales-documents.show', $d) }}" class="btn btn-secondary btn-sm"><x-icon name="pencil" class="size-3.5"/> Aç və redaktə et</a>
+                            <a href="{{ route('sales-documents.show', $d) }}" class="btn btn-secondary btn-sm"><x-icon name="pencil" class="size-3.5"/> {{ __('Aç və redaktə et') }}</a>
                             <a href="{{ route('sales-documents.pdf', $d) }}" class="btn btn-ghost btn-sm"><x-icon name="download" class="size-4"/> PDF</a>
                         </div>
                     </div>
@@ -35,11 +35,11 @@
                 <span class="flex-1 text-muted">{{ $docs->isEmpty() ? 'Sənədlər hələ yaradılmayıb.' : 'Silinmiş sənəd var.' }}</span>
                 @if(auth()->user()->can('projects.update') && ! $invoice->isLocked())
                     <form method="POST" action="{{ route('invoices.documents', $invoice) }}">@csrf
-                        <button class="btn btn-primary btn-sm"><x-icon name="sparkles" class="size-4"/> Hesablamadan yarat</button>
+                        <button class="btn btn-primary btn-sm"><x-icon name="sparkles" class="size-4"/> {{ __('Hesablamadan yarat') }}</button>
                     </form>
                 @endif
             @else
-                <span class="text-muted">Proforma faktura və spesifikasiya logistika, komissiya və RUB konvertasiyası tətbiq olunan kimi burada avtomatik yaranacaq.</span>
+                <span class="text-muted">{{ __('Proforma faktura və spesifikasiya logistika, komissiya və RUB konvertasiyası tətbiq olunan kimi burada avtomatik yaranacaq.') }}</span>
             @endif
         </div>
     @endif

@@ -52,6 +52,15 @@ Route::middleware('guest')->group(function () {
 Route::post('/logout', [Auth\LoginController::class, 'destroy'])->middleware('auth')->name('logout');
 
 /* ---------- platform owner ---------- */
+/* Interface language — for guests (login page) and signed-in users alike */
+Route::post('/locale', function (\Illuminate\Http\Request $request) {
+    $locale = $request->validate(['locale' => ['required', \Illuminate\Validation\Rule::in(array_keys(config('glaust.locales')))]])['locale'];
+    $request->session()->put('locale', $locale);
+    $request->user()?->forceFill(['locale' => $locale])->save();
+
+    return back();
+})->middleware('throttle:30,1')->name('locale');
+
 Route::middleware(['auth', 'superadmin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [Admin\AdminController::class, 'dashboard'])->name('dashboard');
     Route::get('/companies', [Admin\AdminController::class, 'companies'])->name('companies.index');

@@ -1,9 +1,9 @@
-<x-layouts.app title="Mənim işlərim">
-    <x-page-header title="Mənim işlərim" icon="calendar-check"
+<x-layouts.app :title="__('Mənim işlərim')">
+    <x-page-header :title="__('Mənim işlərim')" icon="calendar-check"
                    :subtitle="az_weekday($today).', '.$today->day.' '.az_month($today->month).' · bu gün '.$doneToday.' tapşırıq tamamlanıb'">
         <x-slot:actions>
             @can('projects.create')
-                <a href="{{ route('tasks.create', ['assignee_id' => auth()->id()]) }}" class="btn btn-primary"><x-icon name="plus" class="size-4"/> Tapşırıq</a>
+                <a href="{{ route('tasks.create', ['assignee_id' => auth()->id()]) }}" class="btn btn-primary"><x-icon name="plus" class="size-4"/> {{ __('Tapşırıq') }}</a>
             @endcan
         </x-slot:actions>
     </x-page-header>
@@ -45,20 +45,20 @@
 
         <aside class="space-y-5 lg:sticky lg:top-24">
             <section class="card p-5">
-                <h2 class="text-sm font-semibold flex items-center gap-2"><x-icon name="bell" class="size-4 text-saffron"/> Yeni xatırlatma</h2>
+                <h2 class="text-sm font-semibold flex items-center gap-2"><x-icon name="bell" class="size-4 text-saffron"/> {{ __('Yeni xatırlatma') }}</h2>
                 <form method="POST" action="{{ route('reminders.store') }}" class="mt-4 space-y-3">
                     @csrf
-                    <x-input name="title" label="Nə xatırladılsın?" required placeholder="Məs: Bankla görüş"/>
-                    <x-input name="remind_at" type="datetime-local" label="Nə vaxt?" required :value="now()->addHour()->startOfHour()->format('Y-m-d\TH:i')"/>
-                    <x-input name="body" type="textarea" label="Qeyd" rows="2"/>
-                    <button class="btn btn-primary w-full"><x-icon name="plus" class="size-4"/> Əlavə et</button>
-                    <p class="text-xs text-muted">Vaxtı çatanda header-də görünəcək və mailinizə göndəriləcək.</p>
+                    <x-input name="title" :label="__('Nə xatırladılsın?')" required :placeholder="__('Məs: Bankla görüş')"/>
+                    <x-input name="remind_at" type="datetime-local" :label="__('Nə vaxt?')" required :value="now()->addHour()->startOfHour()->format('Y-m-d\TH:i')"/>
+                    <x-input name="body" type="textarea" :label="__('Qeyd')" rows="2"/>
+                    <button class="btn btn-primary w-full"><x-icon name="plus" class="size-4"/> {{ __('Əlavə et') }}</button>
+                    <p class="text-xs text-muted">{{ __('Vaxtı çatanda header-də görünəcək və mailinizə göndəriləcək.') }}</p>
                 </form>
             </section>
 
             <section class="card overflow-hidden">
                 <header class="flex items-center justify-between px-5 h-12 border-b border-line">
-                    <h2 class="text-sm font-semibold">Xatırlatmalar</h2>
+                    <h2 class="text-sm font-semibold">{{ __('Xatırlatmalar') }}</h2>
                     <span class="text-xs font-mono text-muted">{{ $reminders->count() }}</span>
                 </header>
                 @forelse($reminders as $r)
@@ -70,19 +70,19 @@
                                 <div class="mt-1.5 flex items-center gap-2 text-[11px]">
                                     <span class="badge badge-slate !h-5">{{ $r->sourceLabel() }}</span>
                                     <span @class(['font-mono', 'text-danger' => $r->isOverdue(), 'text-faint' => ! $r->isOverdue()])>{{ azdate($r->remind_at, true) }}</span>
-                                    @if($r->snoozed_until && $r->snoozed_until->isFuture())<span class="text-faint">· ertələnib</span>@endif
+                                    @if($r->snoozed_until && $r->snoozed_until->isFuture())<span class="text-faint">{{ __('· ertələnib') }}</span>@endif
                                 </div>
                             </div>
                             <form method="POST" action="{{ route('reminders.done', $r) }}">@csrf
-                                <button class="btn btn-ghost btn-sm btn-icon" title="Oxundu"><x-icon name="check" class="size-4"/></button>
+                                <button class="btn btn-ghost btn-sm btn-icon" title="{{ __('Oxundu') }}"><x-icon name="check" class="size-4"/></button>
                             </form>
                             @if($r->source === 'personal')
-                                <x-delete-form :action="route('reminders.destroy', $r)" label="" message="Xatırlatma silinsin?"/>
+                                <x-delete-form :action="route('reminders.destroy', $r)" label="" :message="__('Xatırlatma silinsin?')"/>
                             @endif
                         </div>
                     </div>
                 @empty
-                    <p class="px-5 py-6 text-sm text-muted text-center">Aktiv xatırlatma yoxdur.</p>
+                    <p class="px-5 py-6 text-sm text-muted text-center">{{ __('Aktiv xatırlatma yoxdur.') }}</p>
                 @endforelse
             </section>
         </aside>

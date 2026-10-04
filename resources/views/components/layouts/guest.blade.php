@@ -29,17 +29,17 @@
             <span class="grid place-items-center size-10 rounded-xl bg-gradient-to-br from-teal-400 to-teal-700 text-night shadow-[0_0_30px_-4px_#2dd4bf]">
                 <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 8.5h13.5M14 5l3.5 3.5L14 12"/><path d="M20 15.5H6.5M10 12l-3.5 3.5L10 19"/></svg>
             </span>
-            <span class="text-lg font-semibold text-white tracking-tight">TradeFlow <span class="text-slate-500 font-normal">Ticarət idarəetmə sistemi</span></span>
+            <span class="text-lg font-semibold text-white tracking-tight">{{ __('TradeFlow') }} <span class="text-slate-500 font-normal">{{ __('Ticarət idarəetmə sistemi') }}</span></span>
         </div>
 
         <div class="relative max-w-lg stagger">
-            <p class="text-sm font-medium text-teal-300 tracking-wide" style="--i:0">Layihə · CRM · Müqavilə · Bank · Logistika</p>
+            <p class="text-sm font-medium text-teal-300 tracking-wide" style="--i:0">{{ __('Layihə · CRM · Müqavilə · Bank · Logistika') }}</p>
             <h2 class="mt-4 text-4xl xl:text-[44px] leading-[1.1] font-semibold text-white tracking-tight" style="--i:1">
-                Şirkətinizin bütün işi<br>bir idarə panelində.
+                {{ __('Şirkətinizin bütün işi') }}<br>{{ __('bir idarə panelində.') }}
             </h2>
             <p class="mt-5 text-[15px] leading-relaxed text-slate-400" style="--i:2">
-                Mərkəzi Bankın rəsmi məzənnəsi ilə hesablanan bank əməliyyatları, müştəri və təchizatçılarla bağlanan müqavilələr,
-                yüklərin izlənməsi və hər səhər mailinizə gələn gündəlik iş siyahısı.
+                {{ __('Mərkəzi Bankın rəsmi məzənnəsi ilə hesablanan bank əməliyyatları, müştəri və təchizatçılarla bağlanan müqavilələr,
+                yüklərin izlənməsi və hər səhər mailinizə gələn gündəlik iş siyahısı.') }}
             </p>
             <div class="mt-10 grid grid-cols-3 gap-3" style="--i:3">
                 @foreach([['coins', 'CBAR məzənnələri', 'hər gün avtomatik'], ['bell', 'Xatırlatmalar', 'panel və mail'], ['shield', 'Rollar və loglar', 'hər giriş qeydə alınır']] as [$i, $t, $s])
@@ -62,7 +62,7 @@
                 <span class="grid place-items-center size-9 rounded-xl bg-gradient-to-br from-teal-400 to-teal-700 text-night">
                     <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 8.5h13.5M14 5l3.5 3.5L14 12"/><path d="M20 15.5H6.5M10 12l-3.5 3.5L10 19"/></svg>
                 </span>
-                <span class="text-base font-semibold tracking-tight">TradeFlow</span>
+                <span class="text-base font-semibold tracking-tight">{{ __('TradeFlow') }}</span>
             </div>
             @if($heading)
                 <h1 class="text-[26px] font-semibold tracking-tight">{{ $heading }}</h1>

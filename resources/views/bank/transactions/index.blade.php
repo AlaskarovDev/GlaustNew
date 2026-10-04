@@ -1,10 +1,10 @@
-<x-layouts.app title="Bank əməliyyatları">
-    <x-page-header title="Bank əməliyyatları" icon="bank" subtitle="Hər əməliyyat öz tarixinin CBAR məzənnəsi ilə AZN-ə çevrilir">
+<x-layouts.app :title="__('Bank əməliyyatları')">
+    <x-page-header :title="__('Bank əməliyyatları')" icon="bank" :subtitle="__('Hər əməliyyat öz tarixinin CBAR məzənnəsi ilə AZN-ə çevrilir')">
         <x-slot:actions>
             @can('bank.create')
-                <a href="{{ route('bank.transactions.create', ['mode' => 'transfer']) }}" class="btn btn-secondary"><x-icon name="transfer" class="size-4"/> Köçürmə</a>
-                <a href="{{ route('bank.transactions.create', ['direction' => 'out']) }}" class="btn btn-secondary"><x-icon name="arrow-up-right" class="size-4 text-danger"/> Məxaric</a>
-                <a href="{{ route('bank.transactions.create', ['direction' => 'in']) }}" class="btn btn-primary"><x-icon name="arrow-down-left" class="size-4"/> Mədaxil</a>
+                <a href="{{ route('bank.transactions.create', ['mode' => 'transfer']) }}" class="btn btn-secondary"><x-icon name="transfer" class="size-4"/> {{ __('Köçürmə') }}</a>
+                <a href="{{ route('bank.transactions.create', ['direction' => 'out']) }}" class="btn btn-secondary"><x-icon name="arrow-up-right" class="size-4 text-danger"/> {{ __('Məxaric') }}</a>
+                <a href="{{ route('bank.transactions.create', ['direction' => 'in']) }}" class="btn btn-primary"><x-icon name="arrow-down-left" class="size-4"/> {{ __('Mədaxil') }}</a>
             @endcan
         </x-slot:actions>
     </x-page-header>
@@ -29,20 +29,20 @@
     @endif
 
     <div class="card overflow-hidden">
-        <x-filter-bar :table="$table" export-route="bank.transactions.export" export-ability="bank.export" placeholder="Təyinat, sənəd №, kontragent, müqavilə…"/>
+        <x-filter-bar :table="$table" export-route="bank.transactions.export" export-ability="bank.export" :placeholder="__('Təyinat, sənəd №, kontragent, müqavilə…')"/>
         <div class="grid grid-cols-3 divide-x divide-line border-b border-line text-center">
-            <div class="py-3"><div class="text-[11px] uppercase tracking-wider text-muted">Mədaxil</div><div class="font-mono font-semibold text-success">{{ money($totals['in']) }}</div></div>
-            <div class="py-3"><div class="text-[11px] uppercase tracking-wider text-muted">Məxaric</div><div class="font-mono font-semibold text-danger">{{ money($totals['out']) }}</div></div>
+            <div class="py-3"><div class="text-[11px] uppercase tracking-wider text-muted">{{ __('Mədaxil') }}</div><div class="font-mono font-semibold text-success">{{ money($totals['in']) }}</div></div>
+            <div class="py-3"><div class="text-[11px] uppercase tracking-wider text-muted">{{ __('Məxaric') }}</div><div class="font-mono font-semibold text-danger">{{ money($totals['out']) }}</div></div>
             <div class="py-3"><div class="text-[11px] uppercase tracking-wider text-muted">Fərq ({{ $totals['count'] }})</div><div class="font-mono font-semibold">{{ money($totals['in'] - $totals['out']) }}</div></div>
         </div>
         @if($items->isEmpty())
-            <x-empty icon="bank" :title="$table->hasActiveFilters() ? 'Heç nə tapılmadı' : 'Hələ əməliyyat yoxdur'" text="Mədaxil, məxaric və köçürmələri daxil edin və ya bank çıxarışını Excel-dən import edin."/>
+            <x-empty icon="bank" :title="$table->hasActiveFilters() ? 'Heç nə tapılmadı' : 'Hələ əməliyyat yoxdur'" :text="__('Mədaxil, məxaric və köçürmələri daxil edin və ya bank çıxarışını Excel-dən import edin.')"/>
         @else
             <div class="overflow-x-auto">
                 <table class="table-g table-stack">
                     <thead><tr>
-                        <x-th :table="$table" sort="date">Tarix</x-th><th>Hesab</th><th>Kontragent / təyinat</th><th>Kateqoriya</th>
-                        <th class="!text-right">Məbləğ</th><x-th :table="$table" sort="amount" num>AZN</x-th>
+                        <x-th :table="$table" sort="date">{{ __('Tarix') }}</x-th><th>{{ __('Hesab') }}</th><th>{{ __('Kontragent / təyinat') }}</th><th>{{ __('Kateqoriya') }}</th>
+                        <th class="!text-right">{{ __('Məbləğ') }}</th><x-th :table="$table" sort="amount" num>AZN</x-th>
                     </tr></thead>
                     <tbody>
                     @foreach($items as $t)

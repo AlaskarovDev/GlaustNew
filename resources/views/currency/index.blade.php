@@ -1,11 +1,11 @@
-<x-layouts.app title="Valyuta məzənnələri">
-    <x-page-header title="Valyuta məzənnələri" icon="coins"
+<x-layouts.app :title="__('Valyuta məzənnələri')">
+    <x-page-header :title="__('Valyuta məzənnələri')" icon="coins"
                    subtitle="Azərbaycan Respublikasının Mərkəzi Bankı (CBAR) · rəsmi məzənnələr · {{ $date->format('d.m.Y') }}">
         <x-slot:actions>
             <form method="GET" class="flex items-center gap-2">
-                <input type="date" name="date" value="{{ $date->format('Y-m-d') }}" max="{{ $today->format('Y-m-d') }}" class="input !w-[160px] font-mono" aria-label="Tarix">
+                <input type="date" name="date" value="{{ $date->format('Y-m-d') }}" max="{{ $today->format('Y-m-d') }}" class="input !w-[160px] font-mono" aria-label="{{ __('Tarix') }}">
                 <input type="hidden" name="code" value="{{ $code }}">
-                <button class="btn btn-primary">Göstər</button>
+                <button class="btn btn-primary">{{ __('Göstər') }}</button>
             </form>
         </x-slot:actions>
     </x-page-header>
@@ -19,7 +19,7 @@
     @endif
 
     <div class="flex flex-wrap items-center gap-2 mb-6 text-sm">
-        <span class="text-muted">Sürətli keçid:</span>
+        <span class="text-muted">{{ __('Sürətli keçid:') }}</span>
         @foreach(['Bugün' => $today, 'Dünən' => $today->subDay(), '1 həftə əvvəl' => $today->subWeek(), '1 ay əvvəl' => $today->subMonth()] as $label => $d)
             <a href="{{ route('currency.index', ['date' => $d->format('Y-m-d'), 'code' => $code]) }}"
                @class(['btn btn-sm', 'btn-secondary' => ! $d->isSameDay($date), 'bg-brand-soft text-brand-ink' => $d->isSameDay($date)])>{{ $label }}</a>
@@ -29,7 +29,7 @@
     @if($error)
         <div class="card border-saffron/40 bg-saffron-soft/60 p-4 mb-6 flex gap-3 text-sm" role="alert">
             <x-icon name="alert" class="size-5 text-saffron shrink-0"/>
-            <div>{{ $error }} <span class="text-muted">Mərkəzi Bank bu tarix üçün siyahı dərc etməyibsə və ya sayt əlçatan deyilsə, başqa tarix seçin.</span></div>
+            <div>{{ $error }} <span class="text-muted">{{ __('Mərkəzi Bank bu tarix üçün siyahı dərc etməyibsə və ya sayt əlçatan deyilsə, başqa tarix seçin.') }}</span></div>
         </div>
     @endif
 
@@ -39,7 +39,7 @@
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h2 class="text-base font-semibold">{{ $code }} / AZN</h2>
-                    <p class="text-xs text-muted">1 vahid üçün manat · saxlanılan tarixçə</p>
+                    <p class="text-xs text-muted">{{ __('1 vahid üçün manat · saxlanılan tarixçə') }}</p>
                 </div>
                 <div class="flex gap-1 p-1 rounded-lg bg-surface-2 border border-line">
                     @foreach([30 => '30 gün', 90 => '90 gün', 365 => '1 il'] as $d => $l)
@@ -61,12 +61,12 @@
                 <div class="mt-4 -mx-2 h-[320px]" x-chart="{{ json_encode($chart) }}"><div class="skeleton h-full mx-2"></div></div>
                 @php $vals = array_values($history); @endphp
                 <dl class="mt-4 grid grid-cols-3 gap-3 text-center">
-                    <div class="rounded-lg bg-surface-2 py-2.5"><dt class="text-[11px] text-muted uppercase tracking-wider">Minimum</dt><dd class="font-mono font-semibold">{{ rate_fmt(min($vals)) }}</dd></div>
-                    <div class="rounded-lg bg-surface-2 py-2.5"><dt class="text-[11px] text-muted uppercase tracking-wider">Orta</dt><dd class="font-mono font-semibold">{{ rate_fmt(array_sum($vals) / count($vals)) }}</dd></div>
-                    <div class="rounded-lg bg-surface-2 py-2.5"><dt class="text-[11px] text-muted uppercase tracking-wider">Maksimum</dt><dd class="font-mono font-semibold">{{ rate_fmt(max($vals)) }}</dd></div>
+                    <div class="rounded-lg bg-surface-2 py-2.5"><dt class="text-[11px] text-muted uppercase tracking-wider">{{ __('Minimum') }}</dt><dd class="font-mono font-semibold">{{ rate_fmt(min($vals)) }}</dd></div>
+                    <div class="rounded-lg bg-surface-2 py-2.5"><dt class="text-[11px] text-muted uppercase tracking-wider">{{ __('Orta') }}</dt><dd class="font-mono font-semibold">{{ rate_fmt(array_sum($vals) / count($vals)) }}</dd></div>
+                    <div class="rounded-lg bg-surface-2 py-2.5"><dt class="text-[11px] text-muted uppercase tracking-wider">{{ __('Maksimum') }}</dt><dd class="font-mono font-semibold">{{ rate_fmt(max($vals)) }}</dd></div>
                 </dl>
             @else
-                <x-empty icon="chart" title="Tarixçə hələ toplanmayıb" text="Sistem hər gün məzənnələri avtomatik yükləyir. Qrafik bir neçə gündən sonra dolacaq."/>
+                <x-empty icon="chart" :title="__('Tarixçə hələ toplanmayıb')" :text="__('Sistem hər gün məzənnələri avtomatik yükləyir. Qrafik bir neçə gündən sonra dolacaq.')"/>
             @endif
         </section>
 
@@ -75,12 +75,12 @@
             <table class="table-g table-stack">
                 <thead>
                 <tr>
-                    <th>Kod</th>
-                    <th>Valyuta</th>
-                    <th class="!text-right">Nominal</th>
-                    <th class="!text-right">Məzənnə</th>
-                    <th class="!text-right">1 vahid</th>
-                    <th class="!text-right">Dəyişmə</th>
+                    <th>{{ __('Kod') }}</th>
+                    <th>{{ __('Valyuta') }}</th>
+                    <th class="!text-right">{{ __('Nominal') }}</th>
+                    <th class="!text-right">{{ __('Məzənnə') }}</th>
+                    <th class="!text-right">{{ __('1 vahid') }}</th>
+                    <th class="!text-right">{{ __('Dəyişmə') }}</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -106,13 +106,13 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="6"><x-empty icon="coins" title="Məzənnə siyahısı yoxdur"/></td></tr>
+                    <tr><td colspan="6"><x-empty icon="coins" :title="__('Məzənnə siyahısı yoxdur')"/></td></tr>
                 @endforelse
                 </tbody>
             </table>
             <div class="px-4 py-3 border-t border-line text-xs text-muted flex flex-wrap gap-x-4 gap-y-1">
-                <span>Mənbə: <a href="{{ $sourceUrl }}" target="_blank" rel="noopener" class="text-brand-ink hover:underline">cbar.az</a></span>
-                <span>RUB, JPY və s. 100 vahid üçün dərc olunur; «1 vahid» sütunu hesablamalarda istifadə olunan dəyərdir.</span>
+                <span>{{ __('Mənbə:') }} <a href="{{ $sourceUrl }}" target="_blank" rel="noopener" class="text-brand-ink hover:underline">{{ __('cbar.az') }}</a></span>
+                <span>{{ __('RUB, JPY və s. 100 vahid üçün dərc olunur; «1 vahid» sütunu hesablamalarda istifadə olunan dəyərdir.') }}</span>
             </div>
         </section>
     </div>

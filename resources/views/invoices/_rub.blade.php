@@ -43,12 +43,12 @@
         <span class="step-no">3</span>
         <div class="min-w-0">
             <h2 class="step-title">{{ $cur }} → RUB konvertasiya</h2>
-            <p class="step-sub">Fakturanın kəsiləcəyi tarixə görə</p>
+            <p class="step-sub">{{ __('Fakturanın kəsiləcəyi tarixə görə') }}</p>
         </div>
         @if($invoice->hasRub())
             <span @class(['badge ml-auto shrink-0', 'badge-green' => ! $isForecast, 'badge-amber' => $isForecast])>{{ \App\Support\Invoices\RubConverter::SOURCES[$invoice->fx_source] }}</span>
         @else
-            <span class="badge badge-slate ml-auto shrink-0">Gözləyir</span>
+            <span class="badge badge-slate ml-auto shrink-0">{{ __('Gözləyir') }}</span>
         @endif
     </header>
 
@@ -65,7 +65,7 @@
                 @if($isForecast)
                     <tr class="gap"><td colspan="3"></td></tr>
                     <tr class="is-used"><td>{{ $d }}</td><td>Proq {{ $cur }}</td><td>{{ $r($invoice->fx_base_azn) }}</td></tr>
-                    <tr class="is-used"><td>{{ $d }}</td><td>Proq RUB</td><td>{{ $r($invoice->fx_target_azn) }}</td></tr>
+                    <tr class="is-used"><td>{{ $d }}</td><td>{{ __('Proq RUB') }}</td><td>{{ $r($invoice->fx_target_azn) }}</td></tr>
                 @endif
             </table>
             @if($isForecast && $actual)
@@ -81,14 +81,14 @@
             @csrf
             <input type="hidden" name="fx_source" :value="source">
             <div class="space-y-1.5">
-                <label class="field-label" for="fx-date">Fakturanın kəsiləcəyi tarix <span class="text-danger">*</span></label>
+                <label class="field-label" for="fx-date">{{ __('Fakturanın kəsiləcəyi tarix') }} <span class="text-danger">*</span></label>
                 <input id="fx-date" type="date" name="fx_date" x-model="date" @change="load()" class="input @error('fx_date') is-invalid @enderror">
                 @error('fx_date')<p class="field-error">{{ $message }}</p>@enderror
             </div>
 
-            <div class="segmented" role="radiogroup" aria-label="Kurs mənbəyi">
-                <label :class="source === 'cbar' && 'is-on'"><input type="radio" value="cbar" x-model="source" class="sr-only"> CBAR kursu</label>
-                <label :class="source === 'forecast' && 'is-on'"><input type="radio" value="forecast" x-model="source" class="sr-only"> Proqnoz</label>
+            <div class="segmented" role="radiogroup" aria-label="{{ __('Kurs mənbəyi') }}">
+                <label :class="source === 'cbar' && 'is-on'"><input type="radio" value="cbar" x-model="source" class="sr-only"> {{ __('CBAR kursu') }}</label>
+                <label :class="source === 'forecast' && 'is-on'"><input type="radio" value="forecast" x-model="source" class="sr-only"> {{ __('Proqnoz') }}</label>
             </div>
 
             <table class="rate-table">
@@ -106,15 +106,15 @@
                     <td><input id="fx-base" name="fx_base_azn" x-model="base" :disabled="source !== 'forecast'" @focus="source = 'forecast'" inputmode="decimal" placeholder="2,0005" class="input !h-8 font-mono text-right @error('fx_base_azn') is-invalid @enderror"></td>
                 </tr>
                 <tr :class="source === 'forecast' && 'is-used'">
-                    <td x-text="dmy()"></td><td><label for="fx-rub">Proq RUB</label></td>
+                    <td x-text="dmy()"></td><td><label for="fx-rub">{{ __('Proq RUB') }}</label></td>
                     <td><input id="fx-rub" name="fx_target_azn" x-model="rub" :disabled="source !== 'forecast'" inputmode="decimal" placeholder="0,02110" class="input !h-8 font-mono text-right @error('fx_target_azn') is-invalid @enderror"></td>
                 </tr>
             </table>
             @error('fx_base_azn')<p class="field-error">{{ $message }}</p>@enderror
             @error('fx_target_azn')<p class="field-error">{{ $message }}</p>@enderror
-            <p class="text-[11px] text-muted -mt-2">Kurslar: 1 vahid = ₼. Proqnoz seçilibsə RUR sütunları proqnoz üzərindən hesablanır.</p>
+            <p class="text-[11px] text-muted -mt-2">{{ __('Kurslar: 1 vahid = ₼. Proqnoz seçilibsə RUR sütunları proqnoz üzərindən hesablanır.') }}</p>
 
-            <template x-if="source === 'cbar' && future()"><p class="text-xs text-saffron">Gələcək tarix üçün CBAR kursu hələ yoxdur — proqnoz daxil edin.</p></template>
+            <template x-if="source === 'cbar' && future()"><p class="text-xs text-saffron">{{ __('Gələcək tarix üçün CBAR kursu hələ yoxdur — proqnoz daxil edin.') }}</p></template>
             <template x-if="source === 'cbar' && error && !future()"><p class="text-xs text-danger" x-text="error"></p></template>
 
             <div class="flex items-center justify-between rounded-lg bg-surface-2 px-3 py-2 text-sm">
@@ -122,16 +122,16 @@
                 <span class="font-mono font-semibold" x-text="(source === 'cbar' ? (cbar ? f4(cbar.rate) : '—') : (ratio() ? f4(ratio()) : '—')) + ' ₽'"></span>
             </div>
 
-            <button class="btn btn-primary w-full" :disabled="!canApply()"><x-icon name="check" class="size-4"/> Tətbiq et</button>
+            <button class="btn btn-primary w-full" :disabled="!canApply()"><x-icon name="check" class="size-4"/> {{ __('Tətbiq et') }}</button>
         </form>
 
         @if($invoice->hasRub())
             <footer class="step-foot">
                 <button type="button" class="btn btn-secondary btn-sm" @click="editing = !editing"><x-icon name="pencil" class="size-3.5"/> <span x-text="editing ? 'Bağla' : 'Dəyiş'"></span></button>
                 <span class="text-[11px] text-faint ml-auto">{{ azdate($invoice->fx_updated_at, true) }}</span>
-                <form method="POST" action="{{ route('invoices.rub.clear', $invoice) }}" data-confirm="Konvertasiya silinsin?" data-confirm-action="Sil">
+                <form method="POST" action="{{ route('invoices.rub.clear', $invoice) }}" data-confirm="{{ __('Konvertasiya silinsin?') }}" data-confirm-action="{{ __('Sil') }}">
                     @csrf @method('DELETE')
-                    <button class="btn btn-ghost btn-icon btn-sm text-danger hover:!bg-danger-soft" aria-label="Konvertasiyanı sil" title="Sil"><x-icon name="trash" class="size-4"/></button>
+                    <button class="btn btn-ghost btn-icon btn-sm text-danger hover:!bg-danger-soft" aria-label="{{ __('Konvertasiyanı sil') }}" title="{{ __('Sil') }}"><x-icon name="trash" class="size-4"/></button>
                 </form>
             </footer>
         @endif

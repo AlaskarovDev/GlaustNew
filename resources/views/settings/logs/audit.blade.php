@@ -1,23 +1,23 @@
 @use('App\Http\Controllers\Settings\LogController')
-<x-layouts.app title="Audit jurnalı">
+<x-layouts.app :title="__('Audit jurnalı')">
     @php
         $colors = ['created' => 'green', 'updated' => 'blue', 'deleted' => 'rose', 'restored' => 'teal'];
         $show = fn ($v) => is_bool($v) ? ($v ? 'bəli' : 'xeyr') : (is_array($v) ? json_encode($v, JSON_UNESCAPED_UNICODE) : (($v === null || $v === '') ? '—' : \Illuminate\Support\Str::limit((string) $v, 80)));
     @endphp
-    <x-page-header title="Tənzimləmələr" icon="settings"/>
+    <x-page-header :title="__('Tənzimləmələr')" icon="settings"/>
     @include('settings._nav')
     <div class="card overflow-hidden">
         <form method="GET" class="flex flex-wrap items-center gap-2 p-4 border-b border-line" x-data>
-            <input type="search" name="q" value="{{ request('q') }}" placeholder="Qeyd üzrə axtar" class="input !w-56" aria-label="Axtarış">
-            <select name="user_id" class="input !h-9 !w-auto text-[13px]" @change="$el.form.requestSubmit()" aria-label="İstifadəçi"><option value="">İstifadəçi: hamısı</option>@foreach($users as $id => $n)<option value="{{ $id }}" @selected(request('user_id') == $id)>{{ $n }}</option>@endforeach</select>
-            <select name="type" class="input !h-9 !w-auto text-[13px]" @change="$el.form.requestSubmit()" aria-label="Obyekt"><option value="">Obyekt: hamısı</option>@foreach(LogController::types() as $k => $v)<option value="{{ $k }}" @selected(request('type') === $k)>{{ $v }}</option>@endforeach</select>
-            <select name="action" class="input !h-9 !w-auto text-[13px]" @change="$el.form.requestSubmit()" aria-label="Əməliyyat"><option value="">Əməliyyat: hamısı</option>@foreach(LogController::actions() as $k => $v)<option value="{{ $k }}" @selected(request('action') === $k)>{{ $v }}</option>@endforeach</select>
-            <input type="date" name="from" value="{{ request('from') }}" class="input !h-9 !w-[150px] font-mono text-[13px]" aria-label="Tarixdən">
-            <input type="date" name="to" value="{{ request('to') }}" class="input !h-9 !w-[150px] font-mono text-[13px]" aria-label="Tarixədək">
+            <input type="search" name="q" value="{{ request('q') }}" placeholder="{{ __('Qeyd üzrə axtar') }}" class="input !w-56" aria-label="{{ __('Axtarış') }}">
+            <select name="user_id" class="input !h-9 !w-auto text-[13px]" @change="$el.form.requestSubmit()" aria-label="{{ __('İstifadəçi') }}"><option value="">{{ __('İstifadəçi: hamısı') }}</option>@foreach($users as $id => $n)<option value="{{ $id }}" @selected(request('user_id') == $id)>{{ $n }}</option>@endforeach</select>
+            <select name="type" class="input !h-9 !w-auto text-[13px]" @change="$el.form.requestSubmit()" aria-label="{{ __('Obyekt') }}"><option value="">{{ __('Obyekt: hamısı') }}</option>@foreach(LogController::types() as $k => $v)<option value="{{ $k }}" @selected(request('type') === $k)>{{ $v }}</option>@endforeach</select>
+            <select name="action" class="input !h-9 !w-auto text-[13px]" @change="$el.form.requestSubmit()" aria-label="{{ __('Əməliyyat') }}"><option value="">{{ __('Əməliyyat: hamısı') }}</option>@foreach(LogController::actions() as $k => $v)<option value="{{ $k }}" @selected(request('action') === $k)>{{ $v }}</option>@endforeach</select>
+            <input type="date" name="from" value="{{ request('from') }}" class="input !h-9 !w-[150px] font-mono text-[13px]" aria-label="{{ __('Tarixdən') }}">
+            <input type="date" name="to" value="{{ request('to') }}" class="input !h-9 !w-[150px] font-mono text-[13px]" aria-label="{{ __('Tarixədək') }}">
             <button class="btn btn-secondary btn-sm h-9"><x-icon name="filter" class="size-4"/></button>
             @can('logs.export')
                 <span class="ml-auto flex gap-2">
-                    <a href="{{ request()->fullUrlWithQuery(['format' => 'xlsx']) }}" class="btn btn-secondary btn-sm h-9"><x-icon name="sheet" class="size-4 text-success"/> Excel</a>
+                    <a href="{{ request()->fullUrlWithQuery(['format' => 'xlsx']) }}" class="btn btn-secondary btn-sm h-9"><x-icon name="sheet" class="size-4 text-success"/> {{ __('Excel') }}</a>
                     <a href="{{ request()->fullUrlWithQuery(['format' => 'pdf']) }}" class="btn btn-secondary btn-sm h-9"><x-icon name="file-pdf" class="size-4 text-danger"/> PDF</a>
                 </span>
             @endcan
@@ -35,7 +35,7 @@
                         </div>
                         <div class="text-xs text-faint mt-0.5 font-mono">{{ azdate($a->created_at, true) }} · {{ $a->ip_address ?? 'sistem' }}</div>
                         @if($a->old_values || $a->new_values)
-                            <button type="button" class="mt-1.5 text-xs text-brand-ink hover:underline" @click="open = !open" x-text="open ? 'Gizlət' : 'Təfərrüat'">Təfərrüat</button>
+                            <button type="button" class="mt-1.5 text-xs text-brand-ink hover:underline" @click="open = !open" x-text="open ? 'Gizlət' : 'Təfərrüat'">{{ __('Təfərrüat') }}</button>
                             <dl x-show="open" x-collapse x-cloak class="mt-2 rounded-lg bg-surface-2 p-3 text-xs space-y-1 font-mono">
                                 @foreach(($a->action === 'updated' ? $a->new_values : ($a->new_values ?: $a->old_values)) ?? [] as $field => $value)
                                     <div class="flex flex-wrap gap-x-2"><dt class="text-muted">{{ $field }}:</dt>
@@ -46,7 +46,7 @@
                     </div>
                 </li>
             @empty
-                <li><x-empty icon="history" title="Qeyd tapılmadı"/></li>
+                <li><x-empty icon="history" :title="__('Qeyd tapılmadı')"/></li>
             @endforelse
         </ol>
         {{ $logs->links() }}

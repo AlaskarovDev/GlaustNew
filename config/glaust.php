@@ -127,6 +127,9 @@ return [
     'shipment_directions' => ['import' => 'İdxal', 'export' => 'İxrac', 'domestic' => 'Daxili'],
     'transport_modes' => ['road' => 'Avto', 'rail' => 'Dəmir yolu', 'sea' => 'Dəniz', 'air' => 'Hava'],
     'cost_types' => ['freight' => 'Fraxt', 'customs' => 'Gömrük', 'insurance' => 'Sığorta', 'storage' => 'Anbar', 'other' => 'Digər'],
+    // Interface languages (the Azerbaijani text is the translation key).
+    'locales' => ['az' => 'Azərbaycan', 'ru' => 'Русский', 'en' => 'English'],
+
     // Hesabatlar menu. The rules of each report are still to be agreed; until then a page shows what it will cover.
     'analytics' => [
         'cashflow' => ['Cashflow', 'trending-up', 'Pul axını: hesablar üzrə daxilolma və məxaric, dövrün əvvəlinə və sonuna qalıq.',

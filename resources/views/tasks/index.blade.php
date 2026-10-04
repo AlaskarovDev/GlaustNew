@@ -1,20 +1,20 @@
-<x-layouts.app title="Tapşırıqlar" :wide="in_array($view, ['board', 'gantt'])">
-    <x-page-header title="Tapşırıqlar" icon="kanban" subtitle="Bütün layihələr üzrə tapşırıqlar">
+<x-layouts.app :title="__('Tapşırıqlar')" :wide="in_array($view, ['board', 'gantt'])">
+    <x-page-header :title="__('Tapşırıqlar')" icon="kanban" :subtitle="__('Bütün layihələr üzrə tapşırıqlar')">
         <x-slot:actions>
             @can('projects.create')
-                <a href="{{ route('tasks.create', array_filter(['project_id' => request('project_id')])) }}" class="btn btn-primary"><x-icon name="plus" class="size-4"/> Yeni tapşırıq</a>
+                <a href="{{ route('tasks.create', array_filter(['project_id' => request('project_id')])) }}" class="btn btn-primary"><x-icon name="plus" class="size-4"/> {{ __('Yeni tapşırıq') }}</a>
             @endcan
         </x-slot:actions>
     </x-page-header>
 
-    <nav class="flex gap-6 border-b border-line mb-5 overflow-x-auto" aria-label="Görünüş">
+    <nav class="flex gap-6 border-b border-line mb-5 overflow-x-auto" aria-label="{{ __('Görünüş') }}">
         @foreach(['board' => ['kanban', 'Kanban'], 'list' => ['list', 'Siyahı'], 'calendar' => ['calendar', 'Təqvim'], 'gantt' => ['gantt', 'Gantt']] as $key => [$icon, $label])
             <a href="{{ request()->fullUrlWithQuery(['view' => $key, 'page' => null]) }}" @class(['tab-link inline-flex items-center gap-1.5', 'is-active' => $view === $key])><x-icon :name="$icon" class="size-4"/> {{ $label }}</a>
         @endforeach
     </nav>
 
     <div class="card overflow-hidden mb-5">
-        <x-filter-bar :table="$table" export-route="tasks.export" export-ability="projects.export" placeholder="Tapşırıq, layihə…"/>
+        <x-filter-bar :table="$table" export-route="tasks.export" export-ability="projects.export" :placeholder="__('Tapşırıq, layihə…')"/>
     </div>
 
     @if($view === 'board')
@@ -23,11 +23,11 @@
     @elseif($view === 'list')
         <div class="card overflow-hidden">
             @if($items->isEmpty())
-                <x-empty icon="list-checks" title="Tapşırıq tapılmadı"/>
+                <x-empty icon="list-checks" :title="__('Tapşırıq tapılmadı')"/>
             @else
                 <div class="overflow-x-auto">
                     <table class="table-g table-stack">
-                        <thead><tr><x-th :table="$table" sort="title">Tapşırıq</x-th><th>Layihə</th><th>Məsul</th><th>Prioritet</th><x-th :table="$table" sort="due">Son tarix</x-th><th>Status</th></tr></thead>
+                        <thead><tr><x-th :table="$table" sort="title">{{ __('Tapşırıq') }}</x-th><th>{{ __('Layihə') }}</th><th>{{ __('Məsul') }}</th><th>{{ __('Prioritet') }}</th><x-th :table="$table" sort="due">{{ __('Son tarix') }}</x-th><th>{{ __('Status') }}</th></tr></thead>
                         <tbody>
                         @foreach($items as $t)
                             <tr>
@@ -54,9 +54,9 @@
         @endphp
         <div class="card overflow-hidden">
             <header class="flex items-center justify-between px-5 h-14 border-b border-line">
-                <a href="{{ request()->fullUrlWithQuery(['month' => $prev]) }}" class="btn btn-ghost btn-sm btn-icon" aria-label="Əvvəlki ay"><x-icon name="chevron-left" class="size-4"/></a>
+                <a href="{{ request()->fullUrlWithQuery(['month' => $prev]) }}" class="btn btn-ghost btn-sm btn-icon" aria-label="{{ __('Əvvəlki ay') }}"><x-icon name="chevron-left" class="size-4"/></a>
                 <h2 class="text-base font-semibold">{{ az_month($month->month) }} {{ $month->year }}</h2>
-                <a href="{{ request()->fullUrlWithQuery(['month' => $next]) }}" class="btn btn-ghost btn-sm btn-icon" aria-label="Növbəti ay"><x-icon name="chevron-right" class="size-4"/></a>
+                <a href="{{ request()->fullUrlWithQuery(['month' => $next]) }}" class="btn btn-ghost btn-sm btn-icon" aria-label="{{ __('Növbəti ay') }}"><x-icon name="chevron-right" class="size-4"/></a>
             </header>
             <div class="hidden md:grid grid-cols-7 border-b border-line bg-surface-2 text-xs font-medium text-muted">
                 @foreach(['B.e', 'Ç.a', 'Ç', 'C.a', 'C', 'Ş', 'B'] as $d)<div class="px-3 py-2">{{ $d }}</div>@endforeach
@@ -90,12 +90,12 @@
         @endphp
         <div class="card overflow-hidden">
             @if($gantt->isEmpty())
-                <x-empty icon="gantt" title="Son tarixi olan tapşırıq yoxdur"/>
+                <x-empty icon="gantt" :title="__('Son tarixi olan tapşırıq yoxdur')"/>
             @else
                 <div class="overflow-x-auto">
                     <div class="min-w-[900px]">
                         <div class="grid grid-cols-[260px_1fr] border-b border-line bg-surface-2 text-xs text-muted">
-                            <div class="px-4 py-2 font-medium">Tapşırıq</div>
+                            <div class="px-4 py-2 font-medium">{{ __('Tapşırıq') }}</div>
                             <div class="relative h-8">
                                 @for($w = $min->copy(); $w->lt($max); $w->addWeek())
                                     <span class="absolute top-2 font-mono" style="left: {{ $min->diffInDays($w) / $days * 100 }}%">{{ $w->format('d.m') }}</span>
@@ -119,7 +119,7 @@
                         @endforeach
                     </div>
                 </div>
-                <p class="px-4 py-3 border-t border-line text-xs text-muted">Qırmızı xətt — bu gün. İlk 80 tapşırıq göstərilir; filtrlərlə daraldın.</p>
+                <p class="px-4 py-3 border-t border-line text-xs text-muted">{{ __('Qırmızı xətt — bu gün. İlk 80 tapşırıq göstərilir; filtrlərlə daraldın.') }}</p>
             @endif
         </div>
     @endif

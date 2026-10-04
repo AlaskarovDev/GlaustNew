@@ -11,7 +11,7 @@
     @endforeach
     <div class="relative flex-1 min-w-0 lg:max-w-sm">
         <x-icon name="search" class="size-4 text-faint absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"/>
-        <input type="search" name="q" value="{{ request('q') }}" placeholder="{{ $placeholder }}" class="input pl-9" aria-label="Axtarış">
+        <input type="search" name="q" value="{{ request('q') }}" placeholder="{{ $placeholder }}" class="input pl-9" aria-label="{{ __('Axtarış') }}">
     </div>
     <div class="flex flex-wrap items-center gap-2">
         @foreach($filters as $key => $def)
@@ -29,17 +29,17 @@
                 </label>
             @endif
         @endforeach
-        <button class="btn btn-secondary btn-sm h-9"><x-icon name="filter" class="size-4"/> Tətbiq et</button>
+        <button class="btn btn-secondary btn-sm h-9"><x-icon name="filter" class="size-4"/> {{ __('Tətbiq et') }}</button>
         @if($active)
-            <a href="{{ url()->current() }}" class="btn btn-ghost btn-sm h-9 text-muted"><x-icon name="x" class="size-4"/> Sıfırla</a>
+            <a href="{{ url()->current() }}" class="btn btn-ghost btn-sm h-9 text-muted"><x-icon name="x" class="size-4"/> {{ __('Sıfırla') }}</a>
         @endif
     </div>
     @if($canExport)
         <div class="lg:ml-auto flex items-center gap-2">
-            <a href="{{ route($exportRoute, array_merge($query, ['format' => 'xlsx'])) }}" class="btn btn-secondary btn-sm h-9" title="Cari filtrlərlə Excel-ə export">
-                <x-icon name="sheet" class="size-4 text-success"/> Excel
+            <a href="{{ route($exportRoute, array_merge($query, ['format' => 'xlsx'])) }}" class="btn btn-secondary btn-sm h-9" title="{{ __('Cari filtrlərlə Excel-ə export') }}">
+                <x-icon name="sheet" class="size-4 text-success"/> {{ __('Excel') }}
             </a>
-            <a href="{{ route($exportRoute, array_merge($query, ['format' => 'pdf'])) }}" class="btn btn-secondary btn-sm h-9" title="Cari filtrlərlə PDF-ə export">
+            <a href="{{ route($exportRoute, array_merge($query, ['format' => 'pdf'])) }}" class="btn btn-secondary btn-sm h-9" title="{{ __('Cari filtrlərlə PDF-ə export') }}">
                 <x-icon name="file-pdf" class="size-4 text-danger"/> PDF
             </a>
         </div>

@@ -12,10 +12,8 @@
                 </button>
             </div>
         </x-field>
-        <div class="flex items-center justify-between">
-            <label class="inline-flex items-center gap-2 text-sm text-ink-2 cursor-pointer">
-                <input type="checkbox" name="remember" value="1" class="checkbox" @checked(old('remember'))> Məni xatırla
-            </label>
+        {{-- Only password recovery under the password; companies and users are created by the platform admin. --}}
+        <div class="flex justify-end">
             <a href="{{ route('password.request') }}" class="text-sm font-medium text-brand-ink hover:underline">Şifrəni unutmusunuz?</a>
         </div>
         <button class="btn btn-primary w-full h-11" :disabled="busy">
@@ -23,9 +21,4 @@
             Daxil ol
         </button>
     </form>
-    @if(config('glaust.registration_open'))
-        <p class="mt-8 text-center text-sm text-muted">
-            Şirkətiniz hələ qoşulmayıb? <a href="{{ route('register') }}" class="font-medium text-brand-ink hover:underline">Pulsuz sınağa başlayın</a>
-        </p>
-    @endif
 </x-layouts.guest>

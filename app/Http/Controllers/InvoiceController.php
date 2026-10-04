@@ -53,7 +53,7 @@ class InvoiceController extends Controller
         } catch (\Throwable $e) {
             report($e);
 
-            return back()->with('error', 'Fayl oxunmadı. Glaust şablonundan və ya .xlsx formatından istifadə edin.');
+            return back()->with('error', 'Fayl oxunmadı. TradeFlow şablonundan və ya .xlsx formatından istifadə edin.');
         }
         if ($parsed['errors']) {
             return back()->with('import_errors', $parsed['errors'])->with('error', count($parsed['errors']).' sətirdə xəta var — heç nə yadda saxlanmadı. Faylı düzəldib yenidən yükləyin.');

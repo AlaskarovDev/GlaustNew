@@ -44,7 +44,7 @@ class NotificationMailer
 
             $count = $mine->count();
             $ok = $this->mail->send($company, $user->email, new SystemMail(
-                mailSubject: $count === 1 ? 'Xatırlatma: '.$mine->first()->title : "{$count} yeni xatırlatma — Glaust MS",
+                mailSubject: $count === 1 ? 'Xatırlatma: '.$mine->first()->title : "{$count} yeni xatırlatma — TradeFlow",
                 heading: $count === 1 ? $mine->first()->title : "Sizin {$count} xatırlatmanız var",
                 lines: ['Salam, '.$user->name.'!'],
                 sections: [[
@@ -56,7 +56,7 @@ class NotificationMailer
                         'tone' => $r->remind_at->lt(today()) ? 'danger' : null,
                     ])->all(),
                 ]],
-                actionText: 'Glaust MS-də aç',
+                actionText: 'TradeFlow-də aç',
                 actionUrl: route('my-work'),
                 companyName: $company->name,
             ), 'reminder', $user->id);

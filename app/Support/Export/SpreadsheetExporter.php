@@ -38,7 +38,7 @@ class SpreadsheetExporter
     public function build(string $title, array $columns, iterable $rows, array $filters = []): Spreadsheet
     {
         $book = new Spreadsheet;
-        $book->getProperties()->setCreator('Glaust MS')->setTitle($title);
+        $book->getProperties()->setCreator('TradeFlow')->setTitle($title);
         $sheet = $book->getActiveSheet();
         $sheet->setTitle(mb_substr(preg_replace('/[\\\\\/\?\*\[\]:]/u', ' ', $title), 0, 31));
         $last = Coordinate::stringFromColumnIndex(max(1, count($columns)));

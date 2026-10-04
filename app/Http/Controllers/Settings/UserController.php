@@ -149,11 +149,11 @@ class UserController extends Controller
         $company = tenant();
 
         return $mail->send($company, $user->email, new SystemMail(
-            mailSubject: $company->name.' sizi Glaust MS-ə dəvət edir',
+            mailSubject: $company->name.' sizi TradeFlow-ə dəvət edir',
             heading: 'Komandaya xoş gəldiniz!',
             lines: [
                 'Salam, '.$user->name.'!',
-                auth()->user()->name.' sizi «'.$company->name.'» şirkətinin Glaust Management System hesabına '.$user->role?->name.' rolu ilə dəvət edib.',
+                auth()->user()->name.' sizi «'.$company->name.'» şirkətinin TradeFlow hesabına '.$user->role?->name.' rolu ilə dəvət edib.',
                 'Aşağıdakı düymə ilə şifrənizi təyin edin. Link 7 gün etibarlıdır.',
             ],
             actionText: 'Dəvəti qəbul et',

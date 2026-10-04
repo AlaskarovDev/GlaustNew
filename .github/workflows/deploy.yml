@@ -74,7 +74,7 @@ jobs:
           ADMIN_ENV: ${{ secrets.ADMIN_ENV }}
         run: |
           {
-            echo 'APP_NAME="Glaust MS"'
+            echo 'APP_NAME="TradeFlow"'
             echo 'APP_ENV=production'
             echo "APP_KEY=${APP_KEY}"
             echo 'APP_DEBUG=false'
@@ -96,7 +96,7 @@ jobs:
           DB_DATABASE=%STORAGE%/database.sqlite}"
             printf '%s\n' "${MAIL_ENV:-MAIL_MAILER=log
           MAIL_FROM_ADDRESS=noreply@glaust.az
-          MAIL_FROM_NAME=\"Glaust MS\"}"
+          MAIL_FROM_NAME=\"TradeFlow\"}"
             printf '%s\n' "${ADMIN_ENV:-}"
           } | sed 's/^ *//' > server.env
           grep -c . server.env

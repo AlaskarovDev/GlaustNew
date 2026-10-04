@@ -1,10 +1,11 @@
-@props(['name', 'label' => null, 'options' => [], 'value' => null, 'placeholder' => null, 'required' => false, 'hint' => null, 'wrapper' => ''])
+@props(['name', 'label' => null, 'options' => [], 'value' => null, 'placeholder' => null, 'required' => false, 'hint' => null, 'wrapper' => '', 'fresh' => false, 'id' => null])
 @php
     $errorKey = str_replace(['[', ']'], ['.', ''], $name);
-    $current = (string) old($errorKey, $value);
+    $current = (string) ($fresh ? $value : old($errorKey, $value));
+    $id ??= $name;
 @endphp
-<x-field :label="$label" :name="$name" :hint="$hint" :required="$required" :class="$wrapper">
-    <select id="{{ $name }}" name="{{ $name }}" @required($required)
+<x-field :label="$label" :name="$name" :hint="$hint" :required="$required" :class="$wrapper" :for="$id">
+    <select id="{{ $id }}" name="{{ $name }}" @required($required)
         {{ $attributes->class(['input', 'is-invalid' => $errors->has($errorKey)]) }}
         @if($errors->has($errorKey)) aria-invalid="true" aria-describedby="{{ $name }}-error" @endif>
         @if($placeholder !== null)

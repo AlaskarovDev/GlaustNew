@@ -16,7 +16,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="robots" content="noindex, nofollow">
-    <title>{{ $title ? $title.' · ' : '' }}Glaust MS</title>
+    <title>{{ $title ? $title.' · ' : '' }}TradeFlow</title>
     <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
     <script nonce="{{ Vite::cspNonce() }}">
         (() => {
@@ -42,10 +42,10 @@
     <div class="flex items-center gap-3 h-16 px-5 border-b border-night-line shrink-0">
         <a href="{{ route('dashboard') }}" class="flex items-center gap-3 min-w-0">
             <span class="relative grid place-items-center size-9 shrink-0 rounded-[11px] bg-gradient-to-br from-teal-400 to-teal-700 text-night font-bold shadow-[0_0_24px_-4px_#2dd4bf]">
-                <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M17 7.5A6.5 6.5 0 1 0 18.5 13H12"/></svg>
+                <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 8.5h13.5M14 5l3.5 3.5L14 12"/><path d="M20 15.5H6.5M10 12l-3.5 3.5L10 19"/></svg>
             </span>
             <span class="leading-tight min-w-0" :class="collapsed && 'lg:hidden'">
-                <span class="block text-[15px] font-semibold text-white tracking-tight">Glaust</span>
+                <span class="block text-[15px] font-semibold text-white tracking-tight">TradeFlow</span>
                 <span class="block text-[11px] text-slate-500 truncate">{{ $company->name }}</span>
             </span>
         </a>
@@ -305,6 +305,9 @@
                         <div class="mt-1.5"><span class="badge badge-teal">{{ $user->role?->name }}</span></div>
                     </div>
                     <a href="{{ route('profile.edit') }}" class="flex items-center gap-2.5 px-3 h-9 rounded-lg text-sm text-ink-2 hover:bg-surface-2"><x-icon name="user" class="size-4"/> Profil və təhlükəsizlik</a>
+                    @if($user->is_super_admin)
+                        <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2.5 px-3 h-9 rounded-lg text-sm text-ink-2 hover:bg-surface-2"><x-icon name="shield" class="size-4"/> Platforma idarəetməsi</a>
+                    @endif
                     <button type="button" @click="open = false; $dispatch('glaust:shortcuts')" class="w-full flex items-center gap-2.5 px-3 h-9 rounded-lg text-sm text-ink-2 hover:bg-surface-2"><x-icon name="keyboard" class="size-4"/> Qısa yollar <span class="ml-auto kbd">?</span></button>
                     <div class="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-faint">Tema</div>
                     <div class="grid grid-cols-3 gap-1 px-1 pb-1">

@@ -23,7 +23,7 @@ class ProfileController extends Controller
         $user = $request->user();
         $qr = null;
         if ($user->two_factor_secret && ! $user->two_factor_confirmed_at) {
-            $url = $google2fa->getQRCodeUrl('Glaust MS', $user->email, $user->two_factor_secret);
+            $url = $google2fa->getQRCodeUrl('TradeFlow', $user->email, $user->two_factor_secret);
             $qr = (new Writer(new ImageRenderer(new RendererStyle(200, 1), new SvgImageBackEnd)))->writeString($url);
         }
 

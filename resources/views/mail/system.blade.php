@@ -14,7 +14,7 @@
         <td style="background:#101828;padding:22px 28px;">
             <table role="presentation" width="100%"><tr>
                 <td style="font-size:18px;font-weight:700;color:#ffffff;letter-spacing:.2px;">
-                    <span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#2dd4bf;margin-right:8px;"></span>Glaust MS
+                    <span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#2dd4bf;margin-right:8px;"></span>TradeFlow
                 </td>
                 @if($companyName)
                     <td align="right" style="font-size:13px;color:#98a2b3;">{{ $companyName }}</td>
@@ -69,7 +69,7 @@
     <tr>
         <td style="padding:22px 28px 26px;">
             <p style="margin:0;font-size:12px;line-height:1.6;color:#98a2b3;">
-                {{ $footnote ?? 'Bu məktub Glaust Management System tərəfindən avtomatik göndərilib.' }}
+                {{ $footnote ?? 'Bu məktub TradeFlow tərəfindən avtomatik göndərilib.' }}
                 Bildiriş ayarlarını profilinizdən dəyişə bilərsiniz.
             </p>
         </td>

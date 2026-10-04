@@ -6,7 +6,7 @@
     <meta http-equiv="Content-Security-Policy" content="{{ \App\Support\Csp::policy(true) }}">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $title ? $title.' · ' : '' }}Glaust Management System</title>
+    <title>{{ $title ? $title.' · ' : '' }}TradeFlow</title>
     <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
     <script nonce="{{ Vite::cspNonce() }}">
         (() => {
@@ -27,9 +27,9 @@
 
         <div class="relative flex items-center gap-3">
             <span class="grid place-items-center size-10 rounded-xl bg-gradient-to-br from-teal-400 to-teal-700 text-night shadow-[0_0_30px_-4px_#2dd4bf]">
-                <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M17 7.5A6.5 6.5 0 1 0 18.5 13H12"/></svg>
+                <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 8.5h13.5M14 5l3.5 3.5L14 12"/><path d="M20 15.5H6.5M10 12l-3.5 3.5L10 19"/></svg>
             </span>
-            <span class="text-lg font-semibold text-white tracking-tight">Glaust <span class="text-slate-500 font-normal">Management System</span></span>
+            <span class="text-lg font-semibold text-white tracking-tight">TradeFlow <span class="text-slate-500 font-normal">Ticarət idarəetmə sistemi</span></span>
         </div>
 
         <div class="relative max-w-lg stagger">
@@ -52,7 +52,7 @@
             </div>
         </div>
 
-        <p class="relative text-xs text-slate-600">© {{ date('Y') }} Glaust MS · Bütün hüquqlar qorunur</p>
+        <p class="relative text-xs text-slate-600">© {{ date('Y') }} TradeFlow · Bütün hüquqlar qorunur</p>
     </aside>
 
     {{-- Form panel --}}
@@ -60,9 +60,9 @@
         <div class="w-full max-w-[420px] mx-auto rise">
             <div class="lg:hidden flex items-center gap-2.5 mb-10">
                 <span class="grid place-items-center size-9 rounded-xl bg-gradient-to-br from-teal-400 to-teal-700 text-night">
-                    <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M17 7.5A6.5 6.5 0 1 0 18.5 13H12"/></svg>
+                    <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 8.5h13.5M14 5l3.5 3.5L14 12"/><path d="M20 15.5H6.5M10 12l-3.5 3.5L10 19"/></svg>
                 </span>
-                <span class="text-base font-semibold tracking-tight">Glaust MS</span>
+                <span class="text-base font-semibold tracking-tight">TradeFlow</span>
             </div>
             @if($heading)
                 <h1 class="text-[26px] font-semibold tracking-tight">{{ $heading }}</h1>

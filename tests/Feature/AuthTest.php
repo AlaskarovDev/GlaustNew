@@ -130,6 +130,10 @@ class AuthTest extends TestCase
     public function test_registration_creates_a_company_with_roles_and_admin(): void
     {
         $this->seedPlans();
+        // Closed by default (companies are created in the admin area); still works when switched on.
+        $this->get('/register')->assertNotFound();
+        $this->get('/login')->assertOk()->assertDontSee('Pulsuz sınağa')->assertDontSee('Məni xatırla')->assertSee('Şifrəni unutmusunuz?');
+        config(['glaust.registration_open' => true]);
         $this->post('/register', [
             'company_name' => 'Yeni Şirkət MMC', 'voen' => '1234567891', 'name' => 'Aysel Kərimova', 'email' => 'aysel@yeni.az',
             'password' => 'Secret123', 'password_confirmation' => 'Secret123', 'terms' => '1',

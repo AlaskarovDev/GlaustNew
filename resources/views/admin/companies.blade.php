@@ -1,5 +1,7 @@
 <x-layouts.admin title="Şirkətlər">
-    <x-page-header title="Şirkətlər"/>
+    <x-page-header title="Şirkətlər">
+        <x-slot:actions><a href="{{ route('admin.companies.create') }}" class="btn btn-primary"><x-icon name="plus" class="size-4"/> Yeni şirkət</a></x-slot:actions>
+    </x-page-header>
     <div class="card overflow-hidden">
         <form method="GET" class="flex flex-wrap gap-2 p-4 border-b border-line" x-data>
             <input type="search" name="q" value="{{ request('q') }}" placeholder="Ad, VÖEN, email" class="input !w-72" aria-label="Axtarış">

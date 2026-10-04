@@ -55,7 +55,11 @@ Route::post('/logout', [Auth\LoginController::class, 'destroy'])->middleware('au
 Route::middleware(['auth', 'superadmin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [Admin\AdminController::class, 'dashboard'])->name('dashboard');
     Route::get('/companies', [Admin\AdminController::class, 'companies'])->name('companies.index');
+    Route::get('/companies/create', [Admin\AdminController::class, 'createCompany'])->name('companies.create');
+    Route::post('/companies', [Admin\AdminController::class, 'storeCompany'])->name('companies.store');
     Route::get('/companies/{company}', [Admin\AdminController::class, 'company'])->name('companies.show');
+    Route::post('/companies/{company}/users', [Admin\AdminController::class, 'storeUser'])->name('companies.users.store');
+    Route::put('/companies/{company}/users/{user}', [Admin\AdminController::class, 'updateUser'])->name('companies.users.update');
     Route::put('/companies/{company}', [Admin\AdminController::class, 'updateCompany'])->name('companies.update');
     Route::get('/plans', [Admin\AdminController::class, 'plans'])->name('plans.index');
     Route::post('/plans', [Admin\AdminController::class, 'storePlan'])->name('plans.store');

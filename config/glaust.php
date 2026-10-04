@@ -10,7 +10,8 @@ return [
     // Run the scheduler from web traffic when no real cron has been seen (shared hosting).
     'web_scheduler' => env('GLAUST_WEB_SCHEDULER', true),
 
-    'registration_open' => env('GLAUST_REGISTRATION_OPEN', true),
+    // Self-service sign-up is off: companies and their users are created in the platform admin area.
+    'registration_open' => env('GLAUST_REGISTRATION_OPEN', false),
 
     'cbar' => [
         'url' => env('CBAR_URL', 'https://cbar.az/currencies/%s.xml'),

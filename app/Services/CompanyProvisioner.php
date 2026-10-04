@@ -19,39 +19,57 @@ class CompanyProvisioner
     public function create(array $company, array $admin, ?Plan $plan = null, int $trialDays = 14): User
     {
         return DB::transaction(function () use ($company, $admin, $plan, $trialDays) {
-            $plan ??= Plan::where('is_active', true)->orderByDesc('max_users')->first();
+            $model = $this->createCompany($company + ['email' => $admin['email']], $plan, 'trial', $trialDays);
+            $adminRole = Role::withoutGlobalScopes()->where('company_id', $model->id)->where('key', 'admin')->firstOrFail();
 
+            return $this->addUser($model, $admin + ['position' => $admin['position'] ?? 'Direktor'], $adminRole->id);
+        });
+    }
+
+    /** A tenant with its system roles and default categories, without users (the platform admin adds them). */
+    public function createCompany(array $company, ?Plan $plan = null, string $status = 'trial', int $trialDays = 14): Company
+    {
+        return DB::transaction(function () use ($company, $plan, $status, $trialDays) {
+            $plan ??= Plan::where('is_active', true)->orderByDesc('max_users')->first();
             $model = Company::create([
                 'name' => $company['name'],
                 'slug' => $this->uniqueSlug($company['name']),
                 'voen' => $company['voen'] ?? null,
-                'email' => $company['email'] ?? $admin['email'],
+                'email' => $company['email'] ?? null,
                 'phone' => $company['phone'] ?? null,
+                'address' => $company['address'] ?? null,
                 'plan_id' => $plan?->id,
-                'subscription_status' => 'trial',
-                'trial_ends_at' => now()->addDays($trialDays)->toDateString(),
+                'subscription_status' => $status,
+                'trial_ends_at' => $status === 'trial' ? now()->addDays($trialDays)->toDateString() : null,
                 'settings' => [],
             ]);
-
-            return $this->tenant->runAs($model, function (Company $c) use ($admin) {
-                $roles = $this->createSystemRoles();
+            $this->tenant->runAs($model, function () {
+                $this->createSystemRoles();
                 $this->createDefaultCategories();
-
-                $user = new User([
-                    'name' => $admin['name'],
-                    'email' => Str::lower($admin['email']),
-                    'password' => $admin['password'],
-                    'phone' => $admin['phone'] ?? null,
-                    'position' => $admin['position'] ?? 'Direktor',
-                    'is_active' => true,
-                ]);
-                $user->company_id = $c->id;
-                $user->role_id = $roles['admin']->id;
-                $user->email_verified_at = now();
-                $user->save();
-
-                return $user;
             });
+
+            return $model;
+        });
+    }
+
+    /** A user of $company (password set by whoever creates it; e-mail treated as verified). */
+    public function addUser(Company $company, array $data, int $roleId): User
+    {
+        return $this->tenant->runAs($company, function (Company $c) use ($data, $roleId) {
+            $user = new User([
+                'name' => $data['name'],
+                'email' => Str::lower($data['email']),
+                'password' => $data['password'],
+                'phone' => $data['phone'] ?? null,
+                'position' => $data['position'] ?? null,
+                'is_active' => $data['is_active'] ?? true,
+            ]);
+            $user->company_id = $c->id;
+            $user->role_id = $roleId;
+            $user->email_verified_at = now();
+            $user->save();
+
+            return $user;
         });
     }
 

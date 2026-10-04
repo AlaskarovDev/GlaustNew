@@ -49,7 +49,7 @@ class SupplierInvoiceSheet
     public static function template(): Spreadsheet
     {
         $book = new Spreadsheet;
-        $book->getProperties()->setCreator('Glaust MS')->setTitle('Satıcının fakturası — şablon');
+        $book->getProperties()->setCreator('TradeFlow')->setTitle('Satıcının fakturası — şablon');
         $sheet = $book->getActiveSheet();
         $sheet->setTitle('Faktura');
         $cols = array_values(self::COLUMNS);
@@ -58,7 +58,7 @@ class SupplierInvoiceSheet
         $firstLocked = Coordinate::stringFromColumnIndex(count(array_filter($cols, fn ($c) => $c[1])) + 1);
         $endRow = self::HEADER_ROW + self::BLANK_ROWS;
 
-        $sheet->setCellValue('A1', 'Satıcının fakturası (proforma) — Glaust MS import şablonu');
+        $sheet->setCellValue('A1', 'Satıcının fakturası (proforma) — TradeFlow import şablonu');
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
         $sheet->setCellValue('A2', "YALNIZ yaşıl başlıqlı sütunları doldurun: Proforma N, N, Description, HS Code, Quantity, UOM, Unit Price, Total/EUR (daxil olmaqla).");
         $sheet->getStyle('A2')->getFont()->setBold(true)->getColor()->setRGB('0B6B5F');

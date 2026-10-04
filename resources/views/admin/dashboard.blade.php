@@ -1,5 +1,5 @@
 <x-layouts.admin title="Platforma">
-    <x-page-header title="Platforma" subtitle="Glaust MS üzrə bütün şirkətlər və abunələr"/>
+    <x-page-header title="Platforma" subtitle="TradeFlow üzrə bütün şirkətlər və abunələr"/>
     <div class="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-6 stagger">
         @foreach([['Şirkətlər', $stats['companies'], null], ['Aktiv abunə', $stats['active'], 'text-success'], ['Sınaqda', $stats['trial'], 'text-saffron'], ['Dayandırılıb', $stats['suspended'], 'text-danger'], ['İstifadəçilər', $stats['users'], null], ['Aylıq gəlir', money($stats['mrr']), null]] as $i => [$l, $v, $c])
             <div class="card p-5" style="--i:{{ $i }}"><div class="text-xs text-muted">{{ $l }}</div><div class="mt-1 text-2xl font-semibold font-mono {{ $c }}">{{ $v }}</div></div>

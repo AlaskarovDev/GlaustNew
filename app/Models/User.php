@@ -125,7 +125,7 @@ class User extends Authenticatable
         $url = route('password.reset', ['token' => $token, 'email' => $this->email]);
 
         app(\App\Services\MailService::class)->send($this->company, $this->email, new \App\Mail\SystemMail(
-            mailSubject: 'Şifrənin yenilənməsi — Glaust MS',
+            mailSubject: 'Şifrənin yenilənməsi — TradeFlow',
             heading: 'Şifrənizi yeniləyin',
             lines: [
                 'Salam, '.$this->name.'!',

@@ -163,7 +163,7 @@ class SettingsController extends Controller
         $to = $request->validate(['to' => ['required', 'email']], [], ['to' => 'Alıcı'])['to'];
 
         $error = $mail->test($company, $to, new SystemMail(
-            mailSubject: 'Test məktubu — Glaust MS',
+            mailSubject: 'Test məktubu — TradeFlow',
             heading: 'SMTP ayarları işləyir',
             lines: ['Bu məktub '.$company->name.' şirkətinin mail ayarlarını yoxlamaq üçün göndərilib.', 'Server: '.$company->smtp_host.':'.$company->smtp_port.' · '.now()->format('d.m.Y H:i')],
             companyName: $company->name,

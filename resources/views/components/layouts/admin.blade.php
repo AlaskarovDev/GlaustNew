@@ -7,7 +7,7 @@
 <html lang="az">
 <head>
     <meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="{{ \App\Support\Csp::policy(true) }}"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="csrf-token" content="{{ csrf_token() }}"><meta name="robots" content="noindex, nofollow">
-    <title>{{ $title ? $title.' · ' : '' }}Glaust Admin</title>
+    <title>{{ $title ? $title.' · ' : '' }}TradeFlow Admin</title>
     <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
     <script nonce="{{ Vite::cspNonce() }}">(() => { let m = 'system'; try { m = localStorage.getItem('glaust-theme') || m } catch (e) {} document.documentElement.classList.toggle('dark', m === 'dark' || (m === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)); })();</script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -17,7 +17,7 @@
         <div class="max-w-[1400px] mx-auto h-16 px-4 sm:px-6 flex items-center gap-6">
             <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2.5 shrink-0">
                 <span class="grid place-items-center size-8 rounded-lg bg-gradient-to-br from-amber-300 to-amber-600 text-night"><x-icon name="crown" class="size-4"/></span>
-                <span class="font-semibold text-white">Glaust <span class="text-slate-500 font-normal">Platforma</span></span>
+                <span class="font-semibold text-white">TradeFlow <span class="text-slate-500 font-normal">Platforma</span></span>
             </a>
             <nav class="flex gap-1 overflow-x-auto">
                 @foreach($links as [$r, $i, $l])

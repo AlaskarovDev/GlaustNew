@@ -13,7 +13,7 @@
  */
 
 const TOKEN_HASH = '__TOKEN_HASH__';
-const ARTISAN_ALLOWED = ['glaust:demo', 'glaust:purge-demo', 'glaust:cbar-backfill', 'glaust:cbar-fetch', 'glaust:reminders', 'glaust:digest',
+const ARTISAN_ALLOWED = ['glaust:demo', 'glaust:purge-demo', 'glaust:setup-company', 'glaust:cbar-backfill', 'glaust:cbar-fetch', 'glaust:reminders', 'glaust:digest',
     'glaust:sweep-sessions', 'migrate:status', 'about', 'db:seed', 'schedule:list', 'queue:work'];
 
 header('Content-Type: application/json; charset=utf-8');

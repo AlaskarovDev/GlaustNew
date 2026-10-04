@@ -24,7 +24,10 @@
                     <a href="{{ route($r) }}" @class(['nav-link !h-9 whitespace-nowrap', 'is-active' => request()->routeIs($r.'*')])><x-icon :name="$i" class="size-4"/> {{ $l }}</a>
                 @endforeach
             </nav>
-            <form method="POST" action="{{ route('logout') }}" class="ml-auto">@csrf<button class="nav-link !h-9"><x-icon name="log-out" class="size-4"/> <span class="hidden sm:inline">Çıxış</span></button></form>
+            @if(auth()->user()?->company_id)
+                <a href="{{ route('dashboard') }}" class="nav-link !h-9 ml-auto"><x-icon name="arrow-left" class="size-4"/> <span class="hidden sm:inline">Şirkətə qayıt</span></a>
+            @endif
+            <form method="POST" action="{{ route('logout') }}" class="{{ auth()->user()?->company_id ? '' : 'ml-auto' }}">@csrf<button class="nav-link !h-9"><x-icon name="log-out" class="size-4"/> <span class="hidden sm:inline">Çıxış</span></button></form>
         </div>
     </header>
     <main class="page-enter max-w-[1400px] mx-auto px-4 sm:px-6 py-8">{{ $slot }}</main>

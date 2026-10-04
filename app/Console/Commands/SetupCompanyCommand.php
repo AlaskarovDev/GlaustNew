@@ -13,7 +13,8 @@ use Illuminate\Validation\Rules\Password;
 /**
  * Creates a company (active, no demo data) if it does not exist yet and adds an Admin user to it;
  * --super also gives that user the platform admin area (/admin: companies and their users).
- * Idempotent: an existing company is reused, an existing user is refused.
+ * Idempotent: an existing company is reused; an existing account without a company (the platform
+ * admin) is attached to it with the Admin role and the given password; another company's user is refused.
  */
 class SetupCompanyCommand extends Command
 {
@@ -29,6 +30,32 @@ class SetupCompanyCommand extends Command
 
         $email = mb_strtolower(trim((string) $this->option('admin-email')));
         if ($email === '') {
+            return self::SUCCESS;
+        }
+        // An existing account without a company (e.g. the platform admin) is attached to this company.
+        $existing = User::where('email', $email)->first();
+        if ($existing && $existing->company_id !== null && $existing->company_id !== $company->id) {
+            $this->error('Bu email başqa şirkətin istifadəçisidir.');
+
+            return self::FAILURE;
+        }
+        if ($existing) {
+            $v = Validator::make(['password' => (string) $this->option('admin-password')], ['password' => ['required', Password::defaults()]]);
+            if ($v->fails()) {
+                $this->error($v->errors()->first());
+
+                return self::FAILURE;
+            }
+            $role = Role::withoutGlobalScopes()->where('company_id', $company->id)->where('key', 'admin')->firstOrFail();
+            $existing->company_id = $company->id;
+            $existing->role_id = $role->id;
+            $existing->password = $this->option('admin-password');
+            $existing->is_active = true;
+            $existing->name = $this->option('admin-name') ?: $existing->name;
+            $existing->is_super_admin = $existing->is_super_admin || $this->option('super');
+            $existing->save();
+            $this->info("Mövcud hesab şirkətə bağlandı: {$existing->email} (Admin".($existing->is_super_admin ? ', platforma idarəetməsi də' : '').')');
+
             return self::SUCCESS;
         }
         $v = Validator::make(['email' => $email, 'password' => (string) $this->option('admin-password'), 'name' => (string) $this->option('admin-name')], [

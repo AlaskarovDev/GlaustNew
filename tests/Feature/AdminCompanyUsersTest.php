@@ -79,8 +79,30 @@ class AdminCompanyUsersTest extends TestCase
         $this->actingAs($boss)->get(route('admin.companies.index'))->assertOk()->assertSee('Glaust Handel');
         $this->get(route('dashboard'))->assertOk()->assertSee('Platforma idarəetməsi');
 
-        // Same company again is reused; the same e-mail is refused.
-        $this->artisan('glaust:setup-company', ['name' => 'Glaust Handel', '--admin-email' => 'boss@glaust.az', '--admin-name' => 'X', '--admin-password' => 'Glaust2026@'])->assertFailed();
+        // Running again is idempotent: the company is reused and the same user is just updated.
+        $this->artisan('glaust:setup-company', ['name' => 'Glaust Handel', '--admin-email' => 'boss@glaust.az', '--admin-name' => 'X', '--admin-password' => 'Glaust2026@'])->assertSuccessful();
         $this->assertSame(1, Company::where('name', 'Glaust Handel')->count());
+    }
+
+    public function test_setup_company_attaches_the_platform_admin(): void
+    {
+        $root = $this->superAdmin();
+        $this->artisan('glaust:setup-company', ['name' => 'Glaust Handel', '--admin-email' => 'root@platform.az', '--admin-name' => 'İbrahim', '--admin-password' => 'Glaust2026@', '--super' => true])
+            ->expectsOutputToContain('Mövcud hesab şirkətə bağlandı')->assertSuccessful();
+        $root->refresh();
+        $this->assertSame('Glaust Handel', Company::find($root->company_id)->name);
+        $this->assertSame('admin', $root->role->key);
+        $this->assertTrue((bool) $root->is_super_admin);
+        $this->assertTrue(\Hash::check('Glaust2026@', $root->password));
+
+        $this->post('/login', ['email' => 'root@platform.az', 'password' => 'Glaust2026@'])->assertRedirect();
+        $this->assertAuthenticatedAs($root);
+        $this->get(route('dashboard'))->assertOk();
+        $this->get(route('admin.companies.index'))->assertOk();
+
+        // Someone else's company user is not taken over.
+        $other = $this->makeCompany('Başqa MMC', 'admin@basqa.az');
+        $this->artisan('glaust:setup-company', ['name' => 'Glaust Handel', '--admin-email' => 'admin@basqa.az', '--admin-password' => 'Glaust2026@'])->assertFailed();
+        $this->assertNotSame(Company::where('name', 'Glaust Handel')->value('id'), $other->fresh()->company_id);
     }
 }

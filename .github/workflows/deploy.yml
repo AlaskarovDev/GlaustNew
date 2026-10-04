@@ -91,7 +91,7 @@ jobs:
             echo 'QUEUE_CONNECTION=database'
             echo 'FILESYSTEM_DISK=local'
             echo 'GLAUST_WEB_SCHEDULER=true'
-            echo 'GLAUST_REGISTRATION_OPEN=true'
+            echo 'GLAUST_REGISTRATION_OPEN=false'
             printf '%s\n' "${DB_ENV:-DB_CONNECTION=sqlite
           DB_DATABASE=%STORAGE%/database.sqlite}"
             printf '%s\n' "${MAIL_ENV:-MAIL_MAILER=log

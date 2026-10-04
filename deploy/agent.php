@@ -111,9 +111,11 @@ function artisan(string $dir, array $commands): array
     $out = [];
     foreach ($commands as [$name, $args]) {
         $code = $kernel->call($name, $args);
-        $out[] = ['command' => $name, 'exit' => $code, 'output' => mb_substr(trim($kernel->output()), -6000)];
+        // output() fetches (and empties) the buffer: read it once, use it for both the result and the error.
+        $text = trim($kernel->output());
+        $out[] = ['command' => $name, 'exit' => $code, 'output' => mb_substr($text, -6000)];
         if ($code !== 0) {
-            throw new RuntimeException("artisan {$name} exited with {$code}: ".mb_substr(trim($kernel->output()), -2000));
+            throw new RuntimeException("artisan {$name} exited with {$code}: ".mb_substr($text, -2000));
         }
     }
 

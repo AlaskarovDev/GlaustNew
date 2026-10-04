@@ -1,17 +1,57 @@
 <x-layouts.app :title="$invoice->typeLabel().' '.$invoice->number" wide>
     @php $later = array_filter($columns, fn ($c) => ! $c[1]); @endphp
     <x-page-header :title="$invoice->typeLabel().' № '.$invoice->number" :back="route('deals.show', $invoice->deal)"
-                   :subtitle="($invoice->counterparty?->name ?? '').' · '.azdate($invoice->invoice_date).' · Tədarük '.$invoice->deal->code">
+                   :subtitle="($invoice->counterparty?->name ?? '').' · '.azdate($invoice->invoice_date).' · Sövdələşmə '.$invoice->deal->code">
         <x-slot:actions>
             <a href="{{ route('invoices.export', [$invoice, 'format' => 'xlsx']) }}" class="btn btn-secondary"><x-icon name="sheet" class="size-4 text-success"/> Excel</a>
             <a href="{{ route('invoices.export', [$invoice, 'format' => 'pdf']) }}" class="btn btn-secondary"><x-icon name="file-pdf" class="size-4 text-danger"/> PDF</a>
         </x-slot:actions>
     </x-page-header>
 
-    <div class="grid grid-cols-2 xl:grid-cols-5 gap-4 mb-6 stagger">
-        <div class="card p-4" style="--i:0"><div class="text-xs text-muted">Cəmi</div><div class="text-xl font-semibold font-mono">{{ money($invoice->total, $invoice->currency) }}</div></div>
-        <div class="card p-4" style="--i:1"><div class="text-xs text-muted">AZN (CBAR {{ azdate($invoice->invoice_date) }})</div><div class="text-xl font-semibold font-mono">{{ money($invoice->total_azn) }}</div><div class="text-[11px] text-faint">{{ rate_fmt($invoice->cbar_rate) }}</div></div>
-        <div class="card p-4" style="--i:2"><div class="text-xs text-muted">Sətir / miqdar</div><div class="text-xl font-semibold font-mono">{{ $invoice->items->count() }}</div><div class="text-[11px] text-faint">{{ num($invoice->items->sum('quantity'), 2) }} cəmi miqdar</div></div>
+    @php
+        $ourInvoice = $invoice->salesDocuments->firstWhere('kind', 'proforma');
+        $ourTotal = $ourInvoice?->grandTotal();
+    @endphp
+    {{-- Totals in their own currencies; AZN only on request, at the CBAR rates of a chosen date. --}}
+    <div class="mb-6" x-data="{
+            azn: false, date: @js($invoice->invoice_date->toDateString()), today: @js(today()->toDateString()),
+            rates: {}, loading: false, error: '',
+            async load() {
+                this.error = ''; this.loading = true; const out = {};
+                try {
+                    for (const c of @js(array_values(array_unique(array_filter([$invoice->currency, $ourInvoice?->currency]))))) {
+                        if (c === 'AZN') { out[c] = 1; continue; }
+                        const d = await glaustApi('/ajax/rate?currency=' + c + '&date=' + encodeURIComponent(this.date));
+                        if (!d.ok) throw new Error(d.message);
+                        out[c] = d.rate;
+                    }
+                    this.rates = out;
+                } catch (e) { this.error = e.message; this.rates = {}; }
+                this.loading = false;
+            },
+            inAzn(amount, cur) { return this.rates[cur] ? glaustFmt.fmt(amount * this.rates[cur], 2) + ' ₼' : '—'; },
+         }" x-init="$watch('azn', v => v && load()); $watch('date', () => azn && load())">
+        <div class="flex flex-wrap items-center justify-end gap-2 mb-2">
+            <div x-show="azn" x-cloak class="flex items-center gap-2 text-sm">
+                <label for="azn-date" class="text-muted">CBAR kursu tarixi</label>
+                <input id="azn-date" type="date" x-model="date" :max="today" class="input !h-8 !w-40">
+                <span class="text-xs text-danger" x-show="error" x-text="error"></span>
+            </div>
+            <button type="button" class="btn btn-sm" :class="azn ? 'btn-primary' : 'btn-secondary'" @click="azn = !azn" :aria-pressed="azn"><span class="font-mono">₼</span> <span x-text="azn ? 'AZN-i gizlət' : 'AZN ilə göstər'"></span></button>
+        </div>
+        <div class="grid grid-cols-2 xl:grid-cols-5 gap-4 stagger">
+            <div class="card p-4" style="--i:0"><div class="text-xs text-muted">Satıcının fakturası</div><div class="text-xl font-semibold font-mono">{{ money($invoice->total, $invoice->currency) }}</div>
+                <div class="text-[11px] text-muted mt-0.5" x-show="azn" x-cloak><span x-show="loading">…</span><span x-show="!loading" x-text="inAzn({{ (float) $invoice->total }}, @js($invoice->currency))"></span></div></div>
+            <div class="card p-4" style="--i:1"><div class="text-xs text-muted">Alıcıya fakturamız</div>
+                @if($ourInvoice)
+                    <a href="{{ route('sales-documents.show', $ourInvoice) }}" class="block text-xl font-semibold font-mono hover:text-brand-ink">{{ money($ourTotal, $ourInvoice->currency) }}</a>
+                    <div class="text-[11px] text-muted mt-0.5" x-show="azn" x-cloak><span x-show="loading">…</span><span x-show="!loading" x-text="inAzn({{ (float) $ourTotal }}, @js($ourInvoice->currency))"></span></div>
+                    <div class="text-[11px] text-faint" x-show="!azn">Proforma {{ $ourInvoice->number }}</div>
+                @else
+                    <div class="text-xl font-semibold text-faint">—</div><div class="text-[11px] text-faint">hesablama bitəndə yaranır</div>
+                @endif
+            </div>
+            <div class="card p-4" style="--i:2"><div class="text-xs text-muted">Sətir / miqdar</div><div class="text-xl font-semibold font-mono">{{ $invoice->items->count() }}</div><div class="text-[11px] text-faint">{{ num($invoice->items->sum('quantity'), 2) }} cəmi miqdar</div></div>
         <div class="card p-4" style="--i:3"><div class="text-xs text-muted">Müqavilə</div>
             @if($invoice->contract)<a href="{{ route('contracts.show', $invoice->contract) }}" class="block font-mono font-semibold hover:text-brand-ink">{{ $invoice->contract->number }}</a>@else<div>—</div>@endif
             <div class="text-[11px] text-faint">{{ $invoice->type === 'supplier' ? 'alış müqaviləsi' : 'satış müqaviləsi' }}</div></div>
@@ -25,6 +65,7 @@
             @else
                 <x-status group="invoice" :value="$invoice->status"/>
             @endif
+        </div>
         </div>
     </div>
 

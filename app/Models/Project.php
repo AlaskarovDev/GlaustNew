@@ -82,7 +82,7 @@ class Project extends Model
         return $this->hasMany(Milestone::class)->orderBy('due_date');
     }
 
-    /** Tədarüklər: buy-and-resell lots of this project. */
+    /** Sövdələşmələr: buy-and-resell lots of this project. */
     public function deals(): HasMany
     {
         return $this->hasMany(Deal::class)->orderBy('deal_date')->orderBy('id');

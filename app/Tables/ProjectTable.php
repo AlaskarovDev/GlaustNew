@@ -20,16 +20,16 @@ class ProjectTable extends Table
     protected function baseQuery(): Builder
     {
         return Project::query()
-            ->with(['counterparty:id,name', 'supplier:id,name', 'saleContract:id,number,amount_azn', 'purchaseContract:id,number,amount_azn', 'manager:id,name,email', 'members:id,name,email'])
-            ->withCount(['tasks', 'tasks as done_tasks_count' => fn ($q) => $q->where('status', 'done'),
-                'tasks as overdue_tasks_count' => fn ($q) => $q->where('status', '!=', 'done')->where('due_date', '<', today()->toDateString())]);
+            ->with(['counterparty:id,name', 'supplier:id,name', 'saleContract:id,number,amount_azn', 'purchaseContract:id,number,amount_azn', 'manager:id,name,email', 'members:id,name,email',
+                // for the forecast profit: commission on the seller invoices, expenses booked on the deals
+                'deals' => fn ($q) => $q->select('id', 'project_id', 'status')->withSum('expenses', 'amount_azn')
+                    ->with('invoices:id,deal_id,type,status,commission_total,currency')])
+            ->withCount(['deals', 'deals as active_deals_count' => fn ($q) => $q->whereNotIn('status', ['completed', 'cancelled'])]);
     }
 
     public function filters(): array
     {
         return [
-            'status' => ['label' => 'Status', 'type' => 'select', 'options' => status_options('project')],
-            'priority' => ['label' => 'Prioritet', 'type' => 'select', 'options' => status_options('priority')],
             'manager_id' => ['label' => 'Menecer', 'type' => 'select', 'options' => User::forTenant()->orderBy('name')->pluck('name', 'id')->all()],
         ];
     }
@@ -60,23 +60,12 @@ class ProjectTable extends Table
         return [
             Column::make('Kod', 'code'),
             Column::make('Ad', 'name', width: 34),
-            Column::make('Alan tərəf', 'counterparty.name'),
-            Column::make('Satış müqaviləsi', 'saleContract.number'),
-            Column::make('Satış (AZN)', 'saleContract.amount_azn', 'money', total: true),
             Column::make('Satan tərəf', 'supplier.name'),
-            Column::make('Alış müqaviləsi', 'purchaseContract.number'),
-            Column::make('Alış (AZN)', 'purchaseContract.amount_azn', 'money', total: true),
-            Column::make('Marja (AZN)', fn ($p) => $p->contractMargin()['margin'], 'money', total: true),
-            Column::make('Menecer', 'manager.name'),
-            Column::make('Status', fn ($p) => status_label('project', $p->status)),
-            Column::make('Prioritet', fn ($p) => status_label('priority', $p->priority)),
-            Column::make('Başlama', 'start_date', 'date'),
-            Column::make('Bitmə', 'end_date', 'date'),
-            Column::make('Büdcə', 'budget', 'money'),
-            Column::make('Valyuta', 'currency'),
-            Column::make('Tapşırıqlar', 'tasks_count', 'number'),
-            Column::make('Tamamlanıb', 'done_tasks_count', 'number'),
-            Column::make('İrəliləyiş %', fn ($p) => $p->progress(), 'number'),
+            Column::make('Alan tərəf', 'counterparty.name'),
+            Column::make('Məsul şəxs', 'manager.name'),
+            Column::make('Sövdələşmələr', 'deals_count', 'number', total: true),
+            Column::make('Davam edən', 'active_deals_count', 'number', total: true),
+            Column::make('Proqnoz mənfəət (AZN)', fn ($p) => \App\Support\ProjectForecast::profit($p->deals), 'money', total: true),
         ];
     }
 }

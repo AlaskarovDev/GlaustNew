@@ -144,4 +144,33 @@ class LogisticsActTest extends TestCase
         $this->assertSame(0, $this->inTenant($admin, fn () => BankTransaction::count()));
         $this->assertSame(0, $this->inTenant($admin, fn () => Expense::count()));
     }
+
+    /** Split terms: each part on its own date, valued at that day's CBAR and booked on that day. */
+    public function test_split_parts_on_different_dates(): void
+    {
+        [$admin, $inv, $deal, $carrier, $rub, $eur] = $this->world();
+        $this->actingAs($admin);
+        $d1 = today()->subDays(5)->toDateString();
+        $d2 = today()->subDay()->toDateString();
+        $this->post(route('deals.logistics-acts.store', $deal), [
+            'counterparty_id' => $carrier->id, 'act_number' => 'LA-20', 'act_date' => $d1, 'amount' => '10200', 'currency' => 'EUR', 'payment_plan' => 'today',
+            'parts' => [
+                ['act_amount' => '6000', 'currency' => 'EUR', 'bank_account_id' => $eur->id, 'payment_date' => $d1],
+                ['act_amount' => '4200', 'currency' => 'RUB', 'bank_account_id' => $rub->id, 'bank_rate' => '93', 'payment_date' => $d2],
+            ],
+        ])->assertSessionHasNoErrors();
+
+        $act = $this->inTenant($admin, fn () => LogisticsAct::with('payments')->firstOrFail());
+        [$p1, $p2] = $act->payments->all();
+        $this->assertSame([$d1, $d2], [$p1->payment_date->toDateString(), $p2->payment_date->toDateString()]);
+        $rates = app(CurrencyRates::class);
+        $this->assertEqualsWithDelta($rates->rate('EUR', $d2) / $rates->rate('RUB', $d2), (float) $p2->cbar_cross, 1e-9, 'CBAR of the part date');
+        $this->assertSame($d2, $this->inTenant($admin, fn () => BankTransaction::find($p2->transaction_id))->transaction_date->toDateString(), 'booked on the part date');
+        $this->get(route('deals.show', [$deal, 'tab' => 'logistics']))->assertOk()->assertSee(azdate($d1))->assertSee(azdate($d2));
+
+        // No future dates for a part.
+        $this->post(route('deals.logistics-acts.store', $deal), ['act_number' => 'LA-21', 'act_date' => $d1, 'amount' => '100', 'currency' => 'EUR', 'payment_plan' => 'today',
+            'parts' => [['act_amount' => '100', 'currency' => 'EUR', 'bank_account_id' => $eur->id, 'payment_date' => today()->addDay()->toDateString()]]])
+            ->assertSessionHasErrors('parts.0.payment_date');
+    }
 }

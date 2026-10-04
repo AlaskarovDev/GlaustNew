@@ -1,10 +1,16 @@
-    <section class="card overflow-hidden mb-6">
+    {{-- Once an invoice exists the import form folds into a button (a second proforma can still come in). --}}
+    <section class="card overflow-hidden mb-6" x-data="{ importing: {{ $supplierInvoices->isEmpty() || session('import_errors') || $errors->has('file') ? 'true' : 'false' }} }">
         <header class="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-line">
             <div>
                 <h2 class="text-base font-semibold">Satıcının fakturaları <span class="text-muted font-mono font-normal text-sm">{{ $supplierInvoices->count() }}</span></h2>
                 <p class="text-xs text-muted">Satıcının bizə proformaları — alış müqaviləsinə ({{ $deal->purchaseContract?->number ?? 'seçilməyib' }}) bağlanır</p>
             </div>
-            <a href="{{ route('invoices.template') }}" class="btn btn-secondary btn-sm"><x-icon name="download" class="size-4"/> Excel şablonu</a>
+            <div class="flex flex-wrap gap-2">
+                <a href="{{ route('invoices.template') }}" class="btn btn-secondary btn-sm"><x-icon name="download" class="size-4"/> Excel şablonu</a>
+                @if($supplierInvoices->isNotEmpty())
+                    @can('projects.create')<button type="button" class="btn btn-primary btn-sm" @click="importing = !importing" :aria-expanded="importing"><x-icon name="upload" class="size-4"/> <span x-text="importing ? 'Bağla' : 'Faktura import et'"></span></button>@endcan
+                @endif
+            </div>
         </header>
 
         @if($supplierInvoices->isNotEmpty())
@@ -13,7 +19,7 @@
                     <thead><tr><th>Proforma №</th><th>Tarix</th><th class="!text-right">Sətir</th><th class="!text-right">Məbləğ</th><th>Status</th></tr></thead>
                     <tbody>
                     @foreach($supplierInvoices as $inv)
-                        <tr>
+                        <tr class="cursor-pointer hover:bg-surface-2/60" @click="if (!$event.target.closest('a, button')) window.location = @js(route('invoices.show', $inv))">
                             <td data-label="Proforma №"><a href="{{ route('invoices.show', $inv) }}" class="font-mono font-medium text-ink hover:text-brand-ink">{{ $inv->number }}</a></td>
                             <td data-label="Tarix" class="font-mono text-xs">{{ azdate($inv->invoice_date) }}</td>
                             <td data-label="Sətir" class="num">{{ $inv->items_count }}</td>
@@ -36,7 +42,7 @@
         @endif
 
         @can('projects.create')
-            <form method="POST" action="{{ route('invoices.import', $deal) }}" enctype="multipart/form-data" class="p-5 border-t border-line bg-surface-2/50" x-data="{ name: '', busy: false }" @submit="busy = true">
+            <form method="POST" action="{{ route('invoices.import', $deal) }}" x-show="importing" x-collapse @if($supplierInvoices->isNotEmpty() && ! session('import_errors') && ! $errors->has('file')) x-cloak @endif enctype="multipart/form-data" class="p-5 border-t border-line bg-surface-2/50" x-data="{ name: '', busy: false }" @submit="busy = true">
                 @csrf
                 <h3 class="text-sm font-semibold mb-1">Satıcının fakturasını import et</h3>
                 <p class="text-xs text-muted mb-4">Şablonda yalnız yaşıl sütunlar doldurulur: Proforma N, N, Description, HS Code, Quantity, UOM, Unit Price, Total/EUR. Faylda bir neçə proforma nömrəsi varsa, hər biri ayrıca faktura olur.</p>

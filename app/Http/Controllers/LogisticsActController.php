@@ -109,7 +109,9 @@ class LogisticsActController extends Controller
             'parts.*.bank_account_id' => ['required', 'integer', TenantExists::in('bank_accounts')],
             'parts.*.bank_rate' => ['nullable', 'numeric', 'gt:0', 'max:10000000'],
             'parts.*.fee_amount' => ['nullable', 'numeric', 'min:0'],
-        ], ['parts.required' => 'Ən azı bir ödəniş hissəsi daxil edin.'], [
+            'parts.*.payment_date' => ['nullable', 'date', 'before_or_equal:today'],
+        ], ['parts.required' => 'Ən azı bir ödəniş hissəsi daxil edin.', 'parts.*.payment_date.before_or_equal' => 'Hissənin ödəniş tarixi gələcək ola bilməz.'], [
+            'parts.*.payment_date' => 'Ödəniş tarixi',
             'parts.*.act_amount' => 'Hissənin məbləği', 'parts.*.bank_account_id' => 'Bank hesabı', 'parts.*.bank_rate' => 'Bankın kursu',
         ])['parts'];
     }

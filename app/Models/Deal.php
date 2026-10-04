@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-/** Tədarük: one buy-and-resell lot of a project (see the deals migration). */
+/** Sövdələşmə: one buy-and-resell lot of a project (see the deals migration). */
 class Deal extends Model
 {
     use Auditable, BelongsToCompany, HasAttachments, SoftDeletes;
@@ -70,6 +70,11 @@ class Deal extends Model
     public function supplierPayments(): HasMany
     {
         return $this->hasMany(SupplierPayment::class)->orderByDesc('payment_date')->orderByDesc('id');
+    }
+
+    public function expenses(): HasMany
+    {
+        return $this->hasMany(Expense::class);
     }
 
     public function logisticsActs(): HasMany

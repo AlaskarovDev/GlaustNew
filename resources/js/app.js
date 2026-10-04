@@ -385,7 +385,7 @@ Alpine.data('logisticsPay', (cfg) => ({
     errors: {},
     init() {
         this.$watch('actDate', () => this.load());
-        this.$watch('payDate', () => this.load());
+        this.$watch('payDate', (v, old) => { this.syncDates(old); this.load(); });
         this.$watch('currency', () => { this.load(); this.reflow(); });
         this.$watch('amount', () => this.reflow());
         this.load();
@@ -409,7 +409,8 @@ Alpine.data('logisticsPay', (cfg) => ({
     load() {
         this.errors = {};
         const curs = new Set([this.currency, 'RUB', 'EUR', ...this.parts.map((p) => p.currency)]);
-        curs.forEach((c) => { this.fetchRate(c, this.actDate); this.fetchRate(c, this.payDate); });
+        const dates = new Set([this.actDate, this.payDate, ...this.parts.map((p) => p.date)]);
+        curs.forEach((c) => dates.forEach((d) => this.fetchRate(c, d)));
     },
     // the act at CBAR of its date
     actIn(cur) {
@@ -431,7 +432,8 @@ Alpine.data('logisticsPay', (cfg) => ({
     },
     part(currency, share) {
         const acc = this.accounts.find((a) => a.currency === currency);
-        return { currency, share: share ? String(share) : '', account: acc ? String(acc.id) : '', bankRate: '', fee: '', feeTouched: false };
+        // each part carries its own payment date: when and how much was paid stays visible
+        return { currency, share: share ? String(share) : '', account: acc ? String(acc.id) : '', bankRate: '', fee: '', feeTouched: false, date: this.payDate };
     },
     addPart() { this.parts.push(this.part(this.parts.at(-1)?.currency || 'RUB', this.r2(Math.max(0, this.unallocated())))); this.load(); },
     removePart(i) { this.parts.splice(i, 1); if (!this.parts.length) this.terms = ''; },
@@ -446,7 +448,8 @@ Alpine.data('logisticsPay', (cfg) => ({
     allocated() { return this.r2(this.parts.reduce((s, p) => s + this.num(p.share), 0)); },
     unallocated() { return this.r2(this.total() - this.allocated()); },
     same(p) { return p.currency === this.currency; },
-    cross(p) { const a = this.rate(this.currency, this.payDate), b = this.rate(p.currency, this.payDate); return a && b ? a / b : null; },
+    pd(p) { return p.date || this.payDate; },
+    cross(p) { const a = this.rate(this.currency, this.pd(p)), b = this.rate(p.currency, this.pd(p)); return a && b ? a / b : null; },
     applied(p) { return this.same(p) ? 1 : this.num(p.bankRate); },
     pay(p) { return this.applied(p) ? this.r2(this.num(p.share) * this.applied(p)) : null; },
     payCbar(p) { return this.cross(p) ? this.r2(this.num(p.share) * this.cross(p)) : null; },
@@ -454,7 +457,7 @@ Alpine.data('logisticsPay', (cfg) => ({
     rule(p) {
         const own = this.fees[p.currency];
         if (own) return { percent: own.percent, min: own.minimum, max: own.maximum ?? null };
-        const eur = this.fees.EUR, er = this.rate('EUR', this.payDate), cr = this.rate(p.currency, this.payDate);
+        const eur = this.fees.EUR, er = this.rate('EUR', this.pd(p)), cr = this.rate(p.currency, this.pd(p));
         if (!eur || !er || !cr) return null;
         const f = er / cr;
         return { percent: eur.percent, min: this.r2(eur.minimum * f), max: eur.maximum != null ? this.r2(eur.maximum * f) : null };
@@ -467,9 +470,11 @@ Alpine.data('logisticsPay', (cfg) => ({
         return this.r2(fee);
     },
     fee(p) { return p.feeTouched ? this.num(p.fee) : this.ruleFee(p); },
-    feeIn(p, cur) { const a = this.rate(p.currency, this.payDate), b = this.rate(cur, this.payDate); return a && b ? this.r2(this.fee(p) * a / b) : null; },
+    feeIn(p, cur) { const a = this.rate(p.currency, this.pd(p)), b = this.rate(cur, this.pd(p)); return a && b ? this.r2(this.fee(p) * a / b) : null; },
     debit(p) { return this.pay(p) !== null ? this.r2(this.pay(p) + this.fee(p)) : null; },
-    partOk(p) { return this.num(p.share) > 0 && p.account && (this.same(p) || this.num(p.bankRate) > 0); },
+    partOk(p) { return this.num(p.share) > 0 && p.account && p.date && p.date <= this.today && (this.same(p) || this.num(p.bankRate) > 0); },
+    // the payment date of every part follows the common date until a part gets its own
+    syncDates(old) { this.parts.forEach((p) => { if (!p.date || p.date === old) p.date = this.payDate; }); },
     canSubmit() {
         if (this.mode === 'new' && (!this.total() || !this.currency)) return false;
         if (this.mode === 'new' && this.plan === 'later') return !!this.plannedDate;

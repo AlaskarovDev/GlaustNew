@@ -81,7 +81,7 @@
                     </x-field>
                     <div class="grid grid-cols-2 gap-4">
                         <x-field label="İstinad / ödəniş tapşırığı №" name="reference"><input name="reference" value="{{ $mine ? old('reference') : '' }}" class="input font-mono"></x-field>
-                        <x-field label="Təyinat" name="purpose"><input name="purpose" value="{{ $mine ? old('purpose') : '' }}" placeholder="Tədarük {{ $deal->code }} üzrə ödəniş" class="input"></x-field>
+                        <x-field label="Təyinat" name="purpose"><input name="purpose" value="{{ $mine ? old('purpose') : '' }}" placeholder="Sövdələşmə {{ $deal->code }} üzrə ödəniş" class="input"></x-field>
                     </div>
                 </div>
             </div>

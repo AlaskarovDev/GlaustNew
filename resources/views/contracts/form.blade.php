@@ -64,7 +64,7 @@
                     <x-input name="number" label="Nömrə" :value="$contract->number" required wrapper="sm:col-span-2" class="font-mono" hint="Avtomatik verilir, dəyişə bilərsiniz."/>
                     <x-input name="contract_date" type="date" label="Müqavilə tarixi" :value="$contract->contract_date" required wrapper="sm:col-span-2" x-model="date"/>
                     <x-select name="status" label="Status" :options="status_options('contract')" :value="$contract->status" required wrapper="sm:col-span-2"/>
-                    <x-input name="subject" label="Mövzu" :value="$contract->subject" required wrapper="sm:col-span-6" placeholder="Məs: Avadanlığın tədarükü və quraşdırılması"/>
+                    <x-input name="subject" label="Mövzu" :value="$contract->subject" required wrapper="sm:col-span-6" placeholder="Məs: Avadanlığın sövdələşməni və quraşdırılması"/>
                     <x-input name="amount" label="Məbləğ" :value="$contract->amount" required wrapper="sm:col-span-3" inputmode="decimal" class="font-mono text-right" x-model="amount"/>
                     <x-select name="currency" label="Valyuta" :options="array_combine(config('glaust.currencies'), config('glaust.currencies'))" :value="$contract->currency" required wrapper="sm:col-span-3" x-model="currency"/>
                 </div>

@@ -128,7 +128,7 @@ class InvoiceApprovalService
         }
         $step = $invoice->approval_flow[$invoice->approval_step];
         $this->remind($invoice, $userId, 'Təsdiq gözləyir: faktura '.$invoice->number,
-            trim(($step['title'] ? $step['title'].' · ' : '').'Tədarük '.$invoice->deal?->code.' · '.($invoice->approval_step + 1).'/'.count($invoice->approval_flow).' addım'),
+            trim(($step['title'] ? $step['title'].' · ' : '').'Sövdələşmə '.$invoice->deal?->code.' · '.($invoice->approval_step + 1).'/'.count($invoice->approval_flow).' addım'),
             'approval:'.$invoice->id.':'.$invoice->submitted_at?->timestamp.':'.$invoice->approval_step);
     }
 

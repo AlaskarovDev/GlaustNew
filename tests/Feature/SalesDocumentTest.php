@@ -42,7 +42,8 @@ class SalesDocumentTest extends TestCase
         $this->applyRub($inv)->assertSessionMissing('documents_created');
         $this->assertSame(2, $this->inTenant($admin, fn () => SalesDocument::count()));
 
-        $this->get(route('invoices.show', $inv))->assertOk()->assertSee('Alıcı üçün sənədlər')->assertSee($pf->number);
+        $this->get(route('invoices.show', $inv))->assertOk()->assertSee('Alıcı üçün sənədlər')->assertSee($pf->number)
+            ->assertSee('Satıcının fakturası')->assertSee(money(191922, 'EUR'))->assertSee('Alıcıya fakturamız')->assertSee(money(19800178, 'RUB'))->assertSee('AZN ilə göstər');
         $this->get(route('deals.show', $inv->deal_id))->assertOk()->assertSee('Proforma Invoice');
     }
 

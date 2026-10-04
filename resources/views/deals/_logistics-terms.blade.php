@@ -14,11 +14,16 @@
     <template x-for="(p, i) in parts" :key="i">
         <div class="rounded-xl border border-line overflow-hidden">
             <div class="flex items-center justify-between gap-2 px-4 py-2 bg-surface-2/60 border-b border-line">
-                <span class="text-sm font-semibold"><span x-text="i + 1"></span>-ci hissə</span>
+                <span class="text-sm font-semibold"><span x-text="i + 1"></span>-ci hissə <span class="font-normal text-muted text-xs" x-text="p.date ? '· ' + p.date.split('-').reverse().join('.') : ''"></span></span>
                 <button type="button" class="btn btn-ghost btn-icon btn-sm text-danger" x-show="parts.length > 1" @click="removePart(i)" aria-label="Hissəni sil"><x-icon name="trash" class="size-4"/></button>
             </div>
             <div class="p-4 grid md:grid-cols-2 gap-4">
                 <div class="space-y-3">
+                    <div>
+                        <label class="field-label">Ödəniş tarixi</label>
+                        <input type="date" :name="`parts[${i}][payment_date]`" x-model="p.date" @change="load()" :max="today" class="input">
+                        <p class="text-[11px] text-muted mt-1">Bu hissənin köçürüldüyü tarix — CBAR kursu və komissiya bu tarixə görə</p>
+                    </div>
                     <div class="grid grid-cols-[1fr_96px] gap-2">
                         <div>
                             <label class="field-label">Aktdan pay (<span x-text="currency"></span>)</label>

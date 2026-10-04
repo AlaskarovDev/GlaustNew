@@ -45,7 +45,7 @@ class InvoiceController extends Controller
         ], [], ['file' => 'Excel faylı', 'invoice_date' => 'Faktura tarixi']);
 
         if (! $deal->purchase_contract_id || ! $deal->supplier_id) {
-            return back()->with('error', 'Satıcının fakturası alış müqaviləsinə bağlanır: əvvəlcə tədarükdə «Məhsulu satan tərəf» və onun müqaviləsini seçin.');
+            return back()->with('error', 'Satıcının fakturası alış müqaviləsinə bağlanır: əvvəlcə sövdələşmədə «Məhsulu satan tərəf» və onun müqaviləsini seçin.');
         }
 
         try {
@@ -61,7 +61,7 @@ class InvoiceController extends Controller
 
         $existing = $deal->invoices()->where('type', 'supplier')->whereIn('number', array_map('strval', array_keys($parsed['invoices'])))->pluck('number')->all();
         if ($existing) {
-            return back()->with('error', 'Bu proforma(lar) artıq bu tədarükdə var: '.implode(', ', $existing).'. Təkrar import edilmədi.');
+            return back()->with('error', 'Bu proforma(lar) artıq bu sövdələşmədə var: '.implode(', ', $existing).'. Təkrar import edilmədi.');
         }
 
         $currency = 'EUR'; // the sheet's money column is Total/EUR
@@ -342,7 +342,7 @@ class InvoiceController extends Controller
             };
         }
         $title = $invoice->typeLabel().' '.$invoice->number;
-        $filters = [($invoice->counterparty?->name ?? '').' · '.azdate($invoice->invoice_date).' · Tədarük '.$invoice->deal?->code];
+        $filters = [($invoice->counterparty?->name ?? '').' · '.azdate($invoice->invoice_date).' · Sövdələşmə '.$invoice->deal?->code];
         $name = 'faktura-'.Str::slug($invoice->number).'-'.now()->format('Y-m-d');
 
         return $request->query('format') === 'pdf'

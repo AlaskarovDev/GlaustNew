@@ -16,7 +16,7 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Tests\TestCase;
 
-/** Tədarük: project lot with buyer + seller contracts and the seller's proforma imported from Excel. */
+/** Sövdələşmə: project lot with buyer + seller contracts and the seller's proforma imported from Excel. */
 class DealInvoiceTest extends TestCase
 {
     use RefreshDatabase;
@@ -38,7 +38,7 @@ class DealInvoiceTest extends TestCase
                 'subject' => 'Boya', 'amount' => 100000, 'currency' => 'EUR', 'cbar_rate' => 1.9, 'amount_azn' => 190000, 'status' => 'active']);
             $sale = $mk($buyer, 'sale', 'S-1');
             $purchase = $mk($seller, 'purchase', 'P-1');
-            $project = Project::create(['code' => 'PRJ-1', 'name' => 'Boya tədarükü', 'status' => 'active', 'priority' => 'medium', 'currency' => 'EUR',
+            $project = Project::create(['code' => 'PRJ-1', 'name' => 'Boya sövdələşməni', 'status' => 'active', 'priority' => 'medium', 'currency' => 'EUR',
                 'counterparty_id' => $buyer->id, 'sale_contract_id' => $sale->id, 'supplier_id' => $seller->id, 'purchase_contract_id' => $purchase->id]);
 
             return compact('buyer', 'seller', 'sale', 'purchase', 'project');
@@ -86,7 +86,7 @@ class DealInvoiceTest extends TestCase
         ])->assertSessionHasNoErrors();
 
         $deal = $this->inTenant($admin, fn () => Deal::firstOrFail());
-        $this->assertMatchesRegularExpression('/^TD-\d{4}-0001$/', $deal->code);
+        $this->assertMatchesRegularExpression('/^SV-\d{4}-0001$/', $deal->code);
         $this->assertSame($d['seller']->id, $deal->supplier_id);
         $this->assertSame(1, $this->inTenant($admin, fn () => $d['purchase']->attachments()->count()), 'signed PDF kept on the contract');
         // Opens on the invoices tab; the contracts (and their signed PDFs) are one tab away.
@@ -151,7 +151,8 @@ class DealInvoiceTest extends TestCase
 
         $this->get(route('invoices.show', $inv))->assertOk()->assertSee('TD-Weiss Migrastar')->assertSee('UNIT PRICE CCL EUR');
         // The deal and project pages show the seller's invoice in its own currency, not in AZN.
-        $this->get(route('deals.show', $deal))->assertOk()->assertSee(money(56440, 'EUR'))->assertDontSee('AZN (CBAR)')->assertDontSee(money($inv->total_azn));
+        $this->get(route('deals.show', $deal))->assertOk()->assertSee(money(56440, 'EUR'))->assertDontSee('AZN (CBAR)')->assertDontSee(money($inv->total_azn))
+            ->assertSee('Faktura import et')->assertSee('cursor-pointer', false);
         $this->get(route('projects.show', [$deal->project_id, 'tab' => 'deals']))->assertOk()->assertSee(money(56440, 'EUR'));
         $this->get(route('invoices.export', [$inv, 'format' => 'xlsx']))->assertOk();
         $this->get(route('invoices.export', [$inv, 'format' => 'pdf']))->assertOk();

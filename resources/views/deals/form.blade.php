@@ -1,6 +1,6 @@
 @php $editing = $deal->exists; @endphp
-<x-layouts.app :title="$editing ? 'Tədarük '.$deal->code : 'Yeni tədarük'">
-    <x-page-header :title="$editing ? 'Tədarük '.$deal->code : 'Yeni tədarük'" :back="$editing ? route('deals.show', $deal) : route('projects.show', [$project, 'tab' => 'deals'])"
+<x-layouts.app :title="$editing ? 'Sövdələşmə '.$deal->code : 'Yeni sövdələşmə'">
+    <x-page-header :title="$editing ? 'Sövdələşmə '.$deal->code : 'Yeni sövdələşmə'" :back="$editing ? route('deals.show', $deal) : route('projects.show', [$project, 'tab' => 'deals'])"
                    :subtitle="'Layihə: '.$project->code.' · '.$project->name.' — məhsulu satıcıdan alıb alıcıya satırıq'"/>
 
     @if($errors->any())
@@ -15,7 +15,7 @@
         @if($editing) @method('PUT') @endif
         <div class="space-y-6 min-w-0">
             <section class="card p-6">
-                <h2 class="text-base font-semibold mb-5">Tədarük</h2>
+                <h2 class="text-base font-semibold mb-5">Sövdələşmə</h2>
                 <div class="grid sm:grid-cols-4 gap-4">
                     <x-input name="code" label="Kod" :value="$deal->code" required class="font-mono" hint="Avtomatik"/>
                     <x-input name="title" label="Ad" :value="$deal->title" required wrapper="sm:col-span-3" placeholder="Məs: Boya partiyası — oktyabr"/>
@@ -38,7 +38,7 @@
                 <button class="btn btn-primary flex-1" :disabled="busy"><x-icon name="check" class="size-4"/> {{ $editing ? 'Yadda saxla' : 'Yarat' }}</button>
             </div>
             @unless($editing)
-                <p class="text-xs text-muted px-1">Növbəti addım: tədarük yaradıldıqdan sonra satıcının fakturasını (proforma) Excel şablonu ilə import edəcəksiniz.</p>
+                <p class="text-xs text-muted px-1">Növbəti addım: sövdələşmə yaradıldıqdan sonra satıcının fakturasını (proforma) Excel şablonu ilə import edəcəksiniz.</p>
             @endunless
         </aside>
     </form>

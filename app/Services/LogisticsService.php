@@ -55,7 +55,10 @@ class LogisticsService
         });
     }
 
-    /** @param  list<array{act_amount: float|string, currency: string, bank_account_id: int, bank_rate?: float|string|null, fee_amount?: float|string|null}>  $parts */
+    /**
+     * @param  list<array{act_amount: float|string, currency: string, bank_account_id: int, bank_rate?: float|string|null, fee_amount?: float|string|null, payment_date?: string|null}>  $parts
+     *         each part may carry its own payment date (rates and fee of that day); $date is the default
+     */
     public function pay(LogisticsAct $act, array $parts, string $date, ?string $reference = null): array
     {
         $act->loadMissing('payments', 'deal', 'counterparty');
@@ -66,19 +69,20 @@ class LogisticsService
         if ($total > $act->remaining() + 0.01) {
             throw ValidationException::withMessages(['parts' => 'Hissələrin cəmi ('.money($total, $act->currency).') aktın qalığından ('.money($act->remaining(), $act->currency).') çoxdur.']);
         }
-        $cbarAct = $this->rate($act->currency, $date, 'payment_date');
-        $eur = $this->rate('EUR', $date, 'payment_date');
 
-        return DB::transaction(function () use ($act, $parts, $date, $reference, $cbarAct, $eur) {
+        return DB::transaction(function () use ($act, $parts, $date, $reference) {
             $out = [];
             foreach (array_values($parts) as $i => $p) {
+                $partDate = ! empty($p['payment_date']) ? $p['payment_date'] : $date;
+                $cbarAct = $this->rate($act->currency, $partDate, "parts.$i.payment_date");
+                $eur = $this->rate('EUR', $partDate, "parts.$i.payment_date");
                 $account = BankAccount::findOrFail($p['bank_account_id']);
                 $cur = $p['currency'];
                 if ($account->currency !== $cur) {
                     throw ValidationException::withMessages(["parts.$i.bank_account_id" => ($i + 1)."-ci hissə: hesab {$account->currency}, ödəniş {$cur} — {$cur} hesabı seçin."]);
                 }
                 $share = round((float) $p['act_amount'], 2);
-                $cbar = $this->rate($cur, $date, 'payment_date');
+                $cbar = $this->rate($cur, $partDate, "parts.$i.payment_date");
                 $same = $cur === $act->currency;
                 if (! $same && empty($p['bank_rate'])) {
                     throw ValidationException::withMessages(["parts.$i.bank_rate" => ($i + 1)."-ci hissə: bankın kursunu daxil edin (1 {$act->currency} = ? {$cur})."]);
@@ -91,7 +95,7 @@ class LogisticsService
                 $fee = isset($p['fee_amount']) && $p['fee_amount'] !== null && $p['fee_amount'] !== '' ? round((float) $p['fee_amount'], 2) : ($rule['amount'] ?? 0.0);
 
                 $tx = $this->ledger->record($account, [
-                    'direction' => 'out', 'transaction_date' => $date, 'amount' => $amount,
+                    'direction' => 'out', 'transaction_date' => $partDate, 'amount' => $amount,
                     'counterparty_id' => $act->counterparty_id, 'project_id' => $act->deal->project_id, 'deal_id' => $act->deal_id,
                     'purpose' => 'Logistika aktı '.$act->act_number.' ('.$act->deal->code.'): '.number_format($share, 2, '.', ' ').' '.$act->currency,
                     'reference' => $reference,
@@ -100,14 +104,14 @@ class LogisticsService
                 if ($fee > 0) {
                     $category = Category::firstOrCreate(['scope' => 'expense', 'name' => SupplierPaymentService::FEE_CATEGORY], ['color' => '#64748b']);
                     $feeExpense = $this->expenses->save(new Expense, [
-                        'expense_date' => $date, 'category_id' => $category->id,
+                        'expense_date' => $partDate, 'category_id' => $category->id,
                         'description' => 'Bank komissiyası: logistika aktı '.$act->act_number.', köçürmə '.number_format($amount, 2, '.', ' ').' '.$cur,
                         'amount' => $fee, 'currency' => $cur, 'counterparty_id' => null, 'project_id' => $act->deal->project_id, 'deal_id' => $act->deal_id,
-                        'status' => 'paid', 'payment_method' => 'bank', 'paid_at' => $date, 'bank_account_id' => $account->id, 'reference' => $reference,
+                        'status' => 'paid', 'payment_method' => 'bank', 'paid_at' => $partDate, 'bank_account_id' => $account->id, 'reference' => $reference,
                     ]);
                 }
                 $out[] = LogisticsPayment::create([
-                    'logistics_act_id' => $act->id, 'deal_id' => $act->deal_id, 'payment_date' => $date,
+                    'logistics_act_id' => $act->id, 'deal_id' => $act->deal_id, 'payment_date' => $partDate,
                     'act_amount' => $share, 'currency' => $cur, 'cbar_act_rate' => $cbarAct, 'cbar_rate' => $cbar, 'cbar_cross' => $cross, 'bank_rate' => $bankRate,
                     'amount_cbar' => $amountCbar, 'amount' => $amount, 'difference' => round($amount - $amountCbar, 2), 'difference_azn' => round(($amount - $amountCbar) * $cbar, 2),
                     'fee_percent' => $rule['percent'] ?? null, 'fee_minimum' => $rule['minimum'] ?? null, 'fee_maximum' => $rule['maximum'] ?? null,
@@ -129,7 +133,7 @@ class LogisticsService
         $act->loadMissing('deal');
         $r = Reminder::firstOrCreate(['dedupe_key' => 'logistics-act:'.$act->id.':'.$act->planned_date->toDateString()], [
             'user_id' => auth()->id(), 'source' => 'logistics_payment',
-            'title' => 'Logistika ödənişi: akt '.$act->act_number, 'body' => money($act->amount, $act->currency).' · Tədarük '.$act->deal->code,
+            'title' => 'Logistika ödənişi: akt '.$act->act_number, 'body' => money($act->amount, $act->currency).' · Sövdələşmə '.$act->deal->code,
             'url' => route('deals.show', [$act->deal_id, 'tab' => 'logistics'], false), 'remindable_type' => 'logistics_act', 'remindable_id' => $act->id,
             'remind_at' => $act->planned_date->copy()->setTime(9, 0),
         ]);

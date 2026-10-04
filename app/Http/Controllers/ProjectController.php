@@ -25,9 +25,8 @@ class ProjectController extends Controller
     {
         $table = new ProjectTable($request);
         $view = $request->query('view') === 'list' ? 'list' : 'grid';
-        $counts = Project::selectRaw('status, COUNT(*) as c')->groupBy('status')->pluck('c', 'status');
 
-        return view('projects.index', ['table' => $table, 'items' => $table->paginate($view === 'grid' ? 24 : 25), 'view' => $view, 'counts' => $counts]);
+        return view('projects.index', ['table' => $table, 'items' => $table->paginate($view === 'grid' ? 24 : 25), 'view' => $view]);
     }
 
     public function export(Request $request): Response
@@ -64,8 +63,9 @@ class ProjectController extends Controller
 
     public function show(Request $request, Project $project, CurrencyRates $rates): View
     {
-        $project->load(['counterparty', 'supplier', 'saleContract.payments', 'saleContract.counterparty', 'purchaseContract.payments', 'purchaseContract.counterparty', 'manager', 'members', 'milestones' => fn ($q) => $q->withCount(['tasks', 'tasks as done_tasks_count' => fn ($t) => $t->where('status', 'done')]), 'attachments.uploader']);
-        $tab = in_array($request->query('tab'), ['overview', 'deals', 'board', 'finance', 'files'], true) ? $request->query('tab') : 'overview';
+        $project->load(['counterparty', 'supplier', 'saleContract.payments', 'saleContract.counterparty', 'purchaseContract.payments', 'purchaseContract.counterparty', 'manager', 'members', 'attachments.uploader']);
+        // The project opens straight on its deals (no overview page).
+        $tab = in_array($request->query('tab'), ['deals', 'board', 'finance', 'files'], true) ? $request->query('tab') : 'deals';
 
         $tasks = $project->tasks()->with('assignee:id,name,email')
             ->withCount(['checklist', 'checklist as checklist_done_count' => fn ($q) => $q->where('is_done', true), 'comments'])
@@ -92,7 +92,8 @@ class ProjectController extends Controller
         }
 
         $deals = $project->deals()->with(['counterparty:id,name', 'supplier:id,name', 'saleContract:id,number', 'purchaseContract:id,number'])
-            ->withCount('invoices')->with(['invoices' => fn ($q) => $q->where('type', 'supplier')->select('id', 'deal_id', 'type', 'total', 'currency')])->get();
+            ->withCount('invoices')->withSum('expenses', 'amount_azn')
+            ->with(['invoices' => fn ($q) => $q->where('type', 'supplier')->select('id', 'deal_id', 'type', 'status', 'total', 'currency', 'commission_total')])->get();
 
         // Money actually moved under each side's contract (bank, AZN).
         $settled = [];

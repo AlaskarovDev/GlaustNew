@@ -1,4 +1,4 @@
-@props(['name', 'url', 'value' => null, 'display' => null, 'label' => null, 'placeholder' => __('Seçin…'), 'required' => false, 'hint' => null, 'wrapper' => '', 'depends' => null, 'partyId' => null])
+@props(['name', 'url', 'value' => null, 'display' => null, 'label' => null, 'placeholder' => __('Seçin…'), 'required' => false, 'hint' => null, 'wrapper' => '', 'depends' => null, 'partyId' => null, 'empty' => null])
 @php
     $errorKey = str_replace(['[', ']'], ['.', ''], $name);
     $value = old($errorKey, $value);
@@ -32,7 +32,7 @@
                     </li>
                 </template>
                 <li x-show="loading" class="px-3 py-3 text-sm text-muted">{{ __('Yüklənir…') }}</li>
-                <li x-show="!loading && !items.length" class="px-3 py-3 text-sm text-muted">{{ __('Nəticə yoxdur') }}</li>
+                <li x-show="!loading && !items.length" class="px-3 py-3 text-sm text-muted" x-text="query ? @js(__('Nəticə yoxdur')) : @js($empty ?? __('Nəticə yoxdur'))"></li>
             </ul>
             @isset($footer)
                 <div class="border-t border-line p-1.5">{{ $footer }}</div>

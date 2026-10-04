@@ -26,8 +26,8 @@ class ContractSides
     public static function attributes(): array
     {
         return [
-            'counterparty_id' => 'Məhsulu alan tərəf', 'supplier_id' => 'Məhsulu satan tərəf',
-            'sale_contract_id' => 'Alan tərəflə müqavilə', 'purchase_contract_id' => 'Satan tərəflə müqavilə',
+            'counterparty_id' => __('Məhsulu alan tərəf'), 'supplier_id' => __('Məhsulu satan tərəf'),
+            'sale_contract_id' => __('Alan tərəflə müqavilə'), 'purchase_contract_id' => __('Satan tərəflə müqavilə'),
         ];
     }
 
@@ -36,11 +36,11 @@ class ContractSides
     {
         $sides = [
             ['party' => 'counterparty_id', 'contract' => 'sale_contract_id', 'kind' => 'sale', 'role' => 'isCustomer',
-                'roleError' => 'Məhsulu alan tərəf CRM-də müştəri olmalıdır.',
-                'kindError' => 'Bu bölməyə yalnız satış müqaviləsi (müştəri ilə) seçilə bilər.'],
+                'roleError' => __('Məhsulu alan tərəf CRM-də müştəri olmalıdır.'),
+                'kindError' => __('Bu bölməyə yalnız satış müqaviləsi (müştəri ilə) seçilə bilər.')],
             ['party' => 'supplier_id', 'contract' => 'purchase_contract_id', 'kind' => 'purchase', 'role' => 'isSupplier',
-                'roleError' => 'Məhsulu satan tərəf CRM-də təchizatçı (satıcı) olmalıdır.',
-                'kindError' => 'Bu bölməyə yalnız alış müqaviləsi (satıcı ilə) seçilə bilər.'],
+                'roleError' => __('Məhsulu satan tərəf CRM-də təchizatçı (satıcı) olmalıdır.'),
+                'kindError' => __('Bu bölməyə yalnız alış müqaviləsi (satıcı ilə) seçilə bilər.')],
         ];
 
         foreach ($sides as $s) {
@@ -58,7 +58,7 @@ class ContractSides
                 $data[$s['party']] = $contract->counterparty_id;
             } elseif ((int) $data[$s['party']] !== $contract->counterparty_id) {
                 throw ValidationException::withMessages([
-                    $s['contract'] => "Müqavilə {$contract->number} seçilmiş tərəfə deyil, «{$contract->counterparty?->name}» ilə bağlanıb.",
+                    $s['contract'] => __('Müqavilə :v1 seçilmiş tərəfə deyil, «:v2» ilə bağlanıb.', ['v1' => $contract->number, 'v2' => $contract->counterparty?->name]),
                 ]);
             }
         }

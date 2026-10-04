@@ -58,6 +58,26 @@ class ProjectContractsTest extends TestCase
         $this->get(route('projects.edit', $project))->assertOk()->assertSee('S-1 · Məhsul');
     }
 
+    public function test_project_and_trade_start_without_the_buyers_contract(): void
+    {
+        $admin = $this->makeCompany();
+        $d = $this->setupDeal($admin);
+        $this->actingAs($admin)->post(route('projects.store'), $this->payload([
+            'counterparty_id' => $d['buyer']->id, 'supplier_id' => $d['seller']->id, 'purchase_contract_id' => $d['purchase']->id,
+        ]))->assertSessionHasNoErrors();
+        $project = $this->inTenant($admin, fn () => Project::firstOrFail());
+        $this->assertNull($project->sale_contract_id);
+
+        $this->post(route('deals.store', $project), [
+            'title' => 'Birinci partiya', 'deal_date' => today()->toDateString(), 'currency' => 'EUR', 'status' => 'draft',
+            'counterparty_id' => $d['buyer']->id, 'supplier_id' => $d['seller']->id, 'purchase_contract_id' => $d['purchase']->id,
+        ])->assertSessionHasNoErrors();
+        $this->assertNull($this->inTenant($admin, fn () => \App\Models\Deal::firstOrFail()->sale_contract_id));
+
+        // the form says the buyer's contract is optional and offers to create one
+        $this->get(route('projects.create'))->assertOk()->assertSee('Satış müqaviləsi (istəyə bağlı)')->assertSee('Yeni müqavilə yarat');
+    }
+
     public function test_contract_must_match_side_kind_and_party(): void
     {
         $admin = $this->makeCompany();

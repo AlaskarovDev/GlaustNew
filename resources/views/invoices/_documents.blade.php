@@ -29,11 +29,12 @@
         </div>
     @endif
 
-    @if($docs->whereIn('kind', \App\Models\SalesDocument::AUTO_KINDS)->count() < count(\App\Models\SalesDocument::AUTO_KINDS))
+    @php $needsPacking = $docs->contains('kind', 'proforma') && ! $docs->contains('kind', 'packing'); @endphp
+    @if($needsPacking || $docs->whereIn('kind', \App\Models\SalesDocument::AUTO_KINDS)->count() < count(\App\Models\SalesDocument::AUTO_KINDS))
         <div class="px-5 py-4 {{ $docs->isNotEmpty() ? 'border-t border-line' : '' }} flex flex-wrap items-center gap-3 text-sm">
             @if($invoice->rubReady())
-                <span class="flex-1 text-muted">{{ $docs->isEmpty() ? __('Sənədlər hələ yaradılmayıb.') : __('Silinmiş sənəd var.') }}</span>
-                @if(auth()->user()->can('projects.update') && ! $invoice->isLocked())
+                <span class="flex-1 text-muted">{{ $docs->isEmpty() ? __('Sənədlər hələ yaradılmayıb.') : ($needsPacking && $docs->whereIn('kind', \App\Models\SalesDocument::AUTO_KINDS)->count() === count(\App\Models\SalesDocument::AUTO_KINDS) ? __('Packing List hələ yaradılmayıb.') : __('Silinmiş sənəd var.')) }}</span>
+                @if(auth()->user()->can('projects.update') && (! $invoice->isLocked() || $needsPacking))
                     <form method="POST" action="{{ route('invoices.documents', $invoice) }}">@csrf
                         <button class="btn btn-primary btn-sm"><x-icon name="sparkles" class="size-4"/> {{ __('Hesablamadan yarat') }}</button>
                     </form>

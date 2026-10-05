@@ -277,17 +277,20 @@ class InvoiceController extends Controller
         }
     }
 
-    /** Recreate a deleted proforma/specification from the current calculation. */
+    /** Recreate a deleted proforma/specification (and a missing packing list) from the current calculation. */
     public function documents(Invoice $invoice, \App\Support\Invoices\SalesDocumentBuilder $builder): RedirectResponse
     {
         $this->authorize('projects.update');
-        if ($invoice->isLocked()) {
+        $hasProforma = $invoice->salesDocuments()->where('kind', 'proforma')->exists();
+        $needsPacking = $hasProforma && ! $invoice->salesDocuments()->where('kind', 'packing')->exists();
+        // a locked invoice can still get its packing list (pallets and weights come later)
+        if ($invoice->isLocked() && ! $needsPacking) {
             return back()->with('error', $this->lockedMessage($invoice));
         }
         if (! $invoice->rubReady()) {
             return back()->with('error', __('Əvvəlcə 3 addımı tamamlayın: logistika, komissiya, RUB konvertasiyası.'));
         }
-        $created = $builder->ensureFor($invoice);
+        $created = $invoice->isLocked() ? [$builder->createPacking($invoice)] : $builder->ensureFor($invoice);
 
         return back()->with('success', $created ? __('Yaradıldı: ').collect($created)->map(fn ($d) => $d->title().' '.$d->number)->implode(', ').'.' : __('Sənədlər artıq mövcuddur.'));
     }

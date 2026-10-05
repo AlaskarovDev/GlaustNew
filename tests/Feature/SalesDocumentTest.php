@@ -40,7 +40,7 @@ class SalesDocumentTest extends TestCase
 
         // Re-applying a step never overwrites existing (possibly edited) documents.
         $this->applyRub($inv)->assertSessionMissing('documents_created');
-        $this->assertSame(2, $this->inTenant($admin, fn () => SalesDocument::count()));
+        $this->assertSame(3, $this->inTenant($admin, fn () => SalesDocument::count()), 'proforma, specification, packing list');
 
         $this->get(route('invoices.show', $inv))->assertOk()->assertSee('Alıcı üçün sənədlər')->assertSee($pf->number)
             ->assertSee('Satıcının fakturası')->assertSee(money(191922, 'EUR'))->assertSee('Alıcıya fakturamız')->assertSee(money(19800178, 'RUB'))->assertSee('AZN ilə göstər');
@@ -111,9 +111,54 @@ class SalesDocumentTest extends TestCase
         $this->actingAs($other)->get(route('sales-documents.pdf', $pf))->assertNotFound();
 
         $this->actingAs($admin)->delete(route('sales-documents.destroy', $pf))->assertRedirect();
-        $this->assertSame(1, $this->inTenant($admin, fn () => SalesDocument::count()));
-        $this->post(route('invoices.documents', $inv))->assertSessionHas('success');
         $this->assertSame(2, $this->inTenant($admin, fn () => SalesDocument::count()));
+        $this->post(route('invoices.documents', $inv))->assertSessionHas('success');
+        $this->assertSame(3, $this->inTenant($admin, fn () => SalesDocument::count()));
         $this->assertSame(1, $this->inTenant($admin, fn () => Invoice::count()));
+    }
+
+    /** Packing List (PL sheet): created with the proforma, products in pallet 1, pallets edited by hand, stays editable after the lock. */
+    public function test_packing_list_with_pallets(): void
+    {
+        config(['glaust.invoice_approval_flow' => false]);
+        [$admin, $inv] = $this->calculated();
+        $this->applyRub($inv);
+        [$pf, $pl] = $this->inTenant($admin, fn () => [SalesDocument::where('kind', 'proforma')->firstOrFail(), SalesDocument::where('kind', 'packing')->firstOrFail()]);
+        $this->assertSame($pf->number, $pl->number);
+        $this->assertCount(1, $pl->pallets());
+        $this->assertSame(count($pf->lines), count($pl->pallets()[0]['items']));
+        $this->assertSame((float) $pf->lines[0]['quantity'], (float) $pl->pallets()[0]['items'][0]['total']);
+        $this->assertSame('kg', $pl->pallets()[0]['items'][0]['total_unit']);
+
+        $this->actingAs($admin)->get(route('sales-documents.show', $pl))->assertOk()->assertSee('Packing List')->assertSee('Proforma ilə yoxlama');
+        $item = fn ($desc, $total) => ['code' => '510.1637.03', 'description' => $desc, 'package' => '200 kg', 'quantity' => (string) ($total / 200), 'qty_unit' => 'stck', 'total' => (string) $total, 'total_unit' => 'kg', 'weight' => '880'];
+        $desc = $pf->lines[0]['description'];
+        $this->put(route('sales-documents.update', $pl), [
+            'number' => $pl->number, 'doc_date' => today()->toDateString(),
+            'pallets' => [
+                ['title' => 'Pallet №1', 'packing' => '4 colli 115 x 115 x 105', 'weight' => '905', 'items' => [$item($desc, 800)]],
+                ['title' => 'Pallet №2', 'packing' => '4 colli 115 x 115 x 105', 'weight' => '905,5', 'items' => [$item($desc, 800), ['description' => '']]],
+            ],
+        ])->assertSessionHasNoErrors();
+        $pl = $this->inTenant($admin, fn () => SalesDocument::find($pl->id));
+        $this->assertSame(['pallets' => 2, 'weight' => 1810.5, 'packed' => 1760.0], $pl->packingTotals());
+        $this->assertCount(1, $pl->pallets()[1]['items'], 'empty rows are dropped');
+        $this->assertSame('2 palet · '.num(1810.5).' kg', $pl->summary());
+        $this->put(route('sales-documents.update', $pl), ['number' => 'X', 'doc_date' => today()->toDateString(), 'pallets' => []])->assertSessionHasErrors('pallets');
+
+        $pdf = $this->get(route('sales-documents.pdf', $pl));
+        $pdf->assertOk();
+        $this->assertStringContainsString('application/pdf', $pdf->headers->get('Content-Type'));
+
+        // locking issues the commercial invoice: the packing list takes its number and stays editable
+        $this->post(route('invoices.approval.finalize', $inv))->assertSessionHasNoErrors();
+        [$ci, $pl] = $this->inTenant($admin, fn () => [SalesDocument::where('kind', 'commercial')->firstOrFail(), SalesDocument::find($pl->id)]);
+        $this->assertSame($ci->number, $pl->number);
+        $this->assertFalse($pl->isLocked());
+        $this->put(route('sales-documents.update', $pl), [
+            'number' => $pl->number, 'doc_date' => today()->toDateString(),
+            'pallets' => [['title' => 'Pallet №1', 'packing' => '', 'weight' => '900', 'items' => [$item($desc, 800)]]],
+        ])->assertSessionHasNoErrors();
+        $this->get(route('deals.show', $inv->deal_id))->assertOk()->assertSee('Packing List');
     }
 }

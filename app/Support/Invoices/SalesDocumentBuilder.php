@@ -44,6 +44,9 @@ class SalesDocumentBuilder
                     $created[] = $this->create($invoice, $kind);
                 }
             }
+            if (! in_array('packing', $existing, true)) {
+                $created[] = $this->createPacking($invoice);
+            }
         });
 
         return $created;
@@ -85,6 +88,9 @@ class SalesDocumentBuilder
     /** True when the stored lines no longer match what the calculation gives now. */
     public function isStale(SalesDocument $doc): bool
     {
+        if (! in_array($doc->kind, SalesDocument::AUTO_KINDS, true)) {
+            return false;
+        }
         $invoice = $doc->sourceInvoice;
         if (! $invoice || ! $invoice->rubReady()) {
             return false;
@@ -115,7 +121,7 @@ class SalesDocumentBuilder
         $date = today();
         $n = SalesDocument::withTrashed()->where('kind', 'commercial')->count() + 1;
 
-        return SalesDocument::create([
+        $commercial = SalesDocument::create([
             'deal_id' => $proforma->deal_id,
             'project_id' => $proforma->project_id,
             'source_invoice_id' => $invoice->id,
@@ -139,6 +145,39 @@ class SalesDocumentBuilder
             'created_by' => auth()->id(),
             'updated_by' => auth()->id(),
         ]);
+        $this->syncPacking($commercial);
+
+        return $commercial;
+    }
+
+    /**
+     * Packing List (the PL sheet): header like the proforma, the products in «Pallet №1» with their
+     * total quantity; pallets, colli, package sizes and weights are filled in by hand.
+     */
+    public function createPacking(Invoice $invoice): SalesDocument
+    {
+        $proforma = SalesDocument::where('source_invoice_id', $invoice->id)->where('kind', 'proforma')->firstOrFail();
+        $commercial = SalesDocument::where('source_invoice_id', $invoice->id)->where('kind', 'commercial')->first();
+        $items = array_map(fn ($l) => [
+            'code' => '', 'description' => (string) ($l['description'] ?? ''), 'package' => '', 'quantity' => null, 'qty_unit' => 'stck',
+            'total' => (float) ($l['quantity'] ?? 0), 'total_unit' => $this->enUnit((string) ($l['uom'] ?? '')), 'weight' => null,
+        ], $proforma->lines ?? []);
+
+        return SalesDocument::create([
+            'deal_id' => $proforma->deal_id, 'project_id' => $proforma->project_id, 'source_invoice_id' => $invoice->id, 'kind' => 'packing',
+            'number' => $commercial?->number ?? $proforma->number, 'doc_date' => $commercial?->doc_date ?? $proforma->doc_date,
+            'contract_number' => $proforma->contract_number, 'contract_date' => $proforma->contract_date, 'counterparty_id' => $proforma->counterparty_id,
+            'currency' => $proforma->currency, 'heading' => $proforma->heading, 'seller_block' => $proforma->seller_block, 'customer_block' => $proforma->customer_block,
+            'lines' => [['title' => 'Pallet №1', 'packing' => '', 'weight' => null, 'items' => $items]], 'total' => 0,
+            'created_by' => auth()->id(), 'updated_by' => auth()->id(),
+        ]);
+    }
+
+    /** The packing list refers to the commercial invoice once it exists (its number and date). */
+    private function syncPacking(SalesDocument $commercial): void
+    {
+        SalesDocument::where('source_invoice_id', $commercial->source_invoice_id)->where('kind', 'packing')
+            ->update(['number' => $commercial->number, 'doc_date' => $commercial->doc_date]);
     }
 
     /** After an unlock and correction: the commercial invoice keeps its number, its lines and total follow the documents. */

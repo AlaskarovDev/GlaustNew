@@ -18,7 +18,7 @@
                     <span class="grid place-items-center size-11 shrink-0 rounded-xl {{ $d->isProforma() ? 'bg-brand-soft text-brand-ink' : 'bg-saffron-soft text-saffron' }}"><x-icon name="file-pdf" class="size-5"/></span>
                     <div class="min-w-0 flex-1">
                         <div class="font-semibold">{{ $d->title() }} <span class="font-mono">{{ $d->number }}</span></div>
-                        <div class="text-xs text-muted">{{ $d->label() }} · {{ azdate($d->doc_date) }} · <span class="font-mono text-ink">{{ money($d->grandTotal(), $d->currency) }}</span></div>
+                        <div class="text-xs text-muted">{{ $d->label() }} · {{ azdate($d->doc_date) }} · <span class="font-mono text-ink">{{ $d->summary() }}</span></div>
                         <div class="mt-3 flex flex-wrap gap-2">
                             <a href="{{ route('sales-documents.show', $d) }}" class="btn btn-secondary btn-sm"><x-icon name="pencil" class="size-3.5"/> {{ __('Aç və redaktə et') }}</a>
                             <a href="{{ route('sales-documents.pdf', $d) }}" class="btn btn-ghost btn-sm"><x-icon name="download" class="size-4"/> PDF</a>

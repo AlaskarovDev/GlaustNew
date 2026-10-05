@@ -88,7 +88,7 @@
                             <td data-label="{{ __('Nömrə') }}" class="font-mono">{{ $d->number }}</td>
                             <td data-label="{{ __('Tarix') }}" class="font-mono text-xs">{{ azdate($d->doc_date) }}</td>
                             <td data-label="{{ __('Hesablama') }}">@if($inv = $supplierInvoices->firstWhere('id', $d->source_invoice_id))<a href="{{ route('invoices.show', $inv) }}" class="font-mono text-xs hover:text-brand-ink">{{ $inv->number }}</a>@else — @endif</td>
-                            <td data-label="{{ __('Məbləğ') }}" class="num">{{ money($d->grandTotal(), $d->currency) }}</td>
+                            <td data-label="{{ __('Məbləğ') }}" class="num">{{ $d->summary() }}</td>
                             <td class="text-right whitespace-nowrap">
                                 <a href="{{ route('sales-documents.show', $d) }}" class="btn btn-ghost btn-sm"><x-icon name="pencil" class="size-3.5"/> {{ __('Aç') }}</a>
                                 <a href="{{ route('sales-documents.pdf', $d) }}" class="btn btn-ghost btn-sm"><x-icon name="download" class="size-4"/> PDF</a>

@@ -22,6 +22,7 @@ class SalesDocument extends Model
         'proforma' => ['Proforma Invoice', 'Alıcıya proforma faktura (EN)'],
         'specification' => ['Спецификация', 'Müqaviləyə spesifikasiya (RU)'],
         'commercial' => ['Commercial Invoice', 'Kommersiya fakturası (təsdiqdən sonra)'],
+        'packing' => ['Packing List', 'Qablaşdırma siyahısı — paletlər və çəkilər (EN)'],
     ];
 
     /** Created automatically when the calculation is complete; the commercial invoice comes from the approval. */
@@ -93,6 +94,10 @@ class SalesDocument extends Model
     /** The commercial invoice is final; the others freeze while their invoice is in approval or approved. */
     public function isLocked(): bool
     {
+        if ($this->kind === 'packing') {
+            return false; // pallets and weights are often known only after the invoice is locked
+        }
+
         return $this->kind === 'commercial' || (bool) $this->sourceInvoice?->isLocked();
     }
 
@@ -104,6 +109,41 @@ class SalesDocument extends Model
     public function label(): string
     {
         return __(self::KINDS[$this->kind][1]);
+    }
+
+    /** One line for lists: the amount, or pallets and weight for a packing list. */
+    public function summary(): string
+    {
+        if ($this->isPacking()) {
+            $t = $this->packingTotals();
+
+            return $t['pallets'].' '.__('palet').' · '.num($t['weight']).' kg';
+        }
+
+        return money($this->grandTotal(), $this->currency);
+    }
+
+    public function isPacking(): bool
+    {
+        return $this->kind === 'packing';
+    }
+
+    /** Packing list: [{title, packing, weight, items: [{code, description, package, quantity, qty_unit, total, total_unit, weight}]}]. */
+    public function pallets(): array
+    {
+        return $this->isPacking() ? array_values((array) $this->lines) : [];
+    }
+
+    /** @return array{pallets: int, weight: float, packed: float} pallets, weight with pallets, weight with packing */
+    public function packingTotals(): array
+    {
+        $p = $this->pallets();
+
+        return [
+            'pallets' => count($p),
+            'weight' => round(array_sum(array_map(fn ($x) => (float) ($x['weight'] ?? 0), $p)), 2),
+            'packed' => round(array_sum(array_map(fn ($x) => array_sum(array_map(fn ($i) => (float) ($i['weight'] ?? 0), $x['items'] ?? [])), $p)), 2),
+        ];
     }
 
     /** Sum of the lines (each line total is quantity × unit price, to the kopeck). */

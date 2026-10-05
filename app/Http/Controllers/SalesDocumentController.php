@@ -26,6 +26,12 @@ class SalesDocumentController extends Controller
         $history = AuditLog::with('user')->where('auditable_type', 'sales_document')->where('auditable_id', $document->id)->latest('created_at')->limit(25)->get();
         $sibling = SalesDocument::where('source_invoice_id', $document->source_invoice_id)->where('id', '!=', $document->id)->first();
 
+        if ($document->isPacking()) {
+            $proforma = SalesDocument::where('source_invoice_id', $document->source_invoice_id)->where('kind', 'proforma')->first();
+
+            return view('sales-documents.packing', ['doc' => $document, 'history' => $history, 'proforma' => $proforma]);
+        }
+
         return view('sales-documents.show', [
             'doc' => $document,
             'history' => $history,
@@ -39,6 +45,9 @@ class SalesDocumentController extends Controller
         $this->authorize('projects.update');
         if ($document->isLocked()) {
             return back()->with('error', $document->kind === 'commercial' ? __('Kommersiya fakturası təsdiqdən sonra yaradılıb və dəyişdirilmir.') : __('Faktura təsdiqdədir və ya təsdiqlənib — sənəddə düzəliş əməliyyatlarına icazə dayandırılıb.'));
+        }
+        if ($document->isPacking()) {
+            return $this->updatePacking($request, $document);
         }
         $lines = array_values(array_filter((array) $request->input('lines', []), fn ($l) => is_array($l) && trim(implode('', array_map('strval', $l))) !== ''));
         foreach ($lines as &$l) {
@@ -97,6 +106,9 @@ class SalesDocumentController extends Controller
         if ($document->isLocked()) {
             return back()->with('error', $document->kind === 'commercial' ? __('Kommersiya fakturası təsdiqdən sonra yaradılıb və dəyişdirilmir.') : __('Faktura təsdiqdədir və ya təsdiqlənib — sənəddə düzəliş əməliyyatlarına icazə dayandırılıb.'));
         }
+        if (! in_array($document->kind, SalesDocument::AUTO_KINDS, true)) {
+            return back()->with('error', __('Bu sənəd hesablamadan yenilənmir.'));
+        }
         try {
             $document->revisionReason = __('Fakturanın hesablamasından yeniləndi');
             $builder->refreshLines($document);
@@ -118,9 +130,65 @@ class SalesDocumentController extends Controller
                 $logo = 'data:'.$mime.';base64,'.base64_encode(Storage::disk('local')->get($company->logo_path));
             }
         }
-        $name = ['proforma' => 'Proforma ', 'specification' => 'Specification ', 'commercial' => 'Commercial Invoice '][$document->kind].Str::slug($document->number).'.pdf';
+        $name = ['proforma' => 'Proforma ', 'specification' => 'Specification ', 'commercial' => 'Commercial Invoice ', 'packing' => 'Packing List '][$document->kind].Str::slug($document->number).'.pdf';
 
         return $pdf->render('pdf.'.$document->kind, ['doc' => $document, 'logo' => $logo], $name, false, $request->boolean('inline'));
+    }
+
+    /** Packing list: header + pallets, each with its items and weights. */
+    private function updatePacking(Request $request, SalesDocument $document): RedirectResponse
+    {
+        $num = fn ($v) => $v === null || trim((string) $v) === '' ? null : parse_number($v);
+        $pallets = [];
+        foreach (array_values((array) $request->input('pallets', [])) as $p) {
+            if (! is_array($p)) {
+                continue;
+            }
+            $items = [];
+            foreach (array_values((array) ($p['items'] ?? [])) as $it) {
+                if (! is_array($it) || trim((string) ($it['description'] ?? '').(string) ($it['code'] ?? '')) === '') {
+                    continue;
+                }
+                $items[] = ['code' => trim((string) ($it['code'] ?? '')), 'description' => trim((string) ($it['description'] ?? '')), 'package' => trim((string) ($it['package'] ?? '')),
+                    'quantity' => $num($it['quantity'] ?? null), 'qty_unit' => trim((string) ($it['qty_unit'] ?? '')),
+                    'total' => $num($it['total'] ?? null), 'total_unit' => trim((string) ($it['total_unit'] ?? '')), 'weight' => $num($it['weight'] ?? null)];
+            }
+            $pallets[] = ['title' => trim((string) ($p['title'] ?? '')), 'packing' => trim((string) ($p['packing'] ?? '')), 'weight' => $num($p['weight'] ?? null), 'items' => $items];
+        }
+        $request->merge(['pallets' => $pallets]);
+        $data = $request->validate([
+            'number' => ['required', 'string', 'max:64'],
+            'doc_date' => ['required', 'date'],
+            'contract_number' => ['nullable', 'string', 'max:64'],
+            'contract_date' => ['nullable', 'string', 'max:32'],
+            'heading' => ['nullable', 'string', 'max:120'],
+            'seller_block' => ['nullable', 'string', 'max:2000'],
+            'customer_block' => ['nullable', 'string', 'max:2000'],
+            'notes' => ['nullable', 'string', 'max:2000'],
+            'pallets' => ['required', 'array', 'min:1', 'max:500'],
+            'pallets.*.title' => ['required', 'string', 'max:60'],
+            'pallets.*.packing' => ['nullable', 'string', 'max:120'],
+            'pallets.*.weight' => ['nullable', 'numeric', 'min:0', 'max:9999999'],
+            'pallets.*.items' => ['required', 'array', 'min:1', 'max:100'],
+            'pallets.*.items.*.code' => ['nullable', 'string', 'max:40'],
+            'pallets.*.items.*.description' => ['required', 'string', 'max:300'],
+            'pallets.*.items.*.package' => ['nullable', 'string', 'max:40'],
+            'pallets.*.items.*.quantity' => ['nullable', 'numeric', 'min:0', 'max:999999999'],
+            'pallets.*.items.*.qty_unit' => ['nullable', 'string', 'max:16'],
+            'pallets.*.items.*.total' => ['nullable', 'numeric', 'min:0', 'max:999999999'],
+            'pallets.*.items.*.total_unit' => ['nullable', 'string', 'max:16'],
+            'pallets.*.items.*.weight' => ['nullable', 'numeric', 'min:0', 'max:9999999'],
+        ], ['pallets.min' => __('Ən azı bir palet olmalıdır.'), 'pallets.*.items.required' => __('Hər paletdə ən azı bir məhsul olmalıdır.')], [
+            'number' => __('Nömrə'), 'doc_date' => __('Tarix'), 'pallets.*.title' => __('Paletin adı'), 'pallets.*.items.*.description' => __('Təsvir'),
+            'pallets.*.weight' => __('Paletlə çəki'), 'pallets.*.items.*.weight' => __('Qablaşdırma ilə çəki'),
+        ]);
+        $data['lines'] = $data['pallets'];
+        unset($data['pallets']);
+        $data['total'] = 0;
+        $data['updated_by'] = $request->user()->id;
+        $document->update($data);
+
+        return back()->with('success', 'Packing List '.$document->number.__(' yadda saxlanıldı. PDF son vəziyyətdən yaradılacaq.'));
     }
 
     public function destroy(SalesDocument $document): RedirectResponse

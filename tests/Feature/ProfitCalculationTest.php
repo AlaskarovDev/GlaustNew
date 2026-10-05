@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\BankAccount;
-use App\Models\CurrencyRate;
 use App\Models\Deal;
 use App\Models\Invoice;
 use App\Models\LogisticsAct;
@@ -26,14 +25,18 @@ class ProfitCalculationTest extends TestCase
 
     private function rates(string $date, float $eur, float $rub): void
     {
+        // plain dates, as the rate service stores them (a model insert would add a time part)
         foreach (['EUR' => $eur, 'RUB' => $rub] as $code => $rate) {
-            CurrencyRate::create(['currency_code' => $code, 'rate_date' => $date, 'bulletin_date' => $date, 'rate' => $rate, 'nominal' => 1, 'value' => $rate]);
+            \Illuminate\Support\Facades\DB::table('currency_rates')->insert(['currency_code' => $code, 'rate_date' => $date, 'bulletin_date' => $date,
+                'rate' => $rate, 'nominal' => 1, 'value' => $rate, 'source' => 'CBAR', 'created_at' => now(), 'updated_at' => now()]);
         }
     }
 
     private function atfRow3(): array
     {
         $admin = $this->makeCompany();
+        \Illuminate\Support\Facades\Http::preventStrayRequests();
+        \Illuminate\Support\Facades\Http::fake(fn () => \Illuminate\Support\Facades\Http::response('', 503)); // only the stored rates count
         $this->rates('2025-01-07', 1.7666, 0.015962);   // X: seller paid  (Y, Z)
         $this->rates('2025-01-28', 1.7739, 0.017487);   // BI: act date    (BJ, BK)
         $this->rates('2025-02-10', 1.7533, 0.017526);   // AY: logistics paid (AZ, BA)

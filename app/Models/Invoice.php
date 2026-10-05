@@ -99,7 +99,7 @@ class Invoice extends Model
         return $this->hasLogistics() && $this->hasCommission() && $this->hasRub();
     }
 
-    public const APPROVAL_STATUSES = ['pending' => ['Təsdiqdədir', 'amber'], 'approved' => ['Təsdiqlənib', 'green'], 'rejected' => ['Geri qaytarılıb', 'rose']];
+    public const APPROVAL_STATUSES = ['pending' => ['Təsdiqdədir', 'amber'], 'approved' => ['Təsdiqlənib', 'green'], 'rejected' => ['Geri qaytarılıb', 'rose'], 'unlocked' => ['Müvəqqəti kilidsiz', 'amber']];
 
     public function approvals(): HasMany
     {

@@ -141,6 +141,26 @@ class SalesDocumentBuilder
         ]);
     }
 
+    /** After an unlock and correction: the commercial invoice keeps its number, its lines and total follow the documents. */
+    public function reissueCommercial(Invoice $invoice, ?string $reason = null): SalesDocument
+    {
+        $existing = SalesDocument::where('source_invoice_id', $invoice->id)->where('kind', 'commercial')->first();
+        if (! $existing) {
+            return $this->issueCommercial($invoice);
+        }
+        $docs = SalesDocument::where('source_invoice_id', $invoice->id)->get()->keyBy('kind');
+        $proforma = $docs->get('proforma');
+        $base = $docs->get('specification') ?? $proforma;
+        $lines = array_map(fn ($l) => ['uom' => $this->enUnit((string) ($l['uom'] ?? ''))] + $l, $base->lines);
+        $existing->revisionReason = $reason ?? __('Faktura yenidən formalaşdırıldı');
+        $existing->update([
+            'lines' => $lines, 'freight' => $proforma->freight, 'insurance' => $proforma->insurance,
+            'total' => $this->total($lines, $proforma->freight, $proforma->insurance), 'updated_by' => auth()->id(),
+        ]);
+
+        return $existing;
+    }
+
     /** Russian unit back to the English one used on the invoice (кг -> kg, м2 -> qm). */
     public function enUnit(string $uom): string
     {

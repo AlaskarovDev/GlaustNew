@@ -98,6 +98,7 @@ class SalesDocumentController extends Controller
             return back()->with('error', $document->kind === 'commercial' ? __('Kommersiya fakturası təsdiqdən sonra yaradılıb və dəyişdirilmir.') : __('Faktura təsdiqdədir və ya təsdiqlənib — sənəddə düzəliş əməliyyatlarına icazə dayandırılıb.'));
         }
         try {
+            $document->revisionReason = __('Fakturanın hesablamasından yeniləndi');
             $builder->refreshLines($document);
         } catch (\RuntimeException $e) {
             return back()->with('error', $e->getMessage());

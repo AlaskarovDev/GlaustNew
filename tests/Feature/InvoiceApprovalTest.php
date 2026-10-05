@@ -14,8 +14,9 @@ class InvoiceApprovalTest extends TestCase
 {
     use CalculatedInvoice, RefreshDatabase;
 
-    private function ready(): array
+    private function ready(bool $chain = true): array
     {
+        config(['glaust.invoice_approval_flow' => $chain]);
         [$admin, $inv] = $this->calculated();
         $this->applyRub($inv);
         $first = $this->makeUser($admin->company, 'accountant', 'muhasib@test.az');
@@ -33,6 +34,53 @@ class InvoiceApprovalTest extends TestCase
     private function fresh($admin, $inv): Invoice
     {
         return $this->inTenant($admin, fn () => Invoice::with('salesDocuments')->find($inv->id));
+    }
+
+    /** Chain off (default): approve & lock in one step, unlock with a reason, correct, re-form; total changes are kept. */
+    public function test_lock_unlock_with_reason_and_reform(): void
+    {
+        [$admin, $inv] = $this->ready(false);
+        $this->actingAs($admin)->get(route('invoices.show', $inv))->assertOk()->assertSee('Fakturanı təsdiqlə və kilidlə')->assertDontSee('Fakturanı təsdiqə göndər');
+        $this->get(route('settings.index'))->assertDontSee('Təsdiq axını');
+
+        $this->post(route('invoices.approval.finalize', $inv))->assertSessionHasNoErrors();
+        $inv = $this->fresh($admin, $inv);
+        $this->assertTrue($inv->isLocked());
+        $ci = $inv->salesDocuments->firstWhere('kind', 'commercial');
+        $this->assertNotNull($ci);
+        $this->post(route('invoices.commission', $inv), ['commission_rate' => '5'])->assertSessionHas('error');
+
+        // unlock needs a reason
+        $this->post(route('invoices.approval.unlock', $inv), ['reason' => ''])->assertSessionHasErrors('reason');
+        $this->post(route('invoices.approval.unlock', $inv), ['reason' => 'Alıcı qiyməti dəyişdi'])->assertRedirect(route('invoices.show', [$inv, 'edit' => 1]));
+        $inv = $this->fresh($admin, $inv);
+        $this->assertSame('unlocked', $inv->approval_status);
+        $this->assertFalse($inv->isLocked());
+        $this->get(route('invoices.show', $inv))->assertOk()->assertSee('Alıcı qiyməti dəyişdi')->assertSee('Yenidən formalaşdır və kilidlə');
+
+        // correct: commission 3.5 % -> 5 %, refresh the documents, re-form
+        $this->post(route('invoices.commission', $inv), ['commission_rate' => '5'])->assertSessionHasNoErrors();
+        $this->applyRub($inv);
+        $pf = $inv->salesDocuments->firstWhere('kind', 'proforma');
+        $sp = $inv->salesDocuments->firstWhere('kind', 'specification');
+        $before = (float) $pf->total;
+        $this->post(route('sales-documents.refresh', $pf))->assertSessionHasNoErrors();
+        $this->post(route('sales-documents.refresh', $sp))->assertSessionHasNoErrors();
+        $this->post(route('invoices.approval.finalize', $inv))->assertSessionHasNoErrors();
+
+        $inv = $this->fresh($admin, $inv);
+        $this->assertTrue($inv->isApproved());
+        $ci2 = $inv->salesDocuments->firstWhere('kind', 'commercial');
+        $this->assertSame($ci->number, $ci2->number, 'the commercial invoice keeps its number');
+        $this->assertGreaterThan((float) $ci->total, (float) $ci2->total);
+        $revs = $this->inTenant($admin, fn () => \App\Models\SalesDocumentRevision::where('deal_id', $inv->deal_id)->get());
+        $pfRev = $revs->firstWhere('sales_document_id', $pf->id);
+        $this->assertEqualsWithDelta($before, (float) $pfRev->total_before, 0.001);
+        $this->assertEqualsWithDelta((float) $pfRev->total_after - $before, (float) $pfRev->difference, 0.001);
+        $ciRev = $revs->firstWhere('sales_document_id', $ci->id);
+        $this->assertSame('Alıcı qiyməti dəyişdi', $ciRev->reason, 'the unlock reason travels to the commercial invoice change');
+
+        $this->get(route('deals.show', $inv->deal_id))->assertOk()->assertSee('Proforma və Commercial Invoice məbləğləri')->assertSee('Alıcı qiyməti dəyişdi');
     }
 
     public function test_full_flow_issues_the_commercial_invoice_and_locks_everything(): void

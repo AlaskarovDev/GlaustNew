@@ -36,6 +36,27 @@ class InvoiceApprovalController extends Controller
         });
     }
 
+    /** Approve and lock in one step (no approval chain); also re-locks a temporarily unlocked invoice. */
+    public function finalize(Request $request, Invoice $invoice): RedirectResponse
+    {
+        $this->authorize('projects.update');
+        $reopened = $invoice->approval_status === 'unlocked';
+        $this->approvals->finalize($invoice, $request->user());
+
+        return back()->with('success', $reopened
+            ? __('Faktura yenidən formalaşdırıldı və kilidləndi. Commercial Invoice yeniləndi.')
+            : __('Faktura təsdiqləndi və kilidləndi. Commercial Invoice hazırdır.'));
+    }
+
+    public function unlock(Request $request, Invoice $invoice): RedirectResponse
+    {
+        $this->authorize('projects.update');
+        $data = $request->validate(['reason' => ['required', 'string', 'min:3', 'max:500']], [], ['reason' => __('Səbəb')]);
+        $this->approvals->unlock($invoice, $request->user(), $data['reason']);
+
+        return redirect()->route('invoices.show', [$invoice, 'edit' => 1])->with('success', __('Faktura müvəqqəti kiliddən çıxarıldı — düzəliş edin, sonra «Yenidən formalaşdır və kilidlə» basın.'));
+    }
+
     public function withdraw(Request $request, Invoice $invoice): RedirectResponse
     {
         $this->approvals->withdraw($invoice, $request->user());

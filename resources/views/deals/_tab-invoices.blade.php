@@ -102,3 +102,58 @@
             <p class="px-5 py-5 text-sm text-muted">{{ __('Satıcının fakturasında logistika, komissiya və RUB konvertasiyası tətbiq olunan kimi proforma faktura və spesifikasiya burada avtomatik yaranacaq.') }}</p>
         @endif
     </section>
+
+    {{-- Proforma vs commercial invoice, and every change of their totals --}}
+    @php
+        $revisions = \App\Models\SalesDocumentRevision::where('deal_id', $deal->id)->with('user', 'document')->orderByDesc('id')->get();
+        $pairs = $deal->salesDocuments->where('kind', 'proforma')->map(fn ($pf) => [
+            'proforma' => $pf,
+            'commercial' => $deal->salesDocuments->where('source_invoice_id', $pf->source_invoice_id)->firstWhere('kind', 'commercial'),
+            'first' => (float) ($revisions->where('sales_document_id', $pf->id)->last()?->total_before ?? $pf->grandTotal()),
+        ]);
+    @endphp
+    @if($pairs->isNotEmpty())
+        <section class="card overflow-hidden mb-6" x-data="{ history: false }">
+            <header class="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-line">
+                <div>
+                    <h2 class="text-base font-semibold">{{ __('Proforma və Commercial Invoice məbləğləri') }}</h2>
+                    <p class="text-xs text-muted">{{ __('Proformanın ilk və cari məbləği, Commercial Invoice ilə fərq; hər dəyişiklik fərqi ilə yadda saxlanılır') }}</p>
+                </div>
+                @if($revisions->isNotEmpty())
+                    <button type="button" class="btn btn-ghost btn-sm" @click="history = !history"><x-icon name="history" class="size-4"/> {{ __('Dəyişikliklər') }} ({{ $revisions->count() }})</button>
+                @endif
+            </header>
+            <div class="overflow-x-auto">
+                <table class="table-g table-stack">
+                    <thead><tr><th>{{ __('Proforma') }}</th><th class="!text-right">{{ __('İlk məbləğ') }}</th><th class="!text-right">{{ __('Cari məbləğ') }}</th><th class="!text-right">{{ __('Dəyişiklik') }}</th><th>Commercial Invoice</th><th class="!text-right">{{ __('Məbləğ') }}</th><th class="!text-right">{{ __('Fərq (CI − proforma)') }}</th></tr></thead>
+                    <tbody>
+                    @foreach($pairs as $row)
+                        @php $pf = $row['proforma']; $ci = $row['commercial']; $cur = $pf->grandTotal(); $change = round($cur - $row['first'], 2); $gap = $ci ? round($ci->grandTotal() - $cur, 2) : null; @endphp
+                        <tr>
+                            <td data-label="{{ __('Proforma') }}"><a href="{{ route('sales-documents.show', $pf) }}" class="font-mono font-medium hover:text-brand-ink">{{ $pf->number }}</a></td>
+                            <td data-label="{{ __('İlk məbləğ') }}" class="num">{{ money($row['first'], $pf->currency) }}</td>
+                            <td data-label="{{ __('Cari məbləğ') }}" class="num font-medium">{{ money($cur, $pf->currency) }}</td>
+                            <td data-label="{{ __('Dəyişiklik') }}" @class(['num', 'text-success' => $change > 0, 'text-danger' => $change < 0])>{{ $change ? ($change > 0 ? '+' : '−').money(abs($change), $pf->currency) : '—' }}</td>
+                            <td data-label="Commercial Invoice">@if($ci)<a href="{{ route('sales-documents.show', $ci) }}" class="font-mono hover:text-brand-ink">{{ $ci->number }}</a>@else <span class="text-muted text-xs">{{ __('hələ yoxdur') }}</span> @endif</td>
+                            <td data-label="{{ __('Məbləğ') }}" class="num">{{ $ci ? money($ci->grandTotal(), $ci->currency) : '—' }}</td>
+                            <td data-label="{{ __('Fərq (CI − proforma)') }}" @class(['num font-semibold', 'text-success' => $gap > 0, 'text-danger' => $gap < 0])>{{ $gap === null ? '—' : ($gap ? ($gap > 0 ? '+' : '−').money(abs($gap), $pf->currency) : money(0, $pf->currency)) }}</td>
+                        </tr>
+                    @endforeach
+                    </tbody>
+                </table>
+            </div>
+            @if($revisions->isNotEmpty())
+                <ol x-show="history" x-cloak class="border-t border-line divide-y divide-line text-sm">
+                    @foreach($revisions as $rv)
+                        <li class="px-5 py-2.5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                            <span class="font-medium">{{ $rv->document?->title() }} {{ $rv->document?->number }}</span>
+                            <span class="font-mono text-xs text-muted">{{ money($rv->total_before, $rv->currency) }} → {{ money($rv->total_after, $rv->currency) }}</span>
+                            <span @class(['font-mono text-xs font-semibold', 'text-success' => $rv->difference > 0, 'text-danger' => $rv->difference < 0])>{{ $rv->difference > 0 ? '+' : '−' }}{{ money(abs($rv->difference), $rv->currency) }}</span>
+                            <span class="text-xs text-faint ml-auto">{{ $rv->user?->name ?? __('Sistem') }} · {{ azdate($rv->created_at, true) }}</span>
+                            <span class="w-full text-xs text-muted">{{ $rv->reason ?: __('Əl ilə düzəliş') }}</span>
+                        </li>
+                    @endforeach
+                </ol>
+            @endif
+        </section>
+    @endif

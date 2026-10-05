@@ -29,6 +29,32 @@ class SalesDocument extends Model
 
     protected $guarded = ['id', 'company_id'];
 
+    /** Why the next save changes the total (kept on the revision); set by the code that saves. */
+    public ?string $revisionReason = null;
+
+    protected static function booted(): void
+    {
+        // every change of the total is kept with its difference
+        static::updated(function (SalesDocument $doc) {
+            if (! $doc->wasChanged('total')) {
+                return;
+            }
+            $before = (float) $doc->getOriginal('total');
+            $after = (float) $doc->total;
+            SalesDocumentRevision::create([
+                'sales_document_id' => $doc->id, 'deal_id' => $doc->deal_id, 'kind' => $doc->kind, 'currency' => $doc->currency,
+                'total_before' => $before, 'total_after' => $after, 'difference' => round($after - $before, 2),
+                'reason' => $doc->revisionReason, 'user_id' => auth()->id(),
+            ]);
+            $doc->revisionReason = null;
+        });
+    }
+
+    public function revisions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(SalesDocumentRevision::class)->orderByDesc('id');
+    }
+
     protected function casts(): array
     {
         return ['doc_date' => 'date', 'lines' => 'array', 'freight' => 'decimal:2', 'insurance' => 'decimal:2', 'total' => 'decimal:2'];

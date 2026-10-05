@@ -127,6 +127,10 @@ return [
     'shipment_directions' => ['import' => 'İdxal', 'export' => 'İxrac', 'domestic' => 'Daxili'],
     'transport_modes' => ['road' => 'Avto', 'rail' => 'Dəmir yolu', 'sea' => 'Dəniz', 'air' => 'Hava'],
     'cost_types' => ['freight' => 'Fraxt', 'customs' => 'Gömrük', 'insurance' => 'Sığorta', 'storage' => 'Anbar', 'other' => 'Digər'],
+    // Multi-step invoice approval (Tənzimləmələr → Təsdiq axını). Off: the invoice is approved and locked
+    // with one button and can be unlocked for a while (with a reason) to correct it.
+    'invoice_approval_flow' => env('GLAUST_INVOICE_APPROVAL_FLOW', false),
+
     // Interface languages (the Azerbaijani text is the translation key).
     'locales' => ['az' => 'Azərbaycan', 'ru' => 'Русский', 'en' => 'English'],
 

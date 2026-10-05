@@ -151,6 +151,8 @@ Route::middleware(['auth', 'tenant'])->group(function () {
         Route::post('/invoices/{invoice}/documents', [InvoiceController::class, 'documents'])->name('invoices.documents');
         Route::post('/invoices/{invoice}/approval', [InvoiceApprovalController::class, 'submit'])->name('invoices.approval.submit');
         Route::post('/invoices/{invoice}/approval/decide', [InvoiceApprovalController::class, 'decide'])->name('invoices.approval.decide');
+        Route::post('/invoices/{invoice}/approval/finalize', [InvoiceApprovalController::class, 'finalize'])->name('invoices.approval.finalize');
+        Route::post('/invoices/{invoice}/approval/unlock', [InvoiceApprovalController::class, 'unlock'])->name('invoices.approval.unlock');
         Route::post('/invoices/{invoice}/approval/withdraw', [InvoiceApprovalController::class, 'withdraw'])->name('invoices.approval.withdraw');
         Route::delete('/invoices/{invoice}', [InvoiceController::class, 'destroy'])->name('invoices.destroy');
 

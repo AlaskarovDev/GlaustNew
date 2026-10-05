@@ -43,7 +43,7 @@ class InvoiceApprovalService
             $invoice->status === 'cancelled' => __('Ləğv edilmiş faktura təsdiqə göndərilmir.'),
             ! $invoice->rubReady() => __('Əvvəlcə 3 addımı tamamlayın: logistika, komissiya, RUB konvertasiyası.'),
             ! $invoice->salesDocuments()->where('kind', 'proforma')->exists() => __('Alıcı üçün proforma faktura yoxdur.'),
-            ! $this->flow($company) => __('Təsdiq axını qurulmayıb: Tənzimləmələr → Təsdiq axını.'),
+            self::flowEnabled() && ! $this->flow($company) => __('Təsdiq axını qurulmayıb: Tənzimləmələr → Təsdiq axını.'),
             default => null,
         };
     }
@@ -112,6 +112,46 @@ class InvoiceApprovalService
             Reminder::where('source', 'approval')->where('remindable_type', 'invoice')->where('remindable_id', $invoice->id)->whereNull('read_at')->update(['read_at' => now()]);
             $invoice->update(['approval_status' => null, 'approval_step' => null]);
             $this->log($invoice, 'withdrawn', $by, null);
+        });
+    }
+
+    public static function flowEnabled(): bool
+    {
+        return (bool) config('glaust.invoice_approval_flow');
+    }
+
+    /**
+     * Without the approval chain: approve and lock in one step. The commercial invoice is issued, or
+     * re-formed from the corrected documents when the invoice had been unlocked.
+     */
+    public function finalize(Invoice $invoice, User $by): void
+    {
+        $reopened = $invoice->approval_status === 'unlocked';
+        if (! $reopened && ($why = $this->blocker($invoice, tenant()))) {
+            throw ValidationException::withMessages(['approval' => $why]);
+        }
+        if ($reopened && ! $invoice->rubReady()) {
+            throw ValidationException::withMessages(['approval' => __('Əvvəlcə 3 addımı tamamlayın: logistika, komissiya, RUB konvertasiyası.')]);
+        }
+        DB::transaction(function () use ($invoice, $by, $reopened) {
+            $reason = $reopened ? $invoice->approvals()->where('action', 'unlocked')->latest('id')->value('comment') : null;
+            $this->documents->ensureFor($invoice);
+            $invoice->update(['approval_status' => 'approved', 'approval_step' => null, 'approved_at' => now(), 'status' => 'confirmed',
+                'submitted_by' => $invoice->submitted_by ?? $by->id, 'submitted_at' => $invoice->submitted_at ?? now()]);
+            $this->log($invoice, 'locked', $by, $reason);
+            $reopened ? $this->documents->reissueCommercial($invoice->fresh(), $reason) : $this->documents->issueCommercial($invoice->fresh());
+        });
+    }
+
+    /** Opens a locked invoice for corrections; the reason is kept and shown until it is locked again. */
+    public function unlock(Invoice $invoice, User $by, string $reason): void
+    {
+        if ($invoice->approval_status !== 'approved') {
+            throw ValidationException::withMessages(['approval' => __('Yalnız kilidlənmiş faktura açıla bilər.')]);
+        }
+        DB::transaction(function () use ($invoice, $by, $reason) {
+            $invoice->update(['approval_status' => 'unlocked']);
+            $this->log($invoice, 'unlocked', $by, $reason);
         });
     }
 

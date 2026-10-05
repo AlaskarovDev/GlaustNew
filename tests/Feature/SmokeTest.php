@@ -85,6 +85,7 @@ class SmokeTest extends TestCase
             route('projects.show', [$m['deal']->project_id, 'tab' => 'deals']), route('deals.create', $m['deal']->project_id), route('deals.show', $m['deal']), route('deals.edit', $m['deal']),
             route('invoices.show', $m['invoice']), route('invoices.export', [$m['invoice'], 'format' => 'xlsx']), route('invoices.export', [$m['invoice'], 'format' => 'pdf']), route('invoices.template'),
             route('shipments.index'), route('shipments.index', ['status' => 'delayed']), route('shipments.create'), route('shipments.show', $m['shipment']), route('shipments.edit', $m['shipment']),
+            route('profit.index'), route('profit.project', $m['deal']->project_id), route('profit.deal', $m['deal']), route('profit.export', $m['deal']->project_id),
             route('reports.index'), route('imports.index'), route('imports.index', ['type' => 'bank_transactions']),
             route('settings.index'), route('settings.company'), route('settings.general'), route('settings.mail'), route('settings.categories'),
             route('settings.users.index'), route('settings.users.create'), route('settings.users.edit', $this->admin->id),

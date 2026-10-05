@@ -7,6 +7,9 @@
     <x-page-header :title="$deal->title" :back="route('projects.show', [$deal->project, 'tab' => 'deals'])"
                    :subtitle="'Trade '.$deal->code.' · '.azdate($deal->deal_date).__(' · Layihə ').$deal->project->code">
         <x-slot:actions>
+            @can('reports.view')
+                <a href="{{ route('profit.deal', $deal) }}" class="btn btn-secondary"><x-icon name="target" class="size-4"/> {{ __('Mənfəət') }}</a>
+            @endcan
             @can('projects.update')
                 <a href="{{ route('deals.edit', $deal) }}" class="btn btn-secondary"><x-icon name="pencil" class="size-4"/> {{ __('Redaktə') }}</a>
             @endcan

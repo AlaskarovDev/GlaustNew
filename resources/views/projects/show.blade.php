@@ -2,6 +2,9 @@
     @php $profit = \App\Support\ProjectForecast::profit($deals); @endphp
     <x-page-header :title="$project->name" :back="route('projects.index')" :subtitle="__('Layihə ').$project->code">
         <x-slot:actions>
+            @can('reports.view')
+                <a href="{{ route('profit.project', $project) }}" class="btn btn-secondary"><x-icon name="target" class="size-4"/> {{ __('Mənfəət') }}</a>
+            @endcan
             @can('projects.update')
                 <a href="{{ route('projects.edit', $project) }}" class="btn btn-secondary"><x-icon name="pencil" class="size-4"/> {{ __('Redaktə') }}</a>
             @endcan

@@ -28,10 +28,11 @@ class Navigation
                 ['label' => __('Valyuta məzənnələri'), 'route' => 'currency.index', 'active' => 'currency.*', 'icon' => 'coins', 'can' => 'currency.view'],
             ]],
             ['label' => __('Analitika'), 'items' => [
-                ['label' => __('Hesabatlar'), 'route' => 'analytics.show', 'params' => ['report' => array_key_first(config('glaust.analytics'))], 'active' => 'analytics.*|reports.*', 'icon' => 'chart', 'can' => 'reports.view',
+                ['label' => __('Hesabatlar'), 'route' => 'analytics.show', 'params' => ['report' => array_key_first(config('glaust.analytics'))], 'active' => 'analytics.*|reports.*|profit.*', 'icon' => 'chart', 'can' => 'reports.view',
                     'children' => array_merge(
                         array_map(fn ($key, $a) => ['label' => __($a[0]), 'route' => 'analytics.show', 'params' => ['report' => $key], 'icon' => $a[1]], array_keys(config('glaust.analytics')), config('glaust.analytics')),
-                        [['label' => __('Digər hesabatlar'), 'route' => 'reports.index', 'params' => [], 'icon' => 'list', 'active' => 'reports.*']],
+                        [['label' => __('Mənfəətin hesablanması'), 'route' => 'profit.index', 'params' => [], 'icon' => 'target', 'active' => 'profit.*'],
+                         ['label' => __('Digər hesabatlar'), 'route' => 'reports.index', 'params' => [], 'icon' => 'list', 'active' => 'reports.*']],
                     )],
                 ['label' => __('Importlar'), 'route' => 'imports.index', 'active' => 'imports.*', 'icon' => 'upload', 'can' => ['crm.import', 'projects.import', 'bank.import', 'logistics.import']],
             ]],

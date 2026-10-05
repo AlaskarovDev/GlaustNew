@@ -215,6 +215,10 @@ Route::middleware(['auth', 'tenant'])->group(function () {
     /* Reports */
     Route::middleware('can:reports.view')->group(function () {
         Route::get('/analytics/{report}', [AnalyticsController::class, 'show'])->whereIn('report', array_keys(config('glaust.analytics')))->name('analytics.show');
+        Route::get('/profit', [\App\Http\Controllers\ProfitController::class, 'index'])->name('profit.index');
+        Route::get('/profit/projects/{project}', [\App\Http\Controllers\ProfitController::class, 'project'])->name('profit.project');
+        Route::get('/profit/projects/{project}/export', [\App\Http\Controllers\ProfitController::class, 'export'])->middleware('can:reports.export')->name('profit.export');
+        Route::get('/profit/deals/{deal}', [\App\Http\Controllers\ProfitController::class, 'deal'])->name('profit.deal');
         Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
         Route::get('/reports/{report}', [ReportController::class, 'show'])->name('reports.show');
         Route::get('/reports/{report}/export', [ReportController::class, 'export'])->middleware('can:reports.export')->name('reports.export');

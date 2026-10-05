@@ -79,7 +79,7 @@ class Deal extends Model
 
     public function logisticsActs(): HasMany
     {
-        return $this->hasMany(LogisticsAct::class)->orderBy('act_date')->orderBy('id');
+        return $this->hasMany(LogisticsAct::class)->orderBy('logistics_invoice_date')->orderBy('id');
     }
 
     public function salesDocuments(): HasMany

@@ -52,11 +52,11 @@ class LogisticsActTest extends TestCase
         [$admin, $inv, $deal, $carrier] = $this->world();
         $this->actingAs($admin);
         $this->get(route('deals.show', [$deal, 'tab' => 'logistics']))->assertOk()
-            ->assertSee('Fakturada qeyd olunan logistika ödənişi')->assertSee(money(10200, 'EUR'))->assertSee('Logistika aktı əlavə et');
+            ->assertSee('Fakturada qeyd olunan logistika ödənişi')->assertSee(money(10200, 'EUR'))->assertSee('Logistika invoysu əlavə et');
 
         $day = today()->subDays(2)->toDateString();
         $this->post(route('deals.logistics-acts.store', $deal), [
-            'counterparty_id' => $carrier->id, 'invoice_id' => $inv->id, 'act_number' => 'LA-17', 'act_date' => $day, 'amount' => '10 200', 'currency' => 'EUR',
+            'counterparty_id' => $carrier->id, 'invoice_id' => $inv->id, 'has_act' => '1', 'act_number' => 'LA-17', 'act_date' => $day, 'amount' => '10 200', 'currency' => 'EUR',
             'logistics_invoice_number' => 'INV-55', 'logistics_invoice_date' => $day,
             'payment_plan' => 'later', 'planned_date' => today()->addDays(3)->toDateString(), 'remind' => '1',
         ])->assertSessionHasNoErrors();
@@ -85,7 +85,7 @@ class LogisticsActTest extends TestCase
         $today = today()->toDateString();
 
         $this->post(route('deals.logistics-acts.store', $deal), [
-            'counterparty_id' => $carrier->id, 'act_number' => 'LA-18', 'act_date' => $today, 'amount' => '10200', 'currency' => 'EUR', 'payment_plan' => 'today',
+            'counterparty_id' => $carrier->id, 'logistics_invoice_number' => 'LA-18', 'logistics_invoice_date' => $today, 'amount' => '10200', 'currency' => 'EUR', 'payment_plan' => 'today',
             'parts' => [
                 ['act_amount' => '5100', 'currency' => 'RUB', 'bank_account_id' => $rub->id, 'bank_rate' => '92,5'],
                 ['act_amount' => '5100', 'currency' => 'EUR', 'bank_account_id' => $eur->id],
@@ -124,8 +124,8 @@ class LogisticsActTest extends TestCase
     {
         [$admin, $inv, $deal, $carrier, $rub, $eur] = $this->world();
         $this->actingAs($admin);
-        $this->post(route('deals.logistics-acts.store', $deal), ['act_number' => 'LA-19', 'act_date' => today()->toDateString(), 'amount' => '1000', 'currency' => 'EUR',
-            'payment_plan' => 'later', 'planned_date' => today()->toDateString()])->assertSessionHasNoErrors();
+        $this->post(route('deals.logistics-acts.store', $deal), ['logistics_invoice_number' => 'LA-19', 'logistics_invoice_date' => today()->toDateString(), 'amount' => '1000', 'currency' => 'EUR',
+            'payment_plan' => 'later', 'planned_date' => today()->addDay()->toDateString()])->assertSessionHasNoErrors();
         $act = $this->inTenant($admin, fn () => LogisticsAct::firstOrFail());
         $pay = fn (array $parts) => $this->post(route('deals.logistics-acts.pay', [$deal, $act]), ['payment_date' => today()->toDateString(), 'parts' => $parts]);
 
@@ -153,7 +153,7 @@ class LogisticsActTest extends TestCase
         $d1 = today()->subDays(5)->toDateString();
         $d2 = today()->subDay()->toDateString();
         $this->post(route('deals.logistics-acts.store', $deal), [
-            'counterparty_id' => $carrier->id, 'act_number' => 'LA-20', 'act_date' => $d1, 'amount' => '10200', 'currency' => 'EUR', 'payment_plan' => 'today',
+            'counterparty_id' => $carrier->id, 'logistics_invoice_number' => 'LA-20', 'logistics_invoice_date' => $d1, 'amount' => '10200', 'currency' => 'EUR', 'payment_plan' => 'today',
             'parts' => [
                 ['act_amount' => '6000', 'currency' => 'EUR', 'bank_account_id' => $eur->id, 'payment_date' => $d1],
                 ['act_amount' => '4200', 'currency' => 'RUB', 'bank_account_id' => $rub->id, 'bank_rate' => '93', 'payment_date' => $d2],
@@ -169,9 +169,57 @@ class LogisticsActTest extends TestCase
         $this->get(route('deals.show', [$deal, 'tab' => 'logistics']))->assertOk()->assertSee(azdate($d1))->assertSee(azdate($d2));
 
         // No future dates for a part.
-        $this->post(route('deals.logistics-acts.store', $deal), ['act_number' => 'LA-21', 'act_date' => $d1, 'amount' => '100', 'currency' => 'EUR', 'payment_plan' => 'today',
+        $this->post(route('deals.logistics-acts.store', $deal), ['logistics_invoice_number' => 'LA-21', 'logistics_invoice_date' => $d1, 'amount' => '100', 'currency' => 'EUR', 'payment_plan' => 'today',
             'parts' => [['act_amount' => '100', 'currency' => 'EUR', 'bank_account_id' => $eur->id, 'payment_date' => today()->addDay()->toDateString()]]])
             ->assertSessionHasErrors('parts.0.payment_date');
+    }
+
+    /** The logistics invoice is the main document; the act (number, date, scan) is optional and can come later. */
+    public function test_invoice_first_act_optional_and_payment_date_choice(): void
+    {
+        [$admin, $inv, $deal, $carrier, $rub, $eur] = $this->world();
+        $this->actingAs($admin);
+        $invDay = today()->subDays(4)->toDateString();
+        $other = today()->subDay()->toDateString();
+
+        // paid on another (past) date: the payment is made right away on that date
+        $this->post(route('deals.logistics-acts.store', $deal), [
+            'logistics_invoice_number' => 'LI-1', 'logistics_invoice_date' => $invDay, 'amount' => '1000', 'currency' => 'EUR',
+            'payment_plan' => 'later', 'planned_date' => $other,
+            'parts' => [['act_amount' => '1000', 'currency' => 'EUR', 'bank_account_id' => $eur->id, 'payment_date' => $other]],
+        ])->assertSessionHasNoErrors();
+        $li = $this->inTenant($admin, fn () => LogisticsAct::with('payments')->where('logistics_invoice_number', 'LI-1')->firstOrFail());
+        $this->assertNull($li->act_number);
+        $this->assertSame($invDay, $li->docDate()->toDateString(), 'valued at the invoice date');
+        $this->assertSame(round(1000 * app(CurrencyRates::class)->rate('EUR', $invDay), 2), (float) $li->amount_azn);
+        $this->assertSame('paid', $li->status());
+        $this->assertSame($other, $li->payments->first()->payment_date->toDateString());
+
+        // the act arrives later, with its scan
+        $this->patch(route('deals.logistics-acts.act', [$deal, $li]), [
+            'act_number' => 'AKT-9', 'act_date' => $other, 'act_file' => \Illuminate\Http\UploadedFile::fake()->create('akt.pdf', 40, 'application/pdf'),
+        ])->assertSessionHasNoErrors();
+        $li = $this->inTenant($admin, fn () => LogisticsAct::with('attachments')->find($li->id));
+        $this->assertSame('AKT-9', $li->act_number);
+        $this->assertCount(1, $li->attachments);
+        $this->get(route('deals.show', [$deal, 'tab' => 'logistics']))->assertOk()->assertSee('LI-1')->assertSee('AKT-9')->assertSee('akt.pdf');
+
+        // the act fields are required only when the act is ticked
+        $this->post(route('deals.logistics-acts.store', $deal), [
+            'logistics_invoice_number' => 'LI-2', 'logistics_invoice_date' => $invDay, 'amount' => '500', 'currency' => 'EUR', 'has_act' => '1',
+            'payment_plan' => 'later', 'planned_date' => today()->addDays(5)->toDateString(), 'remind' => '1',
+        ])->assertSessionHasErrors(['act_number', 'act_date']);
+        // a future date keeps it unpaid with a reminder
+        $this->post(route('deals.logistics-acts.store', $deal), [
+            'logistics_invoice_number' => 'LI-2', 'logistics_invoice_date' => $invDay, 'amount' => '500', 'currency' => 'EUR', 'has_act' => '0',
+            'payment_plan' => 'later', 'planned_date' => today()->addDays(5)->toDateString(), 'remind' => '1',
+        ])->assertSessionHasNoErrors();
+        $li2 = $this->inTenant($admin, fn () => LogisticsAct::with('payments')->where('logistics_invoice_number', 'LI-2')->firstOrFail());
+        $this->assertSame('unpaid', $li2->status());
+        $this->assertNotNull($li2->reminder_id);
+        // the invoice number and date are required
+        $this->post(route('deals.logistics-acts.store', $deal), ['amount' => '5', 'currency' => 'EUR', 'payment_plan' => 'invoice'])
+            ->assertSessionHasErrors(['logistics_invoice_number', 'logistics_invoice_date']);
     }
 
     /** A part entered as an amount in its own currency settles amount / bank rate of the act. */
@@ -182,7 +230,7 @@ class LogisticsActTest extends TestCase
         $this->actingAs($admin);
         $day = today()->subDay()->toDateString();
         $this->post(route('deals.logistics-acts.store', $deal), [
-            'act_number' => 'LA-30', 'act_date' => $day, 'amount' => '10200', 'currency' => 'EUR', 'payment_plan' => 'today',
+            'logistics_invoice_number' => 'LA-30', 'logistics_invoice_date' => $day, 'amount' => '10200', 'currency' => 'EUR', 'payment_plan' => 'today',
             'parts' => [['amount' => '5 000', 'currency' => 'AZN', 'bank_account_id' => $azn->id, 'bank_rate' => '1,9129', 'payment_date' => $day]],
         ])->assertSessionHasNoErrors();
 

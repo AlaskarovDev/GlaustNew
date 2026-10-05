@@ -14,7 +14,7 @@
         $line('S', __('Köçürmə komissiyası'), money($f['fee'], $cur).' × N', money($f['S'])),
         $line('', __('Proqnoz mənfəət'), 'Q − P − R − S', $signed($f['profit']), true, $f['profit'] >= 0 ? 'success' : 'danger'),
     ] : null, 'empty' => __('RUB konvertasiyası (proqnoz kursları) tətbiq olunmayıb.')];
-    $steps[] = ['n' => 2, 'title' => __('Akt tarixinə mənfəət'), 'sub' => $a ? __('Logistika aktı').' '.$a['numbers'].' · '.azdate($a['date']) : null, 'lines' => $a ? [
+    $steps[] = ['n' => 2, 'title' => __('Akt tarixinə mənfəət'), 'sub' => $a ? __('Logistika').': '.$a['numbers'].' · '.azdate($a['date']) : null, 'lines' => $a ? [
         $line('BJ / BK', __('CBAR kursları akt tarixinə'), $cur.' '.rate_fmt($a['BJ']).' · '.$sc.' '.rate_fmt($a['BK']), ''),
         $line('BL', __('Alış, akt tarixinə'), 'D × BJ', money($a['BL'])),
         $line('BM', __('Satış, akt tarixinə'), 'H × BK', money($a['BM'])),

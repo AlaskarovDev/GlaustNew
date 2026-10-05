@@ -19,33 +19,80 @@ class LogisticsActController extends Controller
     public function store(Request $request, Deal $deal): RedirectResponse
     {
         $this->authorize('projects.update');
-        $request->merge(['amount' => parse_number($request->input('amount'))]);
+        $request->merge(['amount' => parse_number($request->input('amount')), 'has_act' => $request->boolean('has_act')]);
         $data = $request->validate([
             'counterparty_id' => ['nullable', 'integer', TenantExists::in('counterparties')],
             'invoice_id' => ['nullable', 'integer', Rule::exists('invoices', 'id')->where('deal_id', $deal->id)->where('company_id', tenant()->id)],
-            'act_number' => ['required', 'string', 'max:64'],
-            'act_date' => ['required', 'date', 'before_or_equal:today'],
+            'logistics_invoice_number' => ['required', 'string', 'max:64'],
+            'logistics_invoice_date' => ['required', 'date', 'before_or_equal:today'],
             'amount' => ['required', 'numeric', 'gt:0', 'max:999999999999'],
             'currency' => ['required', Rule::in(config('glaust.currencies'))],
-            'logistics_invoice_number' => ['nullable', 'string', 'max:64'],
-            'logistics_invoice_date' => ['nullable', 'date'],
-            'payment_plan' => ['required', Rule::in(['today', 'later'])],
-            'planned_date' => ['required_if:payment_plan,later', 'nullable', 'date', 'after_or_equal:today'],
+            'has_act' => ['boolean'],
+            'act_number' => ['required_if:has_act,true', 'nullable', 'string', 'max:64'],
+            'act_date' => ['required_if:has_act,true', 'nullable', 'date', 'before_or_equal:today'],
+            'act_file' => ['nullable', 'file', 'max:'.config('glaust.upload.max_kb'), 'mimes:pdf,jpg,jpeg,png'],
+            // invoice = paid on the invoice date; later = another date (past/today: paid now, future: planned)
+            'payment_plan' => ['required', Rule::in(['invoice', 'today', 'later'])],
+            'planned_date' => ['required_if:payment_plan,later', 'nullable', 'date'],
             'remind' => ['nullable', 'boolean'],
             'reference' => ['nullable', 'string', 'max:80'],
             'notes' => ['nullable', 'string', 'max:2000'],
-        ], ['planned_date.required_if' => __('Köçürmə tarixini seçin.')], [
-            'act_number' => __('Akt nömrəsi'), 'act_date' => __('Akt tarixi'), 'amount' => __('Məbləğ'), 'currency' => __('Valyuta'), 'planned_date' => __('Köçürmə tarixi'),
-            'counterparty_id' => __('Logistika şirkəti'),
+        ], [
+            'planned_date.required_if' => __('Köçürmə tarixini seçin.'),
+            'act_number.required_if' => __('Akt nömrəsini yazın.'), 'act_date.required_if' => __('Akt tarixini seçin.'),
+        ], [
+            'logistics_invoice_number' => __('Invoys nömrəsi'), 'logistics_invoice_date' => __('Invoys tarixi'),
+            'act_number' => __('Akt nömrəsi'), 'act_date' => __('Akt tarixi'), 'act_file' => __('Aktın sənədi'),
+            'amount' => __('Məbləğ'), 'currency' => __('Valyuta'), 'planned_date' => __('Köçürmə tarixi'), 'counterparty_id' => __('Logistika şirkəti'),
         ]);
-        $parts = $data['payment_plan'] === 'today' ? $this->parts($request) : [];
+        if (! $data['has_act']) {
+            $data['act_number'] = $data['act_date'] = null;
+        }
+        $payDate = $data['payment_plan'] === 'later' ? $data['planned_date'] : $data['logistics_invoice_date'];
+        $payNow = $payDate <= today()->toDateString();
+        $data['payment_plan'] = $payNow ? 'today' : 'later';
+        $data['planned_date'] = $payNow ? null : $payDate;
+
+        $parts = $payNow ? $this->parts($request) : [];
         if ($parts) {
             $this->authorize('bank.create');
         }
-        $act = $this->logistics->createAct($deal, $data, $parts);
+        $act = $this->logistics->createAct($deal, $data, $parts, $payDate);
+        if ($data['has_act']) {
+            $this->storeActFile($request, $act);
+        }
 
-        return redirect()->route('deals.show', [$deal, 'tab' => 'logistics'])->with('success', __('Logistika aktı ').$act->act_number.__(' əlavə edildi')
+        return redirect()->route('deals.show', [$deal, 'tab' => 'logistics'])->with('success', __('Logistika: :doc əlavə edildi', ['doc' => $act->label()])
             .($act->payments->isNotEmpty() ? __(' və ödənildi (').$act->payments->count().__(' hissə).') : ($act->reminder_id ? '; '.azdate($act->planned_date).__(' üçün xatırlatma quruldu.') : '.')));
+    }
+
+    /** The act came later: its number, date and scanned copy for an invoice saved without one. */
+    public function attachAct(Request $request, Deal $deal, LogisticsAct $act): RedirectResponse
+    {
+        $this->authorize('projects.update');
+        abort_unless($act->deal_id === $deal->id, 404);
+        $data = $request->validate([
+            'act_number' => ['required', 'string', 'max:64'],
+            'act_date' => ['required', 'date', 'before_or_equal:today'],
+            'act_file' => ['nullable', 'file', 'max:'.config('glaust.upload.max_kb'), 'mimes:pdf,jpg,jpeg,png'],
+        ], [], ['act_number' => __('Akt nömrəsi'), 'act_date' => __('Akt tarixi'), 'act_file' => __('Aktın sənədi')]);
+        $act->update(['act_number' => $data['act_number'], 'act_date' => $data['act_date']]);
+        $this->storeActFile($request, $act);
+
+        return redirect()->route('deals.show', [$deal, 'tab' => 'logistics'])->with('success', __('Akt :v1 əlavə edildi.', ['v1' => $data['act_number']]));
+    }
+
+    private function storeActFile(Request $request, LogisticsAct $act): void
+    {
+        if (! $request->hasFile('act_file')) {
+            return;
+        }
+        $file = $request->file('act_file');
+        $act->attachments()->create([
+            'original_name' => mb_substr($file->getClientOriginalName(), 0, 190),
+            'path' => $file->storeAs('attachments/'.tenant()->id.'/'.now()->format('Y/m'), \Illuminate\Support\Str::uuid().'.'.$file->extension(), 'local'),
+            'mime' => $file->getMimeType(), 'size' => $file->getSize(), 'uploaded_by' => $request->user()->id,
+        ]);
     }
 
     public function pay(Request $request, Deal $deal, LogisticsAct $act): RedirectResponse
@@ -58,7 +105,7 @@ class LogisticsActController extends Controller
         ], [], ['payment_date' => __('Köçürmə tarixi')]);
         $paid = $this->logistics->pay($act, $this->parts($request), $data['payment_date'], $data['reference'] ?? null);
 
-        return redirect()->route('deals.show', [$deal, 'tab' => 'logistics'])->with('success', __('Akt ').$act->act_number.__(' üzrə ödəniş edildi (').count($paid).__(' hissə).'));
+        return redirect()->route('deals.show', [$deal, 'tab' => 'logistics'])->with('success', $act->label().__(' üzrə ödəniş edildi (').count($paid).__(' hissə).'));
     }
 
     public function remind(Request $request, Deal $deal, LogisticsAct $act): RedirectResponse
@@ -78,7 +125,7 @@ class LogisticsActController extends Controller
         abort_unless($act->deal_id === $deal->id, 404);
         $this->logistics->deleteAct($act);
 
-        return redirect()->route('deals.show', [$deal, 'tab' => 'logistics'])->with('success', __('Akt ').$act->act_number.__(' və onun ödənişləri silindi.'));
+        return redirect()->route('deals.show', [$deal, 'tab' => 'logistics'])->with('success', $act->label().__(' və onun ödənişləri silindi.'));
     }
 
     public function destroyPayment(Deal $deal, LogisticsPayment $payment): RedirectResponse

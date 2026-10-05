@@ -376,8 +376,9 @@ Alpine.data('logisticsPay', (cfg) => ({
     actDate: cfg.actDate || cfg.today,
     payDate: cfg.today,
     today: cfg.today,
-    plan: cfg.plan || 'today',
-    plannedDate: '',
+    plan: cfg.plan === 'today' ? 'invoice' : (cfg.plan || 'invoice'),   // invoice = paid on the invoice date | later = another date
+    plannedDate: cfg.plannedDate || '',
+    hasAct: !!cfg.hasAct,
     remind: false,
     terms: '',
     parts: [],
@@ -386,7 +387,10 @@ Alpine.data('logisticsPay', (cfg) => ({
     rates: {},
     errors: {},
     init() {
-        this.$watch('actDate', () => this.load());
+        this.$watch('actDate', () => { this.followPayDate(); this.load(); });
+        this.$watch('plan', () => this.followPayDate());
+        this.$watch('plannedDate', () => this.followPayDate());
+        this.followPayDate();
         this.$watch('payDate', (v, old) => { this.syncDates(old); this.load(); });
         this.$watch('currency', () => { this.load(); this.reflow(); });
         this.$watch('amount', () => this.reflow());
@@ -440,7 +444,7 @@ Alpine.data('logisticsPay', (cfg) => ({
         return {
             currency, target: target || 0, amount: '', amountTouched: false,
             account: acc ? String(acc.id) : '', bankRate: '', fee: '', feeTouched: false,
-            date: this.mode === 'pay' ? this.payDate : '',   // new act: the date is asked for first
+            date: this.payDate,
         };
     },
     addPart() { this.parts.push(this.part(this.parts.at(-1)?.currency || 'RUB', Math.max(0, this.remaining() ?? 0))); this.load(); },
@@ -497,9 +501,17 @@ Alpine.data('logisticsPay', (cfg) => ({
     partOk(p) { return !!p.date && p.date <= this.today && this.pay(p) > 0 && !!p.account && !!this.bank(p); },
     // the payment date of every part follows the common date until a part gets its own
     syncDates(old) { this.parts.forEach((p) => { if (!p.date || p.date === old) p.date = this.payDate; }); },
+    // new invoice: paid now on the invoice date, or on another date that is not in the future
+    payNow() { return this.mode === 'pay' || this.plan === 'invoice' || (!!this.plannedDate && this.plannedDate <= this.today); },
+    followPayDate() {
+        if (this.mode !== 'new') return;
+        const d = this.plan === 'invoice' ? this.actDate : this.plannedDate;
+        if (d && d <= this.today) this.payDate = d;
+    },
     canSubmit() {
         if (this.mode === 'new' && (!this.total() || !this.currency)) return false;
-        if (this.mode === 'new' && this.plan === 'later') return !!this.plannedDate;
+        if (this.mode === 'new' && this.plan === 'later' && !this.plannedDate) return false;
+        if (this.mode === 'new' && !this.payNow()) return true;
         return this.parts.length > 0 && this.parts.every((p) => this.partOk(p)) && this.settled() > 0 && this.remaining() >= -0.05;
     },
 }));

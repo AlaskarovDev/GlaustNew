@@ -10,7 +10,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-/** The logistics company's act for a deal; paid in one or more parts (see the migration). */
+/**
+ * A logistics charge of a deal: the logistics company's invoice (number, date — the amount is valued at
+ * CBAR of that date) and, when there is one, its act (number, date, scanned copy as an attachment).
+ * Paid in one or more parts (see the migrations).
+ */
 class LogisticsAct extends Model
 {
     use Auditable, BelongsToCompany, HasAttachments, SoftDeletes;
@@ -71,8 +75,25 @@ class LogisticsAct extends Model
         };
     }
 
+    /** The date the amount is valued at: the invoice's (older records: the act's). */
+    public function docDate(): ?\Carbon\CarbonInterface
+    {
+        return $this->logistics_invoice_date ?? $this->act_date;
+    }
+
+    public function hasAct(): bool
+    {
+        return (bool) $this->act_number;
+    }
+
+    /** «İnvoys 123» / «Akt 45» — how the charge is named in lists, purposes and reminders. */
+    public function label(): string
+    {
+        return $this->logistics_invoice_number ? __('İnvoys').' '.$this->logistics_invoice_number : __('Akt').' '.$this->act_number;
+    }
+
     public function auditLabel(): string
     {
-        return 'Logistika aktı '.$this->act_number;
+        return 'Logistika: '.($this->logistics_invoice_number ? 'invoys '.$this->logistics_invoice_number : 'akt '.$this->act_number);
     }
 }

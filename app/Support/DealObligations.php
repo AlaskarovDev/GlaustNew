@@ -46,7 +46,7 @@ class DealObligations
         }
         foreach ($acts as $act) {
             if ($act->remaining() > 0) {
-                $logistics[] = ['invoice' => 'Akt '.$act->act_number, 'amount' => $act->remaining(), 'currency' => $act->currency, 'mode' => 'act', 'company' => $act->counterparty?->name];
+                $logistics[] = ['invoice' => $act->label(), 'amount' => $act->remaining(), 'currency' => $act->currency, 'mode' => 'act', 'company' => $act->counterparty?->name];
             }
         }
         $logisticsDue = [];

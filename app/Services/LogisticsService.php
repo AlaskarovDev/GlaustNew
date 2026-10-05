@@ -25,22 +25,24 @@ class LogisticsService
 {
     public function __construct(private BankLedger $ledger, private CurrencyRates $rates, private ExpenseService $expenses) {}
 
-    public function createAct(Deal $deal, array $d, array $parts = []): LogisticsAct
+    /** $d: the logistics invoice (its date values the amount at CBAR), the act if any; paid on $payDate when $parts are given. */
+    public function createAct(Deal $deal, array $d, array $parts = [], ?string $payDate = null): LogisticsAct
     {
-        $rate = fn (string $cur) => $this->rate($cur, $d['act_date'], 'act_date');
+        $valueDate = $d['logistics_invoice_date'] ?? $d['act_date'];
+        $rate = fn (string $cur) => $this->rate($cur, $valueDate, isset($d['logistics_invoice_date']) ? 'logistics_invoice_date' : 'act_date');
         $cbar = $rate($d['currency']);
         $rub = $rate('RUB');
         $eur = $rate('EUR');
         $amount = round((float) $d['amount'], 2);
         $later = ($d['payment_plan'] ?? 'later') === 'later';
 
-        return DB::transaction(function () use ($deal, $d, $parts, $cbar, $rub, $eur, $amount, $later) {
+        return DB::transaction(function () use ($deal, $d, $parts, $cbar, $rub, $eur, $amount, $later, $payDate, $valueDate) {
             $act = LogisticsAct::create([
                 'deal_id' => $deal->id, 'invoice_id' => $d['invoice_id'] ?? null, 'counterparty_id' => $d['counterparty_id'] ?? null,
-                'act_number' => $d['act_number'], 'act_date' => $d['act_date'], 'currency' => $d['currency'], 'amount' => $amount,
+                'act_number' => $d['act_number'] ?? null, 'act_date' => $d['act_date'] ?? null, 'currency' => $d['currency'], 'amount' => $amount,
                 'cbar_rate' => $cbar, 'cbar_rub' => $rub, 'cbar_eur' => $eur,
                 'amount_azn' => round($amount * $cbar, 2), 'amount_rub' => round($amount * $cbar / $rub, 2), 'amount_eur' => round($amount * $cbar / $eur, 2),
-                'logistics_invoice_number' => $d['logistics_invoice_number'] ?? null, 'logistics_invoice_date' => $d['logistics_invoice_date'] ?? null,
+                'logistics_invoice_number' => $d['logistics_invoice_number'] ?? null, 'logistics_invoice_date' => $valueDate,
                 'payment_plan' => $later ? 'later' : 'today', 'planned_date' => $later ? ($d['planned_date'] ?? null) : null,
                 'notes' => $d['notes'] ?? null, 'created_by' => auth()->id(),
             ]);
@@ -48,7 +50,7 @@ class LogisticsService
                 $this->remind($act);
             }
             if (! $later && $parts) {
-                $this->pay($act, $parts, today()->toDateString(), $d['reference'] ?? null);
+                $this->pay($act, $parts, $payDate ?? today()->toDateString(), $d['reference'] ?? null);
             }
 
             return $act->fresh();
@@ -109,7 +111,7 @@ class LogisticsService
                 $tx = $this->ledger->record($account, [
                     'direction' => 'out', 'transaction_date' => $partDate, 'amount' => $amount,
                     'counterparty_id' => $act->counterparty_id, 'project_id' => $act->deal->project_id, 'deal_id' => $act->deal_id,
-                    'purpose' => 'Logistika aktı '.$act->act_number.' ('.$act->deal->code.'): '.number_format($share, 2, '.', ' ').' '.$act->currency,
+                    'purpose' => 'Logistika ('.($act->logistics_invoice_number ? 'invoys '.$act->logistics_invoice_number : 'akt '.$act->act_number).', '.$act->deal->code.'): '.number_format($share, 2, '.', ' ').' '.$act->currency,
                     'reference' => $reference,
                 ]);
                 $feeExpense = null;
@@ -117,7 +119,7 @@ class LogisticsService
                     $category = Category::firstOrCreate(['scope' => 'expense', 'name' => SupplierPaymentService::FEE_CATEGORY], ['color' => '#64748b']);
                     $feeExpense = $this->expenses->save(new Expense, [
                         'expense_date' => $partDate, 'category_id' => $category->id,
-                        'description' => 'Bank komissiyası: logistika aktı '.$act->act_number.', köçürmə '.number_format($amount, 2, '.', ' ').' '.$cur,
+                        'description' => 'Bank komissiyası: logistika '.($act->logistics_invoice_number ? 'invoysu '.$act->logistics_invoice_number : 'aktı '.$act->act_number).', köçürmə '.number_format($amount, 2, '.', ' ').' '.$cur,
                         'amount' => $fee, 'currency' => $cur, 'counterparty_id' => null, 'project_id' => $act->deal->project_id, 'deal_id' => $act->deal_id,
                         'status' => 'paid', 'payment_method' => 'bank', 'paid_at' => $partDate, 'bank_account_id' => $account->id, 'reference' => $reference,
                     ]);
@@ -145,7 +147,7 @@ class LogisticsService
         $act->loadMissing('deal');
         $r = Reminder::firstOrCreate(['dedupe_key' => 'logistics-act:'.$act->id.':'.$act->planned_date->toDateString()], [
             'user_id' => auth()->id(), 'source' => 'logistics_payment',
-            'title' => 'Logistika ödənişi: akt '.$act->act_number, 'body' => money($act->amount, $act->currency).' · Trade '.$act->deal->code,
+            'title' => 'Logistika ödənişi: '.($act->logistics_invoice_number ? 'invoys '.$act->logistics_invoice_number : 'akt '.$act->act_number), 'body' => money($act->amount, $act->currency).' · Trade '.$act->deal->code,
             'url' => route('deals.show', [$act->deal_id, 'tab' => 'logistics'], false), 'remindable_type' => 'logistics_act', 'remindable_id' => $act->id,
             'remind_at' => $act->planned_date->copy()->setTime(9, 0),
         ]);

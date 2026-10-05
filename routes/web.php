@@ -133,6 +133,7 @@ Route::middleware(['auth', 'tenant'])->group(function () {
         Route::delete('/deals/{deal}/supplier-payments/{supplierPayment}', [DealPaymentController::class, 'destroySupplierPayment'])->name('deals.supplier-payments.destroy');
         Route::post('/deals/{deal}/logistics-acts', [LogisticsActController::class, 'store'])->name('deals.logistics-acts.store');
         Route::post('/deals/{deal}/logistics-acts/{act}/pay', [LogisticsActController::class, 'pay'])->name('deals.logistics-acts.pay');
+        Route::patch('/deals/{deal}/logistics-acts/{act}/act', [LogisticsActController::class, 'attachAct'])->name('deals.logistics-acts.act');
         Route::post('/deals/{deal}/logistics-acts/{act}/remind', [LogisticsActController::class, 'remind'])->name('deals.logistics-acts.remind');
         Route::delete('/deals/{deal}/logistics-acts/{act}', [LogisticsActController::class, 'destroy'])->name('deals.logistics-acts.destroy');
         Route::delete('/deals/{deal}/logistics-payments/{payment}', [LogisticsActController::class, 'destroyPayment'])->name('deals.logistics-payments.destroy');

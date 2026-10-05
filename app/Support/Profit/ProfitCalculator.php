@@ -143,14 +143,14 @@ class ProfitCalculator
 
         /* 2. At the act date */
         if ($actRows->isNotEmpty() && $H !== null) {
-            $last = $actRows->max(fn ($r) => $r['act']->act_date->format('Y-m-d'));
+            $last = $actRows->max(fn ($r) => ($r['act']->act_date ?? $r['act']->docDate())->format('Y-m-d')); // the act's date, else its invoice's
             $BJ = $this->rate($cur, $last);
             $BK = $this->rate($saleCur, $last);
             if ($BJ !== null && $BK !== null) {
                 $BL = $D * $BJ;
                 $BM = $H * $BK;
                 $BO = $actRows->sum(fn ($r) => (float) $r['act']->amount_azn * $r['k']);
-                $row['act'] = ['date' => \Carbon\Carbon::parse($last), 'numbers' => $actRows->map(fn ($r) => $r['act']->act_number)->unique()->implode(', '),
+                $row['act'] = ['date' => \Carbon\Carbon::parse($last), 'numbers' => $actRows->map(fn ($r) => $r['act']->label())->unique()->implode(', '),
                     'amounts' => $actRows->groupBy(fn ($r) => $r['act']->currency)->map(fn ($g) => $g->sum(fn ($r) => (float) $r['act']->amount * $r['k']))->all(),
                     'BJ' => $BJ, 'BK' => $BK, 'BL' => $BL, 'BM' => $BM, 'BN' => $BM - $BL, 'BO' => $BO, 'BP' => $BM - $BL - $BO];
             } else {

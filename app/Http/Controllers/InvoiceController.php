@@ -60,6 +60,9 @@ class InvoiceController extends Controller
         }
 
         $existing = $deal->invoices()->where('type', 'supplier')->whereIn('number', array_map('strval', array_keys($parsed['invoices'])))->pluck('number')->all();
+        if (! $existing) {
+            self::purgeDeleted($deal, array_keys($parsed['invoices']));   // a deleted invoice with the same number may be imported again
+        }
         if ($existing) {
             return back()->with('error', __('Bu proforma(lar) artıq bu Trade-də var: ').implode(', ', $existing).__('. Təkrar import edilmədi.'));
         }
@@ -120,9 +123,22 @@ class InvoiceController extends Controller
             'currency' => ['required', Rule::in(config('glaust.currencies'))],
             'amount' => ['required', 'numeric', 'gt:0', 'max:999999999'],
         ], [], ['number' => __('Faktura nömrəsi'), 'invoice_date' => __('Faktura tarixi'), 'currency' => __('Valyuta'), 'amount' => __('Məbləğ')]);
+        if (! empty($data['number'])) {
+            self::purgeDeleted($deal, [$data['number']]);
+        }
         $invoice = $manual->create($deal, ['number' => $data['number'] ?? null, 'invoice_date' => $data['invoice_date'], 'currency' => $data['currency'], 'amount' => (float) $data['amount']], $request->user()->id);
 
         return redirect()->route('invoices.show', $invoice)->with('success', __('Fakturasız məbləğ daxil edildi: :v1. İndi logistika, komissiya və RUB çevirməsini tətbiq edin.', ['v1' => money($invoice->total, $invoice->currency)]));
+    }
+
+    /** Deleted invoices keep their number in the unique index: remove them for good before the number is reused. */
+    private static function purgeDeleted(Deal $deal, array $numbers): void
+    {
+        Invoice::onlyTrashed()->where('deal_id', $deal->id)->where('type', 'supplier')->whereIn('number', array_map('strval', $numbers))
+            ->get()->each(function (Invoice $old) {
+                \App\Models\SalesDocument::withTrashed()->where('source_invoice_id', $old->id)->update(['source_invoice_id' => null]);
+                $old->forceDelete();
+            });
     }
 
     public function show(Invoice $invoice): View
@@ -324,7 +340,10 @@ class InvoiceController extends Controller
             return back()->with('error', $this->lockedMessage($invoice));
         }
         $deal = $invoice->deal_id;
-        $invoice->delete();
+        DB::transaction(function () use ($invoice) {
+            $invoice->salesDocuments()->get()->each->delete();   // its proforma / specification / CI / PL go with it
+            $invoice->delete();
+        });
 
         return redirect()->route('deals.show', $deal)->with('success', __('Faktura :v1 silindi.', ['v1' => $invoice->number]));
     }

@@ -17,7 +17,7 @@
         @if($supplierInvoices->isNotEmpty())
             <div class="overflow-x-auto">
                 <table class="table-g table-stack">
-                    <thead><tr><th>{{ __('Proforma №') }}</th><th>{{ __('Tarix') }}</th><th class="!text-right">{{ __('Sətir') }}</th><th class="!text-right">{{ __('Məbləğ') }}</th><th>{{ __('Status') }}</th></tr></thead>
+                    <thead><tr><th>{{ __('Proforma №') }}</th><th>{{ __('Tarix') }}</th><th class="!text-right">{{ __('Sətir') }}</th><th class="!text-right">{{ __('Məbləğ') }}</th><th>{{ __('Status') }}</th><th class="w-12"></th></tr></thead>
                     <tbody>
                     @foreach($supplierInvoices as $inv)
                         <tr class="cursor-pointer hover:bg-surface-2/60" @click="if (!$event.target.closest('a, button')) window.location = @js(route('invoices.show', $inv))">
@@ -29,6 +29,13 @@
                             <td data-label="Status"><x-status group="invoice" :value="$inv->status"/>
                                 @if($inv->approval_status)@php [$al, $at] = \App\Models\Invoice::APPROVAL_STATUSES[$inv->approval_status]; @endphp<span class="badge badge-{{ $at }} ml-1">{{ __($al) }}</span>@endif
                             </td>
+                            <td class="text-right">
+                                @if(auth()->user()->can('projects.delete') && ! $inv->isLocked())
+                                    <x-delete-form :action="route('invoices.destroy', $inv)" label="" :message="__('Faktura :v1, onun sətirləri və alıcı üçün sənədləri silinəcək.', ['v1' => $inv->number])"/>
+                                @elseif($inv->isLocked())
+                                    <span class="text-faint" title="{{ __('Təsdiqlənib — silmək üçün əvvəlcə kilidi açın') }}"><x-icon name="lock" class="size-4"/></span>
+                                @endif
+                            </td>
                         </tr>
                     @endforeach
                     </tbody>
@@ -36,7 +43,7 @@
                         <tfoot class="hidden md:table-footer-group"><tr class="bg-surface-2 font-semibold">
                             <td class="px-4 py-3" colspan="3">{{ __('Cəmi') }}</td>
                             {{-- per invoice currency, never converted --}}
-                            <td class="px-4 py-3 text-right font-mono">{!! $supplierInvoices->groupBy('currency')->map(fn ($g, $c) => e(money($g->sum('total'), $c)))->implode('<br>') !!}</td><td></td>
+                            <td class="px-4 py-3 text-right font-mono">{!! $supplierInvoices->groupBy('currency')->map(fn ($g, $c) => e(money($g->sum('total'), $c)))->implode('<br>') !!}</td><td></td><td></td>
                         </tr></tfoot>
                     @endif
                 </table>

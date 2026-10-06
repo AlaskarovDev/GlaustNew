@@ -206,7 +206,7 @@
         <div class="space-y-6">
             @include('partials.attachments', ['model' => $invoice, 'type' => 'invoice', 'ability' => 'projects.update'])
             @if(auth()->user()->can('projects.delete') && ! $invoice->isLocked())
-                <x-delete-form :action="route('invoices.destroy', $invoice)" :label="__('Fakturanı sil')" button="btn btn-ghost w-full text-danger hover:!bg-danger-soft" :message="__('Faktura ').$invoice->number.__(' və bütün sətirləri silinəcək.')"/>
+                <x-delete-form :action="route('invoices.destroy', $invoice)" :label="__('Fakturanı sil')" button="btn btn-ghost w-full text-danger hover:!bg-danger-soft" :message="__('Faktura :v1, onun sətirləri və alıcı üçün sənədləri silinəcək.', ['v1' => $invoice->number])"/>
             @endif
         </div>
     </div>

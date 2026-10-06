@@ -1,5 +1,5 @@
     {{-- Once an invoice exists the import form folds into a button (a second proforma can still come in). --}}
-    <section class="card overflow-hidden mb-6" x-data="{ importing: {{ $supplierInvoices->isEmpty() || session('import_errors') || $errors->has('file') ? 'true' : 'false' }} }">
+    <section class="card overflow-hidden mb-6" x-data="{ importing: {{ ($supplierInvoices->isEmpty() || session('import_errors') || $errors->has('file')) && ! $errors->hasAny(['seller_amount', 'sale_base']) ? 'true' : 'false' }}, manual: {{ $errors->hasAny(['seller_amount', 'sale_base']) ? 'true' : 'false' }} }">
         <header class="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-line">
             <div>
                 <h2 class="text-base font-semibold">{{ __('Satıcının fakturaları') }} <span class="text-muted font-mono font-normal text-sm">{{ $supplierInvoices->count() }}</span></h2>
@@ -7,8 +7,9 @@
             </div>
             <div class="flex flex-wrap gap-2">
                 <a href="{{ route('invoices.template') }}" class="btn btn-secondary btn-sm"><x-icon name="download" class="size-4"/> {{ __('Excel şablonu') }}</a>
+                @can('projects.create')<button type="button" class="btn btn-secondary btn-sm" @click="manual = !manual; if (manual) importing = false" :aria-expanded="manual"><x-icon name="pencil" class="size-4"/> {{ __('Fakturasız məbləğ') }}</button>@endcan
                 @if($supplierInvoices->isNotEmpty())
-                    @can('projects.create')<button type="button" class="btn btn-primary btn-sm" @click="importing = !importing" :aria-expanded="importing"><x-icon name="upload" class="size-4"/> <span x-text="importing ? {{ \Illuminate\Support\Js::from(__('Bağla')) }} : 'Faktura import et'"></span></button>@endcan
+                    @can('projects.create')<button type="button" class="btn btn-primary btn-sm" @click="importing = !importing; if (importing) manual = false" :aria-expanded="importing"><x-icon name="upload" class="size-4"/> <span x-text="importing ? {{ \Illuminate\Support\Js::from(__('Bağla')) }} : 'Faktura import et'"></span></button>@endcan
                 @endif
             </div>
         </header>
@@ -20,9 +21,10 @@
                     <tbody>
                     @foreach($supplierInvoices as $inv)
                         <tr class="cursor-pointer hover:bg-surface-2/60" @click="if (!$event.target.closest('a, button')) window.location = @js(route('invoices.show', $inv))">
-                            <td data-label="Proforma №"><a href="{{ route('invoices.show', $inv) }}" class="font-mono font-medium text-ink hover:text-brand-ink">{{ $inv->number }}</a></td>
+                            <td data-label="Proforma №"><a href="{{ route('invoices.show', $inv) }}" class="font-mono font-medium text-ink hover:text-brand-ink">{{ $inv->number }}</a>
+                                @if($inv->isManual())<span class="badge badge-slate ml-1">{{ __('Fakturasız') }}</span>@endif</td>
                             <td data-label="{{ __('Tarix') }}" class="font-mono text-xs">{{ azdate($inv->invoice_date) }}</td>
-                            <td data-label="{{ __('Sətir') }}" class="num">{{ $inv->items_count }}</td>
+                            <td data-label="{{ __('Sətir') }}" class="num">{{ $inv->isManual() ? '—' : $inv->items_count }}</td>
                             <td data-label="{{ __('Məbləğ') }}" class="num">{{ money($inv->total, $inv->currency) }}</td>
                             <td data-label="Status"><x-status group="invoice" :value="$inv->status"/>
                                 @if($inv->approval_status)@php [$al, $at] = \App\Models\Invoice::APPROVAL_STATUSES[$inv->approval_status]; @endphp<span class="badge badge-{{ $at }} ml-1">{{ __($al) }}</span>@endif
@@ -42,6 +44,31 @@
         @endif
 
         @can('projects.create')
+            {{-- Fakturasız: amounts only — no lines, no documents; logistics and the RUB conversion follow on the invoice page --}}
+            <form method="POST" action="{{ route('invoices.manual', $deal) }}" x-show="manual" x-collapse @unless($errors->hasAny(['seller_amount', 'sale_base'])) x-cloak @endunless class="p-5 border-t border-line bg-surface-2/50"
+                  x-data="{ seller: @js((string) old('seller_amount', '')), base: @js((string) old('sale_base', '')), busy: false,
+                            num(v) { return parseFloat(String(v ?? '').replace(/[\s ]/g, '').replace(',', '.')); },
+                            diff() { const s = this.num(this.seller), b = this.num(this.base); return isNaN(s) || isNaN(b) ? null : b - s; } }" @submit="busy = true">
+                @csrf
+                <h3 class="text-sm font-semibold mb-1">{{ __('Fakturasız — birbaşa məbləğlə daxil et') }}</h3>
+                <p class="text-xs text-muted mb-4">{{ __('Mallar və sənədlər hazırlanmır. Satıcının məbləğini və komissiya ilə digər məbləğlər daxil yekun rəqəmi yazın; sonra fakturada logistika xərci və RUB çevirməsi (CBAR və ya proqnoz) tətbiq olunur və son rəqəm hesablanır.') }}</p>
+                <div class="grid sm:grid-cols-2 lg:grid-cols-[150px_160px_110px_1fr_1fr_auto] gap-3 items-end">
+                    <x-input name="number" :label="__('Nömrə (istəyə bağlı)')" placeholder="M-…"/>
+                    <x-input name="invoice_date" type="date" :label="__('Faktura tarixi')" :value="old('invoice_date', today())" required :max="today()->format('Y-m-d')" fresh/>
+                    <x-field :label="__('Valyuta')" name="currency">
+                        <select name="currency" class="input">@foreach(config('glaust.currencies') as $c)<option value="{{ $c }}" @selected(old('currency', $deal->currency ?: 'EUR') === $c)>{{ $c }}</option>@endforeach</select>
+                    </x-field>
+                    <x-field :label="__('Satıcının faktura məbləği')" name="seller_amount" required>
+                        <input name="seller_amount" x-model="seller" inputmode="decimal" class="input font-mono text-right @error('seller_amount') is-invalid @enderror" placeholder="10 000,00" required>
+                    </x-field>
+                    <x-field :label="__('Yekun (komissiya və digər məbləğlər daxil)')" name="sale_base" required>
+                        <input name="sale_base" x-model="base" inputmode="decimal" class="input font-mono text-right @error('sale_base') is-invalid @enderror" placeholder="10 350,00" required>
+                    </x-field>
+                    <button class="btn btn-primary" :disabled="busy"><x-icon name="check" class="size-4"/> {{ __('Daxil et') }}</button>
+                </div>
+                <p class="mt-2 text-xs text-muted" x-show="diff() !== null && diff() >= 0">{{ __('Komissiya və digər məbləğlər') }}: <span class="font-mono text-ink" x-text="glaustFmt.fmt(diff(), 2)"></span></p>
+            </form>
+
             <form method="POST" action="{{ route('invoices.import', $deal) }}" x-show="importing" x-collapse @if($supplierInvoices->isNotEmpty() && ! session('import_errors') && ! $errors->has('file')) x-cloak @endif enctype="multipart/form-data" class="p-5 border-t border-line bg-surface-2/50" x-data="{ name: '', busy: false }" @submit="busy = true">
                 @csrf
                 <h3 class="text-sm font-semibold mb-1">{{ __('Satıcının fakturasını import et') }}</h3>

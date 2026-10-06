@@ -76,7 +76,7 @@ class ProfitCalculator
             ?? $deal->salesDocuments->where('source_invoice_id', $inv->id)->firstWhere('kind', 'commercial');
         $saleWeights = [];
         foreach ($invoices as $inv) {
-            $saleWeights[$inv->id] = ($s = $saleOf($inv)) ? $s->grandTotal() : 0;
+            $saleWeights[$inv->id] = ($s = $saleOf($inv)) ? $s->grandTotal() : ($inv->saleTotal() ?? 0);
         }
         $saleWeightSum = array_sum($saleWeights) ?: 1;
 
@@ -111,8 +111,9 @@ class ProfitCalculator
     {
         $D = $inv->adjustedTotal();   // after corrections of the seller's invoice
         $cur = $inv->currency;
-        $H = $sale ? $sale->grandTotal() : null;
-        $saleCur = $sale?->currency;
+        // a manual entry (no documents) bills its own RUR total
+        $H = $sale ? $sale->grandTotal() : $inv->saleTotal();
+        $saleCur = $sale?->currency ?? ($inv->isManual() ? \App\Support\Invoices\RubConverter::target($inv) : null);
         $today = $this->today();
         $row = ['invoice' => $inv, 'sale' => $sale, 'D' => $D, 'cur' => $cur, 'H' => $H, 'saleCur' => $saleCur, 'share' => $share,
             'forecast' => null, 'act' => null, 'settle' => null, 'bank' => null, 'estimated' => false, 'notes' => []];

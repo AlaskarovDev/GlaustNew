@@ -49,9 +49,19 @@ class CounterpartyLedger
             }
         }
 
-        // seller: its invoices become our debt with our commercial invoice
+        // buyer: amounts entered without an invoice bill their RUR total once calculated (no documents)
+        $manualSales = Invoice::with(['deal', 'items'])->where('type', 'supplier')->where('entry_mode', 'manual')->where('status', '!=', 'cancelled')
+            ->whereHas('deal', fn ($q) => $q->where('counterparty_id', $cp->id))->get();
+        foreach ($manualSales as $inv) {
+            if (($sale = $inv->saleTotal()) !== null) {
+                $push($inv->fx_date ?? $inv->invoice_date, __('Fakturasız hesablama').' '.$inv->number, 'Trade '.$inv->deal?->code, \App\Support\Invoices\RubConverter::target($inv), $sale, 0, route('invoices.show', $inv));
+            }
+        }
+
+        // seller: its invoices become our debt with our commercial invoice (a manual entry: at once)
         $withCommercial = SalesDocument::where('kind', 'commercial')->pluck('source_invoice_id')->filter()->all();
-        $sellerInvoices = Invoice::with('deal')->where('type', 'supplier')->where('status', '!=', 'cancelled')->where('counterparty_id', $cp->id)->whereIn('id', $withCommercial)->get();
+        $sellerInvoices = Invoice::with('deal')->where('type', 'supplier')->where('status', '!=', 'cancelled')->where('counterparty_id', $cp->id)
+            ->where(fn ($q) => $q->whereIn('id', $withCommercial)->orWhere('entry_mode', 'manual'))->get();
         $ciDates = SalesDocument::where('kind', 'commercial')->pluck('doc_date', 'source_invoice_id');
         foreach ($sellerInvoices as $inv) {
             $push($ciDates[$inv->id] ?? $inv->approved_at ?? $inv->invoice_date, __('Satıcı fakturası').' '.$inv->number, 'Trade '.$inv->deal?->code, $inv->currency, 0, (float) $inv->total, route('invoices.show', $inv));

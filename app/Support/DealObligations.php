@@ -27,6 +27,12 @@ class DealObligations
         $proformas = $deal->salesDocuments->where('kind', 'proforma');
         $billedDocs = $proformas->map(fn ($pf) => $deal->salesDocuments->where('source_invoice_id', $pf->source_invoice_id)->firstWhere('kind', 'commercial') ?? $pf);
         $billed = $billedDocs->groupBy('currency')->map(fn ($g) => round($g->sum(fn ($d) => $d->grandTotal()), 2))->all();
+        // manual entries have no documents: their RUR total is what we bill
+        $manual = $deal->invoices->where('type', 'supplier')->where('status', '!=', 'cancelled')->filter(fn ($i) => $i->saleTotal() !== null);
+        foreach ($manual as $inv) {
+            $c = \App\Support\Invoices\RubConverter::target($inv);
+            $billed[$c] = round(($billed[$c] ?? 0) + $inv->saleTotal(), 2);
+        }
         $received = $sum($deal->payments);
         $buyerDue = self::minus($billed, $received);
         $buyerOverpaid = $billed ? self::minus($received, $billed) : [];
@@ -42,7 +48,7 @@ class DealObligations
         // Logistics: from the moment the buyer's proforma is ready, in the entered currency. Logistics
         // companies' invoices (one or several) replace the estimate as far as they cover it; what they
         // do not cover yet stays as an estimate (e.g. 6 500 planned, 2 750 invoiced by one company → 3 750 left).
-        $proformaFor = $deal->salesDocuments->where('kind', 'proforma')->pluck('source_invoice_id')->all();
+        $proformaFor = $deal->salesDocuments->where('kind', 'proforma')->pluck('source_invoice_id')->merge($manual->pluck('id'))->all();
         $acts = $deal->logisticsActs;
         $logistics = [];
         foreach ($supplierInvoices->filter(fn ($i) => $i->hasLogistics() && in_array($i->id, $proformaFor, true)) as $inv) {

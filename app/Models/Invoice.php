@@ -93,6 +93,33 @@ class Invoice extends Model
         return $this->fx_rate !== null;
     }
 
+    /** Entered as amounts only, without the seller's lines: no documents are prepared for it. */
+    public function isManual(): bool
+    {
+        return $this->entry_mode === 'manual';
+    }
+
+    /** Manual entry: our amount with commission and other amounts (seller total + their difference). */
+    public function saleBase(): float
+    {
+        return round((float) $this->total + (float) $this->commission_total, 2);
+    }
+
+    /**
+     * What we bill the buyer for a manual entry, in the Trade's sale currency: the rounded RUR total
+     * of its line (as a proforma would be built). Null until the calculation is complete.
+     */
+    public function saleTotal(): ?float
+    {
+        if (! $this->isManual() || ! $this->rubReady()) {
+            return null;
+        }
+        $this->loadMissing('items');
+        $this->items->each->setRelation('invoice', $this);
+
+        return round((float) $this->items->sum(fn ($it) => (float) $it->totalRubRounded()), 2);
+    }
+
     /** Every input of the RUR columns is in: logistics, commission and the RUB rate. */
     public function rubReady(): bool
     {

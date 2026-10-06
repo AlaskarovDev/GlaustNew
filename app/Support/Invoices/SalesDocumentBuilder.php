@@ -33,7 +33,7 @@ class SalesDocumentBuilder
      */
     public function ensureFor(Invoice $invoice): array
     {
-        if ($invoice->type !== 'supplier' || ! $invoice->rubReady()) {
+        if ($invoice->type !== 'supplier' || $invoice->isManual() || ! $invoice->rubReady()) {
             return [];
         }
         $created = [];

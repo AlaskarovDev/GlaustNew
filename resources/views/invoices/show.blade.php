@@ -11,6 +11,8 @@
     @php
         $ourInvoice = $invoice->salesDocuments->firstWhere('kind', 'proforma');
         $ourTotal = $ourInvoice?->grandTotal();
+        $manual = $invoice->isManual();
+        $saleCur = \App\Support\Invoices\RubConverter::target($invoice);
     @endphp
     {{-- Totals in their own currencies; AZN only on request, at the CBAR rates of a chosen date. --}}
     <div class="mb-6" x-data="{
@@ -19,7 +21,7 @@
             async load() {
                 this.error = ''; this.loading = true; const out = {};
                 try {
-                    for (const c of @js(array_values(array_unique(array_filter([$invoice->currency, $ourInvoice?->currency]))))) {
+                    for (const c of @js(array_values(array_unique(array_filter([$invoice->currency, $ourInvoice?->currency ?? ($manual ? $saleCur : null)]))))) {
                         if (c === 'AZN') { out[c] = 1; continue; }
                         const d = await glaustApi('/ajax/rate?currency=' + c + '&date=' + encodeURIComponent(this.date));
                         if (!d.ok) throw new Error(d.message);
@@ -42,8 +44,16 @@
         <div class="grid grid-cols-2 xl:grid-cols-5 gap-4 stagger">
             <div class="card p-4" style="--i:0"><div class="text-xs text-muted">{{ __('Satıcının fakturası') }}</div><div class="text-xl font-semibold font-mono">{{ money($invoice->total, $invoice->currency) }}</div>
                 <div class="text-[11px] text-muted mt-0.5" x-show="azn" x-cloak><span x-show="loading">…</span><span x-show="!loading" x-text="inAzn({{ (float) $invoice->total }}, @js($invoice->currency))"></span></div></div>
-            <div class="card p-4" style="--i:1"><div class="text-xs text-muted">{{ __('Alıcıya fakturamız') }}</div>
-                @if($ourInvoice)
+            <div class="card p-4" style="--i:1"><div class="text-xs text-muted">{{ $manual ? __('Alıcıya yekun məbləğ') : __('Alıcıya fakturamız') }}</div>
+                @if($manual)
+                    @if(($saleTotal = $invoice->saleTotal()) !== null)
+                        <div class="text-xl font-semibold font-mono text-brand-ink">{{ money($saleTotal, $saleCur) }}</div>
+                        <div class="text-[11px] text-muted mt-0.5" x-show="azn" x-cloak><span x-show="loading">…</span><span x-show="!loading" x-text="inAzn({{ $saleTotal }}, @js($saleCur))"></span></div>
+                        <div class="text-[11px] text-faint" x-show="!azn">{{ __('sənəd hazırlanmır') }}</div>
+                    @else
+                        <div class="text-xl font-semibold text-faint">—</div><div class="text-[11px] text-faint">{{ __('logistika və RUB çevirməsindən sonra') }}</div>
+                    @endif
+                @elseif($ourInvoice)
                     <a href="{{ route('sales-documents.show', $ourInvoice) }}" class="block text-xl font-semibold font-mono hover:text-brand-ink">{{ money($ourTotal, $ourInvoice->currency) }}</a>
                     <div class="text-[11px] text-muted mt-0.5" x-show="azn" x-cloak><span x-show="loading">…</span><span x-show="!loading" x-text="inAzn({{ (float) $ourTotal }}, @js($ourInvoice->currency))"></span></div>
                     <div class="text-[11px] text-faint" x-show="!azn">Proforma {{ $ourInvoice->number }}</div>
@@ -51,7 +61,11 @@
                     <div class="text-xl font-semibold text-faint">—</div><div class="text-[11px] text-faint">{{ __('hesablama bitəndə yaranır') }}</div>
                 @endif
             </div>
-            <div class="card p-4" style="--i:2"><div class="text-xs text-muted">{{ __('Sətir / miqdar') }}</div><div class="text-xl font-semibold font-mono">{{ $invoice->items->count() }}</div><div class="text-[11px] text-faint">{{ num($invoice->items->sum('quantity'), 2) }} {{ __('cəmi miqdar') }}</div></div>
+            @if($manual)
+                <div class="card p-4" style="--i:2"><div class="text-xs text-muted">{{ __('Yekun məbləğ') }}</div><div class="text-xl font-semibold font-mono">{{ money($invoice->saleBase(), $invoice->currency) }}</div><div class="text-[11px] text-faint">{{ __('komissiya və digər məbləğlər daxil') }}</div></div>
+            @else
+                <div class="card p-4" style="--i:2"><div class="text-xs text-muted">{{ __('Sətir / miqdar') }}</div><div class="text-xl font-semibold font-mono">{{ $invoice->items->count() }}</div><div class="text-[11px] text-faint">{{ num($invoice->items->sum('quantity'), 2) }} {{ __('cəmi miqdar') }}</div></div>
+            @endif
         <div class="card p-4" style="--i:3"><div class="text-xs text-muted">{{ __('Müqavilə') }}</div>
             @if($invoice->contract)<a href="{{ route('contracts.show', $invoice->contract) }}" class="block font-mono font-semibold hover:text-brand-ink">{{ $invoice->contract->number }}</a>@else<div>—</div>@endif
             <div class="text-[11px] text-faint">{{ $invoice->type === 'supplier' ? __('alış müqaviləsi') : __('satış müqaviləsi') }}</div></div>
@@ -70,14 +84,18 @@
     </div>
 
     @if($invoice->type === 'supplier')
-        @include('invoices._approval')
+        @unless($manual)@include('invoices._approval')@endunless
+        @if($manual)
+            <div class="card p-4 mb-5 flex gap-3 text-sm bg-surface-2"><x-icon name="info" class="size-5 text-brand shrink-0"/>
+                <div>{{ __('Fakturasız məbləğ: mallar və sənədlər (proforma, spesifikasiya, Commercial Invoice) hazırlanmır. Yekun məbləğin üstünə logistika gəlinir və RUB çevirməsi ilə alıcıya son rəqəm hesablanır.') }}</div></div>
+        @endif
         <div class="flex items-baseline justify-between gap-3 mb-3">
             <h2 class="text-sm font-semibold text-ink-2">{{ __('Hesablama addımları') }}</h2>
             <p class="text-xs text-muted">{{ __('Hər addım tətbiq olunduqca cədvəldəki uyğun sütunlar dolur') }}</p>
         </div>
         <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6 items-stretch">
             @include('invoices._logistics')
-            @include('invoices._commission')
+            @include($manual ? 'invoices._manual' : 'invoices._commission')
             @include('invoices._rub')
         </div>
     @endif
@@ -183,7 +201,7 @@
         @endif
     </section>
 
-    @if($invoice->type === 'supplier')
+    @if($invoice->type === 'supplier' && ! $manual)
         @include('invoices._documents')
     @endif
 

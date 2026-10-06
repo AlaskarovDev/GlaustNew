@@ -58,10 +58,24 @@ class FxDifferenceTest extends TestCase
             array_map(fn ($s) => [$s['date'], $s['kind'], $s['amount']], $r['steps']));
     }
 
+    public function test_advance_across_the_year_end_is_split_on_31_december_when_chosen(): void
+    {
+        // 10 000 € paid 01.12.2025 at 1,9717, received 13.01.2026 at 1,9832, 31.12.2025 at 1,9900
+        $r = FxDifference::calc('verilmis_avans', 10000, '2025-12-01', 1.9717, '2026-01-13', 1.9832, [2025 => 1.99], false, true);
+        $this->assertSame([['2025-12-31', 2025, 'positive', 183.0], ['2026-01-13', 2026, 'negative', 68.0]],
+            array_map(fn ($s) => [$s['date'], $s['year'], $s['kind'], $s['amount']], $r['steps']));
+        $this->assertSame(115.0, $r['net'], 'the same 115 in total, only split between the years');
+        $this->assertEqualsWithDelta($r['paid'], $r['recognized'] + $r['negative'] - $r['positive'], 0.001);
+
+        $r = FxDifference::calc('alinmis_avans', 1000, '2025-12-01', 2.00, '2026-01-13', 2.10, [2025 => 2.20], false, true);
+        $this->assertSame([['2025-12-31', 'negative', 200.0], ['2026-01-13', 'positive', 100.0]],
+            array_map(fn ($s) => [$s['date'], $s['kind'], $s['amount']], $r['steps']));
+    }
+
     public function test_page_calculates_with_cbar_rates_and_lists_30_days(): void
     {
         Http::fake(['*' => Http::response('', 500)]);   // rates come from the stored bulletins only
-        foreach (['2025-12-01' => 2.00, '2026-04-15' => 1.50, '2026-04-14' => 1.52] as $date => $rate) {
+        foreach (['2025-12-01' => 2.00, '2025-12-31' => 1.80, '2026-04-15' => 1.50, '2026-04-14' => 1.52] as $date => $rate) {
             DB::table('currency_rates')->insert(['currency_code' => 'EUR', 'rate_date' => $date, 'bulletin_date' => $date,
                 'rate' => $rate, 'nominal' => 1, 'value' => $rate, 'source' => 'CBAR', 'created_at' => now(), 'updated_at' => now()]);
         }
@@ -71,7 +85,11 @@ class FxDifferenceTest extends TestCase
         $this->get(route('fx-difference.index'))->assertOk()->assertSee('Layihənin bitmə tarixi');
         $this->get(route('fx-difference.index', ['end_date' => '2026-04-15', 'lines' => [
             ['case' => 'verilmis_avans', 'currency' => 'EUR', 'amount' => '10000', 'date' => '2025-12-01', 'note' => 'Ellis', 'nonres' => '1'],
-        ]]))->assertOk()->assertSee("MƏNFİ (xərc)")->assertSee(money(5000))->assertSee('219.3')->assertSee(money(20000))->assertSee('Ellis');
+        ]]))->assertOk()->assertSee("MƏNFİ (xərc)")->assertSee(money(5000))->assertSee('219.3')->assertSee(money(20000))->assertSee('Ellis')
+            ->assertSee('31.12.2025')->assertSee(money(2000))->assertSee(money(3000));   // advance split on 31.12 by default
+        $this->get(route('fx-difference.index', ['end_date' => '2026-04-15', 'revalue_advances' => '0', 'lines' => [
+            ['case' => 'verilmis_avans', 'currency' => 'EUR', 'amount' => '10000', 'date' => '2025-12-01'],
+        ]]))->assertOk()->assertSee(money(5000))->assertDontSee(money(2000));
 
         // a future end date needs a forecast rate, never another day's
         $this->get(route('fx-difference.index', ['end_date' => today()->addMonth()->toDateString(), 'lines' => [

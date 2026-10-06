@@ -123,6 +123,12 @@
                     </template>
                 </div>
             </div>
+            <label class="mt-4 flex items-start gap-2 text-sm">
+                <input type="hidden" name="revalue_advances" value="0">
+                <input type="checkbox" name="revalue_advances" value="1" class="checkbox mt-0.5" @checked($req->input('revalue_advances', '1') == '1')>
+                <span>{{ __('Avanslar da il sonu (31.12) məzənnəsi ilə yenidən qiymətləndirilsin') }}
+                    <span class="block text-xs text-muted">{{ __('Layihə ildən-ilə keçirsə, avansın fərqi iki hissəyə bölünür: 31.12-yə qədər olan hissə həmin ilin, qalanı qəbul ilinin mənfəətində tanınır.') }}</span></span>
+            </label>
             @if($errors->any())
                 <div class="mt-4 text-sm text-danger space-y-1">@foreach($errors->all() as $e)<p class="flex items-center gap-2"><x-icon name="alert" class="size-4"/> {{ $e }}</p>@endforeach</div>
             @endif
@@ -202,8 +208,14 @@
                                 </table>
                                 <p class="mt-3 text-xs text-muted leading-relaxed">
                                     @switch($row['case'])
-                                        @case('verilmis_avans') {{ __('Verilmiş avans 31.12-də yenidən qiymətləndirilmir. Fərq = qəbul günü dəyəri − avansın manat dəyəri, qəbul tarixində tanınır. Yoxlama: xərc + mənfi fərq − müsbət fərq = ödənilən manat.') }} @break
-                                        @case('alinmis_avans') {{ __('Alınmış avans 31.12-də yenidən qiymətləndirilmir. Fərq = avansın manat dəyəri − təqdim günü gəliri, təqdim tarixində tanınır.') }} @break
+                                        @case('verilmis_avans')
+                                            @if($result['revise_advances']) {{ __('Verilmiş avans il sonu 31.12 məzənnəsi ilə yenidən qiymətləndirilir: 31.12-yə qədərki fərq həmin ilin, qalanı (31.12 məzənnəsindən) qəbul ilinin mənfəətində tanınır. Yoxlama: xərc + mənfi fərq − müsbət fərq = ödənilən manat.') }}
+                                            @else {{ __('Verilmiş avans 31.12-də yenidən qiymətləndirilmir. Fərq = qəbul günü dəyəri − avansın manat dəyəri, qəbul tarixində tanınır. Yoxlama: xərc + mənfi fərq − müsbət fərq = ödənilən manat.') }} @endif
+                                            @break
+                                        @case('alinmis_avans')
+                                            @if($result['revise_advances']) {{ __('Alınmış avans il sonu 31.12 məzənnəsi ilə yenidən qiymətləndirilir: 31.12-yə qədərki fərq həmin ilin, qalanı təqdim ilinin mənfəətində tanınır.') }}
+                                            @else {{ __('Alınmış avans 31.12-də yenidən qiymətləndirilmir. Fərq = avansın manat dəyəri − təqdim günü gəliri, təqdim tarixində tanınır.') }} @endif
+                                            @break
                                         @case('alis_borc') {{ __('Kreditor borcu (öhdəlik): valyuta bahalaşıbsa — mənfi, ucuzlaşıbsa — müsbət. İl sonu açıq borc 31.12 məzənnəsi ilə yenidən qiymətləndirilir, sonrakı fərq 31.12 məzənnəsindən hesablanır (VM 69.2).') }} @break
                                         @case('satis_borc') {{ __('Debitor borcu (aktiv): valyuta bahalaşıbsa — müsbət, ucuzlaşıbsa — mənfi. İl sonu açıq borc 31.12 məzənnəsi ilə yenidən qiymətləndirilir (VM 69.2).') }} @break
                                         @default {{ __('İl sonu açıq qalığın 31.12 məzənnəsi ilə yenidən qiymətləndirilməsi; işarə aktiv/öhdəlik qaydasına görə (VM 69.2).') }}

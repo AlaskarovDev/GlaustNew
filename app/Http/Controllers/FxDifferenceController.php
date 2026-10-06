@@ -36,10 +36,12 @@ class FxDifferenceController extends Controller
             'lines.*.date' => ['required', 'date', 'before_or_equal:end_date', 'before_or_equal:today'],
             'lines.*.note' => ['nullable', 'string', 'max:120'],
             'lines.*.nonres' => ['nullable', 'boolean'],
+            'revalue_advances' => ['nullable', 'boolean'],
         ], [
             'lines.*.date.before_or_equal' => __('Əməliyyat tarixi bitmə tarixindən və bu gündən gec ola bilməz.'),
         ]);
 
+        $reviseAdvances = (bool) ($data['revalue_advances'] ?? true);   // on unless switched off
         $end = $rates->normalize(substr($data['end_date'], 0, 10));
         $future = $end->gt($rates->today());
         $rows = [];
@@ -56,7 +58,7 @@ class FxDifferenceController extends Controller
                     $rate2 = $rates->rate($cur, $end);
                 }
                 $yearEnd = [];
-                if (in_array($l['case'], ['alis_borc', 'satis_borc'], true)) {
+                if (in_array($l['case'], ['alis_borc', 'satis_borc'], true) || ($reviseAdvances && in_array($l['case'], ['verilmis_avans', 'alinmis_avans'], true))) {
                     for ($y = (int) substr($date1, 0, 4); $y < $end->year; $y++) {
                         $r = "{$y}-12-31" <= $rates->today()->toDateString() ? $rates->tryRate($cur, "{$y}-12-31") : null;
                         if ($r) {
@@ -71,7 +73,7 @@ class FxDifferenceController extends Controller
                 continue;
             }
             $rows[] = $l + ['note' => null, 'nonres' => false, 'n' => $i + 1, 'date' => $date1, 'rate1' => $rate1, 'rate2' => $rate2, 'labels' => FxDifference::dateLabels($l['case']),
-                'calc' => FxDifference::calc($l['case'], (float) $l['amount'], $date1, $rate1, $end->toDateString(), $rate2, $yearEnd, (bool) ($l['nonres'] ?? false))];
+                'calc' => FxDifference::calc($l['case'], (float) $l['amount'], $date1, $rate1, $end->toDateString(), $rate2, $yearEnd, (bool) ($l['nonres'] ?? false), $reviseAdvances)];
         }
 
         $years = [];
@@ -86,7 +88,7 @@ class FxDifferenceController extends Controller
 
         return view('fx-difference.index', [...$view,
             'result' => [
-                'rows' => $rows, 'errors' => $errors, 'warnings' => array_values(array_unique($warnings)), 'future' => $future, 'end' => $end,
+                'rows' => $rows, 'errors' => $errors, 'warnings' => array_values(array_unique($warnings)), 'future' => $future, 'end' => $end, 'revise_advances' => $reviseAdvances,
                 'project' => isset($data['project_id']) ? $projects->firstWhere('id', $data['project_id']) : null,
                 'years' => $years,
                 'positive' => round(collect($rows)->sum(fn ($r) => $r['calc']['positive']), 2),

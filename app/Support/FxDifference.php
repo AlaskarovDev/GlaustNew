@@ -8,8 +8,9 @@ use Carbon\CarbonImmutable;
  * Exchange-rate difference per the Tax Code (VM 69, 13.2.12, 108.1). Pure arithmetic — rates are given:
  *   alis_borc        — purchase, goods first, paid later (liability; revalued on every 31.12 in between);
  *   satis_borc       — sale, goods first, money later (asset; revalued on every 31.12 in between);
- *   verilmis_avans   — advance paid, goods/services received later (never revalued on 31.12);
- *   alinmis_avans    — advance received, goods delivered later (never revalued on 31.12);
+ *   verilmis_avans   — advance paid, goods/services received later;
+ *   alinmis_avans    — advance received, goods delivered later
+ *                      (advances are revalued on 31.12 only when $reviseAdvances — the company's choice);
  *   il_sonu_aktiv    — 31.12 revaluation of an open receivable / currency account balance;
  *   il_sonu_ohdelik  — 31.12 revaluation of an open payable / currency loan.
  * Sign: the company gets more manat or pays fewer → positive (income, line 214);
@@ -54,7 +55,7 @@ class FxDifference
      *               recognized: float|null, paid: float|null, tax_base: float|null, tax_base_date: string|null}
      */
     public static function calc(string $case, float $amount, string $date1, float $rate1, string $date2, float $rate2,
-        array $yearEnd = [], bool $nonResidentService = false): array
+        array $yearEnd = [], bool $nonResidentService = false, bool $reviseAdvances = false): array
     {
         $d1 = CarbonImmutable::parse($date1);
         $d2 = CarbonImmutable::parse($date2);
@@ -70,10 +71,12 @@ class FxDifference
                 'line' => abs($gain) < 0.005 ? null : self::LINES[$gain > 0 ? 'positive' : 'negative']];
         };
 
-        $asset = in_array($case, ['satis_borc', 'il_sonu_aktiv'], true);
+        // asset: a higher rate is a gain (receivable, currency account, advance paid); liability: the reverse
+        $asset = in_array($case, ['satis_borc', 'il_sonu_aktiv', 'verilmis_avans'], true);
+        $advance = in_array($case, ['verilmis_avans', 'alinmis_avans'], true);
         if ($d1->isSameDay($d2)) {
             // same day: nothing
-        } elseif (in_array($case, ['alis_borc', 'satis_borc'], true)) {
+        } elseif (in_array($case, ['alis_borc', 'satis_borc'], true) || ($advance && $reviseAdvances)) {
             $prev = $rate1;
             for ($y = $d1->year; $y < $d2->year; $y++) {      // open debt on every 31.12 in between (VM 69.2)
                 if (! isset($yearEnd[$y])) {
@@ -85,7 +88,7 @@ class FxDifference
                 $prev = $r;
             }
             $diff = $amount * ($rate2 - $prev);
-            $step($d2->toDateString(), $asset ? __('Pulun daxil olması') : __('Ödəniş'), $prev, $rate2, $asset ? $diff : -$diff);
+            $step($d2->toDateString(), self::dateLabels($case)[1], $prev, $rate2, $asset ? $diff : -$diff);
         } elseif ($case === 'verilmis_avans') {
             $step($d2->toDateString(), __('Mal/xidmətin qəbulu'), $rate1, $rate2, $settled - $book);   // value received vs manat paid
         } elseif ($case === 'alinmis_avans') {

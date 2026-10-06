@@ -28,6 +28,7 @@
             bankRate: @js((string) ($mine ? old('bank_rate', '') : '')),
             fee: @js((string) ($mine ? old('fee_amount', '') : '')), feeTouched: {{ $mine && old('fee_amount') !== null ? 'true' : 'false' }},
             fees: @js($fees),
+            feeByBank: {{ $mine && old('fee_bank_rate') ? 'true' : 'false' }}, feeRate: @js((string) ($mine ? old('fee_bank_rate', '') : '')),
             rate: { cur: null, acc: null, fee: null }, loading: false, error: '',
             num(v) { return parseFloat(String(v ?? '').replace(/[\s ]/g, '').replace(',', '.')) || 0; },
             acc() { return this.accounts.find(a => String(a.id) === String(this.account)); },
@@ -55,7 +56,15 @@
             // the fee in the currency of the account it comes off: the payment account at the bank's rate, another one at CBAR
             feeAcc() {
                 if (!this.feeSeparate()) return this.appliedRate() ? Math.round(this.feeValue() * this.appliedRate() * 100) / 100 : null;
-                return this.rate.cur && this.rate.fee ? Math.round(this.feeValue() * this.rate.cur / this.rate.fee * 100) / 100 : null;
+                if (this.feeBankMode()) return this.num(this.feeRate) ? Math.round(this.feeValue() * this.num(this.feeRate) * 100) / 100 : null;
+                return this.feeCbar();
+            },
+            feeCbar() { return this.rate.cur && this.rate.fee ? Math.round(this.feeValue() * this.rate.cur / this.rate.fee * 100) / 100 : null; },
+            feeConvertible() { return this.feeSeparate() && this.feeCur() !== this.cur; },
+            feeBankMode() { return this.feeConvertible() && this.feeByBank; },
+            feeDiff() {   // + paid more than at CBAR, in the fee account's currency
+                if (!this.feeBankMode() || this.feeAcc() === null || this.feeCbar() === null) return null;
+                return Math.round((this.feeAcc() - this.feeCbar()) * 100) / 100;
             },
             total() { if (this.accBank() === null) return null; if (this.feeSeparate()) return this.accBank(); return this.feeAcc() !== null ? Math.round((this.accBank() + this.feeAcc()) * 100) / 100 : null; },
             fmt: (v) => glaustFmt.fmt(v, 2), rf: (v) => glaustFmt.fmtRate(v),
@@ -126,8 +135,22 @@
                         <template x-for="a in accounts" :key="a.id"><option :value="String(a.id)" x-text="a.label + ' (' + a.currency + ')'"></option></template>
                     </select>
                     @error('fee_account_id')<p class="field-error">{{ $message }}</p>@enderror
+                    {{-- the fee off an account in another currency: at CBAR, or at the bank's rate typed for it --}}
+                    <div class="flex gap-1 p-1 rounded-lg bg-surface-2 border border-line" x-show="feeConvertible()">
+                        <button type="button" class="flex-1 h-8 rounded-md text-xs font-medium" :class="!feeByBank ? 'bg-surface shadow-sm text-ink' : 'text-muted'" @click="feeByBank = false">{{ __('CBAR kursu ilə') }}</button>
+                        <button type="button" class="flex-1 h-8 rounded-md text-xs font-medium" :class="feeByBank ? 'bg-surface shadow-sm text-ink' : 'text-muted'" @click="feeByBank = true; $nextTick(() => $refs.feeRate?.focus())">{{ __('Bank kursu ilə hesabla') }}</button>
+                    </div>
+                    <template x-if="feeBankMode()">
+                        <div class="space-y-1">
+                            <label class="field-label" for="sp-fee-rate">{{ __('Komissiya üçün bankın kursu: 1') }} <span x-text="cur"></span> = ? <span x-text="feeCur()"></span> <span class="text-danger">*</span></label>
+                            <input id="sp-fee-rate" x-ref="feeRate" name="fee_bank_rate" x-model="feeRate" inputmode="decimal" :placeholder="rate.cur && rate.fee ? rf(rate.cur / rate.fee) : ''" class="input font-mono text-right @error('fee_bank_rate') is-invalid @enderror" required>
+                            @error('fee_bank_rate')<p class="field-error">{{ $message }}</p>@enderror
+                        </div>
+                    </template>
                     <p class="text-[11px] text-muted" x-show="feeAcc() && (feeSeparate() ? feeCur() !== cur : !same())">= <span class="font-mono font-medium text-ink" x-text="fmt(feeAcc()) + ' ' + feeCur()"></span>
-                        <span x-show="feeSeparate()">{{ __('— ödəniş tarixinin CBAR kursları ilə') }} (1 <span x-text="cur"></span> = <span x-text="rate.cur && rate.fee ? rf(rate.cur / rate.fee) : '—'"></span> <span x-text="feeCur()"></span>)</span></p>
+                        <span x-show="feeSeparate() && !feeBankMode()">{{ __('— ödəniş tarixinin CBAR kursları ilə') }} (1 <span x-text="cur"></span> = <span x-text="rate.cur && rate.fee ? rf(rate.cur / rate.fee) : '—'"></span> <span x-text="feeCur()"></span>)</span>
+                        <span x-show="feeBankMode()">{{ __('— bankın kursu ilə') }} · CBAR: <span class="font-mono" x-text="feeCbar() !== null ? fmt(feeCbar()) + ' ' + feeCur() : '—'"></span>
+                            <span class="font-mono" x-show="feeDiff()" :class="feeDiff() > 0 ? 'text-danger' : 'text-success'" x-text="'(' + (feeDiff() > 0 ? '−' : '+') + fmt(Math.abs(feeDiff())) + ' ' + feeCur() + ')'"></span></span></p>
                     <p class="text-[11px] text-muted">{{ __('«Xərclər»də «Bank komissiyası» kimi yazılır.') }}</p>
                 </div>
                 <div class="px-4 py-3 border-t border-line bg-surface-2/60 space-y-1.5">

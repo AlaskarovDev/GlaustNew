@@ -63,6 +63,33 @@ class SupplierPaymentTest extends TestCase
         $this->assertSame(1025.0, $p2->totalDebit());
     }
 
+    /** «Bank kursu ilə hesabla»: the fee off another account converted at the bank's rate typed for it; its difference to CBAR is kept. */
+    public function test_fee_from_another_account_at_the_banks_rate(): void
+    {
+        [$admin, $inv] = $this->calculated();
+        $deal = $this->inTenant($admin, fn () => Deal::find($inv->deal_id));
+        [$eurAcc, $aznAcc] = $this->inTenant($admin, fn () => [
+            BankAccount::create(['name' => 'EUR', 'bank_name' => 'Turan Bank', 'currency' => 'EUR', 'opening_balance' => 200000, 'is_active' => true]),
+            BankAccount::create(['name' => 'AZN', 'bank_name' => 'Turan Bank', 'currency' => 'AZN', 'opening_balance' => 10000, 'is_active' => true]),
+        ]);
+        $day = today()->subDays(2)->toDateString();
+        $eur = app(CurrencyRates::class)->rate('EUR', $day);
+
+        $this->actingAs($admin)->get(route('deals.show', [$deal, 'tab' => 'income']))->assertOk()->assertSee('Bank kursu ilə hesabla');
+        // 73 644.80 EUR; fee 184.11 EUR off the AZN account at the bank's 1.95
+        $this->post(route('deals.payments.store', $deal), ['direction' => 'out', 'payment_date' => $day, 'currency' => 'EUR', 'amount' => '73 644,80',
+            'bank_account_id' => $eurAcc->id, 'fee_amount' => '184,11', 'fee_account_id' => $aznAcc->id, 'fee_bank_rate' => '1,95'])->assertSessionHasNoErrors();
+
+        $p = $this->inTenant($admin, fn () => SupplierPayment::firstOrFail());
+        $this->assertSame([359.01, 1.95], [(float) $p->fee_account_amount, (float) $p->fee_bank_rate], '184.11 × 1.95');
+        $this->assertSame(round(359.01 - round(184.11 * $eur, 2), 2), (float) $p->fee_difference_azn, 'against CBAR');
+        $this->assertSame(round(10000 - 359.01, 2), $this->inTenant($admin, fn () => BankAccount::find($aznAcc->id)->balance()));
+        $this->assertSame(359.01, (float) $this->inTenant($admin, fn () => Expense::findOrFail($p->fee_expense_id)->amount));
+
+        $fx = $this->inTenant($admin, fn () => \App\Support\FxResults::for(collect([Deal::find($deal->id)])));
+        $this->assertSame(-(float) $p->fee_difference_azn, collect($fx['rows'])->firstWhere('kind', 'Bank komissiyası')['azn']);
+    }
+
     public function test_paying_from_an_azn_account_at_the_banks_rate_with_fee(): void
     {
         [$admin, $inv] = $this->calculated();

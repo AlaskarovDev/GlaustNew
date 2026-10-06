@@ -19,7 +19,7 @@ class SupplierPayment extends Model
     {
         return ['payment_date' => 'date', 'amount' => 'decimal:2', 'cbar_rate' => 'decimal:8', 'cbar_account_rate' => 'decimal:8',
             'cbar_cross' => 'decimal:12', 'bank_rate' => 'decimal:12', 'account_amount_cbar' => 'decimal:2', 'account_amount' => 'decimal:2',
-            'difference' => 'decimal:2', 'difference_azn' => 'decimal:2', 'fee_percent' => 'decimal:4', 'fee_minimum' => 'decimal:2', 'fee_maximum' => 'decimal:2',
+            'difference' => 'decimal:2', 'difference_azn' => 'decimal:2', 'fee_bank_rate' => 'decimal:12', 'fee_difference_azn' => 'decimal:2', 'fee_percent' => 'decimal:4', 'fee_minimum' => 'decimal:2', 'fee_maximum' => 'decimal:2',
             'fee_amount' => 'decimal:2', 'fee_account_amount' => 'decimal:2'];
     }
 

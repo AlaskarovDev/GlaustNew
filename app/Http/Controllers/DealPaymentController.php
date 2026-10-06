@@ -78,6 +78,7 @@ class DealPaymentController extends Controller
             'amount' => parse_number($request->input('amount')),
             'bank_rate' => parse_number($request->input('bank_rate')),
             'fee_amount' => parse_number($request->input('fee_amount')),
+            'fee_bank_rate' => parse_number($request->input('fee_bank_rate')),
         ]);
         $data = $request->validate([
             'payment_date' => ['required', 'date', 'before_or_equal:today'],
@@ -87,9 +88,10 @@ class DealPaymentController extends Controller
             'bank_rate' => ['nullable', 'numeric', 'gt:0', 'max:10000000'],
             'fee_amount' => ['nullable', 'numeric', 'min:0', 'max:999999999'],
             'fee_account_id' => ['nullable', 'integer', TenantExists::in('bank_accounts')],
+            'fee_bank_rate' => ['nullable', 'numeric', 'gt:0', 'max:10000000'],
             'reference' => ['nullable', 'string', 'max:80'],
             'purpose' => ['nullable', 'string', 'max:255'],
-        ], [], ['payment_date' => __('Tarix'), 'currency' => __('Valyuta'), 'amount' => __('Məbləğ'), 'bank_account_id' => __('Bank hesabı'), 'bank_rate' => __('Bankın kursu'), 'fee_amount' => __('Bank komissiyası'), 'fee_account_id' => __('Komissiya hesabı')]);
+        ], [], ['payment_date' => __('Tarix'), 'currency' => __('Valyuta'), 'amount' => __('Məbləğ'), 'bank_account_id' => __('Bank hesabı'), 'bank_rate' => __('Bankın kursu'), 'fee_amount' => __('Bank komissiyası'), 'fee_account_id' => __('Komissiya hesabı'), 'fee_bank_rate' => __('Komissiya üçün bankın kursu')]);
 
         $p = app(\App\Services\SupplierPaymentService::class)->pay($deal, $data);
 

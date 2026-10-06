@@ -52,19 +52,30 @@ class SupplierPaymentService
         $fee = isset($d['fee_amount']) && $d['fee_amount'] !== null ? round((float) $d['fee_amount'], 2) : ($rule['amount'] ?? 0.0);
 
         // The fee (in the payment currency) comes off the payment account at the bank's rate, or off any other
-        // account chosen for it — then converted to that account's currency at CBAR of the payment date.
+        // account chosen for it — then converted to that account's currency at CBAR of the payment date, or at
+        // the bank's rate typed for the fee ("Bank kursu ilə hesabla"); its difference to CBAR is kept in AZN.
         $feeAccount = ! empty($d['fee_account_id']) ? BankAccount::findOrFail($d['fee_account_id']) : $account;
+        $feeBankRate = null;
+        $feeDiffAzn = null;
         if ($feeAccount->id === $account->id) {
             $feeAcc = round($fee * $bankRate, 2);
         } else {
             try {
-                $feeAcc = round($fee * $cbar / $this->rates->rate($feeAccount->currency, $d['payment_date']), 2);
+                $feeAccRate = $this->rates->rate($feeAccount->currency, $d['payment_date']);
             } catch (RateUnavailable $e) {
                 throw ValidationException::withMessages(['fee_account_id' => $e->getMessage()]);
             }
+            $feeAccCbar = round($fee * $cbar / $feeAccRate, 2);
+            if (! empty($d['fee_bank_rate']) && $feeAccount->currency !== $cur) {
+                $feeBankRate = (float) $d['fee_bank_rate'];
+                $feeAcc = round($fee * $feeBankRate, 2);
+                $feeDiffAzn = round(($feeAcc - $feeAccCbar) * $feeAccRate, 2);
+            } else {
+                $feeAcc = $feeAccCbar;
+            }
         }
 
-        return DB::transaction(function () use ($deal, $d, $account, $feeAccount, $cur, $amount, $cbar, $cbarAcc, $cross, $bankRate, $accCbar, $accBank, $diff, $rule, $fee, $feeAcc) {
+        return DB::transaction(function () use ($deal, $d, $account, $feeAccount, $cur, $amount, $cbar, $cbarAcc, $cross, $bankRate, $accCbar, $accBank, $diff, $rule, $fee, $feeAcc, $feeBankRate, $feeDiffAzn) {
             $purpose = ($d['purpose'] ?? null) ?: 'Trade '.$deal->code.' üzrə satıcıya ödəniş: '.number_format($amount, 2, '.', ' ').' '.$cur;
             $tx = $this->ledger->record($account, [
                 'direction' => 'out', 'transaction_date' => $d['payment_date'], 'amount' => $accBank,
@@ -93,6 +104,7 @@ class SupplierPaymentService
                 'account_amount_cbar' => $accCbar, 'account_amount' => $accBank, 'difference' => $diff, 'difference_azn' => round($diff * $cbarAcc, 2),
                 'fee_percent' => $rule['percent'] ?? null, 'fee_minimum' => $rule['minimum'] ?? null, 'fee_maximum' => $rule['maximum'] ?? null, 'fee_amount' => $fee, 'fee_account_amount' => $feeAcc,
                 'fee_account_id' => $feeAccount->id, 'fee_account_currency' => $feeAccount->currency,
+                'fee_bank_rate' => $feeBankRate, 'fee_difference_azn' => $feeDiffAzn,
                 'transaction_id' => $tx->id, 'fee_expense_id' => $feeExpense?->id,
                 'reference' => $d['reference'] ?? null, 'purpose' => $purpose, 'created_by' => auth()->id(),
             ]);

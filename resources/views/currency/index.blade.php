@@ -38,7 +38,13 @@
         <section class="card p-5 lg:p-6 xl:sticky xl:top-24 order-last xl:order-first">
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                    <h2 class="text-base font-semibold">{{ $code }} / AZN</h2>
+                    <form method="GET" action="{{ route('currency.index') }}" class="flex items-center gap-2">
+                        <input type="hidden" name="date" value="{{ $date->format('Y-m-d') }}"><input type="hidden" name="days" value="{{ $days }}">
+                        <select name="code" class="input !h-8 !w-auto !py-0 font-semibold" x-data @change="$el.form.submit()" aria-label="{{ __('Valyuta') }}">
+                            @foreach(array_unique(array_merge(array_keys($list), [$code])) as $c)<option value="{{ $c }}" @selected($c === $code)>{{ $c }}</option>@endforeach
+                        </select>
+                        <h2 class="text-base font-semibold">/ AZN</h2>
+                    </form>
                     <p class="text-xs text-muted">{{ __('1 vahid üçün manat · saxlanılan tarixçə') }}</p>
                 </div>
                 <div class="flex gap-1 p-1 rounded-lg bg-surface-2 border border-line">
@@ -62,9 +68,46 @@
                 @php $vals = array_values($history); @endphp
                 <dl class="mt-4 grid grid-cols-3 gap-3 text-center">
                     <div class="rounded-lg bg-surface-2 py-2.5"><dt class="text-[11px] text-muted uppercase tracking-wider">{{ __('Minimum') }}</dt><dd class="font-mono font-semibold">{{ rate_fmt(min($vals)) }}</dd></div>
-                    <div class="rounded-lg bg-surface-2 py-2.5"><dt class="text-[11px] text-muted uppercase tracking-wider">{{ __('Orta') }}</dt><dd class="font-mono font-semibold">{{ rate_fmt(array_sum($vals) / count($vals)) }}</dd></div>
+                    <div class="rounded-lg bg-surface-2 py-2.5"><dt class="text-[11px] text-muted uppercase tracking-wider">{{ __('Orta') }}</dt><dd class="font-mono font-semibold">{{ rate_fmt(round(array_sum($vals) / count($vals), 4)) }}</dd></div>
                     <div class="rounded-lg bg-surface-2 py-2.5"><dt class="text-[11px] text-muted uppercase tracking-wider">{{ __('Maksimum') }}</dt><dd class="font-mono font-semibold">{{ rate_fmt(max($vals)) }}</dd></div>
                 </dl>
+
+                {{-- every bulletin of the period, newest first, with the change from the one before --}}
+                @php
+                    $dates = array_keys($history);
+                    $daily = [];
+                    foreach ($dates as $i => $d) {
+                        $prevRate = $i ? $history[$dates[$i - 1]] : null;
+                        $daily[] = ['date' => $d, 'rate' => $history[$d], 'diff' => $prevRate !== null ? $history[$d] - $prevRate : null,
+                            'pct' => $prevRate ? ($history[$d] - $prevRate) / $prevRate * 100 : null];
+                    }
+                    $daily = array_reverse($daily);
+                    $first = $vals[0];
+                    $periodPct = $first ? (end($vals) - $first) / $first * 100 : 0;
+                @endphp
+                <div class="mt-5 flex items-baseline justify-between gap-3">
+                    <h3 class="text-sm font-semibold">{{ __(':code — gündəlik məzənnələr', ['code' => $code]) }} <span class="font-mono font-normal text-muted">{{ count($daily) }}</span></h3>
+                    <span class="text-xs text-muted">{{ __('Dövr üzrə') }}:
+                        <span class="font-mono {{ $periodPct > 0.005 ? 'text-success' : ($periodPct < -0.005 ? 'text-danger' : 'text-faint') }}">{{ $periodPct > 0.005 ? '▲ +' : ($periodPct < -0.005 ? '▼ ' : '') }}{{ num($periodPct) }}%</span></span>
+                </div>
+                <div class="mt-2 rounded-lg border border-line overflow-y-auto max-h-[480px]">
+                    <table class="table-g text-sm">
+                        <thead class="sticky top-0 z-10"><tr>
+                            <th>{{ __('Tarix') }}</th><th class="!text-right">{{ __('1 vahid') }}</th><th class="!text-right">{{ __('Dəyişmə') }}</th><th class="!text-right">%</th>
+                        </tr></thead>
+                        <tbody>
+                        @foreach($daily as $row)
+                            @php $up = ($row['diff'] ?? 0) > 0.000005; $down = ($row['diff'] ?? 0) < -0.000005; @endphp
+                            <tr @class(['bg-brand-soft/40' => $row['date'] === $date->format('Y-m-d')])>
+                                <td class="font-mono text-xs">{{ \Carbon\Carbon::parse($row['date'])->format('d.m.Y') }} <span class="text-faint font-sans">{{ \Carbon\Carbon::parse($row['date'])->locale(app()->getLocale())->isoFormat('dd') }}</span></td>
+                                <td class="num font-medium text-ink">{{ rate_fmt($row['rate']) }}</td>
+                                <td @class(['num', 'text-success' => $up, 'text-danger' => $down, 'text-faint' => ! $up && ! $down])>{{ $row['diff'] === null ? '—' : ($up ? '+' : ($down ? '−' : '')).rate_fmt(abs($row['diff'])) }}</td>
+                                <td @class(['num text-xs', 'text-success' => $up, 'text-danger' => $down, 'text-faint' => ! $up && ! $down])>{{ $row['pct'] === null ? '' : ($up ? '▲ +' : ($down ? '▼ ' : '')).num($row['pct']).'%' }}</td>
+                            </tr>
+                        @endforeach
+                        </tbody>
+                    </table>
+                </div>
             @else
                 <x-empty icon="chart" :title="__('Tarixçə hələ toplanmayıb')" :text="__('Sistem hər gün məzənnələri avtomatik yükləyir. Qrafik bir neçə gündən sonra dolacaq.')"/>
             @endif

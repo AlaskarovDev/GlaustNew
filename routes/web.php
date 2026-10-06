@@ -112,6 +112,7 @@ Route::middleware(['auth', 'tenant'])->group(function () {
     });
 
     Route::get('/currency', [CurrencyController::class, 'index'])->middleware('can:currency.view')->name('currency.index');
+    Route::get('/fx-difference', [\App\Http\Controllers\FxDifferenceController::class, 'index'])->middleware('can:currency.view')->name('fx-difference.index');
 
     /* Projects & tasks */
     Route::middleware('can:projects.view')->group(function () {

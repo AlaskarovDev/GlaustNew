@@ -26,6 +26,7 @@ class Navigation
                 ['label' => __('Valyuta alış-satışı'), 'route' => 'bank.exchanges.index', 'active' => 'bank.exchanges.*', 'icon' => 'transfer', 'can' => 'bank.view'],
                 ['label' => __('Bank əməliyyatları'), 'route' => 'bank.transactions.index', 'active' => 'bank.transactions.*', 'icon' => 'bank', 'can' => 'bank.view'],
                 ['label' => __('Valyuta məzənnələri'), 'route' => 'currency.index', 'active' => 'currency.*', 'icon' => 'coins', 'can' => 'currency.view'],
+                ['label' => __('Məzənnə fərqi'), 'route' => 'fx-difference.index', 'active' => 'fx-difference.*', 'icon' => 'scale', 'can' => 'currency.view'],
             ]],
             ['label' => __('Analitika'), 'items' => [
                 ['label' => __('Hesabatlar'), 'route' => 'analytics.show', 'params' => ['report' => array_key_first(config('glaust.analytics'))], 'active' => 'analytics.*|reports.*|profit.*', 'icon' => 'chart', 'can' => 'reports.view',

@@ -60,12 +60,12 @@ class CounterpartyReport extends Report
 
         if ($cp = $this->selected()) {
             $events = collect();
-            foreach (Contract::where('counterparty_id', $cp->id)->whereNotIn('status', ['draft', 'cancelled'])->whereBetween('contract_date', [$from, $to])->get() as $c) {
+            foreach (Contract::where('counterparty_id', $cp->id)->whereNotIn('status', ['draft', 'cancelled'])->whereBetween('contract_date', [$from, $to.' 23:59:59'])->get() as $c) {
                 // Sale: they owe us (debit). Purchase: we owe them (credit).
                 $events->push(['date' => $c->contract_date, 'doc' => __('Müqavilə ').$c->number, 'text' => $c->subject,
                     'debit' => $c->kind === 'sale' ? (float) $c->amount_azn : null, 'credit' => $c->kind === 'purchase' ? (float) $c->amount_azn : null]);
             }
-            foreach (BankTransaction::where('counterparty_id', $cp->id)->where('kind', 'regular')->whereBetween('transaction_date', [$from, $to])->get() as $t) {
+            foreach (BankTransaction::where('counterparty_id', $cp->id)->where('kind', 'regular')->whereBetween('transaction_date', [$from, $to.' 23:59:59'])->get() as $t) {
                 // Money in from them reduces what they owe (credit); money out to them reduces what we owe (debit).
                 $events->push(['date' => $t->transaction_date, 'doc' => ($t->direction === 'in' ? __('Daxilolma') : __('Ödəniş')).($t->reference ? ' № '.$t->reference : ''), 'text' => $t->purpose,
                     'debit' => $t->direction === 'out' ? (float) $t->amount_azn : null, 'credit' => $t->direction === 'in' ? (float) $t->amount_azn : null]);
@@ -80,7 +80,7 @@ class CounterpartyReport extends Report
         }
 
         $rows = BankTransaction::with('counterparty:id,name,voen,type')->where('kind', 'regular')->whereNotNull('counterparty_id')
-            ->whereBetween('transaction_date', [$from, $to])
+            ->whereBetween('transaction_date', [$from, $to.' 23:59:59'])
             ->selectRaw('counterparty_id, direction, SUM(amount_azn) as s, COUNT(*) as n')->groupBy('counterparty_id', 'direction')->get()
             ->groupBy('counterparty_id');
 

@@ -51,7 +51,7 @@ class ContractsReport extends Report
             return $this->data;
         }
         $contracts = Contract::with('counterparty:id,name')
-            ->whereBetween('contract_date', [$this->from()->toDateString(), $this->to()->toDateString()])
+            ->whereBetween('contract_date', [$this->from()->toDateString(), $this->to()->toDateString().' 23:59:59'])
             ->when(in_array($this->request->query('kind'), ['sale', 'purchase'], true), fn ($q) => $q->where('kind', $this->request->query('kind')))
             ->when($this->request->filled('status'), fn ($q) => $q->where('status', $this->request->query('status')))
             ->orderBy('contract_date')->get();

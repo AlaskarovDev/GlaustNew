@@ -58,7 +58,7 @@ class TaskTable extends Table
         match ($r->query('due')) {
             'overdue' => $query->where('status', '!=', 'done')->where('due_date', '<', $today),
             'today' => $query->whereDate('due_date', $today),
-            'week' => $query->whereBetween('due_date', [$today, today()->addDays(7)->toDateString()]),
+            'week' => $query->whereBetween('due_date', [$today, today()->addDays(7)->toDateString().' 23:59:59']),
             'none' => $query->whereNull('due_date'),
             default => null,
         };

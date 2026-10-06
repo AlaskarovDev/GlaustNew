@@ -33,7 +33,7 @@ class TaskController extends Controller
             $month = $this->month($request);
             $data['month'] = $month;
             $data['byDay'] = $table->query()->reorder()
-                ->whereBetween('due_date', [$month->copy()->startOfMonth()->startOfWeek()->toDateString(), $month->copy()->endOfMonth()->endOfWeek()->toDateString()])
+                ->whereBetween('due_date', [$month->copy()->startOfMonth()->startOfWeek()->toDateString(), $month->copy()->endOfMonth()->endOfWeek()->toDateString().' 23:59:59'])
                 ->orderBy('due_date')->get()->groupBy(fn ($t) => $t->due_date->format('Y-m-d'));
         } else {
             $data['gantt'] = $table->query()->reorder()->whereNotNull('due_date')->orderBy('start_date')->orderBy('due_date')->limit(80)->get();

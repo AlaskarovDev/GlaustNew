@@ -140,7 +140,7 @@ class NotificationMailer
 
         if ($user->hasPermission('contracts.view')) {
             $ending = Contract::with('counterparty')->whereIn('status', ['signed', 'active'])
-                ->whereBetween('end_date', [$today->toDateString(), $today->addDays(30)->toDateString()])
+                ->whereBetween('end_date', [$today->toDateString(), $today->addDays(30)->toDateString().' 23:59:59'])
                 ->where(fn ($q) => $q->where('responsible_id', $user->id)->orWhereNull('responsible_id'))
                 ->orderBy('end_date')->limit(10)->get();
             $sections[] = ['title' => '30 gün ərzində bitən müqavilələr', 'items' => $ending->map(fn (Contract $c) => [
@@ -151,7 +151,7 @@ class NotificationMailer
             ])->all()];
 
             $payments = ContractPayment::with('contract.counterparty')->whereNull('paid_at')
-                ->whereBetween('due_date', [$today->subDays(30)->toDateString(), $today->addDays(7)->toDateString()])
+                ->whereBetween('due_date', [$today->subDays(30)->toDateString(), $today->addDays(7)->toDateString().' 23:59:59'])
                 ->whereHas('contract', fn ($q) => $q->whereIn('status', ['signed', 'active'])
                     ->where(fn ($w) => $w->where('responsible_id', $user->id)->orWhereNull('responsible_id')))
                 ->orderBy('due_date')->limit(10)->get();

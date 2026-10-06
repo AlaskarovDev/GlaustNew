@@ -30,7 +30,7 @@ class ContractController extends Controller
         $items = $table->paginate();
         $summary = Contract::whereIn('status', ['signed', 'active'])
             ->selectRaw("kind, COUNT(*) as n, SUM(amount_azn) as s")->groupBy('kind')->get()->keyBy('kind');
-        $ending = Contract::whereIn('status', ['signed', 'active'])->whereBetween('end_date', [today()->toDateString(), today()->addDays(30)->toDateString()])->count();
+        $ending = Contract::whereIn('status', ['signed', 'active'])->whereBetween('end_date', [today()->toDateString(), today()->addDays(30)->toDateString().' 23:59:59'])->count();
 
         return view('contracts.index', compact('table', 'items', 'summary', 'ending'));
     }

@@ -32,7 +32,7 @@ class ReminderService
             $contracts = Contract::with('counterparty')
                 ->whereIn('status', ['signed', 'active'])
                 ->whereNotNull('end_date')
-                ->whereBetween('end_date', [$today->toDateString(), $today->addDays(max($days))->toDateString()])
+                ->whereBetween('end_date', [$today->toDateString(), $today->addDays(max($days))->toDateString().' 23:59:59'])
                 ->get();
             foreach ($contracts as $c) {
                 $left = (int) $today->diffInDays($c->end_date, false);
@@ -86,7 +86,7 @@ class ReminderService
         $taskDays = array_map('intval', (array) $company->setting('task_reminder_days'));
         if ($taskDays) {
             $tasks = Task::with('project')->open()->whereNotNull('assignee_id')->whereNotNull('due_date')
-                ->whereBetween('due_date', [$today->toDateString(), $today->addDays(max($taskDays))->toDateString()])
+                ->whereBetween('due_date', [$today->toDateString(), $today->addDays(max($taskDays))->toDateString().' 23:59:59'])
                 ->get();
             foreach ($tasks as $t) {
                 $left = (int) $today->diffInDays($t->due_date, false);
@@ -142,7 +142,7 @@ class ReminderService
 
         $overdue = (clone $base)->where('due_date', '<', $today->toDateString())->orderBy('due_date')->limit(20)->get()->map($map);
         $todayTasks = (clone $base)->whereDate('due_date', $today->toDateString())->orderByRaw("CASE priority WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END")->get()->map($map);
-        $upcoming = (clone $base)->whereBetween('due_date', [$today->addDay()->toDateString(), $today->addDays(3)->toDateString()])->orderBy('due_date')->limit(10)->get()->map($map);
+        $upcoming = (clone $base)->whereBetween('due_date', [$today->addDay()->toDateString(), $today->addDays(3)->toDateString().' 23:59:59'])->orderBy('due_date')->limit(10)->get()->map($map);
 
         $reminders = Reminder::activeFor($user)->orderBy('remind_at')->limit(30)->get()->map(fn (Reminder $r) => [
             'id' => $r->id,

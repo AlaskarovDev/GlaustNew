@@ -34,7 +34,7 @@ class ExpenseController extends Controller
         $to = $f['to'] ?? today()->endOfMonth()->toDateString();
 
         $query = fn () => Expense::query()
-            ->whereBetween('expense_date', [$from, $to])
+            ->whereBetween('expense_date', [$from, $to.' 23:59:59'])
             ->when($f['category_id'] ?? null, fn (Builder $q, $c) => $q->where('category_id', $c))
             ->when($f['status'] ?? null, fn (Builder $q, $s) => $q->where('status', $s))
             ->when($f['method'] ?? null, fn (Builder $q, $m) => $q->where('payment_method', $m))

@@ -51,7 +51,7 @@ class LogisticsReport extends Report
         $types = array_keys(config('glaust.cost_types'));
 
         return $this->data = Shipment::with(['carrier:id,name', 'costs'])
-            ->whereBetween('loading_date', [$this->from()->toDateString(), $this->to()->toDateString()])
+            ->whereBetween('loading_date', [$this->from()->toDateString(), $this->to()->toDateString().' 23:59:59'])
             ->when($this->request->filled('transport_mode'), fn ($q) => $q->where('transport_mode', $this->request->query('transport_mode')))
             ->when($this->request->filled('direction'), fn ($q) => $q->where('direction', $this->request->query('direction')))
             ->orderBy('loading_date')->get()

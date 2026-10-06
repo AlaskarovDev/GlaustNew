@@ -48,7 +48,7 @@ class IncomeExpenseReport extends Report
     private function base()
     {
         return BankTransaction::query()->where('kind', 'regular')
-            ->whereBetween('transaction_date', [$this->from()->toDateString(), $this->to()->toDateString()])
+            ->whereBetween('transaction_date', [$this->from()->toDateString(), $this->to()->toDateString().' 23:59:59'])
             ->when($this->request->filled('project_id'), fn ($q) => $q->where('project_id', $this->request->integer('project_id')));
     }
 

@@ -99,6 +99,7 @@
                 @if($used !== null)<div class="mt-2 h-1.5 rounded-full bg-surface-2 overflow-hidden"><div @class(['h-full rounded-full', 'bg-brand' => $used < 80, 'bg-saffron' => $used >= 80 && $used < 100, 'bg-danger' => $used >= 100]) style="width: {{ $used }}%"></div></div><div class="text-xs text-muted mt-1">{{ __('büdcənin') }} {{ $used }}%-i</div>@endif</div>
             <div class="card p-5" style="--i:2"><div class="text-xs text-muted">{{ __('Daxilolma') }}</div><div class="mt-1 text-2xl font-semibold font-mono text-success">{{ money($finance['income']) }}</div><div class="text-xs text-muted mt-1">{{ __('Nəticə:') }} {{ money($finance['income'] - $finance['expense']) }}</div></div>
         </div>
+        @include('partials.fx-results', ['fx' => \App\Support\FxResults::for($project->deals()->get(), $project->id), 'showTrade' => true])
         <div class="grid xl:grid-cols-2 gap-6">
             <section class="card overflow-hidden">
                 <header class="px-5 h-14 flex items-center border-b border-line"><h2 class="text-sm font-semibold">{{ __('Bank əməliyyatları') }}</h2></header>

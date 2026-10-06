@@ -52,7 +52,7 @@ class ContractTable extends Table
         if ($ending = $r->query('ending')) {
             $ending === 'expired'
                 ? $query->whereIn('status', ['signed', 'active'])->where('end_date', '<', today()->toDateString())
-                : $query->whereIn('status', ['signed', 'active'])->whereBetween('end_date', [today()->toDateString(), today()->addDays((int) $ending)->toDateString()]);
+                : $query->whereIn('status', ['signed', 'active'])->whereBetween('end_date', [today()->toDateString(), today()->addDays((int) $ending)->toDateString().' 23:59:59']);
         }
         if ($r->filled('counterparty_id')) {
             $query->where('counterparty_id', $r->integer('counterparty_id'));

@@ -45,6 +45,36 @@ class CurrencyExchangeTest extends TestCase
         $this->assertSame(1, $this->inTenant($admin, fn () => \App\Models\Deal::find($deal->id)->currencyExchanges()->count()));
     }
 
+    public function test_rub_sold_below_cbar_shows_as_rub_exchange_expense_in_trade_project_and_report(): void
+    {
+        $this->fakeCbar();
+        $admin = $this->makeCompany();
+        [$azn, $rub, $project, $deal] = $this->inTenant($admin, function () {
+            $p = \App\Models\Project::create(['code' => 'P-1', 'name' => 'Boya', 'status' => 'active', 'priority' => 'medium', 'currency' => 'EUR']);
+
+            return [
+                BankAccount::create(['name' => 'AZN', 'bank_name' => 'Kapital Bank', 'currency' => 'AZN', 'is_active' => true]),
+                BankAccount::create(['name' => 'RUB', 'bank_name' => 'TuranBank', 'currency' => 'RUB', 'opening_balance' => 1000000, 'is_active' => true]),
+                $p, \App\Models\Deal::create(['project_id' => $p->id, 'code' => 'TR-7', 'title' => 'Partiya', 'deal_date' => today(), 'currency' => 'EUR', 'status' => 'active']),
+            ];
+        });
+        $this->actingAs($admin);
+        $day = today()->subDay()->toDateString();
+        $cbar = app(CurrencyRates::class)->rate('RUB', $day);
+        $this->post(route('bank.exchanges.store'), ['exchange_date' => $day, 'direction' => 'sell', 'currency' => 'RUB', 'counter_currency' => 'AZN',
+            'amount' => '100000', 'bank_rate' => (string) round($cbar * 0.99, 6), 'from_account_id' => $rub->id, 'to_account_id' => $azn->id,
+            'project_id' => $project->id, 'deal_id' => $deal->id])->assertSessionHasNoErrors();
+        $loss = (float) $this->inTenant($admin, fn () => CurrencyExchange::firstOrFail()->difference_azn);
+        $this->assertGreaterThan(0, $loss);
+
+        $fx = $this->inTenant($admin, fn () => \App\Support\FxResults::for(collect([\App\Models\Deal::find($deal->id)])));
+        $this->assertSame(['RUB' => ['gain' => 0.0, 'loss' => $loss, 'net' => -$loss]], $fx['currencies']);
+
+        $this->get(route('deals.show', [$deal, 'tab' => 'finance']))->assertOk()->assertSee('RUB məzənnə fərqi — xərc')->assertSee(money($loss));
+        $this->get(route('projects.show', [$project, 'tab' => 'finance']))->assertOk()->assertSee('RUB məzənnə fərqi — xərc')->assertSee(money($loss));
+        $this->get(route('reports.show', ['exchange', 'from' => $day, 'to' => $day]))->assertOk()->assertSee('RUB məzənnə fərqi — xərc')->assertSee('Valyuta satışı (RUB)');
+    }
+
     public function test_buy_and_sell_keep_cbar_and_bank_figures(): void
     {
         $this->fakeCbar();

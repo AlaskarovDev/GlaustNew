@@ -162,8 +162,8 @@
                                     <a :href="fxUrl" class="text-xs text-brand-ink hover:underline" x-text="fxDeal"></a></div>
                                 <template x-if="!fx.length"><p class="text-xs text-muted">{{ __('Bu Trade-in xarici valyutada ödəməli olduğu yoxdur.') }}</p></template>
                                 <template x-for="r in fx" :key="r.currency">
-                                    <div class="rounded-lg bg-surface-2/70 px-3 py-2 space-y-0.5">
-                                        <div class="flex justify-between gap-2"><span class="font-mono font-semibold" x-text="r.currency"></span><span class="text-xs text-muted">{{ \Illuminate\Support\Js::from(__('ödəməliyik')) }} <b class="font-mono text-danger" x-text="f(r.due)"></b></span></div>
+                                    <div class="rounded-lg bg-surface-2/70 px-3 py-2 space-y-0.5" translate="no">
+                                        <div class="flex justify-between gap-2"><span class="font-mono font-semibold" x-text="r.currency"></span><span class="text-xs text-muted">{{ __('ödəməliyik') }} <b class="font-mono text-danger" x-text="f(r.due)"></b></span></div>
                                         <div class="flex justify-between gap-2 text-xs text-muted" x-show="r.acquired > 0"><span>{{ __('Trade üçün alınıb') }}</span><span class="font-mono" x-text="f(r.acquired) + ' · ' + {{ \Illuminate\Support\Js::from(__('əldə')) }} + ' ' + f(Math.max(0, r.available))"></span></div>
                                         <div class="flex justify-between gap-2 text-xs" x-show="change(r) !== 0"><span class="text-muted">{{ __('Bu əməliyyatla') }}</span><span class="font-mono" :class="change(r) > 0 ? 'text-success' : 'text-danger'" x-text="(change(r) > 0 ? '+' : '−') + f(Math.abs(change(r)))"></span></div>
                                         <div class="flex justify-between gap-2 font-medium" x-show="after(r).need > 0"><span class="text-saffron">{{ __('Daha lazım olacaq') }}</span><span class="font-mono text-saffron" x-text="f(after(r).need) + ' ' + r.currency"></span></div>

@@ -47,20 +47,32 @@ class ExchangeReport extends Report
         [$from, $to] = [$this->from()->toDateString(), $this->to()->toDateString()];
 
         $regular = BankTransaction::with('account:id,name', 'counterparty:id,name')->where('kind', 'regular')->where('currency', '!=', 'AZN')
-            ->whereColumn('applied_rate', '!=', 'cbar_rate')->whereBetween('transaction_date', [$from, $to])->get()
+            ->whereColumn('applied_rate', '!=', 'cbar_rate')->whereBetween('transaction_date', [$from, $to.' 23:59:59'])->get()
             ->map(fn ($t) => [
                 'date' => $t->transaction_date, 'type' => $t->direction === 'in' ? __('Mədaxil') : __('Məxaric'), 'account' => $t->account?->name,
                 'detail' => $t->counterparty?->name ?? $t->purpose, 'amount' => (float) $t->amount, 'currency' => $t->currency,
                 'cbar' => (float) $t->cbar_rate, 'applied' => (float) $t->applied_rate, 'diff' => $t->exchangeDifference(),
             ]);
 
-        $conversions = BankTransaction::with('account:id,name')->where('kind', 'conversion')->whereBetween('transaction_date', [$from, $to])
-            ->get()->groupBy('transfer_group')
-            ->map(function ($legs) {
+        $conversionLegs = BankTransaction::with('account:id,name')->where('kind', 'conversion')->whereBetween('transaction_date', [$from, $to.' 23:59:59'])->get();
+        // conversions made in «Valyuta alış-satışı»: named after the currency bought / sold, with their Trade
+        $exchanges = \App\Models\CurrencyExchange::with('deal:id,code', 'project:id,code')->whereIn('out_transaction_id', $conversionLegs->pluck('id'))->get()->keyBy('out_transaction_id');
+        $conversions = $conversionLegs->groupBy('transfer_group')
+            ->map(function ($legs) use ($exchanges) {
                 $out = $legs->firstWhere('direction', 'out');
                 $in = $legs->firstWhere('direction', 'in');
                 if (! $out || ! $in) {
                     return null;
+                }
+                if ($x = $exchanges->get($out->id)) {
+                    return [
+                        'date' => $x->exchange_date, 'type' => ($x->direction === 'buy' ? __('Valyuta alışı') : __('Valyuta satışı')).' ('.$x->currency.')',
+                        'account' => $out->account?->name.' → '.$in->account?->name,
+                        'detail' => num($x->amount).' '.$x->currency.' · '.__('bank kursu').' '.rate_fmt($x->bank_rate).' / CBAR '.rate_fmt($x->cbar_cross)
+                            .($x->deal ? ' · Trade '.$x->deal->code : ($x->project ? ' · '.$x->project->code : '')),
+                        'amount' => (float) $x->amount, 'currency' => $x->currency, 'cbar' => (float) $x->cbar_cross, 'applied' => (float) $x->bank_rate,
+                        'diff' => -(float) $x->difference_azn,
+                    ];
                 }
 
                 return [
@@ -101,11 +113,22 @@ class ExchangeReport extends Report
         $gain = $d->where('diff', '>', 0)->sum('diff');
         $loss = $d->where('diff', '<', 0)->sum('diff');
 
-        return [
+        $out = [
             ['label' => __('Müsbət fərq'), 'value' => $gain, 'money' => true, 'tone' => 'success'],
             ['label' => __('Mənfi fərq'), 'value' => abs($loss), 'money' => true, 'tone' => 'danger'],
             ['label' => __('Xalis nəticə'), 'value' => $gain + $loss, 'money' => true, 'tone' => $gain + $loss >= 0 ? 'success' : 'danger'],
         ];
+        // per currency: "RUB məzənnə fərqi — xərc"
+        foreach ($d->groupBy('currency')->sortKeys() as $cur => $g) {
+            if (($l = abs($g->where('diff', '<', 0)->sum('diff'))) >= 0.005) {
+                $out[] = ['label' => __(':cur məzənnə fərqi — xərc', ['cur' => $cur]), 'value' => $l, 'money' => true, 'tone' => 'danger'];
+            }
+            if (($p = $g->where('diff', '>', 0)->sum('diff')) >= 0.005) {
+                $out[] = ['label' => __(':cur məzənnə fərqi — gəlir', ['cur' => $cur]), 'value' => $p, 'money' => true, 'tone' => 'success'];
+            }
+        }
+
+        return $out;
     }
 
     public function note(): ?string

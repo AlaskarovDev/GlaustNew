@@ -63,7 +63,7 @@ class BankStatementReport extends Report
         $running = $opening;
         $rows = BankTransaction::with('counterparty:id,name', 'contract:id,number')
             ->where('bank_account_id', $account->id)
-            ->whereBetween('transaction_date', [$this->from()->toDateString(), $this->to()->toDateString()])
+            ->whereBetween('transaction_date', [$this->from()->toDateString(), $this->to()->toDateString().' 23:59:59'])
             ->orderBy('transaction_date')->orderBy('id')->get()
             ->map(function ($t) use (&$running) {
                 $running = round($running + ($t->direction === 'in' ? 1 : -1) * (float) $t->amount, 2);

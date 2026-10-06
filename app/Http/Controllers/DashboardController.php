@@ -68,7 +68,7 @@ class DashboardController extends Controller
             $can('bank.view') ? $this->monthFlowKpi($today) : null,
             $can('logistics.view') ? ['label' => __('Yoldakı yüklər'), 'value' => Shipment::whereIn('status', ['loading', 'in_transit', 'customs'])->count(), 'int' => true, 'icon' => 'truck', 'tone' => 'violet', 'url' => route('shipments.index', ['status' => 'in_transit']),
                 'hint' => Shipment::whereNotIn('status', ['arrived', 'delivered'])->whereNotNull('eta')->where('eta', '<', $today->toDateString())->count().' gecikir'] : null,
-            $can('contracts.view') ? ['label' => __('30 gündə bitən müqavilə'), 'value' => Contract::whereIn('status', ['signed', 'active'])->whereBetween('end_date', [$today->toDateString(), $today->addDays(30)->toDateString()])->count(), 'int' => true, 'icon' => 'calendar', 'tone' => 'amber', 'url' => route('contracts.index', ['ending' => '30']),
+            $can('contracts.view') ? ['label' => __('30 gündə bitən müqavilə'), 'value' => Contract::whereIn('status', ['signed', 'active'])->whereBetween('end_date', [$today->toDateString(), $today->addDays(30)->toDateString().' 23:59:59'])->count(), 'int' => true, 'icon' => 'calendar', 'tone' => 'amber', 'url' => route('contracts.index', ['ending' => '30']),
                 'hint' => __('yeniləmə və ya bağlanış')] : null,
         ]));
 
@@ -124,7 +124,7 @@ class DashboardController extends Controller
     private function monthFlowKpi(CarbonImmutable $today): array
     {
         $rows = BankTransaction::where('kind', 'regular')
-            ->whereBetween('transaction_date', [$today->startOfMonth()->toDateString(), $today->toDateString()])
+            ->whereBetween('transaction_date', [$today->startOfMonth()->toDateString(), $today->toDateString().' 23:59:59'])
             ->selectRaw('direction, SUM(amount_azn) as s')->groupBy('direction')->pluck('s', 'direction');
         $in = (float) ($rows['in'] ?? 0);
         $out = (float) ($rows['out'] ?? 0);

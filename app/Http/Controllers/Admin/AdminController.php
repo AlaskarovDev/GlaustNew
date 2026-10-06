@@ -34,7 +34,7 @@ class AdminController extends Controller
                 'mrr' => $companies->where('subscription_status', 'active')->sum(fn ($c) => (float) $c->plan?->monthly_price),
             ],
             'recent' => Company::with('plan')->withCount('users')->latest()->limit(8)->get(),
-            'expiring' => Company::where('subscription_status', 'trial')->whereBetween('trial_ends_at', [today()->toDateString(), today()->addDays(7)->toDateString()])->orderBy('trial_ends_at')->get(),
+            'expiring' => Company::where('subscription_status', 'trial')->whereBetween('trial_ends_at', [today()->toDateString(), today()->addDays(7)->toDateString().' 23:59:59'])->orderBy('trial_ends_at')->get(),
             'failedLogins' => LoginLog::whereIn('event', ['failed', 'locked'])->where('created_at', '>=', now()->subDay())->count(),
             'failedMails' => MailLog::where('status', 'failed')->where('created_at', '>=', now()->subDay())->count(),
         ]);

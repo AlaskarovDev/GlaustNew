@@ -20,7 +20,7 @@ class MyWorkController extends Controller
         $groups = [
             'overdue' => [__('Gecikmiş'), (clone $open)->whereNotNull('due_date')->where('due_date', '<', $today->toDateString())->orderBy('due_date')->get()],
             'today' => [__('Bu gün'), (clone $open)->whereDate('due_date', $today->toDateString())->get()],
-            'week' => [__('Bu həftə'), (clone $open)->whereBetween('due_date', [$today->addDay()->toDateString(), $today->addDays(7)->toDateString()])->orderBy('due_date')->get()],
+            'week' => [__('Bu həftə'), (clone $open)->whereBetween('due_date', [$today->addDay()->toDateString(), $today->addDays(7)->toDateString().' 23:59:59'])->orderBy('due_date')->get()],
             'later' => [__('Sonra və tarixsiz'), (clone $open)->where(fn ($q) => $q->whereNull('due_date')->orWhere('due_date', '>', $today->addDays(7)->toDateString()))->orderByRaw('due_date IS NULL, due_date')->limit(30)->get()],
         ];
         $doneToday = Task::where('assignee_id', $user->id)->where('status', 'done')->where('completed_at', '>=', $today)->count();

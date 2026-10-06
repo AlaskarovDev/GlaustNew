@@ -51,6 +51,8 @@
     @endif
 </section>
 
+@include('partials.fx-results', ['fx' => \App\Support\FxResults::for(collect([$deal]))])
+
 <section class="card overflow-hidden">
     <header class="px-5 py-4 border-b border-line">
         <h2 class="text-base font-semibold">{{ __('Maliyyə əməliyyatları') }} <span class="text-muted font-mono font-normal text-sm">{{ count($moves) }}</span></h2>

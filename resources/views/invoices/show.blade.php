@@ -95,6 +95,7 @@
             @include('invoices._commission')
             @include('invoices._rub')
         </div>
+        @if($manual)@include('invoices._forecast_azn')@endif
     @endif
 
     @php

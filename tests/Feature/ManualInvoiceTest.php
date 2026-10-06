@@ -67,7 +67,10 @@ class ManualInvoiceTest extends TestCase
         $this->assertSame(0, $this->inTenant($admin, fn () => SalesDocument::count()), 'no documents for a manual entry');
 
         $this->get(route('invoices.show', $inv))->assertOk()->assertSee('Fakturasız')->assertSee(money($sale, 'RUB'))->assertDontSee('Alıcı üçün sənədlər')
-            ->assertSee('Yekun məbləğ (bütün xərclər daxil)')->assertDontSee('UNIT PRICE RUR');   // no computed columns
+            ->assertSee('Yekun məbləğ (bütün xərclər daxil)')->assertDontSee('UNIT PRICE RUR')   // no computed columns
+            // in manat at the forecast rates: Total × Proq EUR, logistics × Proq EUR, final × Proq RUB
+            ->assertSee('Proqnoz kurslarla manatda')->assertSee(money(20005))->assertSee(money(650 * 2.0005))->assertSee(money(188845))
+            ->assertSee(money(188845 - 20005 - 650 * 2.0005));
         $this->get(route('deals.show', [$deal, 'tab' => 'invoices']))->assertOk()->assertSee('M-TD-9-1')->assertSee('Fakturasız');
         $this->post(route('invoices.documents', $inv))->assertSessionHas('error');
 

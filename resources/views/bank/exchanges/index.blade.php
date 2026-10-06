@@ -22,6 +22,8 @@
                 counter: @js(old('counter_currency', 'AZN')),
                 amount: @js((string) old('amount', '')),
                 bankRate: @js((string) old('bank_rate', '')),
+                bankRateAzn: @js((string) old('bank_rate_azn', '')),
+                perAzn() { return this.counter === 'AZN' && this.cur !== 'AZN'; },   // typed as '? EUR = 1 AZN'
                 rate: { cur: null, counter: null }, loading: false, error: '',
                 accounts: @js($accountsData),
                 from: @js((string) old('from_account_id', '')), to: @js((string) old('to_account_id', '')),
@@ -36,7 +38,10 @@
                 },
                 cross() { return this.rate.cur && this.rate.counter ? this.rate.cur / this.rate.counter : null; },
                 cbarAmount() { return this.cross() ? Math.round(this.num(this.amount) * this.cross() * 100) / 100 : null; },
-                bankAmount() { return this.num(this.bankRate) ? Math.round(this.num(this.amount) * this.num(this.bankRate) * 100) / 100 : null; },
+                bankAmount() {
+                    if (this.perAzn()) return this.num(this.bankRateAzn) ? Math.round(this.num(this.amount) / this.num(this.bankRateAzn) * 100) / 100 : null;
+                    return this.num(this.bankRate) ? Math.round(this.num(this.amount) * this.num(this.bankRate) * 100) / 100 : null;
+                },
                 diff() { if (this.cbarAmount() === null || this.bankAmount() === null) return null; return Math.round((this.dir === 'buy' ? this.bankAmount() - this.cbarAmount() : this.cbarAmount() - this.bankAmount()) * 100) / 100; },
                 fromCur() { return this.dir === 'buy' ? this.counter : this.cur; },
                 toCur() { return this.dir === 'buy' ? this.cur : this.counter; },
@@ -112,7 +117,9 @@
                     <div class="px-4 py-3 bg-surface-2/60 border-b border-line">
                         <div class="text-xs text-muted">{{ __('CBAR kursu ·') }} <span x-text="date ? date.split('-').reverse().join('.') : '—'"></span></div>
                         <div class="font-mono font-semibold mt-0.5"><span x-show="loading" class="text-faint">{{ __('yüklənir…') }}</span>
-                            <span x-show="!loading && cross()">1 <span x-text="cur"></span> = <span x-text="rf(cross())"></span> <span x-text="counter"></span></span></div>
+                            <span x-show="!loading && cross() && perAzn()"><span x-text="rf(Math.round(1e6 / cross()) / 1e6)"></span> <span x-text="cur"></span> = 1 AZN</span>
+                            <span x-show="!loading && cross() && !perAzn()">1 <span x-text="cur"></span> = <span x-text="rf(cross())"></span> <span x-text="counter"></span></span></div>
+                        <div class="text-[11px] text-muted" x-show="cross() && perAzn()">1 <span x-text="cur"></span> = <span x-text="rf(cross())"></span> AZN</div>
                         <div class="text-[11px] text-muted" x-show="cross() && cur !== 'AZN' && counter !== 'AZN'"><span x-text="cur"></span> <span x-text="rf(rate.cur)"></span> ₼ · <span x-text="counter"></span> <span x-text="rf(rate.counter)"></span> ₼</div>
                         <div class="text-[11px] text-danger" x-show="error" x-text="error"></div>
                     </div>
@@ -120,8 +127,20 @@
                         <div class="flex justify-between gap-3"><dt class="text-muted" x-text="dir === 'buy' ? {{ \Illuminate\Support\Js::from(__('CBAR ilə lazım olan')) }} : {{ \Illuminate\Support\Js::from(__('CBAR ilə gələcək')) }}"></dt><dd class="font-mono" x-text="cbarAmount() !== null ? fmt(cbarAmount()) + ' ' + counter : '—'"></dd></div>
                     </dl>
                     <div class="px-4 pb-3">
-                        <label class="field-label" for="bank-rate">{{ __('Bankın kursu: 1') }} <span x-text="cur"></span> = ? <span x-text="counter"></span> <span class="text-danger">*</span></label>
-                        <input id="bank-rate" name="bank_rate" x-model="bankRate" inputmode="decimal" :placeholder="cross() ? rf(cross()) : ''" class="input font-mono text-right @error('bank_rate') is-invalid @enderror" required>
+                        {{-- against manat: "? EUR = 1 AZN" (manat on the right); otherwise "1 EUR = ? USD" --}}
+                        <template x-if="perAzn()">
+                            <div>
+                                <label class="field-label" for="bank-rate-azn">{{ __('Bankın kursu:') }} ? <span x-text="cur"></span> = 1 AZN <span class="text-danger">*</span></label>
+                                <input id="bank-rate-azn" name="bank_rate_azn" x-model="bankRateAzn" inputmode="decimal" :placeholder="cross() ? rf(Math.round(1e6 / cross()) / 1e6) : ''" class="input font-mono text-right @error('bank_rate') is-invalid @enderror" required>
+                                <p class="field-hint font-mono" x-show="num(bankRateAzn)">1 <span x-text="cur"></span> = <span x-text="rf(Math.round(1e6 / num(bankRateAzn)) / 1e6)"></span> AZN</p>
+                            </div>
+                        </template>
+                        <template x-if="!perAzn()">
+                            <div>
+                                <label class="field-label" for="bank-rate">{{ __('Bankın kursu: 1') }} <span x-text="cur"></span> = ? <span x-text="counter"></span> <span class="text-danger">*</span></label>
+                                <input id="bank-rate" name="bank_rate" x-model="bankRate" inputmode="decimal" :placeholder="cross() ? rf(cross()) : ''" class="input font-mono text-right @error('bank_rate') is-invalid @enderror" required>
+                            </div>
+                        </template>
                         @error('bank_rate')<p class="field-error">{{ $message }}</p>@enderror
                     </div>
                     <dl class="px-4 py-3 border-t border-line space-y-2 text-sm">
@@ -196,8 +215,14 @@
                                 @if($x->deal)<div class="text-[11px] mt-1"><a href="{{ route('deals.show', $x->deal) }}" class="text-brand-ink hover:underline">Trade {{ $x->deal->code }}</a></div>
                                 @elseif($x->project)<div class="text-[11px] mt-1"><a href="{{ route('projects.show', $x->project) }}" class="text-brand-ink hover:underline">{{ $x->project->name }}</a></div>@endif</td>
                             <td data-label="{{ __('Məbləğ') }}" class="num font-medium">{{ money($x->amount, $x->currency) }}</td>
-                            <td data-label="{{ __('CBAR kursu') }}" class="num text-xs">{{ rate_fmt($x->cbar_cross) }}<div class="text-faint">{{ $x->currency }}/{{ $x->counter_currency }}</div></td>
-                            <td data-label="{{ __('Bank kursu') }}" class="num text-xs font-medium">{{ rate_fmt($x->bank_rate) }}</td>
+                            @php $perAzn = $x->counter_currency === 'AZN' && (float) $x->cbar_cross > 0 && (float) $x->bank_rate > 0; @endphp
+                            @if($perAzn)   {{-- "? EUR = 1 AZN": manat on the right --}}
+                                <td data-label="{{ __('CBAR kursu') }}" class="num text-xs">{{ rate_fmt(round(1 / (float) $x->cbar_cross, 6)) }}<div class="text-faint">{{ $x->currency }} = 1 AZN</div></td>
+                                <td data-label="{{ __('Bank kursu') }}" class="num text-xs font-medium">{{ rate_fmt(round(1 / (float) $x->bank_rate, 6)) }}<div class="text-faint font-normal">{{ $x->currency }} = 1 AZN</div></td>
+                            @else
+                                <td data-label="{{ __('CBAR kursu') }}" class="num text-xs">{{ rate_fmt($x->cbar_cross) }}<div class="text-faint">{{ $x->currency }}/{{ $x->counter_currency }}</div></td>
+                                <td data-label="{{ __('Bank kursu') }}" class="num text-xs font-medium">{{ rate_fmt($x->bank_rate) }}</td>
+                            @endif
                             <td data-label="{{ __('CBAR ilə') }}" class="num">{{ money($x->counter_amount_cbar, $x->counter_currency) }}</td>
                             <td data-label="{{ __('Bank ilə') }}" class="num font-medium">{{ money($x->counter_amount, $x->counter_currency) }}</td>
                             <td data-label="{{ __('Fərq') }}" @class(['num', 'text-danger' => $x->difference > 0, 'text-success' => $x->difference < 0])>{{ $x->difference > 0 ? '−' : ($x->difference < 0 ? '+' : '') }}{{ money(abs($x->difference), $x->counter_currency) }}

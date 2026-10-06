@@ -42,7 +42,7 @@
     <thead>
     <tr>
         <th style="width: 7%;">Поз№.</th><th>Наименование товара</th><th style="width: 10%;">Един. измер.</th>
-        <th style="width: 12%;">Количество</th><th style="width: 15%;">Цена за ед., рубли</th><th style="width: 18%;">Общая сумма, рубли</th>
+        <th style="width: 12%;">Количество</th><th style="width: 15%;">Цена за ед., {{ $doc->currency === 'RUB' ? 'рубли' : $doc->currency }}</th><th style="width: 18%;">Общая сумма, рубли</th>
     </tr>
     </thead>
     <tbody>

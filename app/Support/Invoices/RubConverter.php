@@ -20,12 +20,22 @@ class RubConverter
 
     public function __construct(private CurrencyRates $rates) {}
 
-    /** @return array{rate: float, base: float, rub: float, bulletin: ?string} @throws RateUnavailable */
-    public function cbar(string $currency, string $date): array
+    /** Target currency of an invoice's conversion: its Trade's sale currency (RUB by default). */
+    public static function target(Invoice $invoice): string
+    {
+        return $invoice->deal?->saleCurrency() ?? 'RUB';
+    }
+
+    /**
+     * 1 {currency} = ? {target} at CBAR of the day; `rub` = AZN per unit of the target (named after the sheet's D19).
+     *
+     * @return array{rate: float, base: float, rub: float, bulletin: ?string} @throws RateUnavailable
+     */
+    public function cbar(string $currency, string $date, string $target = 'RUB'): array
     {
         $snap = $this->rates->snapshot($date);
         $base = $currency === 'AZN' ? 1.0 : ($snap['rates'][$currency]['rate'] ?? throw RateUnavailable::for($currency, $date));
-        $rub = $snap['rates']['RUB']['rate'] ?? throw RateUnavailable::for('RUB', $date);
+        $rub = $target === 'AZN' ? 1.0 : ($snap['rates'][$target]['rate'] ?? throw RateUnavailable::for($target, $date));
 
         return ['rate' => $base / $rub, 'base' => $base, 'rub' => $rub, 'bulletin' => $snap['bulletin'] ?? null];
     }
@@ -34,7 +44,7 @@ class RubConverter
     {
         if ($source === 'cbar') {
             try {
-                $c = $this->cbar($invoice->currency, $date);
+                $c = $this->cbar($invoice->currency, $date, self::target($invoice));
             } catch (RateUnavailable $e) {
                 throw ValidationException::withMessages(['fx_date' => $e->getMessage().__(' Gələcək tarix üçün «Proqnoz» seçin.')]);
             }
@@ -60,7 +70,7 @@ class RubConverter
             return null;
         }
         try {
-            return $this->cbar($invoice->currency, $invoice->fx_date->toDateString());
+            return $this->cbar($invoice->currency, $invoice->fx_date->toDateString(), self::target($invoice));
         } catch (RateUnavailable|\InvalidArgumentException) {
             return null;
         }

@@ -66,7 +66,8 @@ class AjaxController extends Controller
             return response()->json(['ok' => false, 'message' => __('Naməlum valyuta.')]);
         }
         try {
-            $c = $converter->cbar($from, (string) $request->query('date'));
+            $to = strtoupper((string) $request->query('to', 'RUB'));
+            $c = $converter->cbar($from, (string) $request->query('date'), in_array($to, config('glaust.currencies'), true) ? $to : 'RUB');
 
             return response()->json(['ok' => true] + $c);
         } catch (RateUnavailable $e) {

@@ -5,6 +5,7 @@
 --}}
 @php
     $cur = $invoice->currency;
+    $to = \App\Support\Invoices\RubConverter::target($invoice);   // the Trade's sale currency
     $failed = $errors->hasAny(['fx_source', 'fx_date', 'fx_base_azn', 'fx_target_azn']);
     $actual = app(\App\Support\Invoices\RubConverter::class)->actualFor($invoice);
     $today = today()->toDateString();
@@ -27,7 +28,7 @@
             if (this.future()) { this.source = 'forecast'; return; }
             this.loading = true;
             try {
-                const d = await glaustApi('/ajax/cross-rate?from={{ $cur }}&date=' + encodeURIComponent(this.date));
+                const d = await glaustApi('/ajax/cross-rate?from={{ $cur }}&to={{ $to }}&date=' + encodeURIComponent(this.date));
                 d.ok ? (this.cbar = d) : (this.error = d.message);
             } catch (e) { this.error = e.message; }
             this.loading = false;
@@ -42,7 +43,7 @@
     <header class="step-head">
         <span class="step-no">3</span>
         <div class="min-w-0">
-            <h2 class="step-title">{{ $cur }} → RUB konvertasiya</h2>
+            <h2 class="step-title">{{ $cur }} → {{ $to }} {{ __('konvertasiya') }}</h2>
             <p class="step-sub">{{ __('Fakturanın kəsiləcəyi tarixə görə') }}</p>
         </div>
         @if($invoice->hasRub())
@@ -58,14 +59,14 @@
             $d = azdate($invoice->fx_date);
         @endphp
         <div class="step-summary">
-            <div class="step-value">1 {{ $cur }} = {{ num($invoice->fx_rate, 4) }} ₽</div>
+            <div class="step-value">1 {{ $cur }} = {{ num($invoice->fx_rate, 4) }} {{ currency_symbol($to) }}</div>
             <table class="rate-table mt-2">
                 <tr @class(['is-used' => ! $isForecast])><td>{{ $d }}</td><td>CB {{ $cur }}</td><td>{{ $cb ? $r($cb['base']) : __('dərc olunmayıb') }}</td></tr>
-                <tr @class(['is-used' => ! $isForecast])><td>{{ $d }}</td><td>CB RUB</td><td>{{ $cb ? $r($cb['rub']) : __('dərc olunmayıb') }}</td></tr>
+                <tr @class(['is-used' => ! $isForecast])><td>{{ $d }}</td><td>CB {{ $to }}</td><td>{{ $cb ? $r($cb['rub']) : __('dərc olunmayıb') }}</td></tr>
                 @if($isForecast)
                     <tr class="gap"><td colspan="3"></td></tr>
                     <tr class="is-used"><td>{{ $d }}</td><td>{{ __('Proq') }} {{ $cur }}</td><td>{{ $r($invoice->fx_base_azn) }}</td></tr>
-                    <tr class="is-used"><td>{{ $d }}</td><td>{{ __('Proq RUB') }}</td><td>{{ $r($invoice->fx_target_azn) }}</td></tr>
+                    <tr class="is-used"><td>{{ $d }}</td><td>{{ __('Proq') }} {{ $to }}</td><td>{{ $r($invoice->fx_target_azn) }}</td></tr>
                 @endif
             </table>
             @if($isForecast && $actual)
@@ -97,7 +98,7 @@
                     <td><span x-show="cbar" x-text="cbar && rf(cbar.base)"></span><span x-show="!cbar" class="text-faint" x-text="loading ? '…' : '—'"></span></td>
                 </tr>
                 <tr :class="source === 'cbar' && 'is-used'">
-                    <td x-text="dmy()"></td><td>CB RUB</td>
+                    <td x-text="dmy()"></td><td>CB {{ $to }}</td>
                     <td><span x-show="cbar" x-text="cbar && rf(cbar.rub)"></span><span x-show="!cbar" class="text-faint" x-text="loading ? '…' : '—'"></span></td>
                 </tr>
                 <tr class="gap"><td colspan="3"></td></tr>
@@ -106,7 +107,7 @@
                     <td><input id="fx-base" name="fx_base_azn" x-model="base" :disabled="source !== 'forecast'" @focus="source = 'forecast'" inputmode="decimal" placeholder="2,0005" class="input !h-8 font-mono text-right @error('fx_base_azn') is-invalid @enderror"></td>
                 </tr>
                 <tr :class="source === 'forecast' && 'is-used'">
-                    <td x-text="dmy()"></td><td><label for="fx-rub">{{ __('Proq RUB') }}</label></td>
+                    <td x-text="dmy()"></td><td><label for="fx-rub">{{ __('Proq') }} {{ $to }}</label></td>
                     <td><input id="fx-rub" name="fx_target_azn" x-model="rub" :disabled="source !== 'forecast'" inputmode="decimal" placeholder="0,02110" class="input !h-8 font-mono text-right @error('fx_target_azn') is-invalid @enderror"></td>
                 </tr>
             </table>

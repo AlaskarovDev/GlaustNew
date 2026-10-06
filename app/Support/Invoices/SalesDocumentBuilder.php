@@ -252,7 +252,7 @@ class SalesDocumentBuilder
             'contract_number' => $contract?->number,
             'contract_date' => $contract?->contract_date?->format('d.m.Y'),
             'counterparty_id' => $buyer?->id,
-            'currency' => 'RUB',
+            'currency' => $deal->saleCurrency(),
             'heading' => $previous?->heading ?? mb_strtoupper($company->name),
             'seller_block' => $previous?->seller_block ?? $this->companyBlock($company),
             'customer_block' => $previousForBuyer?->customer_block ?? ($buyer ? $this->counterpartyBlock($buyer) : null),

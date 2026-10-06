@@ -112,7 +112,7 @@
         $formulas = [
             'logistics' => __('H × logistika / H cəm'), 'unit_price_log' => '(I + H) / E', 'fee' => __('H × faiz'),
             'unit_price_ccl_eur' => '(K + I + H) / E', 'total_ccl_eur' => 'L × E',
-            'unit_price_rur' => 'L × '.$invoice->currency.'/RUB'.($invoice->fx_source === 'forecast' ? ' (proqnoz)' : ''), 'total_rur' => 'N × E',
+            'unit_price_rur' => 'L × '.$invoice->currency.'/'.\App\Support\Invoices\RubConverter::target($invoice).($invoice->fx_source === 'forecast' ? ' (proqnoz)' : ''), 'total_rur' => 'N × E',
             'unit_price_rur_rounded' => 'ROUND(N; 2)', 'total_rur_rounded' => 'P × E',
         ];
         $label = fn ($k, $l) => $k === 'fee' && $invoice->hasCommission() ? 'Commission '.$invoice->commissionLabel().'%' : $l;
@@ -177,7 +177,7 @@
                 @if(! $invoice->hasLogistics() && ! $invoice->hasCommission()) {{ __('Boz sütunlar logistika xərci və komissiya faizi daxil edildikdən sonra hesablanır.') }}
                 @elseif(! $invoice->hasLogistics()) {{ __('UNIT PRICE+LOG və CCL sütunları üçün logistika xərcini daxil edin.') }}
                 @elseif(! $invoice->hasCommission()) {{ __('Commission və CCL sütunları üçün sağdakı paneldə komissiya faizini tətbiq edin.') }}
-                @elseif(! $invoice->hasRub()) {{ __('RUR sütunları üçün «:currency → RUB konvertasiya» addımında tarixi və kursu (CBAR və ya proqnoz) tətbiq edin.', ['currency' => $invoice->currency]) }}
+                @elseif(! $invoice->hasRub()) {{ __('RUR sütunları üçün «:currency → :to konvertasiya» addımında tarixi və kursu (CBAR və ya proqnoz) tətbiq edin.', ['currency' => $invoice->currency, 'to' => \App\Support\Invoices\RubConverter::target($invoice)]) }}
                 @endif
             </p>
         @endif

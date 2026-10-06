@@ -192,4 +192,27 @@ class SalesDocumentTest extends TestCase
         $this->get(route('sales-documents.pdf', $docs['proforma']))->assertOk();
         $this->get(route('counterparties.edit', $buyer))->assertOk()->assertSee('Direktorun adı, soyadı');
     }
+
+    /** The Trade's sale currency drives the conversion step and the buyer documents; a new Trade takes the last one's sides. */
+    public function test_sale_currency_and_prefill_from_the_last_trade(): void
+    {
+        [$admin, $inv] = $this->calculated();
+        $deal = $this->inTenant($admin, fn () => \App\Models\Deal::find($inv->deal_id));
+        $this->inTenant($admin, fn () => $deal->update(['sale_currency' => 'USD']));
+        $this->actingAs($admin)->get(route('invoices.show', $inv))->assertOk()->assertSee('EUR → USD');
+        $this->applyRub($inv);   // forecast: 2,0005 per EUR, 0,0211 per unit of the sale currency
+        $pf = $this->inTenant($admin, fn () => SalesDocument::where('kind', 'proforma')->firstOrFail());
+        $this->assertSame('USD', $pf->currency);
+        $this->get(route('deals.show', $deal))->assertOk()->assertSee('Satış valyutası');
+
+        // the project names no sides here: the next Trade's form starts from this Trade's buyer, seller and currencies
+        $project = $this->inTenant($admin, function () use ($deal) {
+            $p = \App\Models\Project::find($deal->project_id);
+            $p->update(['counterparty_id' => null, 'supplier_id' => null, 'sale_contract_id' => null, 'purchase_contract_id' => null]);
+
+            return $p;
+        });
+        $this->get(route('deals.create', $project))->assertOk()
+            ->assertSee($deal->counterparty->name)->assertSee($deal->supplier->name)->assertSee('value="USD" selected', false);
+    }
 }

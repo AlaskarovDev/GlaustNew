@@ -21,6 +21,7 @@
                     <x-input name="title" :label="__('Ad')" :value="$deal->title" required wrapper="sm:col-span-3" :placeholder="__('Məs: Boya partiyası — oktyabr')"/>
                     <x-input name="deal_date" type="date" :label="__('Tarix')" :value="$deal->deal_date" required/>
                     <x-select name="currency" :label="__('Alış hansı valyuta ilə olacaq')" :hint="__('Satıcıya ödəniş və onun fakturası bu valyutadadır')" :options="array_combine(config('glaust.currencies'), config('glaust.currencies'))" :value="$deal->currency" required/>
+                    <x-select name="sale_currency" :label="__('Satış hansı valyuta ilə olacaq')" :hint="__('Alıcıya proforma, Commercial Invoice və onun ödənişi bu valyutadadır')" :options="array_combine(config('glaust.currencies'), config('glaust.currencies'))" :value="$deal->sale_currency ?? 'RUB'" required/>
                 </div>
             </section>
 

@@ -26,16 +26,19 @@ class DealController extends Controller
         $this->authorize('projects.create');
         $project->load('counterparty', 'supplier', 'saleContract', 'purchaseContract');
 
-        // The project's sides are the natural default for its first lot.
+        // The project's sides are the natural default; what the project does not name comes from its
+        // latest Trade (same buyer and seller, usually the same contracts and currencies).
+        $last = $project->deals()->with('counterparty', 'supplier', 'saleContract', 'purchaseContract')->latest('deal_date')->latest('id')->first();
         $deal = new Deal([
-            'code' => $numbers->next('deal'), 'title' => 'Trade — '.$project->name, 'deal_date' => today(), 'currency' => 'EUR',
+            'code' => $numbers->next('deal'), 'title' => 'Trade — '.$project->name, 'deal_date' => today(),
+            'currency' => $last?->currency ?? 'EUR', 'sale_currency' => $last?->sale_currency ?? 'RUB',
             'status' => 'draft', 'responsible_id' => $request->user()->id,
-            'counterparty_id' => $project->counterparty_id, 'sale_contract_id' => $project->sale_contract_id,
-            'supplier_id' => $project->supplier_id, 'purchase_contract_id' => $project->purchase_contract_id,
         ]);
         $deal->setRelation('project', $project);
-        foreach (['counterparty', 'supplier', 'saleContract', 'purchaseContract'] as $rel) {
-            $deal->setRelation($rel, $project->{$rel});
+        foreach (['counterparty' => 'counterparty_id', 'supplier' => 'supplier_id', 'saleContract' => 'sale_contract_id', 'purchaseContract' => 'purchase_contract_id'] as $rel => $key) {
+            $source = $project->{$key} ? $project : $last;
+            $deal->{$key} = $source?->{$key};
+            $deal->setRelation($rel, $source?->{$rel});
         }
 
         return view('deals.form', ['deal' => $deal, 'project' => $project]);
@@ -124,13 +127,14 @@ class DealController extends Controller
             'title' => ['required', 'string', 'max:190'],
             'deal_date' => ['required', 'date'],
             'currency' => ['required', Rule::in(config('glaust.currencies'))],
+            'sale_currency' => ['nullable', Rule::in(config('glaust.currencies'))],
             'status' => ['required', Rule::in(Deal::STATUSES)],
             'responsible_id' => ['nullable', 'integer', TenantExists::plain('users')],
             'notes' => ['nullable', 'string', 'max:5000'],
             'sale_contract_file' => ['nullable', 'file', 'mimes:pdf', 'max:'.config('glaust.upload.max_kb')],
             'purchase_contract_file' => ['nullable', 'file', 'mimes:pdf', 'max:'.config('glaust.upload.max_kb')],
         ], ContractSides::rules()), ['code.unique' => __('Bu kodla Trade artıq var.')], ContractSides::attributes() + [
-            'code' => __('Kod'), 'title' => 'Ad', 'deal_date' => __('Tarix'), 'currency' => __('Alış valyutası'), 'sale_contract_file' => __('Satış müqaviləsinin PDF-i'), 'purchase_contract_file' => __('Alış müqaviləsinin PDF-i'),
+            'code' => __('Kod'), 'title' => 'Ad', 'deal_date' => __('Tarix'), 'currency' => __('Alış valyutası'), 'sale_currency' => __('Satış valyutası'), 'sale_contract_file' => __('Satış müqaviləsinin PDF-i'), 'purchase_contract_file' => __('Alış müqaviləsinin PDF-i'),
         ]);
 
         foreach (['sale' => 'sale_contract', 'purchase' => 'purchase_contract'] as $side => $prefix) {
@@ -139,6 +143,7 @@ class DealController extends Controller
             }
         }
         unset($data['sale_contract_file'], $data['purchase_contract_file']);
+        $data['sale_currency'] = ($data['sale_currency'] ?? null) ?: ($deal?->sale_currency ?: 'RUB');
 
         return ContractSides::check($data);
     }

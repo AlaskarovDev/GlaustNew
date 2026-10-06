@@ -24,6 +24,12 @@ class Deal extends Model
         return ['deal_date' => 'date'];
     }
 
+    /** What the buyer pays in: the proforma, commercial invoice and the conversion step use it. */
+    public function saleCurrency(): string
+    {
+        return $this->sale_currency ?: 'RUB';
+    }
+
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class)->withTrashed();

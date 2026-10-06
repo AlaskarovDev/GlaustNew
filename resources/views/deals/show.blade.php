@@ -26,6 +26,7 @@
     <div class="flex flex-wrap items-center gap-2 -mt-4 mb-6">
         <x-status group="deal" :value="$deal->status"/>
         <span class="badge badge-slate">{{ __('Alış valyutası') }}: <span class="font-mono ml-1">{{ $deal->currency }}</span></span>
+        <span class="badge badge-slate">{{ __('Satış valyutası') }}: <span class="font-mono ml-1">{{ $deal->saleCurrency() }}</span></span>
         @if($deal->responsible)<span class="badge badge-slate">{{ $deal->responsible->name }}</span>@endif
     </div>
 

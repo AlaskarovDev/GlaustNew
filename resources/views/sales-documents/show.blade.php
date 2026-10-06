@@ -138,8 +138,8 @@
                             @if($pf)<th class="w-32">{{ __('Custom Code') }}</th>@endif
                             <th class="w-28 !text-right">{{ $pf ? 'QTY' : 'Количество' }}</th>
                             <th class="w-24">{{ $pf ? 'UOM' : 'Ед. изм.' }}</th>
-                            <th class="w-32 !text-right">{{ $pf ? 'Unit Price '.$doc->currency : 'Цена, руб.' }}</th>
-                            <th class="w-36 !text-right">{{ $pf ? 'Total Price '.$doc->currency : 'Сумма, руб.' }}</th>
+                            <th class="w-32 !text-right">{{ $pf ? 'Unit Price '.$doc->currency : 'Цена, '.($doc->currency === 'RUB' ? 'руб.' : $doc->currency) }}</th>
+                            <th class="w-36 !text-right">{{ $pf ? 'Total Price '.$doc->currency : 'Сумма, '.($doc->currency === 'RUB' ? 'руб.' : $doc->currency) }}</th>
                             <th class="w-20"><span class="sr-only">{{ __('Əməliyyat') }}</span></th>
                         </tr>
                         </thead>

@@ -68,7 +68,7 @@ class ExchangeReport extends Report
                     return [
                         'date' => $x->exchange_date, 'type' => ($x->direction === 'buy' ? __('Valyuta alışı') : __('Valyuta satışı')).' ('.$x->currency.')',
                         'account' => $out->account?->name.' → '.$in->account?->name,
-                        'detail' => num($x->amount).' '.$x->currency.' · '.\App\Support\FxResults::rates($x)
+                        'detail' => num($x->amount).' '.$x->currency.' · '.__('bank kursu').' '.rate_fmt($x->bank_rate).' / CBAR '.rate_fmt($x->cbar_cross)
                             .($x->deal ? ' · Trade '.$x->deal->code : ($x->project ? ' · '.$x->project->code : '')),
                         'amount' => (float) $x->amount, 'currency' => $x->currency, 'cbar' => (float) $x->cbar_cross, 'applied' => (float) $x->bank_rate,
                         'diff' => -(float) $x->difference_azn,

@@ -54,8 +54,7 @@ class CurrencyExchangeService
         $amount = round((float) $d['amount'], 2);
         $bankRate = (float) $d['bank_rate'];
         $counterCbar = round($amount * $c['cross'], 2);
-        // typed per manat ("? EUR = 1 AZN"): divide, so the manat amount is exact
-        $counterBank = ! empty($d['bank_rate_azn']) && $d['counter_currency'] === 'AZN' ? round($amount / (float) $d['bank_rate_azn'], 2) : round($amount * $bankRate, 2);
+        $counterBank = round($amount * $bankRate, 2);
         $difference = round($buy ? $counterBank - $counterCbar : $counterCbar - $counterBank, 2);
 
         return DB::transaction(function () use ($d, $buy, $from, $to, $c, $amount, $bankRate, $counterCbar, $counterBank, $difference) {

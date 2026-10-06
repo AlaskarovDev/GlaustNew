@@ -31,8 +31,7 @@ class CurrencyExchangeController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $this->authorize('bank.create');
-        $request->merge(['amount' => parse_number($request->input('amount')), 'bank_rate' => parse_number($request->input('bank_rate')),
-            'bank_rate_azn' => parse_number($request->input('bank_rate_azn'))]);
+        $request->merge(['amount' => parse_number($request->input('amount')), 'bank_rate' => parse_number($request->input('bank_rate'))]);
         $currencies = Rule::in(config('glaust.currencies'));
         $data = $request->validate([
             'exchange_date' => ['required', 'date', 'before_or_equal:today'],
@@ -40,24 +39,17 @@ class CurrencyExchangeController extends Controller
             'currency' => ['required', $currencies],
             'counter_currency' => ['required', $currencies, 'different:currency'],
             'amount' => ['required', 'numeric', 'gt:0', 'max:999999999999'],
-            // against manat the bank's rate is typed as "? EUR = 1 AZN"; otherwise "1 EUR = ? USD"
-            'bank_rate_azn' => ['nullable', 'numeric', 'gt:0', 'max:10000000'],
-            'bank_rate' => ['required_without:bank_rate_azn', 'nullable', 'numeric', 'gt:0', 'max:10000000'],
+            'bank_rate' => ['required', 'numeric', 'gt:0', 'max:10000000'],
             'from_account_id' => ['required', 'integer', TenantExists::in('bank_accounts')],
             'to_account_id' => ['required', 'integer', TenantExists::in('bank_accounts'), 'different:from_account_id'],
             'reference' => ['nullable', 'string', 'max:80'],
             'notes' => ['nullable', 'string', 'max:255'],
             'project_id' => ['nullable', 'integer', TenantExists::in('projects')],
             'deal_id' => ['nullable', 'integer', TenantExists::in('deals')],
-        ], ['counter_currency.different' => __('Fərqli valyuta seçin.'), 'bank_rate.required_without' => __('Bankın kursunu daxil edin.')], [
+        ], ['counter_currency.different' => __('Fərqli valyuta seçin.'), 'bank_rate.required' => __('Bankın kursunu daxil edin.')], [
             'exchange_date' => __('Tarix'), 'currency' => __('Valyuta'), 'counter_currency' => __('Qarşı valyuta'), 'amount' => __('Məbləğ'), 'bank_rate' => __('Bankın kursu'),
             'from_account_id' => __('Silinən hesab'), 'to_account_id' => __('Mədaxil hesabı'),
         ]);
-        if (! empty($data['bank_rate_azn']) && $data['counter_currency'] === 'AZN') {
-            $data['bank_rate'] = 1 / (float) $data['bank_rate_azn'];   // stored as manat per 1 unit, as CBAR
-        } elseif (empty($data['bank_rate'])) {
-            throw \Illuminate\Validation\ValidationException::withMessages(['bank_rate' => __('Bankın kursunu daxil edin.')]);
-        }
         // optional link: a Trade brings its project; a Trade of another project is refused
         if (! empty($data['deal_id'])) {
             $dealProject = \App\Models\Deal::findOrFail($data['deal_id'])->project_id;

@@ -75,28 +75,6 @@ class CurrencyExchangeTest extends TestCase
         $this->get(route('reports.show', ['exchange', 'from' => $day, 'to' => $day]))->assertOk()->assertSee('RUB məzənnə fərqi — xərc')->assertSee('Valyuta satışı (RUB)');
     }
 
-    public function test_bank_rate_against_manat_is_typed_per_one_azn(): void
-    {
-        $this->fakeCbar();
-        $admin = $this->makeCompany();
-        [$azn, $eur] = $this->inTenant($admin, fn () => [
-            BankAccount::create(['name' => 'AZN', 'bank_name' => 'Kapital Bank', 'currency' => 'AZN', 'opening_balance' => 50000, 'is_active' => true]),
-            BankAccount::create(['name' => 'EUR', 'bank_name' => 'ABB', 'currency' => 'EUR', 'is_active' => true]),
-        ]);
-        $this->actingAs($admin);
-        $day = today()->subDay()->toDateString();
-
-        // "0,5 EUR = 1 AZN": 1 000 EUR cost 2 000 AZN
-        $this->post(route('bank.exchanges.store'), ['exchange_date' => $day, 'direction' => 'buy', 'currency' => 'EUR', 'counter_currency' => 'AZN',
-            'amount' => '1000', 'bank_rate_azn' => '0,5', 'from_account_id' => $azn->id, 'to_account_id' => $eur->id])->assertSessionHasNoErrors();
-        $x = $this->inTenant($admin, fn () => CurrencyExchange::firstOrFail());
-        $this->assertSame([2000.0, 2.0], [(float) $x->counter_amount, (float) $x->bank_rate]);
-        $this->get(route('bank.exchanges.index'))->assertOk()->assertSee('EUR = 1 AZN')->assertSee('0,5');
-
-        $this->post(route('bank.exchanges.store'), ['exchange_date' => $day, 'direction' => 'buy', 'currency' => 'EUR', 'counter_currency' => 'AZN',
-            'amount' => '1000', 'from_account_id' => $azn->id, 'to_account_id' => $eur->id])->assertSessionHasErrors('bank_rate');
-    }
-
     public function test_buy_and_sell_keep_cbar_and_bank_figures(): void
     {
         $this->fakeCbar();

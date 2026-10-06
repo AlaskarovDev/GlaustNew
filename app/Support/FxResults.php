@@ -32,7 +32,7 @@ class FxResults
         foreach ($exchanges as $x) {
             $buy = $x->direction === 'buy';
             $add($x->exchange_date, $buy ? __('Valyuta alışı') : __('Valyuta satışı'), $x->currency,
-                money($x->amount, $x->currency).' · '.self::rates($x), -(float) $x->difference_azn, $x->deal?->code);
+                money($x->amount, $x->currency).' · '.__('bank kursu').' '.rate_fmt($x->bank_rate).' / CBAR '.rate_fmt($x->cbar_cross), -(float) $x->difference_azn, $x->deal?->code);
         }
         foreach ($deals as $deal) {
             /** @var Deal $deal */
@@ -63,16 +63,6 @@ class FxResults
         ksort($cur);
 
         return ['rows' => $rows, 'currencies' => $cur, 'net' => round(array_sum(array_column($cur, 'net')), 2)];
-    }
-
-    /** "bank 0,5243 / CBAR 0,5244 EUR = 1 AZN" against manat, else "bank 1,08 / CBAR 1,07" */
-    public static function rates(\App\Models\CurrencyExchange $x): string
-    {
-        if ($x->counter_currency === 'AZN' && (float) $x->bank_rate > 0 && (float) $x->cbar_cross > 0) {
-            return __('bank kursu').' '.rate_fmt(round(1 / (float) $x->bank_rate, 6)).' / CBAR '.rate_fmt(round(1 / (float) $x->cbar_cross, 6)).' '.$x->currency.' = 1 AZN';
-        }
-
-        return __('bank kursu').' '.rate_fmt($x->bank_rate).' / CBAR '.rate_fmt($x->cbar_cross);
     }
 
     private static function day($d): string

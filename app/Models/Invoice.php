@@ -99,12 +99,6 @@ class Invoice extends Model
         return $this->entry_mode === 'manual';
     }
 
-    /** Manual entry: our amount with commission and other amounts (seller total + their difference). */
-    public function saleBase(): float
-    {
-        return round((float) $this->total + (float) $this->commission_total, 2);
-    }
-
     /**
      * What we bill the buyer for a manual entry, in the Trade's sale currency: the rounded RUR total
      * of its line (as a proforma would be built). Null until the calculation is complete.

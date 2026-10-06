@@ -14,7 +14,7 @@ use App\Support\Profit\ProfitCalculator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/** Fakturasız: the seller's total and our total with commission, then logistics and the RUB conversion — no lines, no documents. */
+/** Fakturasız: only the Total, then logistics, commission and the RUB conversion as usual — no lines, no documents. */
 class ManualInvoiceTest extends TestCase
 {
     use RefreshDatabase;
@@ -43,21 +43,19 @@ class ManualInvoiceTest extends TestCase
         [$admin, $deal] = $this->setUpDeal();
         $date = today()->subDays(3)->toDateString();
 
-        $this->post(route('invoices.manual', $deal), ['invoice_date' => $date, 'currency' => 'EUR', 'seller_amount' => '10 000', 'sale_base' => '9 000'])
-            ->assertSessionHasErrors('sale_base');   // the total with commission cannot be below the seller's amount
+        $this->post(route('invoices.manual', $deal), ['invoice_date' => $date, 'currency' => 'EUR', 'amount' => ''])->assertSessionHasErrors('amount');
 
-        $this->post(route('invoices.manual', $deal), ['invoice_date' => $date, 'currency' => 'EUR', 'seller_amount' => '10 000,00', 'sale_base' => '10 350,00'])
-            ->assertSessionHasNoErrors();
+        $this->post(route('invoices.manual', $deal), ['invoice_date' => $date, 'currency' => 'EUR', 'amount' => '10 000,00'])->assertSessionHasNoErrors();
         $inv = $this->inTenant($admin, fn () => Invoice::where('entry_mode', 'manual')->firstOrFail());
-        $this->assertSame(['M-TD-9-1', '10000.00', '350.00', 1], [$inv->number, $inv->total, $inv->commission_total, $inv->items()->count()]);
+        $this->assertSame(['M-TD-9-1', '10000.00', null, 1], [$inv->number, $inv->total, $inv->commission_total, $inv->items()->count()]);
 
-        $this->post(route('invoices.commission', $inv), ['commission_rate' => '5'])->assertSessionHas('error');   // commission is in the total
+        $this->post(route('invoices.commission', $inv), ['commission_rate' => '3,5'])->assertSessionHasNoErrors();   // the usual commission step: 350
         $this->post(route('invoices.logistics', $inv), ['logistics_mode' => 'forecast', 'logistics_method' => 'total', 'logistics_amount' => '650', 'logistics_currency' => 'EUR'])->assertSessionHasNoErrors();
         $this->post(route('invoices.rub', $inv), ['fx_source' => 'forecast', 'fx_date' => today()->addDays(5)->toDateString(), 'fx_base_azn' => '2,0005', 'fx_target_azn' => '0,0211'])->assertSessionHasNoErrors();
 
         $inv = $this->inTenant($admin, fn () => Invoice::findOrFail($inv->id));
         $sale = $this->inTenant($admin, fn () => $inv->saleTotal());
-        $this->assertEqualsWithDelta(round(11000 * 2.0005 / 0.0211, 2), $sale, 0.02, '(10 350 + 650 logistics) × EUR/RUB');
+        $this->assertEqualsWithDelta(round(11000 * 2.0005 / 0.0211, 2), $sale, 0.02, '(10 000 + 650 logistics + 350 commission) × EUR/RUB');
         $this->assertSame(0, $this->inTenant($admin, fn () => SalesDocument::count()), 'no documents for a manual entry');
 
         $this->get(route('invoices.show', $inv))->assertOk()->assertSee('Fakturasız')->assertSee(money($sale, 'RUB'))->assertDontSee('Alıcı üçün sənədlər');
@@ -78,14 +76,6 @@ class ManualInvoiceTest extends TestCase
             $this->assertSame([$sale, 'RUB'], [$row['H'], $row['saleCur']]);
             $this->assertNotNull($row['forecast']);
             $this->assertEqualsWithDelta($sale * 0.0211 - 10000 * 2.0005 - 650 * 2.0005 - $row['forecast']['S'], $row['forecast']['profit'], 0.01);
-        });
-
-        // amounts can be corrected later; the final figure follows
-        $this->put(route('invoices.manual.update', $inv), ['invoice_date' => $date, 'seller_amount' => '9 000', 'sale_base' => '9 500'])->assertSessionHasNoErrors();
-        $this->inTenant($admin, function () use ($inv) {
-            $inv = Invoice::findOrFail($inv->id);
-            $this->assertSame(['9000.00', '500.00'], [$inv->total, $inv->commission_total]);
-            $this->assertEqualsWithDelta(round(10150 * 2.0005 / 0.0211, 2), $inv->saleTotal(), 0.02);
         });
     }
 }

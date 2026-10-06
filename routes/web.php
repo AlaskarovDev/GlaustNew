@@ -142,7 +142,6 @@ Route::middleware(['auth', 'tenant'])->group(function () {
         Route::get('/invoices/template', [InvoiceController::class, 'template'])->name('invoices.template');
         Route::post('/deals/{deal}/invoices/import', [InvoiceController::class, 'import'])->name('invoices.import');
         Route::post('/deals/{deal}/invoices/manual', [InvoiceController::class, 'manual'])->name('invoices.manual');
-        Route::put('/invoices/{invoice}/manual', [InvoiceController::class, 'updateManual'])->name('invoices.manual.update');
         Route::get('/invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show');
         Route::get('/invoices/{invoice}/export', [InvoiceController::class, 'export'])->name('invoices.export');
         Route::put('/invoices/{invoice}/status', [InvoiceController::class, 'status'])->name('invoices.status');

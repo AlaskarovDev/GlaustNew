@@ -106,46 +106,23 @@ class InvoiceController extends Controller
         return redirect()->route(count($created) === 1 ? 'invoices.show' : 'deals.show', count($created) === 1 ? $created[0] : $deal)->with('success', $msg);
     }
 
-    /** Fakturasız: the seller's total and our total with commission, without lines; logistics and RUB come next. */
+    /** Fakturasız: only the Total (as in the Total column) without lines; logistics, commission and RUB follow as usual. */
     public function manual(Request $request, Deal $deal, \App\Support\Invoices\ManualInvoice $manual): RedirectResponse
     {
         $this->authorize('projects.create');
         if (! $deal->purchase_contract_id || ! $deal->supplier_id) {
             return back()->with('error', __('Satıcının fakturası alış müqaviləsinə bağlanır: əvvəlcə Trade-də «Məhsulu satan tərəf» və onun müqaviləsini seçin.'));
         }
-        $data = $this->manualData($request, $deal->id, null);
-        $invoice = $manual->create($deal, $data, $request->user()->id);
-
-        return redirect()->route('invoices.show', $invoice)->with('success', __('Fakturasız məbləğ daxil edildi: :v1. İndi logistika xərcini və RUB çevirməsini tətbiq edin.', ['v1' => money($invoice->saleBase(), $invoice->currency)]));
-    }
-
-    public function updateManual(Request $request, Invoice $invoice, \App\Support\Invoices\ManualInvoice $manual): RedirectResponse
-    {
-        $this->authorize('projects.update');
-        abort_unless($invoice->isManual(), 404);
-        if ($invoice->isLocked()) {
-            return back()->with('error', $this->lockedMessage($invoice));
-        }
-        $manual->update($invoice, $this->manualData($request, $invoice->deal_id, $invoice));
-
-        return back()->with('success', __('Məbləğlər yeniləndi.'));
-    }
-
-    /** @return array{number: ?string, invoice_date: string, currency: string, seller: float, base: float} */
-    private function manualData(Request $request, int $dealId, ?Invoice $invoice): array
-    {
-        $request->merge(['seller_amount' => parse_number($request->input('seller_amount')), 'sale_base' => parse_number($request->input('sale_base'))]);
+        $request->merge(['amount' => parse_number($request->input('amount'))]);
         $data = $request->validate([
-            'number' => ['nullable', 'string', 'max:60', Rule::unique('invoices', 'number')->where('deal_id', $dealId)->where('type', 'supplier')->whereNull('deleted_at')->ignore($invoice?->id)],
+            'number' => ['nullable', 'string', 'max:60', Rule::unique('invoices', 'number')->where('deal_id', $deal->id)->where('type', 'supplier')->whereNull('deleted_at')],
             'invoice_date' => ['required', 'date', 'before_or_equal:today'],
-            'currency' => [$invoice ? 'nullable' : 'required', Rule::in(config('glaust.currencies'))],
-            'seller_amount' => ['required', 'numeric', 'gt:0', 'max:999999999'],
-            'sale_base' => ['required', 'numeric', 'gte:seller_amount', 'max:999999999'],
-        ], ['sale_base.gte' => __('Yekun məbləğ satıcının məbləğindən az ola bilməz (komissiya və digər məbləğlər daxildir).')],
-            ['number' => __('Faktura nömrəsi'), 'invoice_date' => __('Faktura tarixi'), 'currency' => __('Valyuta'), 'seller_amount' => __('Satıcının faktura məbləği'), 'sale_base' => __('Yekun məbləğ')]);
+            'currency' => ['required', Rule::in(config('glaust.currencies'))],
+            'amount' => ['required', 'numeric', 'gt:0', 'max:999999999'],
+        ], [], ['number' => __('Faktura nömrəsi'), 'invoice_date' => __('Faktura tarixi'), 'currency' => __('Valyuta'), 'amount' => __('Məbləğ')]);
+        $invoice = $manual->create($deal, ['number' => $data['number'] ?? null, 'invoice_date' => $data['invoice_date'], 'currency' => $data['currency'], 'amount' => (float) $data['amount']], $request->user()->id);
 
-        return ['number' => $data['number'] ?? null, 'invoice_date' => $data['invoice_date'], 'currency' => $invoice?->currency ?? $data['currency'],
-            'seller' => (float) $data['seller_amount'], 'base' => (float) $data['sale_base']];
+        return redirect()->route('invoices.show', $invoice)->with('success', __('Fakturasız məbləğ daxil edildi: :v1. İndi logistika, komissiya və RUB çevirməsini tətbiq edin.', ['v1' => money($invoice->total, $invoice->currency)]));
     }
 
     public function show(Invoice $invoice): View
@@ -238,9 +215,6 @@ class InvoiceController extends Controller
         if ($invoice->status === 'cancelled') {
             return back()->with('error', __('Ləğv edilmiş fakturaya komissiya tətbiq olunmur.'));
         }
-        if ($invoice->isManual()) {
-            return back()->with('error', __('Fakturasız məbləğdə komissiya yekun məbləğə daxildir — məbləğləri dəyişin.'));
-        }
         $request->merge(['commission_rate' => parse_number(str_replace('%', '', (string) $request->input('commission_rate')))]);
         $data = $request->validate([
             'commission_rate' => ['required', 'numeric', 'min:0', 'max:100', 'decimal:0,4'],
@@ -256,7 +230,6 @@ class InvoiceController extends Controller
     public function clearCommission(Invoice $invoice, \App\Support\Invoices\CommissionCalculator $calculator): RedirectResponse
     {
         $this->authorize('projects.update');
-        abort_if($invoice->isManual(), 404);
         if ($invoice->isLocked()) {
             return back()->with('error', $this->lockedMessage($invoice));
         }

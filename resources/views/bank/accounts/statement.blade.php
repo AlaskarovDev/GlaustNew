@@ -39,7 +39,7 @@
                         <th class="!text-right">{{ __('Mədaxil') }}</th><th class="!text-right">{{ __('Məxaric') }}</th><th class="!text-right">{{ __('Qalıq') }}</th><th class="!text-right">{{ __('Kurs / AZN') }}</th>
                     </tr></thead>
                     <tbody>
-                    <tr class="bg-surface-2/60"><td colspan="6" class="text-muted text-xs">{{ __('Əvvəlki qalıq') }}</td><td class="num font-medium">{{ money($opening) }}</td><td></td></tr>
+                    <tr class="bg-surface-2/60"><td colspan="6" class="text-muted text-xs">{{ __('Əvvəlki qalıq') }}</td><td class="num font-medium">{{ money($opening, $cur) }}</td><td></td></tr>
                     @foreach($rows as $t)
                         <tr>
                             <td data-label="{{ __('Tarix') }}" class="font-mono text-xs whitespace-nowrap"><a href="{{ route('bank.transactions.show', $t) }}" class="hover:text-brand-ink">{{ azdate($t->transaction_date) }}</a></td>
@@ -52,19 +52,19 @@
                                 </div>
                             </td>
                             <td data-label="{{ __('İstinad') }}" class="font-mono text-xs">{{ $t->reference ?? '—' }}</td>
-                            <td data-label="{{ __('Mədaxil') }}" class="num text-success">{{ $t->direction === 'in' ? money($t->amount) : '' }}</td>
-                            <td data-label="{{ __('Məxaric') }}" class="num text-danger">{{ $t->direction === 'out' ? money($t->amount) : '' }}</td>
-                            <td data-label="{{ __('Qalıq') }}" @class(['num font-medium', 'text-danger' => $t->running_balance < 0])>{{ money($t->running_balance) }}</td>
-                            <td data-label="{{ __('Kurs / AZN') }}" class="num text-xs">@if($cur !== 'AZN'){{ rate_fmt($t->applied_rate) }}<div class="text-faint">{{ money($t->amount_azn) }} ₼</div>@else — @endif</td>
+                            <td data-label="{{ __('Mədaxil') }}" class="num text-success">{{ $t->direction === 'in' ? money($t->amount, $cur) : '' }}</td>
+                            <td data-label="{{ __('Məxaric') }}" class="num text-danger">{{ $t->direction === 'out' ? money($t->amount, $cur) : '' }}</td>
+                            <td data-label="{{ __('Qalıq') }}" @class(['num font-medium', 'text-danger' => $t->running_balance < 0])>{{ money($t->running_balance, $cur) }}</td>
+                            <td data-label="{{ __('Kurs / AZN') }}" class="num text-xs">@if($cur !== 'AZN'){{ rate_fmt($t->applied_rate) }}<div class="text-faint">{{ money($t->amount_azn) }}</div>@else — @endif</td>
                         </tr>
                     @endforeach
                     </tbody>
                     <tfoot>
                     <tr class="bg-surface-2 font-semibold">
                         <td class="px-4 py-3" colspan="4">{{ __('Cəmi · son qalıq') }}</td>
-                        <td class="px-4 py-3 text-right font-mono text-success">{{ money($in) }}</td>
-                        <td class="px-4 py-3 text-right font-mono text-danger">{{ money($out) }}</td>
-                        <td class="px-4 py-3 text-right font-mono">{{ money($closing) }}</td><td></td>
+                        <td class="px-4 py-3 text-right font-mono text-success">{{ money($in, $cur) }}</td>
+                        <td class="px-4 py-3 text-right font-mono text-danger">{{ money($out, $cur) }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ money($closing, $cur) }}</td><td></td>
                     </tr>
                     </tfoot>
                 </table>

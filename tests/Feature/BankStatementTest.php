@@ -36,7 +36,8 @@ class BankStatementTest extends TestCase
         // Whole period: 1000 + 5000 - 1200 + 300.
         $this->get(route('bank.accounts.statement', $acc))->assertOk()
             ->assertSeeInOrder(['Birinci mədaxil', 'Komissiya', 'Son mədaxil'])
-            ->assertSee(money(6000))->assertSee(money(4800))->assertSee(money(5100))->assertSee(money(5100, 'RUB'));
+            ->assertSee(money(6000, 'RUB'))->assertSee(money(4800, 'RUB'))->assertSee(money(5100, 'RUB'))
+            ->assertDontSee(money(5100))->assertDontSee(money(6000));   // a RUB account: no manat sign on its amounts
 
         // From a date: the earlier movement is folded into the opening balance.
         $this->get(route('bank.accounts.statement', [$acc, 'from' => today()->subDays(6)->toDateString()]))->assertOk()

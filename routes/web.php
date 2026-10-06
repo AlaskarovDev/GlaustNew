@@ -177,6 +177,7 @@ Route::middleware(['auth', 'tenant'])->group(function () {
     /* CRM */
     Route::middleware('can:crm.view')->group(function () {
         Route::get('/counterparties/export', [CounterpartyController::class, 'export'])->middleware('can:crm.export')->name('counterparties.export');
+        Route::get('/counterparties/{counterparty}/ledger', [CounterpartyController::class, 'ledger'])->name('counterparties.ledger');
         Route::resource('counterparties', CounterpartyController::class);
     });
 

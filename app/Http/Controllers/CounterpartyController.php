@@ -23,7 +23,8 @@ class CounterpartyController extends Controller
 
         return view('counterparties.index', [
             'table' => $table,
-            'items' => $table->paginate(),
+            'items' => $items = $table->paginate(),
+            'balances' => \App\Support\CounterpartyLedger::balances($items->getCollection()),
             'counts' => [
                 'all' => $counts->sum(),
                 'customer' => ($counts['customer'] ?? 0) + ($counts['both'] ?? 0),
@@ -82,6 +83,12 @@ class CounterpartyController extends Controller
             ->latest('created_at')->limit(15)->get();
 
         return view('counterparties.show', compact('counterparty', 'contracts', 'projects', 'transactions', 'shipments', 'turnover', 'history'));
+    }
+
+    /** Hərəkətlər: debit / credit statement with the party, per currency, with running balances. */
+    public function ledger(Counterparty $counterparty): View
+    {
+        return view('counterparties.ledger', ['counterparty' => $counterparty] + \App\Support\CounterpartyLedger::for($counterparty));
     }
 
     public function edit(Counterparty $counterparty): View

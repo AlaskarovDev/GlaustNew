@@ -37,7 +37,8 @@
                         <th>{{ __('VÖEN') }}</th>
                         <th>{{ __('Əlaqə') }}</th>
                         <x-th :table="$table" sort="contracts" num>{{ __('Müqavilələr') }}</x-th>
-                        <th class="w-10"><span class="sr-only">{{ __('Əməliyyatlar') }}</span></th>
+                        <th class="!text-right">{{ __('Balans') }}</th>
+                        <th class="w-24"><span class="sr-only">{{ __('Əməliyyatlar') }}</span></th>
                     </tr>
                     </thead>
                     <tbody>
@@ -67,7 +68,15 @@
                             <td data-label="{{ __('Müqavilələr') }}" class="num">
                                 <span class="text-ink">{{ $c->active_contracts_count }}</span><span class="text-faint"> / {{ $c->contracts_count }}</span>
                             </td>
-                            <td data-label="" class="text-right">
+                            <td data-label="{{ __('Balans') }}" class="num text-xs">
+                                @forelse($balances[$c->id] ?? [] as $cur => $bal)
+                                    <div @class(['font-semibold', 'text-success' => $bal > 0, 'text-danger' => $bal < 0]) title="{{ $bal > 0 ? __('Bizə borcludur') : __('Biz borcluyuq') }}">{{ $bal > 0 ? '+' : '−' }}{{ money(abs($bal), $cur) }}</div>
+                                @empty
+                                    <span class="text-faint">—</span>
+                                @endforelse
+                            </td>
+                            <td data-label="" class="text-right whitespace-nowrap">
+                                <a href="{{ route('counterparties.ledger', $c) }}" class="btn btn-ghost btn-sm btn-icon" aria-label="{{ __('Hərəkətlər') }}" title="{{ __('Hərəkətlər') }}"><x-icon name="list" class="size-4"/></a>
                                 @can('crm.update')
                                     <a href="{{ route('counterparties.edit', $c) }}" class="btn btn-ghost btn-sm btn-icon" aria-label="{{ __('Redaktə et: :v1', ['v1' => $c->name]) }}"><x-icon name="pencil" class="size-4"/></a>
                                 @endcan

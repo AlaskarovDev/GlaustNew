@@ -5,6 +5,7 @@
     @endphp
     <x-page-header :title="$counterparty->name" :back="route('counterparties.index')">
         <x-slot:actions>
+            <a href="{{ route('counterparties.ledger', $counterparty) }}" class="btn btn-secondary"><x-icon name="list" class="size-4"/> {{ __('Hərəkətlər') }}</a>
             @can('contracts.create')
                 <a href="{{ route('contracts.create', ['counterparty_id' => $counterparty->id]) }}" class="btn btn-secondary"><x-icon name="signature" class="size-4"/> {{ __('Müqavilə bağla') }}</a>
             @endcan

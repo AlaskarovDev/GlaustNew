@@ -72,6 +72,12 @@ class Deal extends Model
         return $this->hasMany(SupplierPayment::class)->orderByDesc('payment_date')->orderByDesc('id');
     }
 
+    /** Currency exchanges done for this Trade (their CBAR difference belongs to its profit). */
+    public function currencyExchanges(): HasMany
+    {
+        return $this->hasMany(CurrencyExchange::class);
+    }
+
     public function expenses(): HasMany
     {
         return $this->hasMany(Expense::class);

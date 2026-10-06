@@ -14,6 +14,37 @@ class CurrencyExchangeTest extends TestCase
 {
     use RefreshDatabase;
 
+    /** An exchange may be tied to a project / Trade (optional); a Trade brings its project, its CBAR difference reaches the Trade's profit. */
+    public function test_exchange_linked_to_a_trade(): void
+    {
+        $this->fakeCbar();
+        $admin = $this->makeCompany();
+        [$azn, $eur, $project, $other, $deal] = $this->inTenant($admin, function () {
+            $p = \App\Models\Project::create(['code' => 'P-1', 'name' => 'Boya', 'status' => 'active', 'priority' => 'medium', 'currency' => 'EUR']);
+            $o = \App\Models\Project::create(['code' => 'P-2', 'name' => 'Digər', 'status' => 'active', 'priority' => 'medium', 'currency' => 'EUR']);
+
+            return [
+                BankAccount::create(['name' => 'AZN', 'bank_name' => 'Kapital Bank', 'currency' => 'AZN', 'opening_balance' => 50000, 'is_active' => true]),
+                BankAccount::create(['name' => 'EUR', 'bank_name' => 'ABB', 'currency' => 'EUR', 'is_active' => true]),
+                $p, $o, \App\Models\Deal::create(['project_id' => $p->id, 'code' => 'TR-1', 'title' => 'Partiya', 'deal_date' => today(), 'currency' => 'EUR', 'status' => 'active']),
+            ];
+        });
+        $this->actingAs($admin);
+        $day = today()->subDay()->toDateString();
+        $buy = fn (array $extra) => $this->post(route('bank.exchanges.store'), ['exchange_date' => $day, 'direction' => 'buy', 'currency' => 'EUR', 'counter_currency' => 'AZN',
+            'amount' => '1000', 'bank_rate' => '2,10', 'from_account_id' => $azn->id, 'to_account_id' => $eur->id] + $extra);
+
+        $this->get(route('bank.exchanges.index'))->assertOk()->assertSee('Trade (istəyə bağlı)');
+        $this->get(route('ajax.lookup', ['deals', 'project_id' => $project->id]))->assertJsonPath('results.0.label', 'TR-1 · Partiya')->assertJsonPath('results.0.party_id', $project->id);
+        $buy(['project_id' => $other->id, 'deal_id' => $deal->id])->assertSessionHasErrors('deal_id');
+        $buy(['deal_id' => $deal->id])->assertSessionHasNoErrors();
+        $x = $this->inTenant($admin, fn () => CurrencyExchange::firstOrFail());
+        $this->assertSame([$project->id, $deal->id], [(int) $x->project_id, (int) $x->deal_id]);
+        $buy([])->assertSessionHasNoErrors();   // still optional
+        $this->get(route('bank.exchanges.index'))->assertOk()->assertSee('Trade TR-1');
+        $this->assertSame(1, $this->inTenant($admin, fn () => \App\Models\Deal::find($deal->id)->currencyExchanges()->count()));
+    }
+
     public function test_buy_and_sell_keep_cbar_and_bank_figures(): void
     {
         $this->fakeCbar();

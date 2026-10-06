@@ -345,7 +345,7 @@ Alpine.data('combobox', (cfg) => ({
             try {
                 const sep = cfg.url.includes('?') ? '&' : '?';
                 const party = this.dependsValue();
-                this.items = (await api(cfg.url + sep + 'q=' + encodeURIComponent(this.query) + (party ? '&counterparty_id=' + encodeURIComponent(party) : ''))).results;
+                this.items = (await api(cfg.url + sep + 'q=' + encodeURIComponent(this.query) + (party ? '&' + (cfg.dependsParam || 'counterparty_id') + '=' + encodeURIComponent(party) : ''))).results;
                 this.active = 0;
             } catch { this.items = []; } finally { this.loading = false; }
         }, 180);

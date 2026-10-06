@@ -63,7 +63,7 @@ class ProfitCalculator
     /** @return array{deal: Deal, rows: array<int, array>, totals: array} */
     public function deal(Deal $deal): array
     {
-        $deal->loadMissing(['invoices', 'salesDocuments', 'supplierPayments', 'payments', 'expenses', 'logisticsActs.payments']);
+        $deal->loadMissing(['invoices', 'salesDocuments', 'supplierPayments', 'payments', 'expenses', 'logisticsActs.payments', 'currencyExchanges']);
         $invoices = $deal->invoices->where('type', 'supplier')->where('status', '!=', 'cancelled')->sortBy([['invoice_date', 'asc'], ['id', 'asc']])->values();
 
         $weights = [];
@@ -84,13 +84,14 @@ class ProfitCalculator
             ->merge($deal->logisticsActs->flatMap->payments->pluck('fee_expense_id'))->filter()->all();
         $otherExpenses = (float) $deal->expenses->whereNotIn('id', $feeExpenseIds)->sum('amount_azn');
         $incomingDiff = (float) $deal->payments->sum(fn ($t) => $t->exchangeDifference()); // + = better than CBAR
+        $exchangeDiff = (float) $deal->currencyExchanges->sum('difference_azn');          // + = paid more than CBAR (loss)
 
         $rows = [];
         foreach ($invoices as $inv) {
             $share = $weights[$inv->id] / $weightSum;
             $acts = $deal->logisticsActs->where('invoice_id', $inv->id)->values();
             $sharedActs = $deal->logisticsActs->whereNull('invoice_id');
-            $rows[] = $this->row($inv, $saleOf($inv), $share, ($saleWeights[$inv->id] ?? 0) / $saleWeightSum, $deal, $acts, $sharedActs, $otherExpenses, $incomingDiff);
+            $rows[] = $this->row($inv, $saleOf($inv), $share, ($saleWeights[$inv->id] ?? 0) / $saleWeightSum, $deal, $acts, $sharedActs, $otherExpenses, $incomingDiff, $exchangeDiff);
         }
 
         return ['deal' => $deal, 'rows' => $rows, 'totals' => $this->totals($rows)];
@@ -106,7 +107,7 @@ class ProfitCalculator
         return ['project' => $project, 'deals' => $out, 'totals' => $this->totals(array_merge(...array_map(fn ($d) => $d['rows'], $out ?: [['rows' => []]])))];
     }
 
-    private function row(Invoice $inv, ?SalesDocument $sale, float $share, float $saleShare, Deal $deal, Collection $acts, Collection $sharedActs, float $otherExpenses, float $incomingDiff): array
+    private function row(Invoice $inv, ?SalesDocument $sale, float $share, float $saleShare, Deal $deal, Collection $acts, Collection $sharedActs, float $otherExpenses, float $incomingDiff, float $exchangeDiff = 0.0): array
     {
         $D = (float) $inv->total;
         $cur = $inv->currency;
@@ -226,8 +227,9 @@ class ProfitCalculator
             $supplierDiff = $deal->supplierPayments->sum(fn ($p) => (float) $p->difference_azn) * $share; // + = paid more than CBAR
             $incoming = $incomingDiff * $saleShare;                                                       // + = got more than CBAR
             $expenses = $otherExpenses * $share;
-            $bankTotal = $incoming - $supplierDiff - $logDiff;
-            $row['bank'] = ['incoming' => $incoming, 'supplier' => -$supplierDiff, 'logistics' => -$logDiff, 'total' => $bankTotal,
+            $exchange = -$exchangeDiff * $share;                                                          // currency exchanges of this Trade
+            $bankTotal = $incoming - $supplierDiff - $logDiff + $exchange;
+            $row['bank'] = ['incoming' => $incoming, 'supplier' => -$supplierDiff, 'logistics' => -$logDiff, 'exchange' => $exchange, 'total' => $bankTotal,
                 'expenses' => $expenses, 'final' => $net + $bankTotal - $expenses];
         } elseif ($H !== null) {
             $row['notes'][] = __('Satıcıya ödəniş hələ edilməyib — xalis mənfəət ödənişdən sonra hesablanır.');

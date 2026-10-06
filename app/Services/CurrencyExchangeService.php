@@ -71,6 +71,7 @@ class CurrencyExchangeService
                 'difference' => $difference, 'difference_azn' => round($difference * $c['cbar_counter'], 2),
                 'from_account_id' => $from->id, 'to_account_id' => $to->id, 'out_transaction_id' => $out->id, 'in_transaction_id' => $in->id,
                 'reference' => $d['reference'] ?? null, 'notes' => $d['notes'] ?? null, 'created_by' => auth()->id(),
+                'project_id' => $d['project_id'] ?? null, 'deal_id' => $d['deal_id'] ?? null,
             ]);
         });
     }

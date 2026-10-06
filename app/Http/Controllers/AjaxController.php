@@ -146,6 +146,12 @@ class AjaxController extends Controller
             'projects' => Project::when($q !== '', fn ($w) => $w->where(fn ($x) => $x->where('name', 'like', $like)->orWhere('code', 'like', $like)))
                 ->whereNotIn('status', ['cancelled'])->latest()->limit(15)->get()
                 ->map(fn ($p) => ['id' => $p->id, 'label' => $p->name, 'meta' => $p->code]),
+            // Trade-lər; with a project chosen only its Trades; picking one fills its project (party_* = the project)
+            'deals' => \App\Models\Deal::with('project')
+                ->when($request->integer('project_id'), fn ($w, $id) => $w->where('project_id', $id))
+                ->when($q !== '', fn ($w) => $w->where(fn ($x) => $x->where('code', 'like', $like)->orWhere('title', 'like', $like)))
+                ->whereNotIn('status', ['cancelled'])->latest('deal_date')->limit(20)->get()
+                ->map(fn ($d) => ['id' => $d->id, 'label' => $d->code.' · '.$d->title, 'meta' => $d->project?->name, 'party_id' => $d->project_id, 'party' => $d->project?->name]),
             'users' => User::forTenant()->where('is_active', true)
                 ->when($q !== '', fn ($w) => $w->where('name', 'like', $like))
                 ->orderBy('name')->limit(15)->get()

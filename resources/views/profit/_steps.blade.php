@@ -38,6 +38,7 @@
         $line('AL', __('Alıcıdan daxilolma: bank ↔ CBAR'), __('mədaxillərin kurs fərqi'), $signed($b['incoming']), false, $b['incoming'] < 0 ? 'danger' : null),
         $line('AM', __('Satıcıya ödəniş: bank ↔ CBAR'), __('ödənişin kurs fərqi'), $signed($b['supplier']), false, $b['supplier'] < 0 ? 'danger' : null),
         $line('', __('Logistika ödənişi: bank ↔ CBAR'), __('ödənişin kurs fərqi'), $signed($b['logistics']), false, $b['logistics'] < 0 ? 'danger' : null),
+        $line('', __('Valyuta alış-satışı: bank ↔ CBAR'), __('bu Trade-ə bağlı mübadilələr'), $signed($b['exchange'] ?? 0), false, ($b['exchange'] ?? 0) < 0 ? 'danger' : null),
         $line('', __('Trade-ə bağlı digər xərclər'), __('Xərclər bölməsindən'), $b['expenses'] > 0.004 ? '−'.money($b['expenses']) : money(0)),
         $line('BE', __('Yekun mənfəət'), 'BT + ' . __('bank fərqləri') . ' − ' . __('xərclər'), $signed($b['final']), true, $b['final'] >= 0 ? 'success' : 'danger'),
     ] : null, 'empty' => __('Satıcıya ödənişdən sonra hesablanır.')];

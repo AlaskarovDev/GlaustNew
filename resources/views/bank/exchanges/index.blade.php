@@ -96,6 +96,15 @@
                         <x-field :label="__('İstinad / bank sənədi №')" name="reference"><input name="reference" value="{{ old('reference') }}" class="input font-mono"></x-field>
                         <x-field :label="__('Qeyd')" name="notes"><input name="notes" value="{{ old('notes') }}" class="input"></x-field>
                     </div>
+                    {{-- optional: which project / Trade the money is for (its CBAR difference then counts in that Trade's profit) --}}
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        <x-combobox name="project_id" :label="__('Layihə (istəyə bağlı)')" :url="route('ajax.lookup', 'projects')" :placeholder="__('Layihə seçin')"
+                                    :value="old('project_id')" :display="old('project_id') ? \App\Models\Project::find(old('project_id'))?->name : null"/>
+                        <x-combobox name="deal_id" :label="__('Trade (istəyə bağlı)')" :url="route('ajax.lookup', 'deals')" :placeholder="__('Trade seçin')"
+                                    depends="project_id" depends-param="project_id" :value="old('deal_id')"
+                                    :display="old('deal_id') ? \App\Models\Deal::find(old('deal_id'))?->code : null"
+                                    :hint="__('Trade seçsəniz layihə avtomatik dolur; bu mübadilənin CBAR fərqi həmin Trade-in mənfəətinə düşür.')"/>
+                    </div>
                 </div>
 
                 {{-- CBAR vs bank --}}
@@ -144,7 +153,9 @@
                     @foreach($list as $x)
                         <tr>
                             <td data-label="{{ __('Tarix') }}" class="font-mono text-xs">{{ azdate($x->exchange_date) }}@if($x->reference)<div class="text-faint">{{ $x->reference }}</div>@endif</td>
-                            <td data-label="{{ __('Əməliyyat') }}"><span class="badge {{ $x->direction === 'buy' ? 'badge-teal' : 'badge-amber' }}">{{ __(\App\Models\CurrencyExchange::DIRECTIONS[$x->direction]) }}</span></td>
+                            <td data-label="{{ __('Əməliyyat') }}"><span class="badge {{ $x->direction === 'buy' ? 'badge-teal' : 'badge-amber' }}">{{ __(\App\Models\CurrencyExchange::DIRECTIONS[$x->direction]) }}</span>
+                                @if($x->deal)<div class="text-[11px] mt-1"><a href="{{ route('deals.show', $x->deal) }}" class="text-brand-ink hover:underline">Trade {{ $x->deal->code }}</a></div>
+                                @elseif($x->project)<div class="text-[11px] mt-1"><a href="{{ route('projects.show', $x->project) }}" class="text-brand-ink hover:underline">{{ $x->project->name }}</a></div>@endif</td>
                             <td data-label="{{ __('Məbləğ') }}" class="num font-medium">{{ money($x->amount, $x->currency) }}</td>
                             <td data-label="{{ __('CBAR kursu') }}" class="num text-xs">{{ rate_fmt($x->cbar_cross) }}<div class="text-faint">{{ $x->currency }}/{{ $x->counter_currency }}</div></td>
                             <td data-label="{{ __('Bank kursu') }}" class="num text-xs font-medium">{{ rate_fmt($x->bank_rate) }}</td>

@@ -34,6 +34,16 @@ class CurrencyExchange extends Model
         return $this->belongsTo(BankAccount::class, 'to_account_id')->withTrashed();
     }
 
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class)->withTrashed();
+    }
+
+    public function deal(): BelongsTo
+    {
+        return $this->belongsTo(Deal::class)->withTrashed();
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

@@ -141,6 +141,9 @@ class ProfitCalculator
         $actRows = $acts->map(fn (LogisticsAct $a) => ['act' => $a, 'k' => 1.0])
             ->merge($sharedActs->map(fn (LogisticsAct $a) => ['act' => $a, 'k' => $share]))->values();
 
+        // planned logistics not yet invoiced by any logistics company (e.g. a second carrier still to come)
+        $logLeft = $acts->isNotEmpty() ? \App\Support\Invoices\LogisticsCoverage::for($inv, $deal->logisticsActs)['left'] : 0.0;
+
         /* 2. At the act date */
         if ($actRows->isNotEmpty() && $H !== null) {
             $last = $actRows->max(fn ($r) => ($r['act']->act_date ?? $r['act']->docDate())->format('Y-m-d')); // the act's date, else its invoice's
@@ -149,7 +152,8 @@ class ProfitCalculator
             if ($BJ !== null && $BK !== null) {
                 $BL = $D * $BJ;
                 $BM = $H * $BK;
-                $BO = $actRows->sum(fn ($r) => (float) $r['act']->amount_azn * $r['k']);
+                $BO = $actRows->sum(fn ($r) => (float) $r['act']->amount_azn * $r['k'])
+                    + ($logLeft > 0.01 ? $logLeft * ($this->rate($inv->logistics_currency, $last) ?? 0) : 0);
                 $row['act'] = ['date' => \Carbon\Carbon::parse($last), 'numbers' => $actRows->map(fn ($r) => $r['act']->label())->unique()->implode(', '),
                     'amounts' => $actRows->groupBy(fn ($r) => $r['act']->currency)->map(fn ($g) => $g->sum(fn ($r) => (float) $r['act']->amount * $r['k']))->all(),
                     'BJ' => $BJ, 'BK' => $BK, 'BL' => $BL, 'BM' => $BM, 'BN' => $BM - $BL, 'BO' => $BO, 'BP' => $BM - $BL - $BO];
@@ -186,6 +190,11 @@ class ProfitCalculator
             $BB = 0.0;
             $logDiff = 0.0;
             if ($actRows->isNotEmpty()) {
+                if ($logLeft > 0.01) {
+                    $estimated = true;
+                    $BC += $logLeft * ($this->rate($inv->logistics_currency, $today) ?? 0);
+                    $row['notes'][] = __('Planlaşdırılan logistikanın :v1 hissəsi hələ invoys edilməyib — proqnoz kimi daxil edilib.', ['v1' => money($logLeft, $inv->logistics_currency)]);
+                }
                 foreach ($actRows as $r) {
                     $a = $r['act'];
                     $BC += $a->payments->sum(fn ($lp) => (float) $lp->act_amount * (float) $lp->cbar_act_rate) * $r['k'];

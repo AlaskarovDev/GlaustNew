@@ -222,6 +222,35 @@ class LogisticsActTest extends TestCase
             ->assertSessionHasErrors(['logistics_invoice_number', 'logistics_invoice_date']);
     }
 
+    /** Two logistics companies share the planned logistics: what the first does not cover stays open. */
+    public function test_logistics_split_between_two_companies(): void
+    {
+        [$admin, $inv, $deal, $carrier, $rub, $eur] = $this->world();
+        $second = $this->inTenant($admin, fn () => Counterparty::create(['type' => 'logistics', 'entity_type' => 'legal', 'name' => 'Ritloga', 'country' => 'Lithuania']));
+        $this->actingAs($admin);
+        $this->applyRub($inv);   // the buyer's proforma exists: the logistics obligation is open
+        $day = today()->subDay()->toDateString();
+        $pay = fn ($amount) => [['act_amount' => $amount, 'currency' => 'EUR', 'bank_account_id' => $eur->id, 'payment_date' => $day, 'fee_amount' => '0']];
+
+        // planned 10 200 EUR; the first company invoices and gets paid 4 000
+        $this->post(route('deals.logistics-acts.store', $deal), ['counterparty_id' => $second->id, 'invoice_id' => $inv->id, 'logistics_invoice_number' => 'R-1',
+            'logistics_invoice_date' => $day, 'amount' => '4000', 'currency' => 'EUR', 'payment_plan' => 'invoice', 'parts' => $pay('4000')])->assertSessionHasNoErrors();
+        $ob = $this->inTenant($admin, fn () => DealObligations::for(Deal::find($deal->id)));
+        $this->assertSame(['EUR' => 6200.0], $ob['logistics']['due'], 'the rest stays open');
+        $this->get(route('deals.show', [$deal, 'tab' => 'logistics']))->assertOk()->assertSee('Qalır')->assertSee(money(6200, 'EUR'));
+
+        // the second company carries the rest
+        $this->post(route('deals.logistics-acts.store', $deal), ['counterparty_id' => $carrier->id, 'invoice_id' => $inv->id, 'logistics_invoice_number' => 'T-9',
+            'logistics_invoice_date' => $day, 'amount' => '6200', 'currency' => 'EUR', 'payment_plan' => 'invoice', 'parts' => $pay('6200')])->assertSessionHasNoErrors();
+        $ob = $this->inTenant($admin, fn () => DealObligations::for(Deal::find($deal->id)));
+        $this->assertSame([], $ob['logistics']['due']);
+        $this->assertSame(['EUR' => 10200.0], $ob['logistics']['paid']);
+        $this->assertStringContainsString('Ritloga', $ob['logistics']['company']);
+        $this->assertStringContainsString('Trans Logistik OOO', $ob['logistics']['company']);
+        $this->get(route('deals.show', [$deal, 'tab' => 'logistics']))->assertOk()->assertSee('Tam invoys edilib')->assertSee('2 şirkət');
+        $this->get(route('deals.show', $deal))->assertOk()->assertSee('tam ödənilib')->assertDontSee('Alıcı üçün proforma hazır olanda logistika');
+    }
+
     /** A part entered as an amount in its own currency settles amount / bank rate of the act. */
     public function test_part_as_amount_in_payment_currency(): void
     {

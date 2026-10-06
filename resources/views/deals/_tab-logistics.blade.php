@@ -6,6 +6,9 @@
     $fees = config('glaust.bank_fees');
     $today = today()->toDateString();
     $failedNew = $errors->any() && old('logistics_invoice_number') !== null;
+    // the next logistics invoice most likely covers what is still open (e.g. a second carrier)
+    $coverage = $withLogistics->mapWithKeys(fn ($i) => [$i->id => \App\Support\Invoices\LogisticsCoverage::for($i, $acts)]);
+    $openInvoice = $withLogistics->first(fn ($i) => $coverage[$i->id]['left'] > 0.01) ?? $withLogistics->first();
 @endphp
 
 {{-- Logistics payment as set and approved on the invoices --}}
@@ -17,7 +20,7 @@
 @else
     <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
         @foreach($withLogistics as $inv)
-            @php $invActs = $acts->where('invoice_id', $inv->id); @endphp
+            @php $invActs = $acts->where('invoice_id', $inv->id); $cov = \App\Support\Invoices\LogisticsCoverage::for($inv, $acts); @endphp
             <a href="{{ route('invoices.show', $inv) }}" class="card card-hover p-4 block">
                 <div class="flex items-start justify-between gap-2">
                     <div><div class="text-xs text-muted">{{ __('Faktura') }}</div><div class="font-mono font-semibold">{{ $inv->number }}</div></div>
@@ -28,8 +31,21 @@
                 </div>
                 <div class="mt-3 text-xl font-mono font-semibold">{{ money($inv->logistics_amount, $inv->logistics_currency) }}</div>
                 <div class="text-xs text-muted mt-1">
-                    @if($invActs->isNotEmpty()){{ __('Logistika invoysları:') }} {!! $invActs->groupBy('currency')->map(fn ($g, $c) => e(money($g->sum('amount'), $c)))->implode(' · ') !!}@else {{ __('Logistika invoysu hələ yoxdur') }} @endif
+                    @if($invActs->isNotEmpty()){{ __('Logistika invoysları:') }} {!! $invActs->groupBy('currency')->map(fn ($g, $c) => e(money($g->sum('amount'), $c)))->implode(' · ') !!}@if($invActs->pluck('counterparty_id')->filter()->unique()->count() > 1) · {{ $invActs->pluck('counterparty_id')->filter()->unique()->count() }} {{ __('şirkət') }}@endif @else {{ __('Logistika invoysu hələ yoxdur') }} @endif
                 </div>
+                @if($invActs->isNotEmpty())
+                    @php $pct = $cov['planned'] > 0 ? min(100, round($cov['covered'] / $cov['planned'] * 100)) : 100; @endphp
+                    <div class="mt-3 h-1.5 rounded-full bg-surface-2 overflow-hidden"><div class="h-full rounded-full bg-brand" style="width: {{ $pct }}%"></div></div>
+                    <div class="mt-2 flex items-baseline justify-between gap-2 text-sm">
+                        @if($cov['left'] > 0.01)
+                            <span class="text-muted">{{ __('Qalır') }}</span><span class="font-mono font-semibold text-saffron">{{ money($cov['left'], $cov['currency']) }}</span>
+                        @elseif($cov['covered'] - $cov['planned'] > 0.01)
+                            <span class="text-muted">{{ __('Plandan artıq') }}</span><span class="font-mono font-semibold text-danger">+{{ money($cov['covered'] - $cov['planned'], $cov['currency']) }}</span>
+                        @else
+                            <span class="text-success font-medium">{{ __('Tam invoys edilib') }}</span><x-icon name="check" class="size-4 text-success"/>
+                        @endif
+                    </div>
+                @endif
             </a>
         @endforeach
     </div>
@@ -189,7 +205,7 @@
             <div class="absolute inset-0 bg-night/50 backdrop-blur-sm" @click="open = false"></div>
             <form method="POST" action="{{ route('deals.logistics-acts.store', $deal) }}" enctype="multipart/form-data" x-show="open" x-transition.opacity
                   class="relative w-full max-w-4xl max-h-[94vh] card !shadow-[var(--shadow-pop)] flex flex-col" x-trap.noscroll="open"
-                  x-data="logisticsPay({ mode: 'new', currency: @js(old('currency', $withLogistics->first()?->logistics_currency ?? 'EUR')), amount: @js((string) old('amount', '')), actDate: @js(old('logistics_invoice_date', $today)), today: @js($today), plan: @js(old('payment_plan', 'invoice')), plannedDate: @js(old('planned_date', '')), hasAct: @js((bool) old('has_act')), accounts: @js($accountsData), fees: @js($fees) })">
+                  x-data="logisticsPay({ mode: 'new', currency: @js(old('currency', $openInvoice?->logistics_currency ?? 'EUR')), amount: @js((string) old('amount', $openInvoice && $coverage[$openInvoice->id]['left'] > 0.01 ? $coverage[$openInvoice->id]['left'] : '')), actDate: @js(old('logistics_invoice_date', $today)), today: @js($today), plan: @js(old('payment_plan', 'invoice')), plannedDate: @js(old('planned_date', '')), hasAct: @js((bool) old('has_act')), accounts: @js($accountsData), fees: @js($fees) })">
                 @csrf
                 <header class="flex items-start justify-between gap-4 px-6 py-4 border-b border-line">
                     <div><h2 id="la-title" class="text-lg font-semibold">{{ __('Logistika invoysu əlavə et') }}</h2><p class="text-xs text-muted">Trade {{ $deal->code }} {{ __('· məbləğ invoys tarixinin CBAR kursları ilə hesablanır') }}</p></div>
@@ -222,7 +238,7 @@
                             </div>
                             @if($withLogistics->count() > 1)
                                 <x-field :label="__('Hansı fakturanın logistikası')" name="invoice_id">
-                                    <select name="invoice_id" class="input">@foreach($withLogistics as $inv)<option value="{{ $inv->id }}">{{ $inv->number }} · {{ money($inv->logistics_amount, $inv->logistics_currency) }}</option>@endforeach</select>
+                                    <select name="invoice_id" class="input">@foreach($withLogistics as $inv)<option value="{{ $inv->id }}" @selected(old('invoice_id', $openInvoice?->id) == $inv->id)>{{ $inv->number }} · {{ money($inv->logistics_amount, $inv->logistics_currency) }}@if($coverage[$inv->id]['count']) · {{ __('qalır') }} {{ money($coverage[$inv->id]['left'], $inv->logistics_currency) }}@endif</option>@endforeach</select>
                                 </x-field>
                             @elseif($withLogistics->count() === 1)
                                 <input type="hidden" name="invoice_id" value="{{ $withLogistics->first()->id }}">

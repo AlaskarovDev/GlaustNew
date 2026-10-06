@@ -33,16 +33,17 @@ class DealObligations
         $paidSeller = $sum($deal->supplierPayments); // in the payment currency, whichever account paid
         $sellerDue = self::minus($invoiced, $paidSeller);
 
-        // Logistics: from the moment the buyer's proforma is ready, in the entered currency; once the
-        // logistics company's act is in, the act (minus what was paid on it) replaces the estimate.
+        // Logistics: from the moment the buyer's proforma is ready, in the entered currency. Logistics
+        // companies' invoices (one or several) replace the estimate as far as they cover it; what they
+        // do not cover yet stays as an estimate (e.g. 6 500 planned, 2 750 invoiced by one company → 3 750 left).
         $proformaFor = $deal->salesDocuments->where('kind', 'proforma')->pluck('source_invoice_id')->all();
         $acts = $deal->logisticsActs;
         $logistics = [];
         foreach ($supplierInvoices->filter(fn ($i) => $i->hasLogistics() && in_array($i->id, $proformaFor, true)) as $inv) {
-            if ($acts->contains('invoice_id', $inv->id)) {
-                continue;
+            $cov = \App\Support\Invoices\LogisticsCoverage::for($inv, $acts);
+            if ($cov['left'] > 0.01) {
+                $logistics[] = ['invoice' => $inv->number.($cov['count'] ? ' · '.__('qalan') : ''), 'amount' => $cov['left'], 'currency' => $inv->logistics_currency, 'mode' => $inv->logistics_mode];
             }
-            $logistics[] = ['invoice' => $inv->number, 'amount' => (float) $inv->logistics_amount, 'currency' => $inv->logistics_currency, 'mode' => $inv->logistics_mode];
         }
         foreach ($acts as $act) {
             if ($act->remaining() > 0) {
@@ -58,7 +59,7 @@ class DealObligations
             'buyer' => ['name' => $deal->counterparty?->name, 'billed' => $billed, 'received' => $received, 'due' => $buyerDue, 'goods' => $received],
             'seller' => ['name' => $deal->supplier?->name, 'invoiced' => $invoiced, 'paid' => $paidSeller, 'due' => $sellerDue, 'goods' => $paidSeller],
             'logistics' => ['items' => $logistics, 'due' => $logisticsDue, 'forecast' => collect($logistics)->contains('mode', 'forecast'),
-                'company' => $acts->first()?->counterparty?->name, 'paid' => $acts->groupBy('currency')->map(fn ($g) => round($g->sum(fn ($a) => $a->paid()), 2))->filter()->all()],
+                'company' => $acts->map(fn ($a) => $a->counterparty?->name)->filter()->unique()->implode(', ') ?: null, 'paid' => $acts->groupBy('currency')->map(fn ($g) => round($g->sum(fn ($a) => $a->paid()), 2))->filter()->all()],
             'payable' => self::plus($sellerDue, $logisticsDue),
             'receivable' => $buyerDue,
         ];

@@ -69,10 +69,19 @@
                         <div><dt class="text-xs">{{ $l['mode'] === 'act' ? $l['invoice'] : 'Faktura '.$l['invoice'] }}</dt><dd class="text-xs">{{ money($l['amount'], $l['currency']) }}</dd></div>
                     @endforeach
                 </dl>
-                @if($ob['logistics']['paid'])<div class="text-[11px] text-muted">{{ __('Aktlar üzrə ödənilib:') }} <span class="font-mono">{!! collect($ob['logistics']['paid'])->map(fn ($v, $c) => e(money($v, $c)))->implode(' · ') !!}</span></div>@endif
-                <p class="text-[11px] text-muted">{{ __('Akt və ödəniş «Logistika» addımında aparılır.') }}</p>
+                @if($ob['logistics']['paid'])<div class="text-[11px] text-muted">{{ __('Logistika invoysları üzrə ödənilib:') }} <span class="font-mono">{!! collect($ob['logistics']['paid'])->map(fn ($v, $c) => e(money($v, $c)))->implode(' · ') !!}</span></div>@endif
+                <p class="text-[11px] text-muted">{{ __('Logistika invoysu və ödəniş «Logistika» addımında aparılır.') }}</p>
             @else
-                <p class="text-sm text-muted">{{ __('Alıcı üçün proforma hazır olanda logistika şirkəti qarşısında öhdəlik burada yaranacaq.') }}</p>
+                @if($ob['logistics']['paid'])
+                    {{-- everything invoiced by the logistics companies is paid and nothing is left to invoice --}}
+                    <dl class="ob-rows">
+                        <div><dt>{{ __('Ödəməliyik') }}</dt><dd class="text-success">{{ __('tam ödənilib') }}</dd></div>
+                        <div><dt>{{ __('Ödəmişik') }}</dt><dd>{!! collect($ob['logistics']['paid'])->map(fn ($v, $c) => e(money($v, $c)))->implode(' · ') !!}</dd></div>
+                    </dl>
+                    <p class="text-[11px] text-muted">{{ __('Logistika invoysları «Logistika» addımındadır.') }}</p>
+                @else
+                    <p class="text-sm text-muted">{{ __('Alıcı üçün proforma hazır olanda logistika şirkəti qarşısında öhdəlik burada yaranacaq.') }}</p>
+                @endif
             @endif
         </article>
     </div>

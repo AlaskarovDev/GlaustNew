@@ -60,5 +60,29 @@ class CounterpartyLedgerTest extends TestCase
         $this->get(route('counterparties.ledger', $deal->counterparty))->assertOk()->assertSee('Biz borcluyuq')->assertSee('Commercial Invoice')->assertSee('Miqdar azaldı');
         $this->get(route('counterparties.ledger', $carrier))->assertOk()->assertSee('L-7')->assertSee(money(750, 'EUR'));
         $this->get(route('counterparties.show', $carrier))->assertOk()->assertSee('Hərəkətlər');
+
+        // totals on top, a click filters the list
+        $this->inTenant($admin, function () {
+            $t = CounterpartyLedger::totals();
+            $this->assertSame(673.14, $t['we_owe']['RUB']);
+            $this->assertGreaterThanOrEqual(2, $t['count']['we_owe']);
+        });
+        $this->get(route('counterparties.index'))->assertOk()->assertSee('Bizə borcludurlar')->assertSee('balance=we_owe', false);
+        $this->get(route('counterparties.index', ['balance' => 'we_owe']))->assertOk()->assertSee('Ritloga');
+        $this->get(route('counterparties.index', ['balance' => 'owes_us']))->assertOk()->assertDontSee('Ritloga');
+
+        // period: what came before `from` is the opening balance, nothing after `to` counts
+        $later = today()->addDay()->toDateString();
+        $this->inTenant($admin, function () use ($carrier, $later) {
+            $p = CounterpartyLedger::for($carrier, $later);
+            $this->assertSame([[], ['EUR' => -750.0]], [$p['entries'], $p['opening']]);
+            $early = CounterpartyLedger::for($carrier, null, today()->subDays(3)->toDateString());
+            $this->assertSame([[], []], [$early['entries'], $early['balances']]);
+        });
+        $this->get(route('counterparties.ledger', [$carrier, 'from' => $later]))->assertOk()->assertSee('Əvvəlki qalıq')->assertDontSee('L-7');
+
+        // Excel export of the statement
+        $x = $this->get(route('counterparties.ledger', [$carrier, 'from' => $day, 'format' => 'xlsx']))->assertOk();
+        $this->assertStringContainsString('spreadsheetml', $x->headers->get('content-type'));
     }
 }

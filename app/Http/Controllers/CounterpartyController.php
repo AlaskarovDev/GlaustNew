@@ -25,6 +25,7 @@ class CounterpartyController extends Controller
             'table' => $table,
             'items' => $items = $table->paginate(),
             'balances' => \App\Support\CounterpartyLedger::balances($items->getCollection()),
+            'debts' => \App\Support\CounterpartyLedger::totals(),
             'counts' => [
                 'all' => $counts->sum(),
                 'customer' => ($counts['customer'] ?? 0) + ($counts['both'] ?? 0),
@@ -86,9 +87,37 @@ class CounterpartyController extends Controller
     }
 
     /** Hərəkətlər: debit / credit statement with the party, per currency, with running balances. */
-    public function ledger(Counterparty $counterparty): View
+    public function ledger(Request $request, Counterparty $counterparty): View|\Symfony\Component\HttpFoundation\StreamedResponse
     {
-        return view('counterparties.ledger', ['counterparty' => $counterparty] + \App\Support\CounterpartyLedger::for($counterparty));
+        $from = $request->date('from')?->toDateString();
+        $to = $request->date('to')?->toDateString();
+        $data = \App\Support\CounterpartyLedger::for($counterparty, $from, $to);
+
+        if ($request->query('format') === 'xlsx') {
+            $rows = [];
+            foreach ($data['opening'] as $cur => $v) {
+                $rows[] = ['date' => $from, 'doc' => __('Əvvəlki qalıq'), 'text' => '', 'cur' => $cur, 'debit' => null, 'credit' => null, 'balance' => $v];
+            }
+            $rows = array_merge($rows, $data['entries']);
+            $cols = [
+                \App\Tables\Column::make(__('Tarix'), fn ($r) => $r['date'], 'date'),
+                \App\Tables\Column::make(__('Sənəd'), 'doc'),
+                \App\Tables\Column::make(__('Təsvir'), 'text', width: 40),
+                \App\Tables\Column::make(__('Valyuta'), 'cur'),
+                \App\Tables\Column::make(__('Debet'), fn ($r) => $r['debit'] ?: null, 'money'),
+                \App\Tables\Column::make(__('Kredit'), fn ($r) => $r['credit'] ?: null, 'money'),
+                \App\Tables\Column::make(__('Qalıq'), 'balance', 'money'),
+            ];
+            $filters = array_values(array_filter([
+                $from || $to ? __('Dövr').': '.($from ? azdate($from) : '…').' — '.($to ? azdate($to) : '…') : null,
+                collect($data['balances'])->map(fn ($v, $c) => ($v > 0 ? __('Bizə borcludur') : __('Biz borcluyuq')).': '.money(abs($v), $c, false))->implode(' · ') ?: __('Borc yoxdur'),
+            ]));
+
+            return app(\App\Support\Export\SpreadsheetExporter::class)->download(__('Hərəkətlər').' — '.$counterparty->name, $cols, $rows,
+                'hereketler-'.\Illuminate\Support\Str::slug($counterparty->name).'.xlsx', $filters);
+        }
+
+        return view('counterparties.ledger', ['counterparty' => $counterparty, 'from' => $from, 'to' => $to] + $data);
     }
 
     public function edit(Counterparty $counterparty): View

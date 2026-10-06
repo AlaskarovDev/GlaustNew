@@ -1,11 +1,27 @@
 {{-- Hərəkətlər: what the party owes us / we owe it, per currency, entry by entry. --}}
 <x-layouts.app :title="__('Hərəkətlər').' · '.$counterparty->name" wide>
-    <x-page-header :title="$counterparty->name" :subtitle="__('Hərəkətlər — borc və alacaq').' · '.$counterparty->typeLabel()" :back="route('counterparties.show', $counterparty)" icon="list"/>
+    <x-page-header :title="$counterparty->name" :subtitle="__('Hərəkətlər — borc və alacaq').' · '.$counterparty->typeLabel()" :back="route('counterparties.show', $counterparty)" icon="list">
+        <x-slot:actions>
+            <a href="{{ route('counterparties.ledger', array_filter([$counterparty->id, 'from' => $from, 'to' => $to, 'format' => 'xlsx'])) }}" class="btn btn-secondary"><x-icon name="sheet" class="size-4"/> Excel</a>
+        </x-slot:actions>
+    </x-page-header>
+
+    <form method="GET" action="{{ route('counterparties.ledger', $counterparty) }}" class="card p-4 mb-6 flex flex-wrap items-end gap-3">
+        <x-field :label="__('Tarixdən')" name="from"><input type="date" name="from" value="{{ $from }}" class="input"></x-field>
+        <x-field :label="__('Tarixədək')" name="to"><input type="date" name="to" value="{{ $to }}" class="input"></x-field>
+        <button class="btn btn-primary"><x-icon name="filter" class="size-4"/> {{ __('Tətbiq et') }}</button>
+        @if($from || $to)<a href="{{ route('counterparties.ledger', $counterparty) }}" class="btn btn-ghost">{{ __('Sıfırla') }}</a>@endif
+        <div class="flex gap-1 ml-auto">
+            @foreach([__('Bu ay') => [today()->startOfMonth(), today()], __('Keçən ay') => [today()->subMonthNoOverflow()->startOfMonth(), today()->subMonthNoOverflow()->endOfMonth()], __('Bu il') => [today()->startOfYear(), today()]] as $l => [$f, $t])
+                <a href="{{ route('counterparties.ledger', [$counterparty, 'from' => $f->toDateString(), 'to' => $t->toDateString()]) }}" class="btn btn-ghost btn-sm">{{ $l }}</a>
+            @endforeach
+        </div>
+    </form>
 
     <div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         @forelse($balances as $cur => $bal)
             <div class="card p-4">
-                <div class="text-xs text-muted">{{ $bal > 0 ? __('Bizə borcludur') : __('Biz borcluyuq') }} · {{ $cur }}</div>
+                <div class="text-xs text-muted">{{ $bal > 0 ? __('Bizə borcludur') : __('Biz borcluyuq') }} · {{ $cur }}@if($to) · {{ azdate($to) }}@endif</div>
                 <div @class(['mt-1 text-2xl font-semibold font-mono', 'text-success' => $bal > 0, 'text-danger' => $bal < 0])>{{ money(abs($bal), $cur) }}</div>
             </div>
         @empty
@@ -18,7 +34,7 @@
             <h2 class="text-base font-semibold">{{ __('Hərəkətlər') }} <span class="text-muted font-mono font-normal text-sm">{{ count($entries) }}</span></h2>
             <p class="text-xs text-muted">{{ __('Debet — bizə borcu artır (Commercial Invoice, bizim ödənişimiz); Kredit — bizim borcumuz artır (satıcı və logistika fakturası, onun ödənişi). Hər valyuta ayrıca.') }}</p>
         </header>
-        @if($entries)
+        @if($entries || $opening)
             <div class="overflow-x-auto">
                 <table class="table-g table-stack text-sm">
                     <thead><tr><th class="w-28">{{ __('Tarix') }}</th><th>{{ __('Sənəd') }}</th><th>{{ __('Təsvir') }}</th><th class="!text-right">{{ __('Debet') }}</th><th class="!text-right">{{ __('Kredit') }}</th><th class="!text-right">{{ __('Qalıq') }}</th></tr></thead>
@@ -31,6 +47,13 @@
                             <td data-label="{{ __('Debet') }}" class="num">{{ $row['debit'] ? money($row['debit'], $row['cur']) : '' }}</td>
                             <td data-label="{{ __('Kredit') }}" class="num">{{ $row['credit'] ? money($row['credit'], $row['cur']) : '' }}</td>
                             <td data-label="{{ __('Qalıq') }}" @class(['num font-medium', 'text-success' => $row['balance'] > 0, 'text-danger' => $row['balance'] < 0])>{{ abs($row['balance']) < 0.005 ? '0' : ($row['balance'] > 0 ? '+' : '−').money(abs($row['balance']), $row['cur']) }}</td>
+                        </tr>
+                    @endforeach
+                    @foreach($opening as $cur => $v)
+                        <tr class="bg-surface-2/60">
+                            <td class="font-mono text-xs">{{ azdate($from) }}</td>
+                            <td class="font-medium" colspan="4">{{ __('Əvvəlki qalıq') }} · {{ $cur }}</td>
+                            <td @class(['num font-semibold', 'text-success' => $v > 0, 'text-danger' => $v < 0])>{{ ($v > 0 ? '+' : '−').money(abs($v), $cur) }}</td>
                         </tr>
                     @endforeach
                     </tbody>

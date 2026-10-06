@@ -12,6 +12,24 @@
         </x-slot:actions>
     </x-page-header>
 
+    {{-- totals: who owes us, whom we owe — a click filters the list --}}
+    <div class="grid sm:grid-cols-2 gap-4 mb-5">
+        @foreach(['owes_us' => [__('Bizə borcludurlar'), 'text-success', 'arrow-down-left'], 'we_owe' => [__('Biz borcluyuq'), 'text-danger', 'arrow-up-right']] as $side => [$label, $tone, $icon])
+            @php $on = request('balance') === $side; @endphp
+            <a href="{{ route('counterparties.index', $on ? array_filter(request()->except('balance', 'page')) : array_merge(request()->except('page'), ['balance' => $side])) }}"
+               @class(['card card-hover p-4 flex items-start gap-3', '!border-brand ring-2 ring-brand/20' => $on]) @if($on) aria-current="true" @endif>
+                <span class="grid place-items-center size-10 rounded-xl bg-surface-2 {{ $tone }} shrink-0"><x-icon :name="$icon" class="size-5"/></span>
+                <div class="min-w-0 flex-1">
+                    <div class="text-xs text-muted">{{ $label }} · {{ $debts['count'][$side] }} {{ __('tərəf') }}</div>
+                    <div class="mt-1 flex flex-wrap gap-x-4 gap-y-1 font-mono text-lg font-semibold {{ $tone }}">
+                        @forelse($debts[$side] as $cur => $v)<span>{{ money($v, $cur) }}</span>@empty<span class="text-faint">—</span>@endforelse
+                    </div>
+                </div>
+                <span class="text-[11px] text-muted shrink-0">{{ $on ? __('filtri sil') : __('göstər') }}</span>
+            </a>
+        @endforeach
+    </div>
+
     <nav class="flex gap-6 border-b border-line mb-5 overflow-x-auto" aria-label="{{ __('Kontragent növü') }}">
         @foreach(['' => [__('Hamısı'), $counts['all']], 'customer' => [__('Müştərilər'), $counts['customer']], 'supplier' => [__('Təchizatçılar'), $counts['supplier']], 'logistics' => [__('Logistika şirkətləri'), $counts['logistics']]] as $type => [$label, $n])
             <a href="{{ route('counterparties.index', array_filter(['type' => $type])) }}" @class(['tab-link', 'is-active' => (string) request('type') === $type])>

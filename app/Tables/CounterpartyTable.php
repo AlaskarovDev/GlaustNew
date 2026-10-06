@@ -35,6 +35,7 @@ class CounterpartyTable extends Table
         return [
             'type' => ['label' => __('Növ'), 'type' => 'select', 'options' => config('glaust.counterparty_types')],
             'entity_type' => ['label' => __('Şəxs'), 'type' => 'select', 'options' => config('glaust.entity_types')],
+            'balance' => ['label' => __('Balans'), 'type' => 'select', 'options' => ['owes_us' => __('Bizə borcludur'), 'we_owe' => __('Biz borcluyuq')]],
         ];
     }
 
@@ -47,6 +48,9 @@ class CounterpartyTable extends Table
             'logistics' => $query->logistics(),
             default => null,
         };
+        if (in_array($this->request->query('balance'), ['owes_us', 'we_owe'], true)) {
+            $query->whereIn('id', \App\Support\CounterpartyLedger::idsWith($this->request->query('balance')) ?: [0]);
+        }
         if (in_array($this->request->query('entity_type'), ['legal', 'individual'], true)) {
             $query->where('entity_type', $this->request->query('entity_type'));
         }

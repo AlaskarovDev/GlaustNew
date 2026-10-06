@@ -22,8 +22,12 @@ use Illuminate\Support\Collection;
  */
 class CounterpartyLedger
 {
-    /** @return array{entries: list<array>, balances: array<string, float>} entries oldest first, each with the running balance of its currency */
-    public static function for(Counterparty $cp): array
+    /**
+     * @return array{entries: list<array>, balances: array<string, float>, opening: array<string, float>}
+     *         entries oldest first (within from–to when given), each with the running balance of its currency;
+     *         opening = balances before `from`; balances = at the end of the period
+     */
+    public static function for(Counterparty $cp, ?string $from = null, ?string $to = null): array
     {
         $e = [];
         $push = function ($date, string $doc, string $text, string $cur, float $debit, float $credit, ?string $url = null) use (&$e) {
@@ -80,12 +84,64 @@ class CounterpartyLedger
 
         usort($e, fn ($a, $b) => strcmp(self::key($a['date']), self::key($b['date'])));
         $running = [];
-        foreach ($e as $i => $row) {
+        $opening = [];
+        $kept = [];
+        foreach ($e as $row) {
+            $day = substr(self::key($row['date']), 0, 10);
+            if ($to && $day > $to) {
+                break;
+            }
             $running[$row['cur']] = round(($running[$row['cur']] ?? 0) + $row['debit'] - $row['credit'], 2);
-            $e[$i]['balance'] = $running[$row['cur']];
+            $row['balance'] = $running[$row['cur']];
+            if ($from && $day < $from) {
+                $opening[$row['cur']] = $row['balance'];
+                continue;
+            }
+            $kept[] = $row;
+        }
+        $nonZero = fn ($a) => array_filter($a, fn ($v) => abs($v) >= 0.005);
+
+        return ['entries' => $kept, 'balances' => $nonZero($running), 'opening' => $nonZero($opening)];
+    }
+
+    /** Current balances of every counterparty of the company (computed once per request). @return array<int, array<string, float>> */
+    public static function all(): array
+    {
+        $attrs = request()->attributes;   // per request, never across requests
+        if (! $attrs->has('counterparty_balances')) {
+            $attrs->set('counterparty_balances', Counterparty::query()->get()->mapWithKeys(fn (Counterparty $c) => [$c->id => self::for($c)['balances']])->all());
         }
 
-        return ['entries' => $e, 'balances' => array_filter($running, fn ($v) => abs($v) >= 0.005)];
+        return $attrs->get('counterparty_balances');
+    }
+
+    /** Totals over all counterparties: what they owe us and what we owe, per currency, with how many parties. */
+    public static function totals(): array
+    {
+        $owes = $owe = [];
+        $n = ['owes_us' => 0, 'we_owe' => 0];
+        foreach (self::all() as $balances) {
+            $pos = $neg = false;
+            foreach ($balances as $cur => $v) {
+                if ($v > 0) {
+                    $owes[$cur] = round(($owes[$cur] ?? 0) + $v, 2);
+                    $pos = true;
+                } else {
+                    $owe[$cur] = round(($owe[$cur] ?? 0) - $v, 2);
+                    $neg = true;
+                }
+            }
+            $n['owes_us'] += (int) $pos;
+            $n['we_owe'] += (int) $neg;
+        }
+
+        return ['owes_us' => $owes, 'we_owe' => $owe, 'count' => $n];
+    }
+
+    /** Ids of parties that owe us (`owes_us`) or that we owe (`we_owe`) in any currency. */
+    public static function idsWith(string $side): array
+    {
+        return array_keys(array_filter(self::all(), fn ($b) => (bool) array_filter($b, fn ($v) => $side === 'owes_us' ? $v > 0 : $v < 0)));
     }
 
     /** Balances of many counterparties at once (for lists). @return array<int, array<string, float>> */

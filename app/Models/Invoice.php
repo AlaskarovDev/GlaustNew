@@ -29,7 +29,7 @@ class Invoice extends Model
         return ['invoice_date' => 'date', 'total' => 'decimal:2', 'total_azn' => 'decimal:2', 'cbar_rate' => 'decimal:8',
             'logistics_amount' => 'decimal:2', 'logistics_rate' => 'decimal:8', 'logistics_total' => 'decimal:2', 'logistics_updated_at' => 'datetime',
             'commission_rate' => 'decimal:4', 'commission_total' => 'decimal:2', 'commission_updated_at' => 'datetime',
-            'fx_date' => 'date', 'fx_bulletin_date' => 'date', 'fx_base_azn' => 'decimal:8', 'fx_target_azn' => 'decimal:8', 'fx_rate' => 'decimal:12', 'fx_updated_at' => 'datetime',
+            'fx_date' => 'date', 'final_amount' => 'decimal:2', 'fx_bulletin_date' => 'date', 'fx_base_azn' => 'decimal:8', 'fx_target_azn' => 'decimal:8', 'fx_rate' => 'decimal:12', 'fx_updated_at' => 'datetime',
             'approval_flow' => 'array', 'submitted_at' => 'datetime', 'approved_at' => 'datetime'];
     }
 
@@ -100,18 +100,18 @@ class Invoice extends Model
     }
 
     /**
-     * What we bill the buyer for a manual entry, in the Trade's sale currency: the rounded RUR total
-     * of its line (as a proforma would be built). Null until the calculation is complete.
+     * What we bill the buyer for a manual entry: its final figure exactly as entered (every cost
+     * included). Logistics, commission and forecast rates are kept beside it and never recompute it.
      */
     public function saleTotal(): ?float
     {
-        if (! $this->isManual() || ! $this->rubReady()) {
-            return null;
-        }
-        $this->loadMissing('items');
-        $this->items->each->setRelation('invoice', $this);
+        return $this->isManual() && $this->final_amount !== null ? round((float) $this->final_amount, 2) : null;
+    }
 
-        return round((float) $this->items->sum(fn ($it) => (float) $it->totalRubRounded()), 2);
+    /** Currency of the final figure: as entered, else the Trade's sale currency. */
+    public function saleCurrency(): string
+    {
+        return $this->final_currency ?: \App\Support\Invoices\RubConverter::target($this);
     }
 
     /** Every input of the RUR columns is in: logistics, commission and the RUB rate. */

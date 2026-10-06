@@ -12,7 +12,7 @@
         $ourInvoice = $invoice->salesDocuments->firstWhere('kind', 'proforma');
         $ourTotal = $ourInvoice?->grandTotal();
         $manual = $invoice->isManual();
-        $saleCur = \App\Support\Invoices\RubConverter::target($invoice);
+        $saleCur = $invoice->saleCurrency();
     @endphp
     {{-- Totals in their own currencies; AZN only on request, at the CBAR rates of a chosen date. --}}
     <div class="mb-6" x-data="{
@@ -51,7 +51,7 @@
                         <div class="text-[11px] text-muted mt-0.5" x-show="azn" x-cloak><span x-show="loading">…</span><span x-show="!loading" x-text="inAzn({{ $saleTotal }}, @js($saleCur))"></span></div>
                         <div class="text-[11px] text-faint" x-show="!azn">{{ __('sənəd hazırlanmır') }}</div>
                     @else
-                        <div class="text-xl font-semibold text-faint">—</div><div class="text-[11px] text-faint">{{ __('3 addım tamamlananda') }}</div>
+                        <div class="text-xl font-semibold text-faint">—</div><div class="text-[11px] text-faint">{{ __('0-cı addımda yazılır') }}</div>
                     @endif
                 @elseif($ourInvoice)
                     <a href="{{ route('sales-documents.show', $ourInvoice) }}" class="block text-xl font-semibold font-mono hover:text-brand-ink">{{ money($ourTotal, $ourInvoice->currency) }}</a>
@@ -83,11 +83,12 @@
         @unless($manual)@include('invoices._approval')@endunless
         @if($manual)
             <div class="card p-4 mb-5 flex gap-3 text-sm bg-surface-2"><x-icon name="info" class="size-5 text-brand shrink-0"/>
-                <div>{{ __('Fakturasız məbləğ: mallar daxil edilmir və sənədlər (proforma, spesifikasiya, Commercial Invoice) hazırlanmır. Logistika, komissiya və RUB çevirməsi adi qaydada hesablanır.') }}</div></div>
+                <div>{{ __('Fakturasız məbləğ: mallar daxil edilmir, sənədlər hazırlanmır və hesablama aparılmır. Yekun məbləğ 0-cı addımda yazılır; logistika, komissiya və kurslar yalnız yadda saxlanılır.') }}</div></div>
         @endif
+        @if($manual)@include('invoices._final')@endif
         <div class="flex items-baseline justify-between gap-3 mb-3">
             <h2 class="text-sm font-semibold text-ink-2">{{ __('Hesablama addımları') }}</h2>
-            <p class="text-xs text-muted">{{ __('Hər addım tətbiq olunduqca cədvəldəki uyğun sütunlar dolur') }}</p>
+            <p class="text-xs text-muted">{{ $manual ? __('Yalnız yadda saxlanılır — cədvələ və yekun məbləğə təsir etmir') : __('Hər addım tətbiq olunduqca cədvəldəki uyğun sütunlar dolur') }}</p>
         </div>
         <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6 items-stretch">
             @include('invoices._logistics')
@@ -98,7 +99,7 @@
 
     @php
         // Computed columns of the company's sheet; a column is live once its inputs exist.
-        $liveCols = [
+        $liveCols = $manual ? [] : [
             'logistics' => $invoice->hasLogistics(),
             'unit_price_log' => $invoice->hasLogistics(),
             'fee' => $invoice->hasCommission(),
@@ -130,7 +131,11 @@
             'unit_price_rur_rounded' => 'ROUND(N; 2)', 'total_rur_rounded' => 'P × E',
         ];
         $label = fn ($k, $l) => $k === 'fee' && $invoice->hasCommission() ? 'Commission '.$invoice->commissionLabel().'%' : $l;
-        $pending = collect($later)->keys()->reject(fn ($k) => $liveCols[$k] ?? false)->count();
+        if ($manual) {   // its figure is entered, not computed: only the entered columns
+            $columns = array_filter($columns, fn ($c) => $c[1]);
+            $later = [];
+        }
+        $pending = $manual ? 0 : collect($later)->keys()->reject(fn ($k) => $liveCols[$k] ?? false)->count();
     @endphp
 
     <section class="card overflow-hidden mb-6">

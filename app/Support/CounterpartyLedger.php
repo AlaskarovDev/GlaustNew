@@ -54,7 +54,7 @@ class CounterpartyLedger
             ->whereHas('deal', fn ($q) => $q->where('counterparty_id', $cp->id))->get();
         foreach ($manualSales as $inv) {
             if (($sale = $inv->saleTotal()) !== null) {
-                $push($inv->fx_date ?? $inv->invoice_date, __('Fakturasız hesablama').' '.$inv->number, 'Trade '.$inv->deal?->code, \App\Support\Invoices\RubConverter::target($inv), $sale, 0, route('invoices.show', $inv));
+                $push($inv->invoice_date, __('Fakturasız məbləğ').' '.$inv->number, 'Trade '.$inv->deal?->code, $inv->saleCurrency(), $sale, 0, route('invoices.show', $inv));
             }
         }
 

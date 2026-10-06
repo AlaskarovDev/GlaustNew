@@ -30,7 +30,7 @@ class DealObligations
         // manual entries have no documents: their RUR total is what we bill
         $manual = $deal->invoices->where('type', 'supplier')->where('status', '!=', 'cancelled')->filter(fn ($i) => $i->saleTotal() !== null);
         foreach ($manual as $inv) {
-            $c = \App\Support\Invoices\RubConverter::target($inv);
+            $c = $inv->saleCurrency();
             $billed[$c] = round(($billed[$c] ?? 0) + $inv->saleTotal(), 2);
         }
         $received = $sum($deal->payments);

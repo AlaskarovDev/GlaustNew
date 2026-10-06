@@ -14,7 +14,7 @@ use App\Support\Profit\ProfitCalculator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/** Fakturasız: only the Total, then logistics, commission and the RUB conversion as usual — no lines, no documents. */
+/** Fakturasız: the Total and the final figure as entered; logistics, commission and forecasts are only kept — no lines, no documents. */
 class ManualInvoiceTest extends TestCase
 {
     use RefreshDatabase;
@@ -53,12 +53,21 @@ class ManualInvoiceTest extends TestCase
         $this->post(route('invoices.logistics', $inv), ['logistics_mode' => 'forecast', 'logistics_method' => 'total', 'logistics_amount' => '650', 'logistics_currency' => 'EUR'])->assertSessionHasNoErrors();
         $this->post(route('invoices.rub', $inv), ['fx_source' => 'forecast', 'fx_date' => today()->addDays(5)->toDateString(), 'fx_base_azn' => '2,0005', 'fx_target_azn' => '0,0211'])->assertSessionHasNoErrors();
 
+        $this->assertNull($this->inTenant($admin, fn () => Invoice::findOrFail($inv->id)->saleTotal()), 'the steps do not compute the figure');
+
+        // step 0: the final figure the user already has
+        $this->post(route('invoices.final', $inv), ['final_amount' => ''])->assertSessionHasErrors('final_amount');
+        $this->post(route('invoices.final', $inv), ['final_amount' => '8 950 000,00'])->assertSessionHasNoErrors();
         $inv = $this->inTenant($admin, fn () => Invoice::findOrFail($inv->id));
         $sale = $this->inTenant($admin, fn () => $inv->saleTotal());
-        $this->assertEqualsWithDelta(round(11000 * 2.0005 / 0.0211, 2), $sale, 0.02, '(10 000 + 650 logistics + 350 commission) × EUR/RUB');
+        $this->assertSame([8950000.0, 'RUB'], [$sale, $inv->final_currency]);
+        // changing logistics / commission later leaves it as entered
+        $this->post(route('invoices.commission', $inv), ['commission_rate' => '10'])->assertSessionHasNoErrors();
+        $this->assertSame($sale, $this->inTenant($admin, fn () => Invoice::findOrFail($inv->id)->saleTotal()));
         $this->assertSame(0, $this->inTenant($admin, fn () => SalesDocument::count()), 'no documents for a manual entry');
 
-        $this->get(route('invoices.show', $inv))->assertOk()->assertSee('Fakturasız')->assertSee(money($sale, 'RUB'))->assertDontSee('Alıcı üçün sənədlər');
+        $this->get(route('invoices.show', $inv))->assertOk()->assertSee('Fakturasız')->assertSee(money($sale, 'RUB'))->assertDontSee('Alıcı üçün sənədlər')
+            ->assertSee('Yekun məbləğ (bütün xərclər daxil)')->assertDontSee('UNIT PRICE RUR');   // no computed columns
         $this->get(route('deals.show', [$deal, 'tab' => 'invoices']))->assertOk()->assertSee('M-TD-9-1')->assertSee('Fakturasız');
         $this->post(route('invoices.documents', $inv))->assertSessionHas('error');
 

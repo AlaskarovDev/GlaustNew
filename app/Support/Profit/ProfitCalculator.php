@@ -113,7 +113,7 @@ class ProfitCalculator
         $cur = $inv->currency;
         // a manual entry (no documents) bills its own RUR total
         $H = $sale ? $sale->grandTotal() : $inv->saleTotal();
-        $saleCur = $sale?->currency ?? ($inv->isManual() ? \App\Support\Invoices\RubConverter::target($inv) : null);
+        $saleCur = $sale?->currency ?? ($inv->isManual() ? $inv->saleCurrency() : null);
         $today = $this->today();
         $row = ['invoice' => $inv, 'sale' => $sale, 'D' => $D, 'cur' => $cur, 'H' => $H, 'saleCur' => $saleCur, 'share' => $share,
             'forecast' => null, 'act' => null, 'settle' => null, 'bank' => null, 'estimated' => false, 'notes' => []];

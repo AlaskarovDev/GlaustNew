@@ -131,6 +131,33 @@ class InvoiceController extends Controller
         return redirect()->route('invoices.show', $invoice)->with('success', __('Fakturasız məbləğ daxil edildi: :v1. İndi logistika, komissiya və RUB çevirməsini tətbiq edin.', ['v1' => money($invoice->total, $invoice->currency)]));
     }
 
+    /** Fakturasız: the final figure with every cost included, as the user has it — stored, never recomputed. */
+    public function final(Request $request, Invoice $invoice): RedirectResponse
+    {
+        $this->authorize('projects.update');
+        abort_unless($invoice->isManual(), 404);
+        if ($invoice->isLocked()) {
+            return back()->with('error', $this->lockedMessage($invoice));
+        }
+        $request->merge(['final_amount' => parse_number($request->input('final_amount'))]);
+        $data = $request->validate(['final_amount' => ['required', 'numeric', 'gt:0', 'max:99999999999']], [], ['final_amount' => __('Yekun məbləğ')]);
+        $invoice->update(['final_amount' => round((float) $data['final_amount'], 2), 'final_currency' => \App\Support\Invoices\RubConverter::target($invoice)]);
+
+        return back()->with('success', __('Yekun məbləğ yadda saxlandı: :v1.', ['v1' => money($invoice->final_amount, $invoice->final_currency)]));
+    }
+
+    public function clearFinal(Invoice $invoice): RedirectResponse
+    {
+        $this->authorize('projects.update');
+        abort_unless($invoice->isManual(), 404);
+        if ($invoice->isLocked()) {
+            return back()->with('error', $this->lockedMessage($invoice));
+        }
+        $invoice->update(['final_amount' => null, 'final_currency' => null]);
+
+        return back()->with('success', __('Yekun məbləğ silindi.'));
+    }
+
     /** Deleted invoices keep their number in the unique index: remove them for good before the number is reused. */
     private static function purgeDeleted(Deal $deal, array $numbers): void
     {
@@ -356,7 +383,7 @@ class InvoiceController extends Controller
         $cols = [];
         foreach (SupplierInvoiceSheet::COLUMNS as $key => [$label, $fillable]) {
             $both = $invoice->hasLogistics() && $invoice->hasCommission();
-            $computed = match (true) {
+            $computed = $invoice->isManual() ? null : match (true) {   // a manual entry's figure is entered, not computed
                 $key === 'logistics' && $invoice->hasLogistics() => Column::make($label.' ('.$invoice->currency.')', 'logistics', 'money', total: true),
                 $key === 'unit_price_log' && $invoice->hasLogistics() => Column::make($label, fn ($it) => $it->unitPriceLog(), 'money'),
                 $key === 'fee' && $invoice->hasCommission() => Column::make('Commission '.$invoice->commissionLabel().'%', 'commission', 'money', total: true),

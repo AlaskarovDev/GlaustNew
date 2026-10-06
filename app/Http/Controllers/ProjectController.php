@@ -129,7 +129,10 @@ class ProjectController extends Controller
     public function destroy(Project $project): RedirectResponse
     {
         $this->authorize('projects.delete');
-        $project->delete();
+        if ($project->deals()->exists() && trim((string) request('confirm_code')) !== $project->code) {
+            return back()->with('error', __('Silmək üçün layihənin kodunu düzgün yazın: :v1', ['v1' => $project->code]));
+        }
+        app(\App\Services\DealRemover::class)->deleteProject($project);
 
         return redirect()->route('projects.index')->with('success', __('Layihə :v1 silindi.', ['v1' => $project->code]));
     }

@@ -11,6 +11,12 @@
             @can('projects.create')
                 <a href="{{ route('deals.create', $project) }}" class="btn btn-primary"><x-icon name="plus" class="size-4"/> {{ __('Yeni Trade') }}</a>
             @endcan
+            @can('projects.delete')
+                @php $dealCount = $project->deals()->count(); $invCount = \App\Models\Invoice::where('project_id', $project->id)->count(); @endphp
+                <x-danger-delete :action="route('projects.destroy', $project)" :code="$project->code" :title="__('Layihə :v1 silinsin?', ['v1' => $project->code])"
+                    :items="[__('Trade-lər (bütün fakturaları, ödənişləri və logistikası ilə)') => $dealCount, __('Satıcı fakturaları') => $invCount]"
+                    :note="__('Hər Trade-in bank hərəkətləri geri qaytarılır. Tapşırıqlar arxivdə qalır.')"/>
+            @endcan
         </x-slot:actions>
     </x-page-header>
 
@@ -123,10 +129,5 @@
             @include('partials.history', ['history' => $history])
             @include('partials.attachments', ['model' => $project, 'type' => 'project', 'ability' => 'projects.update'])
         </div>
-        @can('projects.delete')
-            <div class="mt-6 flex justify-end">
-                <x-delete-form :action="route('projects.destroy', $project)" :label="__('Layihəni sil')" button="btn btn-ghost text-danger hover:!bg-danger-soft" :message="__('Layihə ').$project->code.__(' silinəcək (tapşırıqlar arxivdə qalır).')"/>
-            </div>
-        @endcan
     @endif
 </x-layouts.app>

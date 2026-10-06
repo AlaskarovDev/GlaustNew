@@ -13,6 +13,13 @@
             @can('projects.update')
                 <a href="{{ route('deals.edit', $deal) }}" class="btn btn-secondary"><x-icon name="pencil" class="size-4"/> {{ __('Redaktə') }}</a>
             @endcan
+            @can('projects.delete')
+                @php $sum = app(\App\Services\DealRemover::class)->summary($deal); @endphp
+                <x-danger-delete :action="route('deals.destroy', $deal)" :code="$deal->code" :title="__('Trade :v1 silinsin?', ['v1' => $deal->code])"
+                    :items="[__('Satıcı fakturaları') => $sum['invoices'], __('Alıcı sənədləri') => $sum['documents'], __('Mədaxillər (bank hərəkəti ilə)') => $sum['payments'],
+                             __('Satıcıya ödənişlər (komissiya ilə)') => $sum['supplier_payments'], __('Logistika invoysları və ödənişləri') => $sum['logistics'], __('Trade-in xərcləri') => $sum['expenses']]"
+                    :note="__('Bank hesablarından silinmələr və mədaxillər geri qaytarılır. Valyuta alış-satışı əməliyyatları qalır, sadəcə Trade-dən ayrılır.')"/>
+            @endcan
         </x-slot:actions>
     </x-page-header>
 
@@ -81,9 +88,6 @@
         <div class="space-y-6">
             @if($deal->notes)<section class="card p-5"><h2 class="text-sm font-semibold mb-2">{{ __('Qeydlər') }}</h2><p class="text-sm whitespace-pre-line">{{ $deal->notes }}</p></section>@endif
             @include('partials.attachments', ['model' => $deal, 'type' => 'deal', 'ability' => 'projects.update'])
-            @can('projects.delete')
-                <x-delete-form :action="route('deals.destroy', $deal)" :label="__('Trade-i sil')" button="btn btn-ghost w-full text-danger hover:!bg-danger-soft" :message="'Trade '.$deal->code.__(' silinəcək. Fakturası olan Trade silinmir.')"/>
-            @endcan
         </div>
     </div>
 </x-layouts.app>

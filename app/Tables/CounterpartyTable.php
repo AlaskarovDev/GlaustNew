@@ -44,6 +44,7 @@ class CounterpartyTable extends Table
             'customer' => $query->customers(),
             'supplier' => $query->suppliers(),
             'both' => $query->where('type', 'both'),
+            'logistics' => $query->logistics(),
             default => null,
         };
         if (in_array($this->request->query('entity_type'), ['legal', 'individual'], true)) {

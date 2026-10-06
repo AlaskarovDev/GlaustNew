@@ -190,7 +190,7 @@ class ShipmentController extends Controller
             'eta' => __('Gözlənilən çatma tarixi'), 'loading_date' => __('Yüklənmə tarixi'), 'carrier_id' => __('Daşıyıcı'), 'weight_kg' => __('Çəki'), 'volume_m3' => __('Həcm'),
         ]);
 
-        if (! empty($data['carrier_id']) && ! \App\Models\Counterparty::find($data['carrier_id'])?->isSupplier()) {
+        if (! empty($data['carrier_id']) && ! (($cp = \App\Models\Counterparty::find($data['carrier_id'])) && ($cp->isSupplier() || $cp->isLogistics()))) {
             throw ValidationException::withMessages(['carrier_id' => __('Daşıyıcı CRM-də təchizatçı kimi qeyd olunmalıdır.')]);
         }
 

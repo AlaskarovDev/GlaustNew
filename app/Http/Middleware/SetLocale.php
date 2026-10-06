@@ -48,5 +48,5 @@ class SetLocale
     }
 
     private const LABEL_GROUPS = ['modules', 'actions', 'statuses', 'counterparty_types', 'entity_types', 'contract_kinds',
-        'shipment_directions', 'transport_modes', 'cost_types', 'analytics', 'transaction_kinds', 'reminder_sources'];
+        'shipment_directions', 'transport_modes', 'cost_types', 'analytics', 'transaction_kinds', 'reminder_sources', 'tariff_units', 'payment_bases'];
 }

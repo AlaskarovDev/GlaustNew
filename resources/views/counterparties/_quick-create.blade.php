@@ -25,8 +25,8 @@
             <button type="button" class="btn btn-ghost btn-icon" @click="open = false" aria-label="{{ __('Bağla') }}"><x-icon name="x" class="size-5"/></button>
         </div>
         <div class="grid sm:grid-cols-2 gap-4">
-            <div class="sm:col-span-2 grid grid-cols-3 gap-2">
-                <template x-for="t in [['customer', {{ \Illuminate\Support\Js::from(__('Müştəri')) }}], ['supplier', {{ \Illuminate\Support\Js::from(__('Təchizatçı')) }}], ['both', {{ \Illuminate\Support\Js::from(__('Hər ikisi')) }}]]" :key="t[0]">
+            <div class="sm:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <template x-for="t in [['customer', {{ \Illuminate\Support\Js::from(__('Müştəri')) }}], ['supplier', {{ \Illuminate\Support\Js::from(__('Təchizatçı')) }}], ['both', {{ \Illuminate\Support\Js::from(__('Hər ikisi')) }}], ['logistics', {{ \Illuminate\Support\Js::from(__('Logistika')) }}]]" :key="t[0]">
                     <label class="flex items-center justify-center h-10 rounded-lg border text-sm font-medium cursor-pointer transition-colors"
                            :class="form.type === t[0] ? 'border-brand bg-brand-soft text-brand-ink' : 'border-line text-ink-2 hover:border-line-strong'">
                         <input type="radio" class="sr-only" x-model="form.type" :value="t[0]"><span x-text="t[1]"></span>

@@ -51,6 +51,17 @@ class Counterparty extends Model
         return $q->whereIn('type', ['supplier', 'both']);
     }
 
+    public function scopeLogistics(Builder $q): Builder
+    {
+        return $q->where('type', 'logistics');
+    }
+
+    /** Logistics companies: only they sign service purchase contracts and carry our goods. */
+    public function isLogistics(): bool
+    {
+        return $this->type === 'logistics';
+    }
+
     public function isCustomer(): bool
     {
         return in_array($this->type, ['customer', 'both'], true);

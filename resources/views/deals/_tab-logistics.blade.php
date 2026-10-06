@@ -201,7 +201,7 @@
                     @endif
                     <div class="grid lg:grid-cols-[minmax(0,1fr)_280px] gap-6">
                         <div class="space-y-4 min-w-0">
-                            <x-combobox name="counterparty_id" :label="__('Logistika şirkəti')" :url="route('ajax.lookup', 'counterparties')" :placeholder="__('CRM-dən seçin')"/>
+                            <x-combobox name="counterparty_id" :label="__('Logistika şirkəti')" :url="route('ajax.lookup', ['counterparties', 'role' => 'logistics'])" :placeholder="__('CRM-dən seçin')"/>
                             <div class="grid sm:grid-cols-2 gap-4">
                                 <x-field :label="__('Invoys nömrəsi')" name="logistics_invoice_number" required><input name="logistics_invoice_number" value="{{ old('logistics_invoice_number') }}" class="input font-mono" required></x-field>
                                 <x-field :label="__('Invoys tarixi')" name="logistics_invoice_date" required><input type="date" name="logistics_invoice_date" x-model="actDate" max="{{ $today }}" class="input" required></x-field>

@@ -28,6 +28,7 @@ class CounterpartyController extends Controller
                 'all' => $counts->sum(),
                 'customer' => ($counts['customer'] ?? 0) + ($counts['both'] ?? 0),
                 'supplier' => ($counts['supplier'] ?? 0) + ($counts['both'] ?? 0),
+                'logistics' => $counts['logistics'] ?? 0,
             ],
         ]);
     }
@@ -40,7 +41,7 @@ class CounterpartyController extends Controller
     public function create(Request $request): View
     {
         $this->authorize('crm.create');
-        $type = in_array($request->query('type'), ['customer', 'supplier', 'both'], true) ? $request->query('type') : 'customer';
+        $type = in_array($request->query('type'), ['customer', 'supplier', 'both', 'logistics'], true) ? $request->query('type') : 'customer';
 
         return view('counterparties.form', ['item' => new Counterparty(['type' => $type, 'entity_type' => 'legal', 'country' => 'Azərbaycan'])]);
     }

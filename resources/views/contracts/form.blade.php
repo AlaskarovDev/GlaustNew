@@ -16,7 +16,7 @@
 
     <form method="POST" action="{{ $editing ? route('contracts.update', $contract) : route('contracts.store') }}"
           x-data="{ kind: @js(old('kind', $contract->kind)), cpType: @js($contract->counterparty?->type), busy: false }"
-          @combobox-change.window="if ($event.detail.name === 'counterparty_id') { cpType = $event.detail.item?.type; if (cpType === 'customer') kind = 'sale'; if (cpType === 'supplier') kind = 'purchase'; }"
+          @combobox-change.window="if ($event.detail.name === 'counterparty_id') { cpType = $event.detail.item?.type; if (cpType === 'customer') kind = 'sale'; if (cpType === 'supplier') kind = 'purchase'; if (cpType === 'logistics') kind = 'service'; }"
           @submit="busy = true" class="grid xl:grid-cols-[minmax(0,1fr)_360px] gap-6 items-start">
         @csrf
         @if($editing) @method('PUT') @endif
@@ -40,8 +40,8 @@
 
                     <fieldset class="sm:col-span-2">
                         <legend class="field-label">{{ __('Müqavilənin növü') }} <span class="text-danger">*</span></legend>
-                        <div class="grid sm:grid-cols-2 gap-2">
-                            @foreach(['sale' => [__('Satış'), __('Müştəri ilə — biz satırıq / xidmət göstəririk'), 'arrow-up-right'], 'purchase' => [__('Alış'), __('Təchizatçı ilə — biz alırıq / xidmət alırıq'), 'arrow-down-left']] as $val => [$label, $hint, $icon])
+                        <div class="grid sm:grid-cols-3 gap-2">
+                            @foreach(['sale' => [__('Satış'), __('Müştəri ilə — biz satırıq'), 'arrow-up-right'], 'purchase' => [__('Alış'), __('Təchizatçı ilə — biz məhsul alırıq'), 'arrow-down-left'], 'service' => [__('Xidmət alışı'), __('Yalnız logistika şirkəti ilə — daşıma xidməti'), 'truck']] as $val => [$label, $hint, $icon])
                                 <label class="flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all"
                                        :class="kind === '{{ $val }}' ? 'border-brand bg-brand-soft/60 ring-1 ring-brand/30' : 'border-line hover:border-line-strong'">
                                     <input type="radio" name="kind" value="{{ $val }}" x-model="kind" class="sr-only">
@@ -50,7 +50,7 @@
                                 </label>
                             @endforeach
                         </div>
-                        <p x-show="(kind === 'sale' && cpType === 'supplier') || (kind === 'purchase' && cpType === 'customer')" x-cloak class="field-error">
+                        <p x-show="(kind === 'sale' && ['supplier', 'logistics'].includes(cpType)) || (kind === 'purchase' && ['customer', 'logistics'].includes(cpType)) || (kind === 'service' && cpType && cpType !== 'logistics') || (kind !== 'service' && cpType === 'logistics')" x-cloak class="field-error">
                             <x-icon name="alert" class="size-3.5"/> {{ __('Seçilmiş kontragentin növü bu müqavilə növünə uyğun deyil.') }}
                         </p>
                         @error('kind')<p class="field-error"><x-icon name="alert" class="size-3.5"/> {{ $message }}</p>@enderror
@@ -89,6 +89,37 @@
                     </label>
                 </div>
                 <x-input name="payment_terms" :label="__('Ödəniş şərtləri')" :value="$contract->payment_terms" wrapper="mt-4" :placeholder="__('Məs: 30% avans, qalan təhvildən sonra 15 gün ərzində')"/>
+            </section>
+
+            {{-- Service purchase: the logistics company's terms --}}
+            @php $st = old('service_terms', $contract->service_terms ?? []); @endphp
+            <section class="card p-6" x-show="kind === 'service'" x-cloak>
+                <div class="flex items-center gap-3 mb-5">
+                    <span class="grid place-items-center size-10 rounded-xl bg-saffron-soft text-saffron"><x-icon name="truck" class="size-5"/></span>
+                    <div><h2 class="text-base font-semibold">{{ __('Logistika xidmətinin şərtləri') }}</h2><p class="text-xs text-muted">{{ __('Marşrut, nəqliyyat, tarif, çatdırılma və ödəniş müddəti') }}</p></div>
+                </div>
+                <fieldset :disabled="kind !== 'service'" class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <x-field :label="__('Haradan')" name="service_terms.route_from" class="lg:col-span-2"><input name="service_terms[route_from]" value="{{ $st['route_from'] ?? '' }}" class="input" placeholder="{{ __('Məs: Hamburq, Almaniya') }}"></x-field>
+                    <x-field :label="__('Haraya')" name="service_terms.route_to" class="lg:col-span-2"><input name="service_terms[route_to]" value="{{ $st['route_to'] ?? '' }}" class="input" placeholder="{{ __('Məs: Podolsk, Rusiya') }}"></x-field>
+                    <x-field :label="__('Nəqliyyat növü')" name="service_terms.transport_mode">
+                        <select name="service_terms[transport_mode]" class="input"><option value="">—</option>@foreach(config('glaust.transport_modes') as $k => $l)<option value="{{ $k }}" @selected(($st['transport_mode'] ?? '') === $k)>{{ $l }}</option>@endforeach</select>
+                    </x-field>
+                    <x-field :label="__('Tarif')" name="service_terms.tariff"><input name="service_terms[tariff]" value="{{ isset($st['tariff']) && $st['tariff'] !== null ? $st['tariff'] : '' }}" inputmode="decimal" class="input font-mono text-right" placeholder="0,00"></x-field>
+                    <x-field :label="__('Tarifin valyutası')" name="service_terms.tariff_currency">
+                        <select name="service_terms[tariff_currency]" class="input">@foreach(config('glaust.currencies') as $c)<option value="{{ $c }}" @selected(($st['tariff_currency'] ?? 'EUR') === $c)>{{ $c }}</option>@endforeach</select>
+                    </x-field>
+                    <x-field :label="__('Tarif vahidi (1 … üçün)')" name="service_terms.tariff_unit">
+                        <select name="service_terms[tariff_unit]" class="input">@foreach(config('glaust.tariff_units') as $k => $l)<option value="{{ $k }}" @selected(($st['tariff_unit'] ?? 'truck') === $k)>{{ $l }}</option>@endforeach</select>
+                    </x-field>
+                    <x-field :label="__('Çatdırılma müddəti, gün')" name="service_terms.transit_days"><input type="number" min="0" max="365" name="service_terms[transit_days]" value="{{ $st['transit_days'] ?? '' }}" class="input font-mono"></x-field>
+                    <x-field :label="__('Maks. yük, kq')" name="service_terms.max_weight"><input name="service_terms[max_weight]" value="{{ $st['max_weight'] ?? '' }}" inputmode="decimal" class="input font-mono text-right" placeholder="22000"></x-field>
+                    <x-field :label="__('Ödəniş müddəti, gün')" name="service_terms.payment_days"><input type="number" min="0" max="365" name="service_terms[payment_days]" value="{{ $st['payment_days'] ?? '' }}" class="input font-mono"></x-field>
+                    <x-field :label="__('Ödəniş əsası')" name="service_terms.payment_basis">
+                        <select name="service_terms[payment_basis]" class="input">@foreach(config('glaust.payment_bases') as $k => $l)<option value="{{ $k }}" @selected(($st['payment_basis'] ?? 'act') === $k)>{{ $l }}</option>@endforeach</select>
+                    </x-field>
+                    <label class="flex items-center gap-2 text-sm sm:col-span-2 lg:col-span-2"><input type="hidden" name="service_terms[insurance]" value="0"><input type="checkbox" name="service_terms[insurance]" value="1" @checked(! empty($st['insurance'])) class="size-4 accent-[var(--color-brand)]"> {{ __('Yükün sığortası tarifə daxildir') }}</label>
+                    <label class="flex items-center gap-2 text-sm sm:col-span-2 lg:col-span-2"><input type="hidden" name="service_terms[customs]" value="0"><input type="checkbox" name="service_terms[customs]" value="1" @checked(! empty($st['customs'])) class="size-4 accent-[var(--color-brand)]"> {{ __('Gömrük rəsmiləşdirilməsi tarifə daxildir') }}</label>
+                </fieldset>
             </section>
 
             <section class="card p-6" x-data="repeater(@js(array_values($paymentRows)), { due_date: '', amount: '', note: '', paid: false })">

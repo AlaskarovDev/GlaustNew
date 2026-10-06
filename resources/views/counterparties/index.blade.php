@@ -5,6 +5,7 @@
                 <a href="{{ route('imports.index', ['type' => 'counterparties']) }}" class="btn btn-secondary"><x-icon name="upload" class="size-4"/> {{ __('Import') }}</a>
             @endcan
             @can('crm.create')
+                <a href="{{ route('counterparties.create', ['type' => 'logistics']) }}" class="btn btn-secondary"><x-icon name="truck" class="size-4"/> {{ __('Logistika') }}</a>
                 <a href="{{ route('counterparties.create', ['type' => 'supplier']) }}" class="btn btn-secondary"><x-icon name="building" class="size-4"/> {{ __('Təchizatçı') }}</a>
                 <a href="{{ route('counterparties.create', ['type' => 'customer']) }}" class="btn btn-primary"><x-icon name="user-plus" class="size-4"/> {{ __('Müştəri') }}</a>
             @endcan
@@ -12,7 +13,7 @@
     </x-page-header>
 
     <nav class="flex gap-6 border-b border-line mb-5 overflow-x-auto" aria-label="{{ __('Kontragent növü') }}">
-        @foreach(['' => [__('Hamısı'), $counts['all']], 'customer' => [__('Müştərilər'), $counts['customer']], 'supplier' => [__('Təchizatçılar'), $counts['supplier']]] as $type => [$label, $n])
+        @foreach(['' => [__('Hamısı'), $counts['all']], 'customer' => [__('Müştərilər'), $counts['customer']], 'supplier' => [__('Təchizatçılar'), $counts['supplier']], 'logistics' => [__('Logistika şirkətləri'), $counts['logistics']]] as $type => [$label, $n])
             <a href="{{ route('counterparties.index', array_filter(['type' => $type])) }}" @class(['tab-link', 'is-active' => (string) request('type') === $type])>
                 {{ $label }} <span class="ml-1 text-xs font-mono text-faint">{{ $n }}</span>
             </a>
@@ -54,7 +55,7 @@
                                 </a>
                             </td>
                             <td data-label="{{ __('Növ') }}">
-                                <span @class(['badge', 'badge-teal' => $c->type === 'customer', 'badge-amber' => $c->type === 'supplier', 'badge-violet' => $c->type === 'both'])>{{ $c->typeLabel() }}</span>
+                                <span @class(['badge', 'badge-teal' => $c->type === 'customer', 'badge-amber' => $c->type === 'supplier', 'badge-violet' => $c->type === 'both', 'badge-blue' => $c->type === 'logistics'])>{{ $c->typeLabel() }}</span>
                             </td>
                             <td data-label="{{ __('VÖEN') }}" class="font-mono text-xs">{{ $c->voen ?? '—' }}</td>
                             <td data-label="{{ __('Əlaqə') }}" class="text-xs">

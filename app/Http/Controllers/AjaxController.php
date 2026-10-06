@@ -123,6 +123,8 @@ class AjaxController extends Controller
                 ? Counterparty::query()
                     ->when($request->query('role') === 'customer', fn ($w) => $w->customers())
                     ->when($request->query('role') === 'supplier', fn ($w) => $w->suppliers())
+                    // logistics companies first, then suppliers (older carriers were saved as suppliers)
+                    ->when($request->query('role') === 'logistics', fn ($w) => $w->whereIn('type', ['logistics', 'supplier', 'both'])->orderByRaw("CASE WHEN type = 'logistics' THEN 0 ELSE 1 END"))
                     ->when($q !== '', fn ($w) => $w->where(fn ($x) => $x->where('name', 'like', $like)->orWhere('voen', 'like', $like)))
                     ->orderBy('name')->limit(15)->get()
                     ->map(fn ($c) => ['id' => $c->id, 'label' => $c->name, 'meta' => trim(($c->voen ? __('VÖEN ').$c->voen.' · ' : '').$c->typeLabel()), 'type' => $c->type])
@@ -162,7 +164,7 @@ class AjaxController extends Controller
         $request->merge(['voen' => preg_replace('/\D/', '', (string) $request->input('voen')) ?: null]);
 
         $validator = Validator::make($request->all(), [
-            'type' => ['required', Rule::in(['customer', 'supplier', 'both'])],
+            'type' => ['required', Rule::in(['customer', 'supplier', 'both', 'logistics'])],
             'entity_type' => ['required', Rule::in(['legal', 'individual'])],
             'name' => ['required', 'string', 'max:190'],
             'voen' => ['nullable', 'digits:10', Rule::unique('counterparties', 'voen')->where('company_id', tenant()->id)],

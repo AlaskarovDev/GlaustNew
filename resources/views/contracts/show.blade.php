@@ -58,6 +58,21 @@
                     <div class="flex justify-between gap-4"><dt class="text-muted">{{ __('Məsul şəxs') }}</dt><dd>{{ $contract->responsible?->name ?? '—' }}</dd></div>
                     @if($contract->payment_terms)<div class="sm:col-span-2 flex justify-between gap-4"><dt class="text-muted shrink-0">{{ __('Ödəniş şərtləri') }}</dt><dd class="text-right">{{ $contract->payment_terms }}</dd></div>@endif
                 </dl>
+                @if($contract->kind === 'service' && $contract->service_terms)
+                    @php $st = $contract->service_terms; $na = fn ($v) => $v === null || $v === '' ? '—' : $v; @endphp
+                    <div class="mt-5 pt-5 border-t border-line">
+                        <h3 class="text-sm font-semibold flex items-center gap-2 mb-3"><x-icon name="truck" class="size-4 text-saffron"/> {{ __('Logistika xidmətinin şərtləri') }}</h3>
+                        <dl class="grid sm:grid-cols-2 gap-x-8 gap-y-2.5 text-sm">
+                            <div class="sm:col-span-2 flex justify-between gap-4"><dt class="text-muted">{{ __('Marşrut') }}</dt><dd class="text-right">{{ $na($st['route_from'] ?? null) }} → {{ $na($st['route_to'] ?? null) }}</dd></div>
+                            <div class="flex justify-between gap-4"><dt class="text-muted">{{ __('Nəqliyyat növü') }}</dt><dd>{{ config('glaust.transport_modes.'.($st['transport_mode'] ?? ''), '—') }}</dd></div>
+                            <div class="flex justify-between gap-4"><dt class="text-muted">{{ __('Tarif') }}</dt><dd class="font-mono">@if(isset($st['tariff']) && $st['tariff'] !== null){{ money($st['tariff'], $st['tariff_currency'] ?? 'EUR') }} / {{ config('glaust.tariff_units.'.($st['tariff_unit'] ?? ''), '') }}@else — @endif</dd></div>
+                            <div class="flex justify-between gap-4"><dt class="text-muted">{{ __('Çatdırılma müddəti') }}</dt><dd class="font-mono">{{ isset($st['transit_days']) && $st['transit_days'] !== null && $st['transit_days'] !== '' ? $st['transit_days'].' '.__('gün') : '—' }}</dd></div>
+                            <div class="flex justify-between gap-4"><dt class="text-muted">{{ __('Maks. yük') }}</dt><dd class="font-mono">{{ ! empty($st['max_weight']) ? num($st['max_weight'], 0).' kq' : '—' }}</dd></div>
+                            <div class="flex justify-between gap-4"><dt class="text-muted">{{ __('Ödəniş') }}</dt><dd>{{ isset($st['payment_days']) && $st['payment_days'] !== null && $st['payment_days'] !== '' ? $st['payment_days'].' '.__('gün') : '' }} {{ config('glaust.payment_bases.'.($st['payment_basis'] ?? ''), '') }}</dd></div>
+                            <div class="flex justify-between gap-4"><dt class="text-muted">{{ __('Sığorta / gömrük') }}</dt><dd>{{ ! empty($st['insurance']) ? __('sığorta daxil') : __('sığorta daxil deyil') }} · {{ ! empty($st['customs']) ? __('gömrük daxil') : __('gömrük daxil deyil') }}</dd></div>
+                        </dl>
+                    </div>
+                @endif
             </section>
 
             <section class="card overflow-hidden">

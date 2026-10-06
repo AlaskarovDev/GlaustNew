@@ -27,6 +27,30 @@ class BusinessRulesTest extends TestCase
         ], $over);
     }
 
+    /** Logistics companies: their own CRM type; «Xidmət alışı» contracts only with them, with the service terms. */
+    public function test_service_purchase_contract_only_with_a_logistics_company(): void
+    {
+        $this->fakeCbar();
+        $admin = $this->makeCompany();
+        [$carrier, $supplier] = $this->inTenant($admin, fn () => [$this->party('logistics', 'Trans Logistik OOO'), $this->party('supplier', 'Ellis GmbH')]);
+        $this->actingAs($admin)->get(route('counterparties.index', ['type' => 'logistics']))->assertOk()->assertSee('Trans Logistik OOO')->assertDontSee('Ellis GmbH');
+        $this->get(route('counterparties.create', ['type' => 'logistics']))->assertOk()->assertSee('Daşıma xidməti alırıq');
+        $this->get(route('ajax.lookup', ['counterparties', 'role' => 'supplier']))->assertJsonMissing(['label' => 'Trans Logistik OOO']);
+        $this->get(route('ajax.lookup', ['counterparties', 'role' => 'logistics']))->assertJsonPath('results.0.label', 'Trans Logistik OOO');
+
+        $terms = ['route_from' => 'Hamburq', 'route_to' => 'Podolsk', 'transport_mode' => 'road', 'tariff' => '4 650,50', 'tariff_currency' => 'EUR',
+            'tariff_unit' => 'truck', 'transit_days' => '12', 'payment_days' => '10', 'payment_basis' => 'act', 'insurance' => '1', 'customs' => '0'];
+        $this->post(route('contracts.store'), $this->contract(['counterparty_id' => $supplier->id, 'kind' => 'service', 'service_terms' => $terms]))->assertSessionHasErrors('kind');
+        $this->post(route('contracts.store'), $this->contract(['counterparty_id' => $carrier->id, 'kind' => 'purchase']))->assertSessionHasErrors('kind');
+        $this->post(route('contracts.store'), $this->contract(['counterparty_id' => $carrier->id, 'kind' => 'service', 'subject' => 'Daşıma xidməti', 'service_terms' => $terms]))->assertSessionHasNoErrors();
+
+        $c = $this->inTenant($admin, fn () => \App\Models\Contract::where('kind', 'service')->firstOrFail());
+        $this->assertSame(4650.5, $c->service_terms['tariff']);
+        $this->assertSame(['Hamburq', 'Podolsk', 'truck', true, false], [$c->service_terms['route_from'], $c->service_terms['route_to'], $c->service_terms['tariff_unit'], $c->service_terms['insurance'], $c->service_terms['customs']]);
+        $this->get(route('contracts.show', $c))->assertOk()->assertSee('Logistika xidmətinin şərtləri')->assertSee('Hamburq')->assertSee(money(4650.5, 'EUR'));
+        $this->get(route('contracts.create', ['counterparty_id' => $carrier->id]))->assertOk()->assertSee('Xidmət alışı');
+    }
+
     public function test_contract_requires_an_existing_counterparty(): void
     {
         $this->fakeCbar();

@@ -19,7 +19,7 @@ class Contract extends Model
     protected function casts(): array
     {
         return [
-            'contract_date' => 'date', 'start_date' => 'date', 'end_date' => 'date', 'rate_date' => 'date',
+            'contract_date' => 'date', 'start_date' => 'date', 'end_date' => 'date', 'rate_date' => 'date', 'service_terms' => 'array',
             'amount' => 'decimal:2', 'amount_azn' => 'decimal:2', 'cbar_rate' => 'decimal:8', 'auto_renew' => 'boolean',
         ];
     }

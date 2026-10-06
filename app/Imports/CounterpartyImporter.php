@@ -52,7 +52,7 @@ class CounterpartyImporter extends Importer
     {
         $row = parent::normalise($raw);
         $row['type'] = self::option($row['type'] ?? null, config('glaust.counterparty_types'), null,
-            ['alıcı' => 'customer', 'sifarişçi' => 'customer', 'satıcı' => 'supplier', 'podratçı' => 'supplier', 'daşıyıcı' => 'supplier', 'hər ikisi' => 'both']);
+            ['alıcı' => 'customer', 'sifarişçi' => 'customer', 'satıcı' => 'supplier', 'podratçı' => 'supplier', 'daşıyıcı' => 'logistics', 'logistika' => 'logistics', 'logistika şirkəti' => 'logistics', 'hər ikisi' => 'both']);
         $row['entity_type'] = self::option($row['entity_type'] ?? null, config('glaust.entity_types'), 'legal',
             ['hüquqi' => 'legal', 'fiziki' => 'individual', 'fərdi sahibkar' => 'individual']);
         $row['voen'] = preg_replace('/\D/', '', (string) ($row['voen'] ?? '')) ?: null;
@@ -67,7 +67,7 @@ class CounterpartyImporter extends Importer
     {
         return [
             'name' => ['required', 'string', 'max:190'],
-            'type' => ['required', Rule::in(['customer', 'supplier', 'both'])],
+            'type' => ['required', Rule::in(['customer', 'supplier', 'both', 'logistics'])],
             'entity_type' => ['required', Rule::in(['legal', 'individual'])],
             'voen' => ['nullable', 'digits:10', Rule::unique('counterparties', 'voen')->where('company_id', tenant()->id)],
             'email' => ['nullable', 'email'],

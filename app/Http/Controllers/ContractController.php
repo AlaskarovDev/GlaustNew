@@ -51,7 +51,7 @@ class ContractController extends Controller
         if ($cp = Counterparty::find($request->integer('counterparty_id'))) {
             $contract->counterparty_id = $cp->id;
             $contract->setRelation('counterparty', $cp);
-            $contract->kind = $cp->isCustomer() ? 'sale' : 'purchase';
+            $contract->kind = $cp->isLogistics() ? 'service' : ($cp->isCustomer() ? 'sale' : 'purchase');
         }
         // Opened from a project's buyer / supplier section.
         if ($project = \App\Models\Project::find($request->integer('project_id'))) {
@@ -177,12 +177,30 @@ class ContractController extends Controller
             ->map(fn ($p) => array_merge($p, ['amount' => parse_number($p['amount'] ?? null)]))
             ->values()->all();
         $request->merge(['payments' => $payments]);
+        if (is_array($request->input('service_terms'))) {
+            $st = $request->input('service_terms');
+            $st['tariff'] = isset($st['tariff']) && $st['tariff'] !== '' ? parse_number($st['tariff']) : null;
+            $request->merge(['service_terms' => $st]);
+        }
 
         $data = $request->validate([
             'number' => ['required', 'string', 'max:40', Rule::unique('contracts', 'number')->where('company_id', tenant()->id)->ignore($contract?->id)],
             'contract_date' => ['required', 'date'],
             'counterparty_id' => ['required', 'integer', TenantExists::in('counterparties')],
-            'kind' => ['required', Rule::in(['sale', 'purchase'])],
+            'kind' => ['required', Rule::in(array_keys(config('glaust.contract_kinds')))],
+            'service_terms' => ['nullable', 'array'],
+            'service_terms.route_from' => ['nullable', 'string', 'max:120'],
+            'service_terms.route_to' => ['nullable', 'string', 'max:120'],
+            'service_terms.transport_mode' => ['nullable', Rule::in(array_keys(config('glaust.transport_modes')))],
+            'service_terms.tariff' => ['nullable', 'numeric', 'min:0', 'max:999999999'],
+            'service_terms.tariff_currency' => ['nullable', Rule::in(config('glaust.currencies'))],
+            'service_terms.tariff_unit' => ['nullable', Rule::in(array_keys(config('glaust.tariff_units')))],
+            'service_terms.transit_days' => ['nullable', 'integer', 'min:0', 'max:365'],
+            'service_terms.payment_days' => ['nullable', 'integer', 'min:0', 'max:365'],
+            'service_terms.payment_basis' => ['nullable', Rule::in(array_keys(config('glaust.payment_bases')))],
+            'service_terms.insurance' => ['nullable', 'boolean'],
+            'service_terms.customs' => ['nullable', 'boolean'],
+            'service_terms.max_weight' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
             'subject' => ['required', 'string', 'max:255'],
             'amount' => ['required', 'numeric', 'min:0', 'max:999999999999'],
             'currency' => ['required', Rule::in(config('glaust.currencies'))],
@@ -207,6 +225,22 @@ class ContractController extends Controller
         ], ['payments.*.due_date' => __('Ödəniş tarixi'), 'payments.*.amount' => __('Ödəniş məbləği'), 'parent_id' => __('Əsas müqavilə'), 'responsible_id' => __('Məsul şəxs')]);
 
         $counterparty = Counterparty::findOrFail($data['counterparty_id']);
+        // service purchase only with a logistics company, and a logistics company only signs that
+        if ($data['kind'] === 'service' && ! $counterparty->isLogistics()) {
+            throw ValidationException::withMessages(['kind' => __('Xidmət alışı müqaviləsi yalnız logistika şirkəti ilə bağlanır. «:v1» logistika şirkəti deyil.', ['v1' => $counterparty->name])]);
+        }
+        if ($data['kind'] !== 'service' && $counterparty->isLogistics()) {
+            throw ValidationException::withMessages(['kind' => __('«:v1» logistika şirkətidir — onunla yalnız «Xidmət alışı» müqaviləsi bağlanır.', ['v1' => $counterparty->name])]);
+        }
+        if ($data['kind'] === 'service') {
+            $t = (array) ($data['service_terms'] ?? []);
+            $t['tariff'] = isset($t['tariff']) && $t['tariff'] !== '' ? (float) $t['tariff'] : null;
+            $t['insurance'] = ! empty($t['insurance']);
+            $t['customs'] = ! empty($t['customs']);
+            $data['service_terms'] = $t;
+        } else {
+            $data['service_terms'] = null;
+        }
         if ($data['kind'] === 'sale' && ! $counterparty->isCustomer()) {
             throw ValidationException::withMessages(['kind' => __('«:v1» təchizatçıdır — onunla satış müqaviləsi bağlana bilməz. «Alış» seçin və ya kontragentin növünü dəyişin.', ['v1' => $counterparty->name])]);
         }

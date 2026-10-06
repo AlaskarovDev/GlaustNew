@@ -121,9 +121,12 @@ return [
         ],
     ],
 
-    'counterparty_types' => ['customer' => 'Müştəri', 'supplier' => 'Təchizatçı', 'both' => 'Müştəri və təchizatçı'],
+    'counterparty_types' => ['customer' => 'Müştəri', 'supplier' => 'Təchizatçı', 'both' => 'Müştəri və təchizatçı', 'logistics' => 'Logistika şirkəti'],
     'entity_types' => ['legal' => 'Hüquqi şəxs', 'individual' => 'Fiziki şəxs'],
-    'contract_kinds' => ['sale' => 'Satış (müştəri ilə)', 'purchase' => 'Alış (təchizatçı ilə)'],
+    'contract_kinds' => ['sale' => 'Satış (müştəri ilə)', 'purchase' => 'Alış (təchizatçı ilə)', 'service' => 'Xidmət alışı (logistika şirkəti ilə)'],
+    // A logistics service contract: what is priced per unit
+    'tariff_units' => ['trip' => 'Reys', 'truck' => 'Maşın', 'container' => 'Konteyner', 'pallet' => 'Palet', 'kg' => 'Kq', 'ton' => 'Ton', 'cbm' => 'm³'],
+    'payment_bases' => ['invoice' => 'İnvoysdan sonra', 'act' => 'Aktdan sonra', 'delivery' => 'Təhvildən sonra', 'advance' => 'Avans (yükləmədən əvvəl)'],
     'shipment_directions' => ['import' => 'İdxal', 'export' => 'İxrac', 'domestic' => 'Daxili'],
     'transport_modes' => ['road' => 'Avto', 'rail' => 'Dəmir yolu', 'sea' => 'Dəniz', 'air' => 'Hava'],
     'cost_types' => ['freight' => 'Fraxt', 'customs' => 'Gömrük', 'insurance' => 'Sığorta', 'storage' => 'Anbar', 'other' => 'Digər'],

@@ -18,7 +18,7 @@
     </x-page-header>
 
     <div class="flex flex-wrap items-center gap-2 -mt-4 mb-6">
-        <span @class(['badge', 'badge-teal' => $counterparty->type === 'customer', 'badge-amber' => $counterparty->type === 'supplier', 'badge-violet' => $counterparty->type === 'both'])>{{ $counterparty->typeLabel() }}</span>
+        <span @class(['badge', 'badge-teal' => $counterparty->type === 'customer', 'badge-amber' => $counterparty->type === 'supplier', 'badge-violet' => $counterparty->type === 'both', 'badge-blue' => $counterparty->type === 'logistics'])>{{ $counterparty->typeLabel() }}</span>
         <span class="badge badge-slate">{{ config('glaust.entity_types.'.$counterparty->entity_type) }}</span>
         @if($counterparty->voen)<span class="badge badge-slate font-mono">{{ __('VÖEN') }} {{ $counterparty->voen }}</span>@endif
         @foreach($counterparty->tagList() as $tag)<span class="badge badge-blue">#{{ $tag }}</span>@endforeach

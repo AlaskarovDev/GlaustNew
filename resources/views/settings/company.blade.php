@@ -11,6 +11,8 @@
             <x-input name="phone" :label="__('Telefon')" :value="$company->phone"/>
             <x-input name="email" type="email" :label="__('Email')" :value="$company->email"/>
             <x-input name="address" :label="__('Ünvan')" :value="$company->address"/>
+            <x-input name="director_name" :label="__('Direktorun adı, soyadı')" :value="$company->director_name" wrapper="sm:col-span-2"
+                     :hint="__('Sənədlərdə satıcı tərəfdən imza yerində yazılır: Спецификация — «Генеральный директор …», Proforma və invoice — «General Director …»')"/>
             <x-input name="bank_details" :label="__('Bank rekvizitləri')" :value="$company->bank_details" wrapper="sm:col-span-2" :placeholder="__('Bank, IBAN, SWIFT')"/>
             <x-field :label="__('Loqo')" name="logo" class="sm:col-span-2" :hint="__('PNG/JPG/WEBP, 1 MB-a qədər')">
                 <input type="file" name="logo" accept="image/png,image/jpeg,image/webp" class="input !h-auto py-2 text-sm">

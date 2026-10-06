@@ -107,7 +107,7 @@
 </table>
 
 <table class="sign">
-    <tr><td style="width: 57%;">Signature</td><td class="date"><div style="text-align: left; margin-bottom: 14px;">Date</div>{{ $doc->doc_date->format('d/m/Y') }}</td></tr>
+    <tr><td style="width: 57%;">Signature @if($doc->seller_signatory)<div style="margin-top: 22px; font-size: 9px; font-weight: bold;">{{ $doc->seller_signatory }}</div>@endif</td><td class="date"><div style="text-align: left; margin-bottom: 14px;">Date</div>{{ $doc->doc_date->format('d/m/Y') }}</td></tr>
 </table>
 </body>
 </html>

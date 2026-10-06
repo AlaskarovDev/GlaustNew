@@ -165,6 +165,7 @@ class SalesDocumentController extends Controller
             'seller_block' => ['nullable', 'string', 'max:2000'],
             'customer_block' => ['nullable', 'string', 'max:2000'],
             'notes' => ['nullable', 'string', 'max:2000'],
+            'seller_signatory' => ['nullable', 'string', 'max:255'],
             'pallets' => ['required', 'array', 'min:1', 'max:500'],
             'pallets.*.title' => ['required', 'string', 'max:60'],
             'pallets.*.packing' => ['nullable', 'string', 'max:120'],

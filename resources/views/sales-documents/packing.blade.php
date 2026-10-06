@@ -61,6 +61,7 @@
                         <x-field label="Cont. Date" name="contract_date"><input name="contract_date" value="{{ old('contract_date', $doc->contract_date) }}" placeholder="09.02.2023" class="input font-mono"></x-field>
                     </div>
                     <x-field :label="__('Başlıq (şirkətin adı)')" name="heading"><input name="heading" value="{{ old('heading', $doc->heading) }}" class="input"></x-field>
+                    <x-field label="Signature" name="seller_signatory" :hint="__('Şirkət tənzimləmələrindəki direktordan avtomatik')"><input name="seller_signatory" value="{{ old('seller_signatory', $doc->seller_signatory) }}" placeholder="General Director …" class="input"></x-field>
                 </section>
                 <section class="card p-5 grid sm:grid-cols-2 gap-4">
                     <x-field label="SELLER" name="seller_block"><textarea name="seller_block" rows="6" class="input text-sm">{{ old('seller_block', $doc->seller_block) }}</textarea></x-field>

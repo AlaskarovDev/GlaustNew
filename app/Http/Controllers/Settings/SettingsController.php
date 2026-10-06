@@ -49,6 +49,7 @@ class SettingsController extends Controller
             'email' => ['nullable', 'email', 'max:190'],
             'phone' => ['nullable', 'string', 'max:40'],
             'address' => ['nullable', 'string', 'max:255'],
+            'director_name' => ['nullable', 'string', 'max:120'],
             'bank_details' => ['nullable', 'string', 'max:255'],
             'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:1024'],
         ], [], ['bank_details' => __('Bank rekvizitləri'), 'logo' => __('Loqo')]);
@@ -61,6 +62,9 @@ class SettingsController extends Controller
         }
         unset($data['logo']);
         $company->update($data);
+        if ($company->wasChanged('director_name')) {
+            \App\Support\Invoices\Signatories::syncCompany($company);
+        }
 
         return back()->with('success', __('Şirkət məlumatları yeniləndi.'));
     }

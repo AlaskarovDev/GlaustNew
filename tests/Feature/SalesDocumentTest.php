@@ -161,4 +161,35 @@ class SalesDocumentTest extends TestCase
         ])->assertSessionHasNoErrors();
         $this->get(route('deals.show', $inv->deal_id))->assertOk()->assertSee('Packing List');
     }
+
+    /** Directors from company settings and the buyer's card sign the documents; a later change follows into documents not locked. */
+    public function test_director_names_sign_the_documents(): void
+    {
+        [$admin, $inv] = $this->calculated();
+        $buyer = $this->inTenant($admin, fn () => \App\Models\Deal::find($inv->deal_id)->counterparty);
+        $this->actingAs($admin)->put(route('settings.company.update'), ['name' => 'Glaust Handel', 'director_name' => 'Ələsgərov İ.'])->assertSessionHasNoErrors();
+        $this->inTenant($admin, fn () => $buyer->update(['director_name' => 'Dulinov E. V.']));
+        $this->applyRub($inv);
+
+        $docs = $this->inTenant($admin, fn () => SalesDocument::all()->keyBy('kind'));
+        $this->assertSame('Генеральный директор Ələsgərov İ.', $docs['specification']->seller_signatory);
+        $this->assertSame('Генеральный директор Dulinov E. V.', $docs['specification']->buyer_signatory);
+        $this->assertSame('General Director Ələsgərov İ.', $docs['proforma']->seller_signatory);
+        $this->assertSame('General Director Ələsgərov İ.', $docs['packing']->seller_signatory);
+
+        // the buyer's director changes on its card: the specification follows
+        $this->put(route('counterparties.update', $buyer), [
+            'type' => $buyer->type, 'entity_type' => $buyer->entity_type, 'name' => $buyer->name, 'country' => $buyer->country ?: 'Russia', 'director_name' => 'Petrov A.',
+        ])->assertSessionHasNoErrors();
+        $this->assertSame('Генеральный директор Petrov A.', $this->inTenant($admin, fn () => SalesDocument::find($docs['specification']->id))->buyer_signatory);
+
+        // a hand-typed signatory is kept
+        $this->inTenant($admin, fn () => SalesDocument::find($docs['proforma']->id)->update(['seller_signatory' => 'CFO John Smith']));
+        $this->put(route('settings.company.update'), ['name' => 'Glaust Handel', 'director_name' => 'Yeni Direktor'])->assertSessionHasNoErrors();
+        $this->assertSame('CFO John Smith', $this->inTenant($admin, fn () => SalesDocument::find($docs['proforma']->id))->seller_signatory);
+        $this->assertSame('Генеральный директор Yeni Direktor', $this->inTenant($admin, fn () => SalesDocument::find($docs['specification']->id))->seller_signatory);
+
+        $this->get(route('sales-documents.pdf', $docs['proforma']))->assertOk();
+        $this->get(route('counterparties.edit', $buyer))->assertOk()->assertSee('Direktorun adı, soyadı');
+    }
 }

@@ -107,6 +107,9 @@ class CounterpartyController extends Controller
 
             $counterparty->update($data);
             $this->syncContacts($counterparty, $contacts);
+            if ($counterparty->wasChanged('director_name')) {
+                \App\Support\Invoices\Signatories::syncCounterparty($counterparty);
+            }
         });
 
         return redirect()->route('counterparties.show', $counterparty)->with('success', __('Məlumatlar yeniləndi.'));
@@ -137,6 +140,7 @@ class CounterpartyController extends Controller
             'type' => ['required', Rule::in(array_keys(config('glaust.counterparty_types')))],
             'entity_type' => ['required', Rule::in(array_keys(config('glaust.entity_types')))],
             'name' => ['required', 'string', 'max:190'],
+            'director_name' => ['nullable', 'string', 'max:120'],
             'voen' => ['nullable', 'digits:10', Rule::unique('counterparties', 'voen')->where('company_id', tenant()->id)->ignore($item?->id)],
             'country' => ['required', 'string', 'max:64'],
             'city' => ['nullable', 'string', 'max:64'],

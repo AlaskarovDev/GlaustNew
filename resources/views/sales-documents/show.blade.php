@@ -103,6 +103,9 @@
                                 <textarea name="customer_block" rows="6" class="input text-[13px]">{{ old('customer_block', $doc->customer_block) }}</textarea>
                             </x-field>
                         </div>
+                        <x-field label="Signature" name="seller_signatory" :hint="__('Şirkət tənzimləmələrindəki direktordan avtomatik')">
+                            <input name="seller_signatory" value="{{ old('seller_signatory', $doc->seller_signatory) }}" placeholder="General Director …" class="input">
+                        </x-field>
                     @else
                         <h2 class="text-sm font-semibold">{{ __('İmzalar') }}</h2>
                         <x-field label="От ПРОДАВЦА" name="seller_signatory">

@@ -36,6 +36,8 @@
                     <x-input name="voen" :label="__('VÖEN')" :value="$item->voen" inputmode="numeric" maxlength="10" :placeholder="__('10 rəqəm')" class="font-mono"
                              :hint="__('Eyni VÖEN ilə ikinci kontragent yaradıla bilməz.')"/>
                     <x-input name="name" :label="__('Hüquqi ad / Ad, soyad')" :value="$item->name" required wrapper="sm:col-span-2" :placeholder="__('Məs: «Xəzər Logistika» MMC')"/>
+                    <x-input name="director_name" :label="__('Direktorun adı, soyadı')" :value="$item->director_name" wrapper="sm:col-span-2" :placeholder="__('Məs: Dulinov E. V.')"
+                             :hint="__('Sənədlərdə imza yerində yazılır: Спецификация — «Генеральный директор …», Proforma və invoice — «General Director …»')"/>
                     <x-input name="country" :label="__('Ölkə')" :value="$item->country" required/>
                     <x-input name="city" :label="__('Şəhər')" :value="$item->city"/>
                     <x-input name="address" :label="__('Ünvan')" :value="$item->address" wrapper="sm:col-span-2"/>

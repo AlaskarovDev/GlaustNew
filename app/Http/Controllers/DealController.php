@@ -61,7 +61,7 @@ class DealController extends Controller
     }
 
     /** Tabs follow the order of the work: invoices (buy, calculate, documents) -> income (buyer pays) -> logistics. */
-    public const TABS = ['invoices', 'income', 'logistics', 'contracts'];
+    public const TABS = ['invoices', 'income', 'logistics', 'finance', 'contracts'];
 
     public function show(Request $request, Deal $deal): View
     {

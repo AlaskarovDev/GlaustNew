@@ -136,6 +136,45 @@
                     <div class="px-4 pb-4">
                         <button class="btn btn-primary w-full" :disabled="!bankAmount() || !from || !to || cur === counter"><x-icon name="check" class="size-4"/> {{ __('Əməliyyatı icra et') }}</button>
                     </div>
+                    {{-- the chosen Trade's currency needs: what it still has to pay, bought for it, and after this exchange --}}
+                    <div class="border-t border-line px-4 py-3 text-sm" x-data="{
+                            fx: null, fxDeal: '', fxUrl: '', fxLoading: false,
+                            async loadFx(id) {
+                                this.fx = null; this.fxDeal = '';
+                                if (!id) return;
+                                this.fxLoading = true;
+                                try { const d = await glaustApi('/ajax/deals/' + id + '/fx'); if (d.ok) { this.fx = d.rows; this.fxDeal = d.deal; this.fxUrl = d.url; } } catch (e) {}
+                                this.fxLoading = false;
+                            },
+                            change(r) {
+                                if (this.dir === 'buy' && r.currency === this.cur) return this.num(this.amount);
+                                if (this.dir === 'sell' && r.currency === this.counter) return this.bankAmount() || 0;
+                                if (this.dir === 'sell' && r.currency === this.cur) return -this.num(this.amount);
+                                return 0;
+                            },
+                            after(r) { const have = Math.max(0, r.available) + this.change(r); return { need: Math.max(0, r.due - Math.max(0, have)), extra: r.acquired + Math.max(0, this.change(r)) > 0 ? Math.max(0, have - r.due) : 0 }; },
+                            f: (v) => glaustFmt.fmt(v, 2),
+                         }" x-init="loadFx(@js((string) old('deal_id', ''))); window.addEventListener('combobox-change', (e) => { if (e.detail.name === 'deal_id') loadFx(e.detail.item?.id); })">
+                        <template x-if="fxLoading"><p class="text-xs text-muted">{{ __('Trade-in öhdəlikləri yüklənir…') }}</p></template>
+                        <template x-if="fx && !fxLoading">
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between gap-2"><span class="text-xs font-semibold uppercase tracking-wider text-muted">{{ __('Trade-in valyuta ehtiyacı') }}</span>
+                                    <a :href="fxUrl" class="text-xs text-brand-ink hover:underline" x-text="fxDeal"></a></div>
+                                <template x-if="!fx.length"><p class="text-xs text-muted">{{ __('Bu Trade-in xarici valyutada ödəməli olduğu yoxdur.') }}</p></template>
+                                <template x-for="r in fx" :key="r.currency">
+                                    <div class="rounded-lg bg-surface-2/70 px-3 py-2 space-y-0.5">
+                                        <div class="flex justify-between gap-2"><span class="font-mono font-semibold" x-text="r.currency"></span><span class="text-xs text-muted">{{ \Illuminate\Support\Js::from(__('ödəməliyik')) }} <b class="font-mono text-danger" x-text="f(r.due)"></b></span></div>
+                                        <div class="flex justify-between gap-2 text-xs text-muted" x-show="r.acquired > 0"><span>{{ __('Trade üçün alınıb') }}</span><span class="font-mono" x-text="f(r.acquired) + ' · ' + {{ \Illuminate\Support\Js::from(__('əldə')) }} + ' ' + f(Math.max(0, r.available))"></span></div>
+                                        <div class="flex justify-between gap-2 text-xs" x-show="change(r) !== 0"><span class="text-muted">{{ __('Bu əməliyyatla') }}</span><span class="font-mono" :class="change(r) > 0 ? 'text-success' : 'text-danger'" x-text="(change(r) > 0 ? '+' : '−') + f(Math.abs(change(r)))"></span></div>
+                                        <div class="flex justify-between gap-2 font-medium" x-show="after(r).need > 0"><span class="text-saffron">{{ __('Daha lazım olacaq') }}</span><span class="font-mono text-saffron" x-text="f(after(r).need) + ' ' + r.currency"></span></div>
+                                        <div class="flex justify-between gap-2 font-medium" x-show="after(r).extra > 0"><span class="text-brand-ink">{{ __('Artıq alınmış olacaq') }}</span><span class="font-mono text-brand-ink" x-text="f(after(r).extra) + ' ' + r.currency"></span></div>
+                                        <div class="text-xs text-success font-medium" x-show="after(r).need === 0 && after(r).extra === 0 && r.due > 0">{{ __('Ehtiyac tam ödənir') }}</div>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                        <template x-if="!fx && !fxLoading"><p class="text-[11px] text-faint">{{ __('Trade seçsəniz, onun valyuta ehtiyacı burada görünəcək.') }}</p></template>
+                    </div>
                 </div>
             </div>
         </form>

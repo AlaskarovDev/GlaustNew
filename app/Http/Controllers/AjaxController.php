@@ -58,6 +58,15 @@ class AjaxController extends Controller
         }
     }
 
+    /** A Trade's currency needs for the exchange form: due, bought for it and not spent, still to buy. */
+    public function dealFx(\App\Models\Deal $deal): JsonResponse
+    {
+        abort_unless(request()->user()->can('bank.view') || request()->user()->can('projects.view'), 403);
+
+        return response()->json(['ok' => true, 'deal' => $deal->code, 'url' => route('deals.show', [$deal, 'tab' => 'finance']),
+            'rows' => array_values(\App\Support\DealFinance::currencies($deal))]);
+    }
+
     /** CBAR cross rate of a day for the invoice conversion panel: 1 {from} = ? RUB. */
     public function cross(Request $request, \App\Support\Invoices\RubConverter $converter): JsonResponse
     {

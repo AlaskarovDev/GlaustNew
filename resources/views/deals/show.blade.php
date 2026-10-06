@@ -58,6 +58,7 @@
             'invoices' => ['1', __('Fakturalar'), $supplierInvoices->count() + $deal->salesDocuments->count()],
             'income' => ['2', __('Mədaxillər'), $deal->payments->count()],
             'logistics' => ['3', 'Logistika', $deal->logisticsActs->count()],
+            'finance' => ['₼', __('Maliyyə icmalı'), null],
             'contracts' => [null, __('Müqavilələr'), collect([$deal->purchaseContract, $deal->saleContract])->filter()->count()],
         ];
     @endphp
@@ -80,6 +81,8 @@
         @include('deals._tab-income')
     @elseif($tab === 'logistics')
         @include('deals._tab-logistics')
+    @elseif($tab === 'finance')
+        @include('deals._tab-finance')
     @else
         @include('deals._tab-contracts')
     @endif

@@ -33,7 +33,8 @@ class DealObligations
 
         // Seller: its invoices vs what we paid it.
         $supplierInvoices = $deal->invoices->where('type', 'supplier')->where('status', '!=', 'cancelled');
-        $invoiced = $sum($supplierInvoices, 'total');
+        $supplierInvoices->loadMissing('adjustments');
+        $invoiced = $supplierInvoices->groupBy('currency')->map(fn ($g) => round($g->sum(fn ($i) => $i->adjustedTotal()), 2))->all();
         $paidSeller = $sum($deal->supplierPayments); // in the payment currency, whichever account paid
         $sellerDue = self::minus($invoiced, $paidSeller);
         $sellerOverpaid = $invoiced ? self::minus($paidSeller, $invoiced) : [];   // paid more than its invoices → it owes us

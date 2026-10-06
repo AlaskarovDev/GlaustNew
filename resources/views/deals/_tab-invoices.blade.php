@@ -160,7 +160,52 @@
                     </div>
                     <div class="bg-surface px-5 py-3">
                         <div class="text-xs text-muted mb-1">{{ __('Satıcı') }} · {{ $deal->supplier?->name }}</div>
-                        <div class="flex justify-between gap-3"><span class="text-muted">{{ __('Satıcının fakturaları') }}</span><span class="font-mono">{{ collect($obx['seller']['invoiced'])->map(fn ($v, $c) => money($v, $c))->implode(' · ') ?: '—' }}</span></div>
+                        @php
+                            $sellerInvs = $supplierInvoices->loadMissing('adjustments');
+                            $adjs = $sellerInvs->flatMap->adjustments;
+                        @endphp
+                        <div class="flex justify-between gap-3"><span class="text-muted">{{ __('Satıcının fakturaları') }}</span><span class="font-mono">{{ $sellerInvs->groupBy('currency')->map(fn ($g, $c) => money($g->sum('total'), $c))->implode(' · ') ?: '—' }}</span></div>
+                        @foreach($adjs as $adj)
+                            <div class="flex items-start justify-between gap-3 text-xs" x-data="{ edit: false }">
+                                <div class="min-w-0">
+                                    <span class="text-muted">{{ __('Düzəliş') }} · {{ azdate($adj->adjustment_date) }}</span>
+                                    <div class="text-faint truncate" title="{{ $adj->reason }}">{{ $adj->reason }}</div>
+                                    @can('projects.update')
+                                        <form method="POST" action="{{ route('invoice-adjustments.update', $adj) }}" x-show="edit" x-cloak class="mt-1 flex items-center gap-1">
+                                            @csrf @method('PATCH')
+                                            <input type="hidden" name="adjustment_date" value="{{ $adj->adjustment_date->toDateString() }}"><input type="hidden" name="reason" value="{{ $adj->reason }}">
+                                            <input name="amount" value="{{ (float) $adj->amount }}" class="input !h-7 !w-28 font-mono text-right text-xs" inputmode="decimal">
+                                            <button class="btn btn-primary btn-sm !h-7">{{ __('Saxla') }}</button>
+                                        </form>
+                                    @endcan
+                                </div>
+                                <div class="flex items-center gap-1 shrink-0">
+                                    <span @class(['font-mono', 'text-success' => $adj->amount < 0, 'text-danger' => $adj->amount > 0])>{{ $adj->amount > 0 ? '+' : '−' }}{{ money(abs($adj->amount), $adj->currency) }}</span>
+                                    @can('projects.update')
+                                        <button type="button" class="btn btn-ghost btn-icon btn-sm !size-6" @click="edit = !edit" aria-label="{{ __('Redaktə') }}"><x-icon name="pencil" class="size-3.5"/></button>
+                                        <form method="POST" action="{{ route('invoice-adjustments.destroy', $adj) }}" data-confirm="{{ __('Bu düzəliş silinsin?') }}" data-confirm-action="{{ __('Sil') }}">@csrf @method('DELETE')<button class="btn btn-ghost btn-icon btn-sm !size-6 text-danger" aria-label="{{ __('Sil') }}"><x-icon name="trash" class="size-3.5"/></button></form>
+                                    @endcan
+                                </div>
+                            </div>
+                        @endforeach
+                        @if($adjs->isNotEmpty())
+                            <div class="flex justify-between gap-3"><span class="text-muted">{{ __('Düzəlişdən sonra') }}</span><span class="font-mono">{{ collect($obx['seller']['invoiced'])->map(fn ($v, $c) => money($v, $c))->implode(' · ') }}</span></div>
+                        @endif
+                        @can('projects.update')
+                            @if($sellerInvs->count() === 1)
+                                <details class="text-xs mt-1">
+                                    <summary class="cursor-pointer text-brand-ink">{{ __('Satıcı fakturasına düzəliş əlavə et') }}</summary>
+                                    <form method="POST" action="{{ route('invoices.adjustments.store', $sellerInvs->first()) }}" class="mt-2 grid grid-cols-[1fr_130px_auto] gap-1">
+                                        @csrf
+                                        <input name="reason" class="input !h-8 text-xs" placeholder="{{ __('Səbəb (məs: satıcı az göndərdi)') }}">
+                                        <input name="amount" class="input !h-8 font-mono text-right text-xs" inputmode="decimal" placeholder="−6,08" required>
+                                        <input type="hidden" name="adjustment_date" value="{{ today()->toDateString() }}">
+                                        <button class="btn btn-secondary btn-sm !h-8">{{ __('Əlavə et') }}</button>
+                                    </form>
+                                    <p class="text-faint mt-1">{{ __('Mənfi məbləğ — satıcıya borcumuz azalır (o bizə qaytarır); müsbət — artır.') }}</p>
+                                </details>
+                            @endif
+                        @endcan
                         <div class="flex justify-between gap-3"><span class="text-muted">{{ __('Ödəmişik') }}</span><span class="font-mono">{{ collect($obx['seller']['paid'])->map(fn ($v, $c) => money($v, $c))->implode(' · ') ?: '0' }}</span></div>
                         @if($obx['seller']['overpaid'])
                             <div class="flex justify-between gap-3 font-semibold text-success"><span>{{ __('Satıcı bizə borcludur') }}</span><span class="font-mono">{{ collect($obx['seller']['overpaid'])->map(fn ($v, $c) => money($v, $c))->implode(' · ') }}</span></div>

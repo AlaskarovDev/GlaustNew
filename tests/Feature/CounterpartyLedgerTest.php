@@ -47,7 +47,9 @@ class CounterpartyLedgerTest extends TestCase
 
         $this->inTenant($admin, function () use ($deal, $inv, $carrier) {
             $this->assertSame(['RUB' => -673.14], CounterpartyLedger::for($deal->counterparty)['balances'], 'paid the proforma, the commercial invoice came out lower: we owe the buyer');
-            $this->assertSame(['EUR' => round(50000 - (float) $inv->total, 2)], CounterpartyLedger::for($deal->supplier)['balances'], 'we owe the seller the rest of its invoice');
+            $adj = (float) \App\Models\InvoiceAdjustment::firstOrFail()->amount;   // the seller invoice corrected with the commercial invoice
+            $this->assertLessThan(0, $adj);
+            $this->assertSame(['EUR' => round(50000 - (float) $inv->total - $adj, 2)], CounterpartyLedger::for($deal->supplier)['balances'], 'we owe the seller the rest of its corrected invoice');
             $this->assertSame(['EUR' => -750.0], CounterpartyLedger::for($carrier)['balances'], 'logistics invoice 2 750, paid 2 000');
             $buyer = CounterpartyLedger::for($deal->counterparty)['entries'];
             $correction = collect($buyer)->first(fn ($e) => str_starts_with($e['doc'], 'Düzəliş'));

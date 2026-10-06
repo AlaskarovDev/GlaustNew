@@ -63,7 +63,7 @@ class ProfitCalculator
     /** @return array{deal: Deal, rows: array<int, array>, totals: array} */
     public function deal(Deal $deal): array
     {
-        $deal->loadMissing(['invoices', 'salesDocuments', 'supplierPayments', 'payments', 'expenses', 'logisticsActs.payments', 'currencyExchanges']);
+        $deal->loadMissing(['invoices.adjustments', 'salesDocuments', 'supplierPayments', 'payments', 'expenses', 'logisticsActs.payments', 'currencyExchanges']);
         $invoices = $deal->invoices->where('type', 'supplier')->where('status', '!=', 'cancelled')->sortBy([['invoice_date', 'asc'], ['id', 'asc']])->values();
 
         $weights = [];
@@ -109,7 +109,7 @@ class ProfitCalculator
 
     private function row(Invoice $inv, ?SalesDocument $sale, float $share, float $saleShare, Deal $deal, Collection $acts, Collection $sharedActs, float $otherExpenses, float $incomingDiff, float $exchangeDiff = 0.0): array
     {
-        $D = (float) $inv->total;
+        $D = $inv->adjustedTotal();   // after corrections of the seller's invoice
         $cur = $inv->currency;
         $H = $sale ? $sale->grandTotal() : null;
         $saleCur = $sale?->currency;

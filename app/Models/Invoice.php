@@ -123,6 +123,18 @@ class Invoice extends Model
         return $this->approval_status === 'pending' ? ($this->approval_flow[$this->approval_step]['user_id'] ?? null) : null;
     }
 
+    /** Corrections of this (seller) invoice, oldest first. */
+    public function adjustments(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(InvoiceAdjustment::class)->orderBy('adjustment_date')->orderBy('id');
+    }
+
+    /** The invoice amount after its corrections (what we really owe the seller). */
+    public function adjustedTotal(): float
+    {
+        return round((float) $this->total + (float) $this->adjustments->sum('amount'), 2);
+    }
+
     public function typeLabel(): string
     {
         return __(self::TYPES[$this->type] ?? $this->type);

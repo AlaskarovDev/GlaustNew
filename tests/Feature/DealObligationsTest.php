@@ -96,11 +96,22 @@ class DealObligationsTest extends TestCase
         $this->assertTrue($ob['buyer']['final']);
         $this->assertSame(['RUB' => 673.14], $ob['buyer']['overpaid'], 'we owe the buyer the difference');
         $this->assertSame([], $ob['buyer']['due']);
-        $this->assertSame(['EUR' => 100.0], $ob['seller']['overpaid'], 'the seller owes us');
+        // the seller's invoice was wrong too: corrected by the same share in EUR, automatically
+        $adj = $this->inTenant($admin, fn () => \App\Models\InvoiceAdjustment::firstOrFail());
+        $ciBefore = $this->inTenant($admin, fn () => (float) \App\Models\SalesDocumentRevision::where('kind', 'commercial')->firstOrFail()->total_before);
+        $this->assertSame(round(-673.14 * (float) $inv->total / $ciBefore, 2), (float) $adj->amount);
+        $this->assertSame(['EUR' => round(100 - (float) $adj->amount, 2)], $ob['seller']['overpaid'], 'the seller owes us the overpayment and its correction');
         $this->assertSame(673.14, $ob['payable']['RUB']);
-        $this->assertSame(100.0, $ob['receivable']['EUR']);
+        $this->assertSame(round(100 - (float) $adj->amount, 2), $ob['receivable']['EUR']);
 
         $this->get(route('deals.show', $deal))->assertOk()->assertSee('Alıcıya qaytarmalıyıq')->assertSee('Satıcı bizə borcludur')->assertSee(money(673.14, 'RUB'));
         $this->get(route('obligations.index'))->assertOk()->assertSee('alıcıya qaytarılmalı')->assertSee('satıcı qaytarmalıdır');
+
+        // the automatic correction can be changed to the seller's actual credit note, or removed
+        $this->patch(route('invoice-adjustments.update', $adj), ['amount' => '-6,08', 'adjustment_date' => today()->toDateString(), 'reason' => 'Satıcının kredit notu'])->assertSessionHasNoErrors();
+        $this->assertSame(['EUR' => 106.08], $this->inTenant($admin, fn () => DealObligations::for(Deal::find($deal->id)))['seller']['overpaid']);
+        $this->get(route('deals.show', $deal))->assertOk()->assertSee('Satıcının kredit notu')->assertSee('Düzəlişdən sonra');
+        $this->delete(route('invoice-adjustments.destroy', $adj))->assertSessionHasNoErrors();
+        $this->assertSame(['EUR' => 100.0], $this->inTenant($admin, fn () => DealObligations::for(Deal::find($deal->id)))['seller']['overpaid']);
     }
 }

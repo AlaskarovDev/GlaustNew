@@ -152,6 +152,9 @@ Route::middleware(['auth', 'tenant'])->group(function () {
         Route::post('/invoices/{invoice}/documents', [InvoiceController::class, 'documents'])->name('invoices.documents');
         Route::post('/invoices/{invoice}/approval', [InvoiceApprovalController::class, 'submit'])->name('invoices.approval.submit');
         Route::post('/invoices/{invoice}/approval/decide', [InvoiceApprovalController::class, 'decide'])->name('invoices.approval.decide');
+        Route::post('/invoices/{invoice}/adjustments', [\App\Http\Controllers\InvoiceAdjustmentController::class, 'store'])->name('invoices.adjustments.store');
+        Route::patch('/invoice-adjustments/{adjustment}', [\App\Http\Controllers\InvoiceAdjustmentController::class, 'update'])->name('invoice-adjustments.update');
+        Route::delete('/invoice-adjustments/{adjustment}', [\App\Http\Controllers\InvoiceAdjustmentController::class, 'destroy'])->name('invoice-adjustments.destroy');
         Route::post('/invoices/{invoice}/approval/finalize', [InvoiceApprovalController::class, 'finalize'])->name('invoices.approval.finalize');
         Route::post('/invoices/{invoice}/approval/unlock', [InvoiceApprovalController::class, 'unlock'])->name('invoices.approval.unlock');
         Route::post('/invoices/{invoice}/approval/withdraw', [InvoiceApprovalController::class, 'withdraw'])->name('invoices.approval.withdraw');

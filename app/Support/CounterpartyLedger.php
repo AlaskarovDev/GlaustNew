@@ -51,6 +51,9 @@ class CounterpartyLedger
         $ciDates = SalesDocument::where('kind', 'commercial')->pluck('doc_date', 'source_invoice_id');
         foreach ($sellerInvoices as $inv) {
             $push($ciDates[$inv->id] ?? $inv->approved_at ?? $inv->invoice_date, __('Satıcı fakturası').' '.$inv->number, 'Trade '.$inv->deal?->code, $inv->currency, 0, (float) $inv->total, route('invoices.show', $inv));
+            foreach ($inv->adjustments()->get() as $adj) {   // − : the seller owes us back
+                $push($adj->adjustment_date, __('Düzəliş').' · '.$inv->number, $adj->reason ?? '', $adj->currency, max(0, -(float) $adj->amount), max(0, (float) $adj->amount));
+            }
         }
         $supplierPayments = SupplierPayment::with('deal')->where('counterparty_id', $cp->id)->get();
         foreach ($supplierPayments as $p) {

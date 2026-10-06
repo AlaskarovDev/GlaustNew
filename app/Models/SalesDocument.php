@@ -42,11 +42,21 @@ class SalesDocument extends Model
             }
             $before = (float) $doc->getOriginal('total');
             $after = (float) $doc->total;
-            SalesDocumentRevision::create([
+            $revision = SalesDocumentRevision::create([
                 'sales_document_id' => $doc->id, 'deal_id' => $doc->deal_id, 'kind' => $doc->kind, 'currency' => $doc->currency,
                 'total_before' => $before, 'total_after' => $after, 'difference' => round($after - $before, 2),
                 'reason' => $doc->revisionReason, 'user_id' => auth()->id(),
             ]);
+            // the commercial invoice is corrected because the seller's invoice was wrong: correct that one in
+            // its own currency by the same share (editable / removable on the Trade)
+            if ($doc->kind === 'commercial' && $before > 0 && ($inv = $doc->sourceInvoice)) {
+                InvoiceAdjustment::create([
+                    'invoice_id' => $inv->id, 'deal_id' => $inv->deal_id, 'sales_document_revision_id' => $revision->id,
+                    'adjustment_date' => today(), 'currency' => $inv->currency,
+                    'amount' => round(($after - $before) * (float) $inv->total / $before, 2),
+                    'reason' => 'Commercial Invoice düzəlişi ilə'.($doc->revisionReason ? ': '.$doc->revisionReason : ''), 'created_by' => auth()->id(),
+                ]);
+            }
             $doc->revisionReason = null;
         });
     }

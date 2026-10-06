@@ -245,6 +245,7 @@ class ProfitCalculator
                 'AJ' => $sum('settle', 'AJ'), 'BC' => $sum('settle', 'BC'), 'BB' => $sum('settle', 'BB'), 'BT' => $sum('settle', 'BT')],
             'bank' => ['count' => $count('bank'), 'total' => $sum('bank', 'total'), 'expenses' => $sum('bank', 'expenses'), 'final' => $sum('bank', 'final')],
             'best' => array_sum(array_map(fn ($r) => $r['best'] ?? 0, $rows)),
+            'reached' => count(array_filter($rows, fn ($r) => $r['best'] !== null)),
             'estimated' => (bool) array_filter($rows, fn ($r) => $r['estimated']),
         ];
     }

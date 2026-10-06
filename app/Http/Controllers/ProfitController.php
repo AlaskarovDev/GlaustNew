@@ -18,7 +18,8 @@ class ProfitController extends Controller
     public function index(): View
     {
         $projects = Project::whereHas('deals')->orderByDesc('start_date')->orderByDesc('id')->get()
-            ->map(fn (Project $p) => $this->calc->project($p));
+            ->map(fn (Project $p) => $this->calc->project($p))
+            ->sortByDesc(fn ($p) => [$p['totals']['reached'], $p['totals']['best']])->values();
 
         return view('profit.index', ['projects' => $projects, 'totals' => $this->calc->totals(
             $projects->flatMap(fn ($p) => collect($p['deals'])->flatMap(fn ($d) => $d['rows']))->all()

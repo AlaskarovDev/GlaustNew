@@ -50,6 +50,7 @@ PAGES = [
     ("Yeni bank əməliyyatı", "/bank/transactions/create?direction=in"),
     ("Logistika", "/shipments"),
     ("Hesabatlar", "/reports"),
+    ("Mənfəətin hesablanması", "/profit"),
     ("Gəlir-xərc hesabatı", "/reports/income-expense"),
     ("Import", "/imports"),
     ("Tənzimləmələr", "/settings"),
@@ -188,7 +189,7 @@ def main() -> int:
         ok("giriş səhifəsində konsol təmizdir") if not errs else bad(f"giriş səhifəsi konsol: {errs[0]}")
         shot("00-login")
 
-        js(f"""(() => {{ const f = document.querySelector('form'); f.email.value = {json.dumps(EMAIL)};
+        js(f"""(() => {{ const f = document.querySelector('input[name=email]').form; f.email.value = {json.dumps(EMAIL)};
                  f.password.value = {json.dumps(PASSWORD)}; f.submit(); }})()""")
         if not wait_for("location.pathname === '/' && !!document.querySelector('main#main')", 15):
             bad("giriş alınmadı")

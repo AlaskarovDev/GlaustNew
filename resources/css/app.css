@@ -203,6 +203,27 @@
     .segmented > label.is-on { @apply bg-surface text-brand-ink; box-shadow: var(--shadow-card); }
     .segmented > label:has(:focus-visible) { @apply ring-2 ring-brand/40; }
 
+    /* Mənfəətin hesablanması: four stages from forecast to the final result */
+    .pf-track { @apply grid sm:grid-cols-2 xl:grid-cols-4 gap-3; }
+    .pf-stage { @apply relative rounded-xl border border-line bg-surface p-4 min-w-0; }
+    .pf-stage-head { @apply flex items-center gap-2 text-xs font-medium text-muted; }
+    .pf-stage-no { @apply grid place-items-center size-6 rounded-full bg-surface-2 font-mono text-[11px] font-semibold text-muted; }
+    .pf-stage-value { @apply mt-2 font-mono text-lg font-semibold text-faint tabular-nums; }
+    .pf-stage-foot { @apply mt-1 flex items-center justify-between gap-2 text-[11px] text-faint; }
+    .pf-stage.is-reached { @apply border-brand/30; }
+    .pf-stage.is-reached .pf-stage-no { @apply bg-brand text-white; }
+    .pf-stage.is-reached .pf-stage-value { @apply text-ink; }
+    .pf-stage.is-current { @apply bg-brand-soft/40; box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand) 14%, transparent); }
+    .pf-pos { color: var(--color-success) !important; }
+    .pf-neg { color: var(--color-danger) !important; }
+    .pf-bar { @apply flex gap-1; }
+    .pf-bar > span { @apply h-1.5 flex-1 rounded-full bg-surface-2; }
+    .pf-bar > span.is-on { @apply bg-brand; }
+    .pf-bar > span.is-part { background: color-mix(in srgb, var(--color-brand) 40%, transparent); }
+    .pf-rows > div { @apply flex items-baseline justify-between gap-3 py-1 border-b border-dashed border-line last:border-0; }
+    .pf-rows dt { @apply text-[13px] text-muted; }
+    .pf-rows dd { @apply font-mono text-[13px] font-medium tabular-nums; }
+
     .card-hover { transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease; }
     .card-hover:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); border-color: var(--g-line-strong); }
 

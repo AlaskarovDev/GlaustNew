@@ -12,7 +12,7 @@
     @if($list->isNotEmpty())
         <div class="overflow-x-auto">
             <table class="table-g table-stack">
-                <thead><tr><th>{{ __('Tarix') }}</th><th>{{ $out ? __('Kimə') : __('Kimdən') }}</th><th class="!text-right">{{ __('Məbləğ') }}</th><th>{{ __('Hesab') }}</th><th class="!text-right">{{ __('CBAR kursu') }}</th><th class="!text-right">{{ __('Bankın kursu') }}</th><th class="!text-right">{{ __('AZN (bank)') }}</th><th class="!text-right">{{ __('Fərq') }}</th><th class="w-24"></th></tr></thead>
+                <thead><tr><th>{{ __('Tarix') }}</th><th>{{ $out ? __('Kimə') : __('Kimdən') }}</th><th class="!text-right">{{ __('Məbləğ') }}</th><th>{{ __('Hesab') }}</th><th class="!text-right">{{ __('CBAR kursu') }}</th>@if($out)<th class="!text-right">{{ __('Bankın kursu') }}</th><th class="!text-right">{{ __('AZN (bank)') }}</th><th class="!text-right">{{ __('Fərq') }}</th>@else<th class="!text-right">{{ __('AZN (CBAR)') }}</th>@endif<th class="w-24"></th></tr></thead>
                 <tbody>
                 @foreach($list as $p)
                     @php $diff = round((float) $p->amount_azn - (float) $p->cbar_amount_azn, 2); @endphp
@@ -22,9 +22,13 @@
                         <td data-label="{{ __('Məbləğ') }}" @class(['num font-medium', 'text-danger' => $out, 'text-success' => ! $out])>{{ $out ? '−' : '+' }}{{ money($p->amount, $p->currency) }}</td>
                         <td data-label="{{ __('Hesab') }}" class="text-sm">{{ $p->account?->name }}<div class="text-[11px] text-muted">{{ $p->account?->bank_name }}</div></td>
                         <td data-label="{{ __('CBAR kursu') }}" class="num text-xs">{{ rate_fmt($p->cbar_rate) }}</td>
+                        @if($out)
                         <td data-label="{{ __('Bankın kursu') }}" @class(['num text-xs', 'text-brand-ink font-medium' => (float) $p->applied_rate !== (float) $p->cbar_rate])>{{ rate_fmt($p->applied_rate) }}</td>
                         <td data-label="AZN (bank)" class="num">{{ money($p->amount_azn) }}<div class="text-[11px] text-faint">CBAR: {{ money($p->cbar_amount_azn) }}</div></td>
                         <td data-label="{{ __('Fərq') }}" @class(['num text-xs', 'text-danger' => $diff < 0, 'text-success' => $diff > 0])>{{ $diff > 0 ? '+' : '' }}{{ money($diff) }}</td>
+                        @else
+                        <td data-label="AZN (CBAR)" class="num font-medium">{{ money($p->cbar_amount_azn) }}</td>
+                        @endif
                         <td class="text-right whitespace-nowrap">
                             @can('bank.view')<a href="{{ route('bank.transactions.show', $p) }}" class="btn btn-ghost btn-icon btn-sm" aria-label="{{ __('Bank əməliyyatına bax') }}" title="{{ __('Bank əməliyyatı') }}"><x-icon name="external" class="size-4"/></a>@endcan
                             @can('bank.delete')

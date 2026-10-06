@@ -13,7 +13,7 @@
         <header class="flex flex-wrap items-center justify-between gap-3 px-5 py-4" :class="open && 'border-b border-line'">
             <div>
                 <h2 class="text-base font-semibold flex items-center gap-2">@if($out)<x-icon name="arrow-up-right" class="size-5 text-danger"/> {{ __('Satıcıya ödəniş') }} @else<x-icon name="arrow-down-left" class="size-5 text-success"/> {{ __('Yeni mədaxil') }} @endif</h2>
-                <p class="text-xs text-muted">{{ $out ? __('Satıcıya etdiyimiz ödəniş: məbləğ, tarix, valyuta, silindiyi bank hesabımız və bankın tətbiq etdiyi kurs') : __('Alıcının göndərdiyi ödəniş: məbləğ, tarix, valyuta, daxil olduğu bank hesabımız və bankın tətbiq etdiyi kurs') }}</p>
+                <p class="text-xs text-muted">{{ $out ? __('Satıcıya etdiyimiz ödəniş: məbləğ, tarix, valyuta, silindiyi bank hesabımız və bankın tətbiq etdiyi kurs') : __('Alıcının göndərdiyi ödəniş: məbləğ, tarix, valyuta və daxil olduğu bank hesabımız — AZN ekvivalenti tarixə görə CBAR kursu ilə') }}</p>
             </div>
             <button type="button" class="btn btn-secondary btn-sm" @click="open = !open"><x-icon name="plus" class="size-4" x-show="!open"/><span x-text="open ? {{ \Illuminate\Support\Js::from(__('Bağla')) }} : @js($out ? __('Ödəniş əlavə et') : __('Gələn ödəniş əlavə et'))"></span></button>
         </header>
@@ -61,25 +61,36 @@
                 </div>
             </div>
 
-            {{-- Rates: CBAR of the date (automatic) and the bank's own rate (typed in) --}}
+            {{-- Rates: CBAR of the date (automatic); a payment out also takes the bank's own rate --}}
             <div class="rounded-xl border border-line overflow-hidden" x-show="currency !== 'AZN'">
-                <div class="grid md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-line">
+                <div @class(['grid divide-y md:divide-y-0 md:divide-x divide-line', 'md:grid-cols-3' => $out, 'md:grid-cols-2' => ! $out])>
                     <div class="p-4">
                         <div class="text-xs text-muted">{{ __('CBAR kursu ·') }} <span x-text="date ? date.split('-').reverse().join('.') : '—'"></span></div>
                         <div class="font-mono text-lg font-semibold mt-1"><span x-show="loading" class="text-faint">…</span><span x-show="!loading">1 <span x-text="currency"></span> = <span x-text="rate(cbar)"></span> ₼</span></div>
                         <div class="text-[11px] text-danger" x-show="error" x-text="error"></div>
                     </div>
+                    @if($out)
                     <div class="p-4">
                         <label class="text-xs text-muted" for="applied-rate">{{ __('Bankın kursu (1') }} <span x-text="currency"></span> = ₼)</label>
                         <input id="applied-rate" name="applied_rate" x-model="applied" @input="override = true" inputmode="decimal" class="input mt-1 font-mono text-right @error('applied_rate') is-invalid @enderror">
                         <p class="text-[11px] mt-1" :class="override ? 'text-brand-ink' : 'text-muted'" x-text="override ? {{ \Illuminate\Support\Js::from(__('Əl ilə daxil edilib')) }} : {{ \Illuminate\Support\Js::from(__('CBAR-dan götürülüb — bankın kursu fərqlidirsə dəyişin')) }}"></p>
                     </div>
+                    @endif
+                    @if(! $out)
+                    {{-- incoming: valued at CBAR of the date, no bank rate --}}
+                    <div class="p-4 bg-surface-2/60">
+                        <div class="text-xs text-muted">{{ __('AZN ekvivalenti (CBAR kursu ilə)') }}</div>
+                        <div class="font-mono text-lg font-semibold mt-1" x-text="money(cbarAzn) + ' ₼'"></div>
+                        <div class="text-[11px] text-muted">{{ __('Tarixə görə Mərkəzi Bankın rəsmi kursu') }}</div>
+                    </div>
+                    @else
                     <div class="p-4 bg-surface-2/60">
                         <div class="text-xs text-muted">{{ __('Ekvivalent (bankın kursu ilə)') }}</div>
                         <div class="font-mono text-lg font-semibold mt-1" x-text="money(azn) + ' ₼'"></div>
                         <div class="text-[11px] text-muted">{{ __('CBAR ilə:') }} <span class="font-mono" x-text="money(cbarAzn) + ' ₼'"></span>
                             {{ __('· fərq') }} <span class="font-mono" :class="azn - cbarAzn < 0 ? 'text-danger' : 'text-success'" x-text="(azn - cbarAzn > 0 ? '+' : '') + money(azn - cbarAzn) + ' ₼'"></span></div>
                     </div>
+                    @endif
                 </div>
             </div>
 

@@ -34,7 +34,9 @@ class DealPaymentController extends Controller
         if (! $partyId) {
             return back()->with('error', $out ? __('Əvvəlcə Trade-də satıcını seçin.') : __('Əvvəlcə Trade-də alıcını (məhsulu satdığımız tərəfi) seçin.'));
         }
-        $request->merge(['amount' => parse_number($request->input('amount')), 'applied_rate' => parse_number($request->input('applied_rate'))]);
+        // incoming money is valued at CBAR of its date (no bank rate)
+        $request->merge(['amount' => parse_number($request->input('amount'))]);
+        $request->request->remove('applied_rate');
         $data = $request->validate([
             'transaction_date' => ['required', 'date', 'before_or_equal:today'],
             'currency' => ['required', Rule::in(config('glaust.currencies'))],
@@ -61,7 +63,7 @@ class DealPaymentController extends Controller
                 'deal_id' => $deal->id,
                 'purpose' => ($data['purpose'] ?? null) ?: 'Trade '.$deal->code.($out ? __(' üzrə satıcıya ödəniş') : __(' üzrə alıcının ödənişi')),
                 'reference' => $data['reference'] ?? null,
-            ], $data['applied_rate'] ?? null);
+            ]);
         } catch (RateUnavailable $e) {
             throw ValidationException::withMessages(['transaction_date' => $e->getMessage().__(' Mədaxil yadda saxlanmadı.')]);
         }

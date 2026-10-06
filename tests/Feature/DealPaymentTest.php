@@ -33,12 +33,13 @@ class DealPaymentTest extends TestCase
         return [$admin, $deal, $rub, $eur];
     }
 
-    public function test_payment_is_recorded_with_cbar_and_bank_rate(): void
+    /** Incoming money is valued at CBAR of its date only — there is no bank rate on the form, a posted one is ignored. */
+    public function test_payment_is_recorded_at_cbar_of_its_date(): void
     {
         [$admin, $deal, $rub] = $this->world();
         $day = today()->subDays(2)->toDateString();
         $this->actingAs($admin)->get(route('deals.show', [$deal, 'tab' => 'income']))->assertOk()
-            ->assertSee('Yeni mədaxil')->assertSee('CCL Kontur LLC')->assertSee('Bankın kursu');
+            ->assertSee('Yeni mədaxil')->assertSee('CCL Kontur LLC')->assertSee('AZN ekvivalenti (CBAR kursu ilə)');
 
         $this->post(route('deals.payments.store', $deal), [
             'transaction_date' => $day, 'currency' => 'RUB', 'amount' => '19 800 178,00', 'bank_account_id' => $rub->id, 'applied_rate' => '0,0205', 'reference' => 'PP-77',
@@ -51,8 +52,8 @@ class DealPaymentTest extends TestCase
         $this->assertSame($deal->counterparty_id, $tx->counterparty_id, 'payer = the buyer, automatically');
         $this->assertSame(19800178.0, (float) $tx->amount);
         $this->assertEqualsWithDelta($cbar, (float) $tx->cbar_rate, 1e-8);
-        $this->assertSame(0.0205, (float) $tx->applied_rate);
-        $this->assertSame(round(19800178 * 0.0205, 2), (float) $tx->amount_azn);
+        $this->assertEqualsWithDelta($cbar, (float) $tx->applied_rate, 1e-8, 'no bank rate for incoming money');
+        $this->assertSame(round(19800178 * $cbar, 2), (float) $tx->amount_azn);
         $this->assertSame(round(19800178 * $cbar, 2), (float) $tx->cbar_amount_azn);
 
         $this->get(route('deals.show', [$deal, 'tab' => 'income']))->assertOk()->assertSee('PP-77')->assertSee(money(19800178, 'RUB'));

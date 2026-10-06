@@ -108,6 +108,26 @@ class LogisticsService
                 $rule = BankFee::for($cur, $amount, $cbar, $eur);
                 $fee = isset($p['fee_amount']) && $p['fee_amount'] !== null && $p['fee_amount'] !== '' ? round((float) $p['fee_amount'], 2) : ($rule['amount'] ?? 0.0);
 
+                // the fee (in the part's currency) off the part's account, or off any other account: converted at
+                // CBAR of the day, or at the bank's rate typed for it ("Bank kursu ilə hesabla")
+                $feeAccount = ! empty($p['fee_account_id']) ? BankAccount::findOrFail($p['fee_account_id']) : $account;
+                $feeAccAmount = $fee;
+                $feeBankRate = null;
+                $feeDiffAzn = null;
+                $feeAzn = round($fee * $cbar, 2);
+                if ($feeAccount->id !== $account->id && $feeAccount->currency !== $cur) {
+                    $feeAccRate = $this->rate($feeAccount->currency, $partDate, "parts.$i.fee_account_id");
+                    $feeAccCbar = round($fee * $cbar / $feeAccRate, 2);
+                    if (! empty($p['fee_bank_rate'])) {
+                        $feeBankRate = (float) $p['fee_bank_rate'];
+                        $feeAccAmount = round($fee * $feeBankRate, 2);
+                        $feeDiffAzn = round(($feeAccAmount - $feeAccCbar) * $feeAccRate, 2);
+                    } else {
+                        $feeAccAmount = $feeAccCbar;
+                    }
+                    $feeAzn = round($feeAccAmount * $feeAccRate, 2);   // what the fee really cost, in AZN
+                }
+
                 $tx = $this->ledger->record($account, [
                     'direction' => 'out', 'transaction_date' => $partDate, 'amount' => $amount,
                     'counterparty_id' => $act->counterparty_id, 'project_id' => $act->deal->project_id, 'deal_id' => $act->deal_id,
@@ -120,8 +140,8 @@ class LogisticsService
                     $feeExpense = $this->expenses->save(new Expense, [
                         'expense_date' => $partDate, 'category_id' => $category->id,
                         'description' => 'Bank komissiyası: logistika '.($act->logistics_invoice_number ? 'invoysu '.$act->logistics_invoice_number : 'aktı '.$act->act_number).', köçürmə '.number_format($amount, 2, '.', ' ').' '.$cur,
-                        'amount' => $fee, 'currency' => $cur, 'counterparty_id' => null, 'project_id' => $act->deal->project_id, 'deal_id' => $act->deal_id,
-                        'status' => 'paid', 'payment_method' => 'bank', 'paid_at' => $partDate, 'bank_account_id' => $account->id, 'reference' => $reference,
+                        'amount' => $feeAccAmount, 'currency' => $feeAccount->currency, 'counterparty_id' => null, 'project_id' => $act->deal->project_id, 'deal_id' => $act->deal_id,
+                        'status' => 'paid', 'payment_method' => 'bank', 'paid_at' => $partDate, 'bank_account_id' => $feeAccount->id, 'reference' => $reference,
                     ]);
                 }
                 $out[] = LogisticsPayment::create([
@@ -129,7 +149,9 @@ class LogisticsService
                     'act_amount' => $share, 'currency' => $cur, 'cbar_act_rate' => $cbarAct, 'cbar_rate' => $cbar, 'cbar_cross' => $cross, 'bank_rate' => $bankRate,
                     'amount_cbar' => $amountCbar, 'amount' => $amount, 'difference' => round($amount - $amountCbar, 2), 'difference_azn' => round(($amount - $amountCbar) * $cbar, 2),
                     'fee_percent' => $rule['percent'] ?? null, 'fee_minimum' => $rule['minimum'] ?? null, 'fee_maximum' => $rule['maximum'] ?? null,
-                    'fee_amount' => $fee, 'fee_azn' => round($fee * $cbar, 2), 'fee_eur' => round($fee * $cbar / $eur, 2),
+                    'fee_amount' => $fee, 'fee_azn' => $feeAzn, 'fee_eur' => round($fee * $cbar / $eur, 2),
+                    'fee_account_id' => $feeAccount->id, 'fee_account_currency' => $feeAccount->currency, 'fee_account_amount' => $feeAccAmount,
+                    'fee_bank_rate' => $feeBankRate, 'fee_difference_azn' => $feeDiffAzn,
                     'bank_account_id' => $account->id, 'transaction_id' => $tx->id, 'fee_expense_id' => $feeExpense?->id,
                     'reference' => $reference, 'created_by' => auth()->id(),
                 ]);

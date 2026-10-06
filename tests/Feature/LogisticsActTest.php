@@ -145,6 +145,34 @@ class LogisticsActTest extends TestCase
         $this->assertSame(0, $this->inTenant($admin, fn () => Expense::count()));
     }
 
+    /** The fee of a part off another account: at CBAR, or «Bank kursu ilə hesabla» at a typed rate; the payment account pays only the transfer. */
+    public function test_part_fee_off_another_account_at_the_banks_rate(): void
+    {
+        [$admin, $inv, $deal, $carrier, $rub] = $this->world();
+        $azn = $this->inTenant($admin, fn () => BankAccount::create(['name' => 'AZN', 'bank_name' => 'Turan Bank', 'currency' => 'AZN', 'opening_balance' => 5000, 'is_active' => true]));
+        $this->actingAs($admin);
+        $day = today()->subDay()->toDateString();
+        $rubRate = app(CurrencyRates::class)->rate('RUB', $day);
+        $this->post(route('deals.logistics-acts.store', $deal), ['logistics_invoice_number' => 'LA-30', 'logistics_invoice_date' => $day, 'amount' => '100000', 'currency' => 'RUB',
+            'payment_plan' => 'invoice', 'parts' => [['amount' => '100000', 'currency' => 'RUB', 'bank_account_id' => $rub->id, 'payment_date' => $day,
+                'fee_amount' => '2501', 'fee_account_id' => $azn->id, 'fee_bank_rate' => '0,0175']]])->assertSessionHasNoErrors();
+
+        $lp = $this->inTenant($admin, fn () => LogisticsPayment::firstOrFail());
+        $this->assertSame([2501.0, 43.77, 'AZN'], [(float) $lp->fee_amount, (float) $lp->fee_account_amount, $lp->fee_account_currency], '2 501 RUB × 0.0175');
+        $this->assertSame(round(43.77 - round(2501 * $rubRate, 2), 2), (float) $lp->fee_difference_azn);
+        $this->assertSame(100000.0, $lp->totalDebit(), 'the RUB account pays only the transfer');
+        $this->assertSame(round(2000000 - 100000, 2), $this->inTenant($admin, fn () => BankAccount::find($rub->id)->balance()));
+        $this->assertSame(round(5000 - 43.77, 2), $this->inTenant($admin, fn () => BankAccount::find($azn->id)->balance()));
+        $this->assertSame(['AZN', 43.77], $this->inTenant($admin, fn () => [($e = Expense::findOrFail($lp->fee_expense_id))->currency, (float) $e->amount]));
+
+        // at CBAR when no bank rate is typed
+        $this->post(route('deals.logistics-acts.store', $deal), ['logistics_invoice_number' => 'LA-31', 'logistics_invoice_date' => $day, 'amount' => '1000', 'currency' => 'RUB',
+            'payment_plan' => 'invoice', 'parts' => [['amount' => '1000', 'currency' => 'RUB', 'bank_account_id' => $rub->id, 'payment_date' => $day,
+                'fee_amount' => '100', 'fee_account_id' => $azn->id]]])->assertSessionHasNoErrors();
+        $lp2 = $this->inTenant($admin, fn () => LogisticsPayment::latest('id')->first());
+        $this->assertSame([round(100 * $rubRate, 2), null], [(float) $lp2->fee_account_amount, $lp2->fee_bank_rate]);
+    }
+
     /** Split terms: each part on its own date, valued at that day's CBAR and booked on that day. */
     public function test_split_parts_on_different_dates(): void
     {

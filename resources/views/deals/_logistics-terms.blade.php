@@ -84,8 +84,30 @@
                         </div>
                         <div class="text-[11px] text-faint" x-show="rule(p)"><span x-text="rule(p) && String(rule(p).percent).replace('.', ',')"></span>{{ __('% · ən az') }} <span x-text="rule(p) && fmt(rule(p).min)"></span>{{ __(', ən çox') }} <span x-text="rule(p) && rule(p).max !== null ? fmt(rule(p).max) : '—'"></span> <span x-text="p.currency"></span>
                             <button type="button" class="underline" x-show="p.feeTouched" @click="p.feeTouched = false; p.fee = ''">{{ __('qaydaya qaytar') }}</button></div>
+                        {{-- which account pays the fee; another currency: at CBAR or at the bank's rate typed for it --}}
+                        <div class="mt-2 space-y-1.5">
+                            <label class="text-[11px] text-muted" :for="`lp-fee-acc-${i}`">{{ __('Komissiya hansı hesabdan ödənilsin') }}</label>
+                            <select :id="`lp-fee-acc-${i}`" :name="`parts[${i}][fee_account_id]`" :value="p.feeAccount || p.account" @change="p.feeAccount = $event.target.value === p.account ? '' : $event.target.value; p.feeByBank = false; load()" class="input !h-8 text-sm">
+                                <template x-for="a in accounts" :key="a.id"><option :value="String(a.id)" :selected="String(a.id) === String(p.feeAccount || p.account)" x-text="a.label + ' (' + a.currency + ')'"></option></template>
+                            </select>
+                            <div class="flex gap-1 p-1 rounded-lg bg-surface border border-line" x-show="feeConvertible(p)">
+                                <button type="button" class="flex-1 h-7 rounded-md text-[11px] font-medium" :class="!p.feeByBank ? 'bg-surface-2 text-ink' : 'text-muted'" @click="p.feeByBank = false">{{ __('CBAR kursu ilə') }}</button>
+                                <button type="button" class="flex-1 h-7 rounded-md text-[11px] font-medium" :class="p.feeByBank ? 'bg-surface-2 text-ink' : 'text-muted'" @click="p.feeByBank = true">{{ __('Bank kursu ilə hesabla') }}</button>
+                            </div>
+                            <template x-if="feeBankMode(p)">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="text-[11px] text-muted">{{ __('Komissiya üçün bankın kursu: 1') }} <span x-text="p.currency"></span> = ? <span x-text="feeCur(p)"></span></span>
+                                    <input :name="`parts[${i}][fee_bank_rate]`" x-model="p.feeRate" inputmode="decimal" :placeholder="feeCbar(p) && fee(p) ? rf(feeCbar(p) / fee(p)) : ''" class="input !h-8 w-28 font-mono text-right text-sm" :class="!num(p.feeRate) && 'border-saffron'">
+                                </div>
+                            </template>
+                            <div class="text-[11px] text-muted font-mono" x-show="feeConvertible(p) && feeAcc(p) !== null">= <span class="text-ink font-medium" x-text="fmt(feeAcc(p)) + ' ' + feeCur(p)"></span>
+                                <span x-show="!feeBankMode(p)">{{ __('(CBAR)') }}</span>
+                                <span x-show="feeBankMode(p)">· CBAR: <span x-text="feeCbar(p) !== null ? fmt(feeCbar(p)) : '—'"></span>
+                                    <span x-show="feeDiff(p)" :class="feeDiff(p) > 0 ? 'text-danger' : 'text-success'" x-text="'(' + (feeDiff(p) > 0 ? '−' : '+') + fmt(Math.abs(feeDiff(p))) + ')'"></span></span></div>
+                        </div>
                     </div>
                     <div class="flex justify-between gap-2 pt-2 mt-1 border-t border-line"><dt class="font-semibold">{{ __('Hesabdan silinəcək') }}</dt><dd class="font-mono font-semibold" x-text="debit(p) !== null ? fmt(debit(p)) + ' ' + p.currency : '—'"></dd></div>
+                    <div class="flex justify-between gap-2" x-show="feeSeparate(p) && fee(p)"><dt class="text-muted">{{ __('Komissiya hesabından silinəcək') }}</dt><dd class="font-mono font-semibold" x-text="feeAcc(p) !== null ? fmt(feeAcc(p)) + ' ' + feeCur(p) : '—'"></dd></div>
                     <div class="flex justify-between gap-2 pt-2 mt-1 border-t border-line" x-show="covered(p) !== null">
                         <dt class="text-muted">{{ __('Bundan sonra qalıq borc') }}</dt>
                         <dd class="font-mono font-semibold" :class="remainingAfter(i) < -0.05 ? 'text-danger' : ''" x-text="fmt(remainingAfter(i)) + ' ' + currency"></dd>

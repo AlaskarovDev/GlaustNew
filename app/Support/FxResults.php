@@ -47,6 +47,9 @@ class FxResults
             }
             foreach ($deal->logisticsActs->flatMap->payments as $lp) {
                 $add($lp->payment_date, __('Logistika ödənişi'), (string) $lp->currency, money($lp->amount, $lp->currency).' · '.__('bank kursu ilə'), -(float) $lp->difference_azn, $deal->code);
+                if ($lp->fee_bank_rate) {   // its bank fee converted at the bank's rate
+                    $add($lp->payment_date, __('Bank komissiyası'), (string) $lp->fee_account_currency, money($lp->fee_amount, $lp->currency).' · '.__('bank kursu').' '.rate_fmt($lp->fee_bank_rate), -(float) $lp->fee_difference_azn, $deal->code);
+                }
             }
         }
         usort($rows, fn ($a, $b) => strcmp(self::day($a['date']), self::day($b['date'])));

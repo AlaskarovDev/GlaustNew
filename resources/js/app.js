@@ -414,7 +414,7 @@ Alpine.data('logisticsPay', (cfg) => ({
     },
     load() {
         this.errors = {};
-        const curs = new Set([this.currency, 'RUB', 'EUR', ...this.parts.map((p) => p.currency)]);
+        const curs = new Set([this.currency, 'RUB', 'EUR', ...this.parts.map((p) => p.currency), ...this.parts.map((p) => this.feeCur(p)).filter(Boolean)]);
         const dates = new Set([this.actDate, this.payDate, ...this.parts.map((p) => p.date)]);
         curs.forEach((c) => dates.forEach((d) => this.fetchRate(c, d)));
     },
@@ -444,6 +444,7 @@ Alpine.data('logisticsPay', (cfg) => ({
         return {
             currency, target: target || 0, amount: '', amountTouched: false,
             account: acc ? String(acc.id) : '', bankRate: '', fee: '', feeTouched: false,
+            feeAccount: '', feeByBank: false, feeRate: '',   // '' = the fee comes off the part's own account
             date: this.payDate,
         };
     },
@@ -452,7 +453,7 @@ Alpine.data('logisticsPay', (cfg) => ({
     reflow() { if (this.terms && this.terms !== 'split' && this.parts.length === 1) this.parts[0].target = this.total(); },
     changeCurrency(p) {
         if (!this.options(p.currency).some((a) => String(a.id) === p.account)) p.account = this.options(p.currency)[0] ? String(this.options(p.currency)[0].id) : '';
-        p.bankRate = ''; p.feeTouched = false;
+        p.bankRate = ''; p.feeTouched = false; p.feeByBank = false; p.feeRate = '';
         this.load();
     },
     setAmount(p, v) { p.amount = v; p.amountTouched = v !== ''; },
@@ -492,13 +493,26 @@ Alpine.data('logisticsPay', (cfg) => ({
     },
     fee(p) { return p.feeTouched ? this.num(p.fee) : this.ruleFee(p); },
     feeIn(p, cur) { const a = this.rate(p.currency, this.pd(p)), b = this.rate(cur, this.pd(p)); return a && b ? this.r2(this.fee(p) * a / b) : null; },
-    debit(p) { return this.pay(p) !== null ? this.r2(this.pay(p) + this.fee(p)) : null; },
+    // the fee off another account: converted at CBAR of the day, or at the bank's rate typed for it
+    feeAcct(p) { return this.accounts.find((a) => String(a.id) === String(p.feeAccount || p.account)); },
+    feeCur(p) { return this.feeAcct(p)?.currency; },
+    feeSeparate(p) { return !!p.feeAccount && String(p.feeAccount) !== String(p.account); },
+    feeConvertible(p) { return this.feeSeparate(p) && this.feeCur(p) !== p.currency; },
+    feeBankMode(p) { return this.feeConvertible(p) && p.feeByBank; },
+    feeCbar(p) { return this.feeIn(p, this.feeCur(p)); },
+    feeAcc(p) {
+        if (!this.feeConvertible(p)) return this.fee(p);
+        if (this.feeBankMode(p)) return this.num(p.feeRate) ? this.r2(this.fee(p) * this.num(p.feeRate)) : null;
+        return this.feeCbar(p);
+    },
+    feeDiff(p) { const a = this.feeAcc(p), c = this.feeCbar(p); return this.feeBankMode(p) && a !== null && c !== null ? this.r2(a - c) : null; },
+    debit(p) { return this.pay(p) !== null ? this.r2(this.pay(p) + (this.feeSeparate(p) ? 0 : this.fee(p))) : null; },
     // totals in the act currency
     settled() { return this.r2(this.parts.reduce((s, p) => s + (this.covered(p) ?? 0), 0)); },
     remaining() { return this.r2(this.total() - this.settled()); },
     remainingAfter(i) { return this.r2(this.total() - this.parts.slice(0, i + 1).reduce((s, p) => s + (this.covered(p) ?? 0), 0)); },
     anyEstimate() { return this.parts.some((p) => this.pay(p) !== null && this.estimated(p)); },
-    partOk(p) { return !!p.date && p.date <= this.today && this.pay(p) > 0 && !!p.account && !!this.bank(p); },
+    partOk(p) { return !!p.date && p.date <= this.today && this.pay(p) > 0 && !!p.account && !!this.bank(p) && (!this.fee(p) || this.feeAcc(p) !== null); },
     // the payment date of every part follows the common date until a part gets its own
     syncDates(old) { this.parts.forEach((p) => { if (!p.date || p.date === old) p.date = this.payDate; }); },
     // new invoice: paid now on the invoice date, or on another date that is not in the future

@@ -20,7 +20,8 @@ class LogisticsPayment extends Model
         return ['payment_date' => 'date', 'act_amount' => 'decimal:2', 'cbar_act_rate' => 'decimal:8', 'cbar_rate' => 'decimal:8',
             'cbar_cross' => 'decimal:12', 'bank_rate' => 'decimal:12', 'amount_cbar' => 'decimal:2', 'amount' => 'decimal:2',
             'difference' => 'decimal:2', 'difference_azn' => 'decimal:2', 'fee_percent' => 'decimal:4', 'fee_minimum' => 'decimal:2',
-            'fee_maximum' => 'decimal:2', 'fee_amount' => 'decimal:2', 'fee_azn' => 'decimal:2', 'fee_eur' => 'decimal:2'];
+            'fee_maximum' => 'decimal:2', 'fee_amount' => 'decimal:2', 'fee_azn' => 'decimal:2', 'fee_eur' => 'decimal:2',
+            'fee_account_amount' => 'decimal:2', 'fee_bank_rate' => 'decimal:12', 'fee_difference_azn' => 'decimal:2'];
     }
 
     public function act(): BelongsTo
@@ -43,10 +44,16 @@ class LogisticsPayment extends Model
         return $this->belongsTo(Expense::class, 'fee_expense_id');
     }
 
-    /** Taken from the account: the payment plus the fee on top. */
+    /** The fee came off another account than the payment. */
+    public function feeFromOtherAccount(): bool
+    {
+        return $this->fee_account_id !== null && (int) $this->fee_account_id !== (int) $this->bank_account_id;
+    }
+
+    /** Taken from the payment account: the payment, plus the fee when it came off the same account. */
     public function totalDebit(): float
     {
-        return round((float) $this->amount + (float) $this->fee_amount, 2);
+        return round((float) $this->amount + ($this->feeFromOtherAccount() ? 0 : (float) $this->fee_amount), 2);
     }
 
     public function auditLabel(): string

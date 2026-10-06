@@ -20,7 +20,7 @@
                     <x-input name="code" :label="__('Kod')" :value="$deal->code" required class="font-mono" :hint="__('Avtomatik')"/>
                     <x-input name="title" :label="__('Ad')" :value="$deal->title" required wrapper="sm:col-span-3" :placeholder="__('Məs: Boya partiyası — oktyabr')"/>
                     <x-input name="deal_date" type="date" :label="__('Tarix')" :value="$deal->deal_date" required/>
-                    <x-select name="currency" :label="__('Valyuta')" :options="array_combine(config('glaust.currencies'), config('glaust.currencies'))" :value="$deal->currency" required/>
+                    <x-select name="currency" :label="__('Alış hansı valyuta ilə olacaq')" :hint="__('Satıcıya ödəniş və onun fakturası bu valyutadadır')" :options="array_combine(config('glaust.currencies'), config('glaust.currencies'))" :value="$deal->currency" required/>
                 </div>
             </section>
 

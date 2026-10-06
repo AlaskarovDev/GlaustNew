@@ -129,7 +129,7 @@ class DealController extends Controller
             'sale_contract_file' => ['nullable', 'file', 'mimes:pdf', 'max:'.config('glaust.upload.max_kb')],
             'purchase_contract_file' => ['nullable', 'file', 'mimes:pdf', 'max:'.config('glaust.upload.max_kb')],
         ], ContractSides::rules()), ['code.unique' => __('Bu kodla Trade artıq var.')], ContractSides::attributes() + [
-            'code' => __('Kod'), 'title' => 'Ad', 'deal_date' => __('Tarix'), 'sale_contract_file' => __('Satış müqaviləsinin PDF-i'), 'purchase_contract_file' => __('Alış müqaviləsinin PDF-i'),
+            'code' => __('Kod'), 'title' => 'Ad', 'deal_date' => __('Tarix'), 'currency' => __('Alış valyutası'), 'sale_contract_file' => __('Satış müqaviləsinin PDF-i'), 'purchase_contract_file' => __('Alış müqaviləsinin PDF-i'),
         ]);
 
         foreach (['sale' => 'sale_contract', 'purchase' => 'purchase_contract'] as $side => $prefix) {

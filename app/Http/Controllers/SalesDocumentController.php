@@ -94,7 +94,14 @@ class SalesDocumentController extends Controller
         $data['total'] = $builder->total($data['lines'], $data['freight'] ?? null, $data['insurance'] ?? null);
         $data['updated_by'] = $request->user()->id;
 
+        if ($document->kind === 'commercial') {
+            $document->revisionReason = __('Commercial Invoice əl ilə düzəldildi (kilid açıq ikən)');
+        }
         $document->update($data);
+        if ($document->kind === 'commercial' && $document->source_invoice_id) {
+            // re-forming after the unlock keeps these hand edits
+            \App\Models\InvoiceApproval::create(['invoice_id' => $document->source_invoice_id, 'user_id' => $request->user()->id, 'action' => 'edited']);
+        }
 
         return back()->with('success', $document->title().' '.$document->number.__(' yadda saxlanıldı. PDF son vəziyyətdən yaradılacaq.'));
     }

@@ -50,9 +50,21 @@ class SupplierPaymentService
 
         $rule = SupplierPayment::feeFor($cur, $amount);
         $fee = isset($d['fee_amount']) && $d['fee_amount'] !== null ? round((float) $d['fee_amount'], 2) : ($rule['amount'] ?? 0.0);
-        $feeAcc = round($fee * $bankRate, 2);
 
-        return DB::transaction(function () use ($deal, $d, $account, $cur, $amount, $cbar, $cbarAcc, $cross, $bankRate, $accCbar, $accBank, $diff, $rule, $fee, $feeAcc) {
+        // The fee (in the payment currency) comes off the payment account at the bank's rate, or off any other
+        // account chosen for it — then converted to that account's currency at CBAR of the payment date.
+        $feeAccount = ! empty($d['fee_account_id']) ? BankAccount::findOrFail($d['fee_account_id']) : $account;
+        if ($feeAccount->id === $account->id) {
+            $feeAcc = round($fee * $bankRate, 2);
+        } else {
+            try {
+                $feeAcc = round($fee * $cbar / $this->rates->rate($feeAccount->currency, $d['payment_date']), 2);
+            } catch (RateUnavailable $e) {
+                throw ValidationException::withMessages(['fee_account_id' => $e->getMessage()]);
+            }
+        }
+
+        return DB::transaction(function () use ($deal, $d, $account, $feeAccount, $cur, $amount, $cbar, $cbarAcc, $cross, $bankRate, $accCbar, $accBank, $diff, $rule, $fee, $feeAcc) {
             $purpose = ($d['purpose'] ?? null) ?: 'Trade '.$deal->code.' üzrə satıcıya ödəniş: '.number_format($amount, 2, '.', ' ').' '.$cur;
             $tx = $this->ledger->record($account, [
                 'direction' => 'out', 'transaction_date' => $d['payment_date'], 'amount' => $accBank,
@@ -67,8 +79,8 @@ class SupplierPaymentService
                     'expense_date' => $d['payment_date'], 'category_id' => $category->id,
                     'description' => 'Bank komissiyası: satıcıya köçürmə '.number_format($amount, 2, '.', ' ').' '.$cur.' ('.$deal->code.')'
                         .($rule ? ', '.rtrim(rtrim(number_format($rule['percent'], 2), '0'), '.').'% ('.rtrim(rtrim(number_format($rule['minimum'], 2), '0'), '.').'–'.rtrim(rtrim(number_format($rule['maximum'] ?? 0, 2), '0'), '.').' '.$cur.')' : ''),
-                    'amount' => $feeAcc, 'currency' => $account->currency, 'project_id' => $deal->project_id, 'deal_id' => $deal->id,
-                    'status' => 'paid', 'payment_method' => 'bank', 'paid_at' => $d['payment_date'], 'bank_account_id' => $account->id,
+                    'amount' => $feeAcc, 'currency' => $feeAccount->currency, 'project_id' => $deal->project_id, 'deal_id' => $deal->id,
+                    'status' => 'paid', 'payment_method' => 'bank', 'paid_at' => $d['payment_date'], 'bank_account_id' => $feeAccount->id,
                     'reference' => $d['reference'] ?? null,
                 ]);
             }
@@ -80,6 +92,7 @@ class SupplierPaymentService
                 'cbar_rate' => $cbar, 'cbar_account_rate' => $cbarAcc, 'cbar_cross' => $cross, 'bank_rate' => $bankRate,
                 'account_amount_cbar' => $accCbar, 'account_amount' => $accBank, 'difference' => $diff, 'difference_azn' => round($diff * $cbarAcc, 2),
                 'fee_percent' => $rule['percent'] ?? null, 'fee_minimum' => $rule['minimum'] ?? null, 'fee_maximum' => $rule['maximum'] ?? null, 'fee_amount' => $fee, 'fee_account_amount' => $feeAcc,
+                'fee_account_id' => $feeAccount->id, 'fee_account_currency' => $feeAccount->currency,
                 'transaction_id' => $tx->id, 'fee_expense_id' => $feeExpense?->id,
                 'reference' => $d['reference'] ?? null, 'purpose' => $purpose, 'created_by' => auth()->id(),
             ]);

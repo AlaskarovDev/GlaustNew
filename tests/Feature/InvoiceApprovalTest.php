@@ -83,6 +83,28 @@ class InvoiceApprovalTest extends TestCase
         $this->get(route('deals.show', $inv->deal_id))->assertOk()->assertSee('Proforma və Commercial Invoice məbləğləri')->assertSee('Alıcı qiyməti dəyişdi');
     }
 
+    /** While unlocked the commercial invoice itself can be corrected; re-forming keeps those hand edits. */
+    public function test_commercial_invoice_lines_editable_while_unlocked(): void
+    {
+        [$admin, $inv] = $this->ready(false);
+        $this->actingAs($admin)->post(route('invoices.approval.finalize', $inv))->assertSessionHasNoErrors();
+        $ci = $this->fresh($admin, $inv)->salesDocuments->firstWhere('kind', 'commercial');
+        $payload = fn ($price) => ['number' => $ci->number, 'doc_date' => today()->toDateString(),
+            'lines' => [['description' => 'Corrected goods', 'hs_code' => '3215', 'uom' => 'kg', 'quantity' => '100', 'unit_price' => $price]]];
+
+        $this->put(route('sales-documents.update', $ci), $payload('10'))->assertSessionHas('error');   // locked
+        $this->get(route('sales-documents.show', $ci))->assertOk()->assertSee('Inv. Number')->assertDontSee('Спецификация №');
+
+        $this->post(route('invoices.approval.unlock', $inv), ['reason' => 'Miqdar dəyişdi']);
+        $this->put(route('sales-documents.update', $ci), $payload('12,5'))->assertSessionHasNoErrors();
+        $this->post(route('invoices.approval.finalize', $inv))->assertSessionHasNoErrors();
+
+        $ci = $this->inTenant($admin, fn () => SalesDocument::find($ci->id));
+        $this->assertSame(1250.0, (float) $ci->total, 'hand edits made while unlocked are kept');
+        $this->assertSame('Corrected goods', $ci->lines[0]['description']);
+        $this->assertTrue($ci->isLocked());
+    }
+
     public function test_full_flow_issues_the_commercial_invoice_and_locks_everything(): void
     {
         [$admin, $inv, $first, $second] = $this->ready();

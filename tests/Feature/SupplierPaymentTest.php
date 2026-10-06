@@ -26,6 +26,43 @@ class SupplierPaymentTest extends TestCase
         $this->assertNull(SupplierPayment::feeFor('USD', 1000), 'no rule = no automatic fee');
     }
 
+    /** The fee can come off another account: converted from the payment currency at CBAR of the payment date. */
+    public function test_fee_from_another_account_at_cbar(): void
+    {
+        [$admin, $inv] = $this->calculated();
+        $deal = $this->inTenant($admin, fn () => Deal::find($inv->deal_id));
+        [$eurAcc, $rubAcc] = $this->inTenant($admin, fn () => [
+            BankAccount::create(['name' => 'EUR', 'bank_name' => 'PAŞA Bank', 'currency' => 'EUR', 'opening_balance' => 200000, 'is_active' => true]),
+            BankAccount::create(['name' => 'RUB', 'bank_name' => 'TuranBank', 'currency' => 'RUB', 'opening_balance' => 1000000, 'is_active' => true]),
+        ]);
+        $day = today()->subDays(2)->toDateString();
+        $rates = app(CurrencyRates::class);
+        $toRub = $rates->rate('EUR', $day) / $rates->rate('RUB', $day);
+
+        $this->actingAs($admin)->get(route('deals.show', [$deal, 'tab' => 'income']))->assertOk()->assertSee('Komissiya hansı hesabdan ödənilsin');
+        // 70 575.57 EUR from the EUR account; the fee (0.25 % = 176.44 EUR) from the RUB account
+        $this->post(route('deals.payments.store', $deal), ['direction' => 'out', 'payment_date' => $day, 'currency' => 'EUR', 'amount' => '70 575,57',
+            'bank_account_id' => $eurAcc->id, 'fee_account_id' => $rubAcc->id])->assertSessionHasNoErrors();
+
+        $p = $this->inTenant($admin, fn () => SupplierPayment::firstOrFail());
+        $this->assertSame(176.44, (float) $p->fee_amount);
+        $this->assertSame(round(176.44 * $toRub, 2), (float) $p->fee_account_amount, 'fee in roubles at CBAR');
+        $this->assertSame('RUB', $p->fee_account_currency);
+        $this->assertTrue($p->feeFromOtherAccount());
+        $this->assertSame(70575.57, $p->totalDebit(), 'the EUR account pays only the payment');
+        $this->assertSame(round(200000 - 70575.57, 2), $this->inTenant($admin, fn () => BankAccount::find($eurAcc->id)->balance()));
+        $this->assertSame(round(1000000 - round(176.44 * $toRub, 2), 2), $this->inTenant($admin, fn () => BankAccount::find($rubAcc->id)->balance()));
+        $fee = $this->inTenant($admin, fn () => Expense::findOrFail($p->fee_expense_id));
+        $this->assertSame(['RUB', $rubAcc->id], [$fee->currency, (int) $fee->bank_account_id]);
+
+        // no fee account given: from the payment account, as before
+        $this->post(route('deals.payments.store', $deal), ['direction' => 'out', 'payment_date' => $day, 'currency' => 'EUR', 'amount' => '1000',
+            'bank_account_id' => $eurAcc->id])->assertSessionHasNoErrors();
+        $p2 = $this->inTenant($admin, fn () => SupplierPayment::latest('id')->first());
+        $this->assertFalse($p2->feeFromOtherAccount());
+        $this->assertSame(1025.0, $p2->totalDebit());
+    }
+
     public function test_paying_from_an_azn_account_at_the_banks_rate_with_fee(): void
     {
         [$admin, $inv] = $this->calculated();

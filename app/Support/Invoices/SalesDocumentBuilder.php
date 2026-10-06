@@ -190,6 +190,11 @@ class SalesDocumentBuilder
         if (! $existing) {
             return $this->issueCommercial($invoice);
         }
+        // corrected by hand while the invoice was unlocked: those edits are the commercial invoice
+        $lastUnlock = $invoice->approvals()->where('action', 'unlocked')->max('id');
+        if ($lastUnlock && $invoice->approvals()->where('action', 'edited')->where('id', '>', $lastUnlock)->exists()) {
+            return $existing;
+        }
         $docs = SalesDocument::where('source_invoice_id', $invoice->id)->get()->keyBy('kind');
         $proforma = $docs->get('proforma');
         $base = $docs->get('specification') ?? $proforma;

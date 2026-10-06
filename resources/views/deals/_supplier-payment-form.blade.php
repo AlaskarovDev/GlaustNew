@@ -24,20 +24,24 @@
             amount: @js((string) $payAmount),
             accounts: @js($accountsData),
             account: @js((string) ($mine ? old('bank_account_id', '') : '')),
+            feeAccount: @js((string) ($mine ? old('fee_account_id', '') : '')), feeAccountTouched: {{ $mine && old('fee_account_id') ? 'true' : 'false' }},
             bankRate: @js((string) ($mine ? old('bank_rate', '') : '')),
             fee: @js((string) ($mine ? old('fee_amount', '') : '')), feeTouched: {{ $mine && old('fee_amount') !== null ? 'true' : 'false' }},
             fees: @js($fees),
-            rate: { cur: null, acc: null }, loading: false, error: '',
+            rate: { cur: null, acc: null, fee: null }, loading: false, error: '',
             num(v) { return parseFloat(String(v ?? '').replace(/[\s ]/g, '').replace(',', '.')) || 0; },
             acc() { return this.accounts.find(a => String(a.id) === String(this.account)); },
             accCur() { return this.acc()?.currency; },
             same() { return this.accCur() === this.cur; },
             async one(c) { if (c === 'AZN') return 1; const d = await glaustApi('/ajax/rate?currency=' + c + '&date=' + encodeURIComponent(this.date)); if (!d.ok) throw new Error(d.message); return d.rate; },
+            feeAcct() { return this.accounts.find(a => String(a.id) === String(this.feeAccount)) || this.acc(); },
+            feeCur() { return this.feeAcct()?.currency; },
+            feeSeparate() { return !!this.feeAcct() && !!this.acc() && String(this.feeAcct().id) !== String(this.acc().id); },
             async load() {
-                this.error = ''; this.rate = { cur: null, acc: null };
+                this.error = ''; this.rate = { cur: null, acc: null, fee: null };
                 if (!this.date || !this.accCur()) return;
                 this.loading = true;
-                try { this.rate = { cur: await this.one(this.cur), acc: await this.one(this.accCur()) }; } catch (e) { this.error = e.message; }
+                try { this.rate = { cur: await this.one(this.cur), acc: await this.one(this.accCur()), fee: this.feeCur() ? await this.one(this.feeCur()) : null }; } catch (e) { this.error = e.message; }
                 this.loading = false;
             },
             cross() { return this.rate.cur && this.rate.acc ? this.rate.cur / this.rate.acc : null; },
@@ -48,10 +52,14 @@
             rule() { return this.fees[this.cur] || null; },
             ruleFee() { const r = this.rule(); if (!r) return 0; return Math.round(Math.min(Math.max(this.num(this.amount) * r.percent / 100, r.minimum), r.maximum ?? Infinity) * 100) / 100; },
             feeValue() { return this.feeTouched ? this.num(this.fee) : this.ruleFee(); },
-            feeAcc() { return this.appliedRate() ? Math.round(this.feeValue() * this.appliedRate() * 100) / 100 : null; },
-            total() { return this.accBank() !== null && this.feeAcc() !== null ? Math.round((this.accBank() + this.feeAcc()) * 100) / 100 : null; },
+            // the fee in the currency of the account it comes off: the payment account at the bank's rate, another one at CBAR
+            feeAcc() {
+                if (!this.feeSeparate()) return this.appliedRate() ? Math.round(this.feeValue() * this.appliedRate() * 100) / 100 : null;
+                return this.rate.cur && this.rate.fee ? Math.round(this.feeValue() * this.rate.cur / this.rate.fee * 100) / 100 : null;
+            },
+            total() { if (this.accBank() === null) return null; if (this.feeSeparate()) return this.accBank(); return this.feeAcc() !== null ? Math.round((this.accBank() + this.feeAcc()) * 100) / 100 : null; },
             fmt: (v) => glaustFmt.fmt(v, 2), rf: (v) => glaustFmt.fmtRate(v),
-          }" x-init="if (!account && accounts.length) { const m = accounts.find(a => a.currency === cur); account = String((m || accounts[0]).id); } load(); $watch('date', () => load()); $watch('cur', () => load()); $watch('account', () => load()); $watch('amount', () => { if (!feeTouched) fee = ''; })">
+          }" x-init="if (!account && accounts.length) { const m = accounts.find(a => a.currency === cur); account = String((m || accounts[0]).id); } load(); $watch('date', () => load()); $watch('cur', () => load()); $watch('account', () => { if (!feeAccountTouched) feeAccount = account; load(); }); $watch('feeAccount', () => load()); if (!feeAccount) feeAccount = account; $watch('amount', () => { if (!feeTouched) fee = ''; })">
         @csrf
         <input type="hidden" name="direction" value="out">
         <div class="grid xl:grid-cols-[minmax(0,1fr)_400px] gap-6">
@@ -106,21 +114,34 @@
                 <dl class="px-4 py-3 border-t border-line space-y-2 text-sm">
                     <div class="flex justify-between gap-3"><dt class="text-muted">{{ __('Ödəniş (bank kursu ilə)') }}</dt><dd class="font-mono" x-text="accBank() !== null ? fmt(accBank()) + ' ' + accCur() : '—'"></dd></div>
                     <div class="flex justify-between gap-3" x-show="!same() && diff() !== null"><dt class="text-muted">{{ __('CBAR ilə fərq') }}</dt>
-                        <dd class="font-mono" :class="diff() > {{ __('0 ? \'text-danger\' : (diff()') }} < 0 ? 'text-success' : '')" x-text="(diff() > {{ __('0 ? \'−\' : (diff()') }} < 0 ? '+' : '')) + fmt(Math.abs(diff())) + ' ' + accCur()"></dd></div>
+                        <dd class="font-mono" :class="diff() > 0 ? 'text-danger' : (diff() < 0 ? 'text-success' : '')" x-text="(diff() > 0 ? '−' : (diff() < 0 ? '+' : '')) + fmt(Math.abs(diff())) + ' ' + accCur()"></dd></div>
                 </dl>
                 <div class="px-4 py-3 border-t border-line space-y-1.5">
                     <label class="field-label" for="sp-fee">{{ __('Bank komissiyası (') }}<span x-text="cur"></span>)</label>
                     <input id="sp-fee" name="fee_amount" :value="feeTouched ? fee : (ruleFee() || '')" @input="fee = $event.target.value; feeTouched = true" inputmode="decimal" class="input font-mono text-right">
                     <p class="text-[11px] text-muted" x-show="rule()">{{ __('Qayda:') }} <span x-text="rule() && String(rule().percent).replace('.', ',')"></span>{{ __('% — ən az') }} <span x-text="rule() && rule().minimum"></span>{{ __(', ən çox') }} <span x-text="rule() && rule().maximum"></span> <span x-text="cur"></span>
                         <button type="button" class="underline ml-1" x-show="feeTouched" @click="feeTouched = false; fee = ''">{{ __('qaydaya qaytar') }}</button></p>
-                    <p class="text-[11px] text-muted" x-show="!same() && feeAcc()">= <span class="font-mono" x-text="fmt(feeAcc()) + ' ' + accCur()"></span>{{ __(', «Xərclər»də «Bank komissiyası» kimi yazılacaq') }}</p>
+                    <label class="field-label pt-2" for="sp-fee-account">{{ __('Komissiya hansı hesabdan ödənilsin') }}</label>
+                    <select id="sp-fee-account" name="fee_account_id" x-model="feeAccount" @change="feeAccountTouched = true" class="input @error('fee_account_id') is-invalid @enderror">
+                        <template x-for="a in accounts" :key="a.id"><option :value="String(a.id)" x-text="a.label + ' (' + a.currency + ')'"></option></template>
+                    </select>
+                    @error('fee_account_id')<p class="field-error">{{ $message }}</p>@enderror
+                    <p class="text-[11px] text-muted" x-show="feeAcc() && (feeSeparate() ? feeCur() !== cur : !same())">= <span class="font-mono font-medium text-ink" x-text="fmt(feeAcc()) + ' ' + feeCur()"></span>
+                        <span x-show="feeSeparate()">{{ __('— ödəniş tarixinin CBAR kursları ilə') }} (1 <span x-text="cur"></span> = <span x-text="rate.cur && rate.fee ? rf(rate.cur / rate.fee) : '—'"></span> <span x-text="feeCur()"></span>)</span></p>
+                    <p class="text-[11px] text-muted">{{ __('«Xərclər»də «Bank komissiyası» kimi yazılır.') }}</p>
                 </div>
-                <div class="px-4 py-3 border-t border-line bg-surface-2/60 flex items-baseline justify-between">
-                    <span class="text-sm font-semibold">{{ __('Hesabdan cəmi silinəcək') }}</span>
-                    <span class="font-mono text-lg font-semibold" x-text="total() !== null ? fmt(total()) + ' ' + accCur() : '—'"></span>
+                <div class="px-4 py-3 border-t border-line bg-surface-2/60 space-y-1.5">
+                    <div class="flex items-baseline justify-between gap-3">
+                        <span class="text-sm font-semibold" x-text="feeSeparate() ? {{ \Illuminate\Support\Js::from(__('Ödəniş hesabından silinəcək')) }} : {{ \Illuminate\Support\Js::from(__('Hesabdan cəmi silinəcək')) }}"></span>
+                        <span class="font-mono text-lg font-semibold" x-text="total() !== null ? fmt(total()) + ' ' + accCur() : '—'"></span>
+                    </div>
+                    <div class="flex items-baseline justify-between gap-3" x-show="feeSeparate()">
+                        <span class="text-sm">{{ __('Komissiya hesabından silinəcək') }} <span class="text-xs text-muted" x-text="feeAcct() ? '· ' + feeAcct().label : ''"></span></span>
+                        <span class="font-mono font-semibold" x-text="feeAcc() !== null ? fmt(feeAcc()) + ' ' + feeCur() : '—'"></span>
+                    </div>
                 </div>
                 <div class="p-4">
-                    <button class="btn btn-primary w-full" :disabled="total() === null || !num(amount)"><x-icon name="check" class="size-4"/> {{ __('Ödənişi icra et') }}</button>
+                    <button class="btn btn-primary w-full" :disabled="total() === null || feeAcc() === null || !num(amount)"><x-icon name="check" class="size-4"/> {{ __('Ödənişi icra et') }}</button>
                 </div>
             </div>
         </div>

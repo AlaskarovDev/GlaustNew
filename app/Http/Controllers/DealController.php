@@ -66,7 +66,7 @@ class DealController extends Controller
             'project', 'counterparty', 'supplier', 'responsible',
             'saleContract.attachments.uploader', 'purchaseContract.attachments.uploader',
             'invoices' => fn ($q) => $q->withCount('items'), 'attachments.uploader',
-            'salesDocuments', 'payments.account', 'supplierPayments.account', 'supplierPayments.feeExpense',
+            'salesDocuments', 'payments.account', 'supplierPayments.account', 'supplierPayments.feeAccount', 'supplierPayments.feeExpense',
             'logisticsActs.payments.account', 'logisticsActs.attachments', 'logisticsActs.counterparty', 'logisticsActs.invoice', 'logisticsActs.reminder',
         ]);
         $tab = in_array($request->query('tab'), self::TABS, true) ? $request->query('tab') : 'invoices';

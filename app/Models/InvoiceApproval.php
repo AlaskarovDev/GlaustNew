@@ -13,7 +13,7 @@ class InvoiceApproval extends Model
 
     public const UPDATED_AT = null;
 
-    public const ACTIONS = ['submitted' => ['təsdiqə göndərdi', 'blue'], 'approved' => ['təsdiqlədi', 'green'], 'rejected' => ['geri qaytardı', 'rose'], 'withdrawn' => ['geri çəkdi', 'slate'], 'locked' => ['təsdiqlədi və kilidlədi', 'green'], 'unlocked' => ['müvəqqəti kilidi açdı', 'amber']];
+    public const ACTIONS = ['submitted' => ['təsdiqə göndərdi', 'blue'], 'approved' => ['təsdiqlədi', 'green'], 'rejected' => ['geri qaytardı', 'rose'], 'withdrawn' => ['geri çəkdi', 'slate'], 'locked' => ['təsdiqlədi və kilidlədi', 'green'], 'unlocked' => ['müvəqqəti kilidi açdı', 'amber'], 'edited' => ['Commercial Invoice-də düzəliş etdi', 'blue']];
 
     protected $guarded = ['id', 'company_id'];
 

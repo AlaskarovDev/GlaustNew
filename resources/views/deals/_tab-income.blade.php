@@ -16,9 +16,8 @@
     @empty
         <div class="card p-4 sm:col-span-3" style="--i:0"><div class="text-xs text-muted">{{ __('Gözlənilən') }}</div><div class="text-sm text-muted mt-1">{{ __('Proforma faktura hələ yoxdur — «Fakturalar» addımını tamamlayın.') }}</div></div>
     @endforelse
-    <div class="card p-4" style="--i:3"><div class="text-xs text-muted">{{ __('AZN ekvivalenti (bank kursu)') }}</div><div class="text-xl font-semibold font-mono">{{ money($payments->sum('amount_azn')) }}</div>
-        @php $fx = round($payments->sum('amount_azn') - $payments->sum('cbar_amount_azn'), 2); @endphp
-        <div class="text-[11px] {{ $fx < 0 ? 'text-danger' : 'text-muted' }}">{{ __('CBAR ilə:') }} {{ money($payments->sum('cbar_amount_azn')) }} {{ __('· fərq') }} {{ $fx > 0 ? '+' : '' }}{{ money($fx) }}</div></div>
+    <div class="card p-4" style="--i:3"><div class="text-xs text-muted">{{ __('AZN ekvivalenti (CBAR kursu ilə)') }}</div><div class="text-xl font-semibold font-mono">{{ money($payments->sum('cbar_amount_azn')) }}</div>
+        <div class="text-[11px] text-muted">{{ __('Hər ödəniş öz tarixinin CBAR kursu ilə') }}</div></div>
 </div>
 
 <h3 class="text-xs font-semibold uppercase tracking-wide text-muted mb-3">{{ __('Alıcıdan gələn ödənişlər') }}</h3>

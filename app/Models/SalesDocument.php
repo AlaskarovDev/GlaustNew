@@ -98,7 +98,12 @@ class SalesDocument extends Model
             return false; // pallets and weights are often known only after the invoice is locked
         }
 
-        return $this->kind === 'commercial' || (bool) $this->sourceInvoice?->isLocked();
+        // the commercial invoice is final — except while its invoice is temporarily unlocked for corrections
+        if ($this->kind === 'commercial') {
+            return $this->sourceInvoice?->approval_status !== 'unlocked';
+        }
+
+        return (bool) $this->sourceInvoice?->isLocked();
     }
 
     public function title(): string

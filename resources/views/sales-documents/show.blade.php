@@ -1,12 +1,13 @@
 @php
-    $pf = $doc->isProforma();
+    $pf = in_array($doc->kind, ['proforma', 'commercial'], true);   // English layout (the commercial invoice follows the proforma)
+    $prefix = $doc->kind === 'commercial' ? 'Inv.' : 'Proforma Inv.';
     $canEdit = auth()->user()->can('projects.update') && ! $doc->isLocked();
     $linesData = collect(old('lines', $doc->lines))->map(fn ($l) => [
         'description' => (string) ($l['description'] ?? ''), 'hs_code' => (string) ($l['hs_code'] ?? ''), 'uom' => (string) ($l['uom'] ?? ''),
         'quantity' => isset($l['quantity']) && $l['quantity'] !== '' ? (string) (is_numeric($l['quantity']) ? (float) $l['quantity'] : $l['quantity']) : '',
         'unit_price' => isset($l['unit_price']) && $l['unit_price'] !== '' ? (string) (is_numeric($l['unit_price']) ? (float) $l['unit_price'] : $l['unit_price']) : '',
     ])->values();
-    $proformaTotal = ! $pf && $sibling?->isProforma() ? $sibling->grandTotal() : null;
+    $proformaTotal = $doc->isProforma() ? null : \App\Models\SalesDocument::where('source_invoice_id', $doc->source_invoice_id)->where('kind', 'proforma')->first()?->grandTotal();
 @endphp
 <x-layouts.app :title="$doc->title().' '.$doc->number" wide>
     <x-page-header :title="$doc->title().' № '.$doc->number" :back="route('deals.show', [$doc->deal, 'tab' => 'invoices'])"
@@ -72,10 +73,10 @@
                 <section class="card p-5 space-y-4">
                     <h2 class="text-sm font-semibold">{{ __('Rekvizitlər') }}</h2>
                     <div class="grid sm:grid-cols-2 gap-4">
-                        <x-field :label="$pf ? 'Proforma Inv. Number' : 'Спецификация №'" name="number" required>
+                        <x-field :label="$pf ? $prefix.' Number' : 'Спецификация №'" name="number" required>
                             <input name="number" value="{{ old('number', $doc->number) }}" class="input font-mono @error('number') is-invalid @enderror" required>
                         </x-field>
-                        <x-field :label="$pf ? 'Proforma Inv. Date' : 'Дата (от)'" name="doc_date" required>
+                        <x-field :label="$pf ? $prefix.' Date' : 'Дата (от)'" name="doc_date" required>
                             <input type="date" name="doc_date" value="{{ old('doc_date', $doc->doc_date->toDateString()) }}" class="input @error('doc_date') is-invalid @enderror" required>
                         </x-field>
                         <x-field :label="$pf ? 'Contract N' : 'к Контракту №'" name="contract_number">

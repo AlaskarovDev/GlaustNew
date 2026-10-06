@@ -49,9 +49,25 @@ class SupplierPayment extends Model
     }
 
     /** Total taken from the account: the payment plus the fee. */
+    /** Debited from the payment account: the payment, plus the fee when it was paid from the same account. */
     public function totalDebit(): float
     {
-        return round((float) $this->account_amount + (float) $this->fee_account_amount, 2);
+        return round((float) $this->account_amount + ($this->feeFromOtherAccount() ? 0 : (float) $this->fee_account_amount), 2);
+    }
+
+    public function feeFromOtherAccount(): bool
+    {
+        return $this->fee_account_id && (int) $this->fee_account_id !== (int) $this->bank_account_id;
+    }
+
+    public function feeCurrency(): string
+    {
+        return $this->fee_account_currency ?? $this->account_currency;
+    }
+
+    public function feeAccount(): BelongsTo
+    {
+        return $this->belongsTo(BankAccount::class, 'fee_account_id')->withTrashed();
     }
 
     public function auditLabel(): string

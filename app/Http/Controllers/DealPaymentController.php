@@ -86,14 +86,18 @@ class DealPaymentController extends Controller
             'bank_account_id' => ['required', 'integer', TenantExists::in('bank_accounts')],
             'bank_rate' => ['nullable', 'numeric', 'gt:0', 'max:10000000'],
             'fee_amount' => ['nullable', 'numeric', 'min:0', 'max:999999999'],
+            'fee_account_id' => ['nullable', 'integer', TenantExists::in('bank_accounts')],
             'reference' => ['nullable', 'string', 'max:80'],
             'purpose' => ['nullable', 'string', 'max:255'],
-        ], [], ['payment_date' => __('Tarix'), 'currency' => __('Valyuta'), 'amount' => __('Məbləğ'), 'bank_account_id' => __('Bank hesabı'), 'bank_rate' => __('Bankın kursu'), 'fee_amount' => __('Bank komissiyası')]);
+        ], [], ['payment_date' => __('Tarix'), 'currency' => __('Valyuta'), 'amount' => __('Məbləğ'), 'bank_account_id' => __('Bank hesabı'), 'bank_rate' => __('Bankın kursu'), 'fee_amount' => __('Bank komissiyası'), 'fee_account_id' => __('Komissiya hesabı')]);
 
         $p = app(\App\Services\SupplierPaymentService::class)->pay($deal, $data);
 
         return redirect()->route('deals.show', [$deal, 'tab' => 'income'])->with('success', __('Satıcıya ödəniş: ').money($p->amount, $p->currency)
-            .' · hesabdan silindi: '.money($p->totalDebit(), $p->account_currency).((float) $p->fee_account_amount ? ' (komissiya '.money($p->fee_account_amount, $p->account_currency).' daxil)' : '').'.');
+            .__(' · hesabdan silindi: ').money($p->totalDebit(), $p->account_currency)
+            .((float) $p->fee_account_amount ? ($p->feeFromOtherAccount()
+                ? __(' · komissiya :v1 ayrıca hesabdan', ['v1' => money($p->fee_account_amount, $p->feeCurrency())])
+                : __(' (komissiya :v1 daxil)', ['v1' => money($p->fee_account_amount, $p->account_currency)])) : '').'.');
     }
 
     public function destroySupplierPayment(Deal $deal, \App\Models\SupplierPayment $supplierPayment): RedirectResponse

@@ -22,16 +22,21 @@ class DealObligations
         $deal->loadMissing(['invoices', 'salesDocuments', 'payments', 'supplierPayments', 'logisticsActs.payments', 'logisticsActs.counterparty']);
         $sum = fn ($items, $amount = 'amount') => $items->groupBy('currency')->map(fn ($g) => round($g->sum($amount), 2))->all();
 
-        // Buyer: proforma totals vs what came in.
-        $billed = $deal->salesDocuments->where('kind', 'proforma')->groupBy('currency')->map(fn ($g) => round($g->sum(fn ($d) => $d->grandTotal()), 2))->all();
+        // Buyer: what we bill — the commercial invoice once it exists (it is final), else the proforma —
+        // vs what came in. Paid more than the final bill → we owe the buyer the difference.
+        $proformas = $deal->salesDocuments->where('kind', 'proforma');
+        $billedDocs = $proformas->map(fn ($pf) => $deal->salesDocuments->where('source_invoice_id', $pf->source_invoice_id)->firstWhere('kind', 'commercial') ?? $pf);
+        $billed = $billedDocs->groupBy('currency')->map(fn ($g) => round($g->sum(fn ($d) => $d->grandTotal()), 2))->all();
         $received = $sum($deal->payments);
         $buyerDue = self::minus($billed, $received);
+        $buyerOverpaid = $billed ? self::minus($received, $billed) : [];
 
         // Seller: its invoices vs what we paid it.
         $supplierInvoices = $deal->invoices->where('type', 'supplier')->where('status', '!=', 'cancelled');
         $invoiced = $sum($supplierInvoices, 'total');
         $paidSeller = $sum($deal->supplierPayments); // in the payment currency, whichever account paid
         $sellerDue = self::minus($invoiced, $paidSeller);
+        $sellerOverpaid = $invoiced ? self::minus($paidSeller, $invoiced) : [];   // paid more than its invoices → it owes us
 
         // Logistics: from the moment the buyer's proforma is ready, in the entered currency. Logistics
         // companies' invoices (one or several) replace the estimate as far as they cover it; what they
@@ -56,12 +61,14 @@ class DealObligations
         }
 
         return [
-            'buyer' => ['name' => $deal->counterparty?->name, 'billed' => $billed, 'received' => $received, 'due' => $buyerDue, 'goods' => $received],
-            'seller' => ['name' => $deal->supplier?->name, 'invoiced' => $invoiced, 'paid' => $paidSeller, 'due' => $sellerDue, 'goods' => $paidSeller],
+            'buyer' => ['name' => $deal->counterparty?->name, 'billed' => $billed, 'final' => $billedDocs->contains('kind', 'commercial'), 'received' => $received, 'due' => $buyerDue,
+                'overpaid' => $buyerOverpaid, 'goods' => self::minus($received, $buyerOverpaid)],
+            'seller' => ['name' => $deal->supplier?->name, 'invoiced' => $invoiced, 'paid' => $paidSeller, 'due' => $sellerDue,
+                'overpaid' => $sellerOverpaid, 'goods' => self::minus($paidSeller, $sellerOverpaid)],
             'logistics' => ['items' => $logistics, 'due' => $logisticsDue, 'forecast' => collect($logistics)->contains('mode', 'forecast'),
                 'company' => $acts->map(fn ($a) => $a->counterparty?->name)->filter()->unique()->implode(', ') ?: null, 'paid' => $acts->groupBy('currency')->map(fn ($g) => round($g->sum(fn ($a) => $a->paid()), 2))->filter()->all()],
-            'payable' => self::plus($sellerDue, $logisticsDue),
-            'receivable' => $buyerDue,
+            'payable' => self::plus(self::plus($sellerDue, $logisticsDue), $buyerOverpaid),
+            'receivable' => self::plus($buyerDue, $sellerOverpaid),
         ];
     }
 

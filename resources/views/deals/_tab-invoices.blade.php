@@ -142,6 +142,36 @@
                     </tbody>
                 </table>
             </div>
+            {{-- where the money stands against the final amounts --}}
+            @php $obx = \App\Support\DealObligations::for($deal); @endphp
+            @if($obx['buyer']['received'] || $obx['seller']['paid'])
+                <div class="grid md:grid-cols-2 gap-px bg-line border-t border-line text-sm">
+                    <div class="bg-surface px-5 py-3">
+                        <div class="text-xs text-muted mb-1">{{ __('Alıcı') }} · {{ $deal->counterparty?->name }}</div>
+                        <div class="flex justify-between gap-3"><span class="text-muted">{{ $obx['buyer']['final'] ? __('Commercial Invoice üzrə') : __('Proforma üzrə') }}</span><span class="font-mono">{{ collect($obx['buyer']['billed'])->map(fn ($v, $c) => money($v, $c))->implode(' · ') ?: '—' }}</span></div>
+                        <div class="flex justify-between gap-3"><span class="text-muted">{{ __('Ödəyib') }}</span><span class="font-mono">{{ collect($obx['buyer']['received'])->map(fn ($v, $c) => money($v, $c))->implode(' · ') ?: '0' }}</span></div>
+                        @if($obx['buyer']['overpaid'])
+                            <div class="flex justify-between gap-3 font-semibold text-danger"><span>{{ __('Alıcıya qaytarmalıyıq') }}</span><span class="font-mono">{{ collect($obx['buyer']['overpaid'])->map(fn ($v, $c) => money($v, $c))->implode(' · ') }}</span></div>
+                        @elseif($obx['buyer']['due'])
+                            <div class="flex justify-between gap-3 font-semibold text-success"><span>{{ __('Alıcı bizə borcludur') }}</span><span class="font-mono">{{ collect($obx['buyer']['due'])->map(fn ($v, $c) => money($v, $c))->implode(' · ') }}</span></div>
+                        @else
+                            <div class="text-success font-medium">{{ __('Hesablaşma bağlanıb') }}</div>
+                        @endif
+                    </div>
+                    <div class="bg-surface px-5 py-3">
+                        <div class="text-xs text-muted mb-1">{{ __('Satıcı') }} · {{ $deal->supplier?->name }}</div>
+                        <div class="flex justify-between gap-3"><span class="text-muted">{{ __('Satıcının fakturaları') }}</span><span class="font-mono">{{ collect($obx['seller']['invoiced'])->map(fn ($v, $c) => money($v, $c))->implode(' · ') ?: '—' }}</span></div>
+                        <div class="flex justify-between gap-3"><span class="text-muted">{{ __('Ödəmişik') }}</span><span class="font-mono">{{ collect($obx['seller']['paid'])->map(fn ($v, $c) => money($v, $c))->implode(' · ') ?: '0' }}</span></div>
+                        @if($obx['seller']['overpaid'])
+                            <div class="flex justify-between gap-3 font-semibold text-success"><span>{{ __('Satıcı bizə borcludur') }}</span><span class="font-mono">{{ collect($obx['seller']['overpaid'])->map(fn ($v, $c) => money($v, $c))->implode(' · ') }}</span></div>
+                        @elseif($obx['seller']['due'])
+                            <div class="flex justify-between gap-3 font-semibold text-danger"><span>{{ __('Satıcıya borcluyuq') }}</span><span class="font-mono">{{ collect($obx['seller']['due'])->map(fn ($v, $c) => money($v, $c))->implode(' · ') }}</span></div>
+                        @else
+                            <div class="text-success font-medium">{{ __('Hesablaşma bağlanıb') }}</div>
+                        @endif
+                    </div>
+                </div>
+            @endif
             @if($revisions->isNotEmpty())
                 <ol x-show="history" x-cloak class="border-t border-line divide-y divide-line text-sm">
                     @foreach($revisions as $rv)

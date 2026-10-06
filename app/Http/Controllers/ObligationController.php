@@ -33,9 +33,13 @@ class ObligationController extends Controller
                 'pay' => array_filter([
                     $ob['seller']['due'] ? ['who' => $deal->supplier?->name, 'what' => __('Satıcıya ödəniş'), 'amounts' => $ob['seller']['due']] : null,
                     $ob['logistics']['due'] ? ['who' => $ob['logistics']['company'] ?? __('Logistika şirkəti'), 'what' => __('Logistika xərci').($ob['logistics']['forecast'] ? ' (proqnoz)' : ''), 'amounts' => $ob['logistics']['due']] : null,
+                    $ob['buyer']['overpaid'] ? ['who' => $deal->counterparty?->name, 'what' => __('Artıq ödənilən — alıcıya qaytarılmalı'), 'amounts' => $ob['buyer']['overpaid']] : null,
                 ]),
                 'supply' => $ob['buyer']['goods'] ? [['who' => $deal->counterparty?->name, 'what' => __('Ödədiyi məbləğ qədər məhsul'), 'amounts' => $ob['buyer']['goods']]] : [],
-                'receive' => $ob['buyer']['due'] ? [['who' => $deal->counterparty?->name, 'what' => __('Proforma üzrə qalıq'), 'amounts' => $ob['buyer']['due']]] : [],
+                'receive' => array_values(array_filter([
+                    $ob['buyer']['due'] ? ['who' => $deal->counterparty?->name, 'what' => $ob['buyer']['final'] ? __('Commercial Invoice üzrə qalıq') : __('Proforma üzrə qalıq'), 'amounts' => $ob['buyer']['due']] : null,
+                    $ob['seller']['overpaid'] ? ['who' => $deal->supplier?->name, 'what' => __('Artıq ödənilən — satıcı qaytarmalıdır'), 'amounts' => $ob['seller']['overpaid']] : null,
+                ])),
                 'deliver' => $ob['seller']['goods'] ? [['who' => $deal->supplier?->name, 'what' => __('Ödədiyimiz məbləğ qədər məhsul'), 'amounts' => $ob['seller']['goods']]] : [],
             ];
             foreach ($lines as $key => $items) {

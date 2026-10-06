@@ -31,6 +31,8 @@
             <dl class="ob-rows">
                 <div><dt>{{ __('Bizə ödəməlidir') }}</dt><dd class="text-success">{!! $amounts($ob['buyer']['due'], $ob['buyer']['billed'] ? __('tam ödəyib') : 'proforma yoxdur') !!}</dd></div>
                 <div><dt>{{ __('Ödəyib') }}</dt><dd>{!! $amounts($ob['buyer']['received'], '0') !!}</dd></div>
+                @if($ob['buyer']['final'])<div><dt>{{ __('Commercial Invoice üzrə') }}</dt><dd>{!! $amounts($ob['buyer']['billed']) !!}</dd></div>@endif
+                @if($ob['buyer']['overpaid'])<div><dt class="!text-danger font-medium">{{ __('Alıcıya qaytarmalıyıq') }}</dt><dd class="text-danger">{!! $amounts($ob['buyer']['overpaid']) !!}</dd></div>@endif
             </dl>
             @if($ob['buyer']['billed'])<div class="h-1.5 rounded-full bg-surface-2 overflow-hidden" title="{{ __('Ödənilib') }}"><div class="h-full bg-success rounded-full" style="width: {{ $pct($ob['buyer']['received'], $ob['buyer']['billed']) }}%"></div></div>@endif
             <div class="ob-goods {{ $ob['buyer']['goods'] ? 'is-open' : '' }}">
@@ -48,6 +50,7 @@
             <dl class="ob-rows">
                 <div><dt>{{ __('Ödəməliyik') }}</dt><dd class="text-danger">{!! $amounts($ob['seller']['due'], $ob['seller']['invoiced'] ? __('tam ödənilib') : __('faktura yoxdur')) !!}</dd></div>
                 <div><dt>{{ __('Ödəmişik') }}</dt><dd>{!! $amounts($ob['seller']['paid'], '0') !!}</dd></div>
+                @if($ob['seller']['overpaid'])<div><dt class="!text-success font-medium">{{ __('Satıcı bizə borcludur') }}</dt><dd class="text-success">{!! $amounts($ob['seller']['overpaid']) !!}</dd></div>@endif
             </dl>
             @if($ob['seller']['invoiced'])<div class="h-1.5 rounded-full bg-surface-2 overflow-hidden" title="{{ __('Ödənilib') }}"><div class="h-full bg-saffron rounded-full" style="width: {{ $pct($ob['seller']['paid'], $ob['seller']['invoiced']) }}%"></div></div>@endif
             <div class="ob-goods {{ $ob['seller']['goods'] ? 'is-open' : '' }}">

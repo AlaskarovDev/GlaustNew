@@ -65,6 +65,7 @@ class FxDifferenceTest extends TestCase
         $this->assertSame([['2025-12-31', 2025, 'positive', 183.0], ['2026-01-13', 2026, 'negative', 68.0]],
             array_map(fn ($s) => [$s['date'], $s['year'], $s['kind'], $s['amount']], $r['steps']));
         $this->assertSame(115.0, $r['net'], 'the same 115 in total, only split between the years');
+        $this->assertSame([['date' => '2025-12-31', 'rate' => 1.99, 'azn' => 19900.0]], $r['year_ends']);
         $this->assertEqualsWithDelta($r['paid'], $r['recognized'] + $r['negative'] - $r['positive'], 0.001);
 
         $r = FxDifference::calc('alinmis_avans', 1000, '2025-12-01', 2.00, '2026-01-13', 2.10, [2025 => 2.20], false, true);
@@ -86,7 +87,8 @@ class FxDifferenceTest extends TestCase
         $this->get(route('fx-difference.index', ['end_date' => '2026-04-15', 'lines' => [
             ['case' => 'verilmis_avans', 'currency' => 'EUR', 'amount' => '10000', 'date' => '2025-12-01', 'note' => 'Ellis', 'nonres' => '1'],
         ]]))->assertOk()->assertSee("MƏNFİ (xərc)")->assertSee(money(5000))->assertSee('219.3')->assertSee(money(20000))->assertSee('Ellis')
-            ->assertSee('31.12.2025')->assertSee(money(2000))->assertSee(money(3000));   // advance split on 31.12 by default
+            ->assertSee('31.12.2025')->assertSee(money(2000))->assertSee(money(3000))
+            ->assertSee('İl sonu xərc kimi tanınır')->assertSee(money(18000))->assertSee('Layihə sonunda xərc kimi tanınır');   // advance split on 31.12 by default
         $this->get(route('fx-difference.index', ['end_date' => '2026-04-15', 'revalue_advances' => '0', 'lines' => [
             ['case' => 'verilmis_avans', 'currency' => 'EUR', 'amount' => '10000', 'date' => '2025-12-01'],
         ]]))->assertOk()->assertSee(money(5000))->assertDontSee(money(2000));

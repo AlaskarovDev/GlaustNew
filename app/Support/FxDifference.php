@@ -62,6 +62,7 @@ class FxDifference
         $book = round($amount * $rate1, 2);
         $settled = round($amount * $rate2, 2);
         $steps = [];
+        $yearEnds = [];   // every 31.12 the item was revalued on: its rate and manat value
 
         // + means the company is better off (positive difference)
         $step = function (string $date, string $why, float $from, float $to, float $gain) use (&$steps) {
@@ -86,6 +87,7 @@ class FxDifference
                 $diff = $amount * ($r - $prev);
                 $step("{$y}-12-31", __('31.12 yenidən qiymətləndirmə'), $prev, $r, $asset ? $diff : -$diff);
                 $prev = $r;
+                $yearEnds[] = ['date' => "{$y}-12-31", 'rate' => $r, 'azn' => round($amount * $r, 2)];
             }
             $diff = $amount * ($rate2 - $prev);
             $step($d2->toDateString(), self::dateLabels($case)[1], $prev, $rate2, $asset ? $diff : -$diff);
@@ -112,7 +114,7 @@ class FxDifference
         $taxDate = match ($case) { 'verilmis_avans' => $d1, 'alis_borc' => $d2, default => null };
 
         return [
-            'steps' => $steps, 'positive' => $pos, 'negative' => $neg, 'net' => round($pos - $neg, 2),
+            'steps' => $steps, 'year_ends' => $yearEnds, 'positive' => $pos, 'negative' => $neg, 'net' => round($pos - $neg, 2),
             'book' => $book, 'settled' => $settled, 'recognized' => $recognized, 'paid' => $paid,
             // non-resident service: VAT (agent) and withholding on the manat paid, at the payment day's rate
             'tax_base' => $nonResidentService && $taxDate ? ($case === 'verilmis_avans' ? $book : $settled) : null,

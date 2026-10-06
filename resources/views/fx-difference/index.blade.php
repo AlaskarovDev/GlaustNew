@@ -180,9 +180,20 @@
                         <div class="p-5 grid md:grid-cols-2 gap-5 text-sm">
                             <dl class="space-y-1.5">
                                 <div class="flex justify-between gap-3"><dt class="text-muted">{{ $l1 }} · {{ azdate($row['date']) }}</dt><dd class="font-mono">{{ $rate($row['rate1']) }} → {{ money($c['book']) }}</dd></div>
+                                @foreach($c['year_ends'] as $ye)
+                                    <div class="flex justify-between gap-3"><dt class="text-saffron">{{ __('İl sonu') }} · {{ azdate($ye['date']) }}</dt><dd class="font-mono">{{ $rate($ye['rate']) }} → {{ money($ye['azn']) }}</dd></div>
+                                @endforeach
                                 <div class="flex justify-between gap-3"><dt class="text-muted">{{ $l2 }} · {{ azdate($result['end']) }}</dt><dd class="font-mono">{{ $rate($row['rate2']) }}@if($result['future'])*@endif → {{ money($c['settled']) }}</dd></div>
                                 @if($c['recognized'] !== null)
-                                    <div class="flex justify-between gap-3 border-t border-line pt-1.5"><dt class="text-muted">{{ in_array($row['case'], ['satis_borc', 'alinmis_avans']) ? __('Gəlir kimi tanınır') : __('Xərc kimi tanınır') }}</dt><dd class="font-mono">{{ money($c['recognized']) }}</dd></div>
+                                    @php
+                                        $income = in_array($row['case'], ['satis_borc', 'alinmis_avans']);
+                                        $advance = in_array($row['case'], ['verilmis_avans', 'alinmis_avans']);
+                                    @endphp
+                                    <div class="border-t border-line pt-1.5"></div>
+                                    @foreach($c['year_ends'] as $ye)
+                                        <div class="flex justify-between gap-3"><dt class="text-muted">{{ $advance ? ($income ? __('İl sonu gəlir kimi tanınır') : __('İl sonu xərc kimi tanınır')) : __('İl sonu borcun manat dəyəri') }} · {{ azdate($ye['date']) }}</dt><dd class="font-mono">{{ money($ye['azn']) }}</dd></div>
+                                    @endforeach
+                                    <div class="flex justify-between gap-3"><dt class="text-muted">{{ $c['year_ends'] && $advance ? ($income ? __('Layihə sonunda gəlir kimi tanınır') : __('Layihə sonunda xərc kimi tanınır')) : ($income ? __('Gəlir kimi tanınır') : __('Xərc kimi tanınır')) }} · {{ azdate($advance ? $result['end'] : $row['date']) }}</dt><dd class="font-mono font-semibold">{{ money($c['recognized']) }}</dd></div>
                                     <div class="flex justify-between gap-3"><dt class="text-muted">{{ in_array($row['case'], ['satis_borc', 'alinmis_avans']) ? __('Faktiki daxil olan manat') : __('Faktiki ödənilən manat') }}</dt><dd class="font-mono">{{ money($c['paid']) }}</dd></div>
                                 @endif
                                 @if($c['tax_base'] !== null)

@@ -64,6 +64,14 @@ class LogisticsService
     public function pay(LogisticsAct $act, array $parts, string $date, ?string $reference = null): array
     {
         $act->loadMissing('payments', 'deal', 'counterparty');
+        // The bank's rate typed as "1 AZN = ? RUB": the act currency goes through CBAR of the part's date
+        // (1 EUR = CBAR EUR in AZN × RUB per AZN).
+        foreach ($parts as $i => &$p) {
+            if (! empty($p['bank_rate_azn']) && $p['currency'] !== $act->currency && $p['currency'] !== 'AZN') {
+                $p['bank_rate'] = $this->rate($act->currency, ! empty($p['payment_date']) ? $p['payment_date'] : $date, "parts.$i.payment_date") * (float) $p['bank_rate_azn'];
+            }
+        }
+        unset($p);
         // A part given as an amount in its own currency settles amount / bank rate of the act.
         foreach ($parts as $i => &$p) {
             if ((! isset($p['act_amount']) || $p['act_amount'] === null) && isset($p['amount'])) {

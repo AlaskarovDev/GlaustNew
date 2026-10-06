@@ -443,7 +443,7 @@ Alpine.data('logisticsPay', (cfg) => ({
         const acc = this.accounts.find((a) => a.currency === currency);
         return {
             currency, target: target || 0, amount: '', amountTouched: false,
-            account: acc ? String(acc.id) : '', bankRate: '', fee: '', feeTouched: false,
+            account: acc ? String(acc.id) : '', bankRate: '', bankRateAzn: '', fee: '', feeTouched: false,
             feeAccount: '', feeByBank: false, feeRate: '',   // '' = the fee comes off the part's own account
             date: this.payDate,
         };
@@ -453,7 +453,7 @@ Alpine.data('logisticsPay', (cfg) => ({
     reflow() { if (this.terms && this.terms !== 'split' && this.parts.length === 1) this.parts[0].target = this.total(); },
     changeCurrency(p) {
         if (!this.options(p.currency).some((a) => String(a.id) === p.account)) p.account = this.options(p.currency)[0] ? String(this.options(p.currency)[0].id) : '';
-        p.bankRate = ''; p.feeTouched = false; p.feeByBank = false; p.feeRate = '';
+        p.bankRate = ''; p.bankRateAzn = ''; p.feeTouched = false; p.feeByBank = false; p.feeRate = '';
         this.load();
     },
     setAmount(p, v) { p.amount = v; p.amountTouched = v !== ''; },
@@ -462,7 +462,14 @@ Alpine.data('logisticsPay', (cfg) => ({
     same(p) { return p.currency === this.currency; },
     pd(p) { return p.date || this.payDate; },
     cross(p) { if (!p.date) return null; const a = this.rate(this.currency, p.date), b = this.rate(p.currency, p.date); return a && b ? a / b : null; },
-    bank(p) { return this.same(p) ? 1 : (this.num(p.bankRate) || null); },
+    // paid in a currency other than manat: the bank's rate is typed as "1 AZN = ? RUB" and the act currency
+    // is taken at CBAR of the day (1 EUR = CBAR EUR in AZN × RUB per AZN); paid in manat: "1 EUR = ? AZN"
+    perAzn(p) { return !this.same(p) && p.currency !== 'AZN'; },
+    bank(p) {
+        if (this.same(p)) return 1;
+        if (this.perAzn(p)) { const a = this.rate(this.currency, p.date), x = this.num(p.bankRateAzn); return a && x ? a * x : null; }
+        return this.num(p.bankRate) || null;
+    },
     // the rate used for this part: the bank's when entered, otherwise CBAR (estimate)
     used(p) { return this.bank(p) ?? this.cross(p); },
     estimated(p) { return !this.same(p) && !this.bank(p); },

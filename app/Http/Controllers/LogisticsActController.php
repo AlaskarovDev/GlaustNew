@@ -142,7 +142,7 @@ class LogisticsActController extends Controller
     {
         $parts = array_values(array_filter((array) $request->input('parts', []), fn ($p) => is_array($p) && (trim((string) ($p['amount'] ?? '')) !== '' || trim((string) ($p['act_amount'] ?? '')) !== '')));
         foreach ($parts as &$p) {
-            foreach (['amount', 'act_amount', 'bank_rate', 'fee_amount', 'fee_bank_rate'] as $k) {
+            foreach (['amount', 'act_amount', 'bank_rate', 'bank_rate_azn', 'fee_amount', 'fee_bank_rate'] as $k) {
                 $p[$k] = isset($p[$k]) && $p[$k] !== '' ? parse_number($p[$k]) : null;
             }
         }
@@ -157,6 +157,7 @@ class LogisticsActController extends Controller
             'parts.*.currency' => ['required', Rule::in(config('glaust.currencies'))],
             'parts.*.bank_account_id' => ['required', 'integer', TenantExists::in('bank_accounts')],
             'parts.*.bank_rate' => ['nullable', 'numeric', 'gt:0', 'max:10000000'],
+            'parts.*.bank_rate_azn' => ['nullable', 'numeric', 'gt:0', 'max:10000000'],   // typed as 1 AZN = ? RUB
             'parts.*.fee_amount' => ['nullable', 'numeric', 'min:0'],
             'parts.*.fee_account_id' => ['nullable', 'integer', TenantExists::in('bank_accounts')],
             'parts.*.fee_bank_rate' => ['nullable', 'numeric', 'gt:0', 'max:10000000'],

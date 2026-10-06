@@ -173,6 +173,23 @@ class LogisticsActTest extends TestCase
         $this->assertSame([round(100 * $rubRate, 2), null], [(float) $lp2->fee_account_amount, $lp2->fee_bank_rate]);
     }
 
+    /** An EUR invoice paid in roubles: the bank's rate typed as "1 AZN = ? RUB", EUR taken at CBAR of the day. */
+    public function test_bank_rate_typed_per_manat(): void
+    {
+        [$admin, $inv, $deal, $carrier, $rub] = $this->world();
+        $this->actingAs($admin);
+        $day = today()->subDay()->toDateString();
+        $eurAzn = app(CurrencyRates::class)->rate('EUR', $day);
+        $this->post(route('deals.logistics-acts.store', $deal), ['logistics_invoice_number' => 'LA-40', 'logistics_invoice_date' => $day, 'amount' => '9325', 'currency' => 'EUR',
+            'payment_plan' => 'invoice', 'parts' => [['amount' => '932 872,45', 'currency' => 'RUB', 'bank_account_id' => $rub->id, 'payment_date' => $day,
+                'bank_rate_azn' => '52,5', 'fee_amount' => '0']]])->assertSessionHasNoErrors();
+
+        $lp = $this->inTenant($admin, fn () => LogisticsPayment::firstOrFail());
+        $this->assertEqualsWithDelta($eurAzn * 52.5, (float) $lp->bank_rate, 1e-6, '1 EUR = CBAR EUR (AZN) × 52.5 RUB');
+        $this->assertSame([932872.45, round(932872.45 / ($eurAzn * 52.5), 2)], [(float) $lp->amount, (float) $lp->act_amount]);
+        $this->get(route('deals.show', [$deal, 'tab' => 'logistics']))->assertOk();
+    }
+
     /** Split terms: each part on its own date, valued at that day's CBAR and booked on that day. */
     public function test_split_parts_on_different_dates(): void
     {

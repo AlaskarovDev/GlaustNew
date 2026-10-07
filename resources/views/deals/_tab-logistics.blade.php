@@ -95,7 +95,7 @@
                                         <td class="num">{{ money($p->act_amount, $act->currency) }}</td>
                                         <td class="num font-medium">{{ money($p->amount, $p->currency) }}</td>
                                         <td class="num text-xs">@if($p->currency !== $act->currency){{ rate_fmt($p->bank_rate) }}<div class="text-faint">{{ rate_fmt($p->cbar_cross) }}</div>@else — @endif</td>
-                                        <td class="num text-xs">{{ money($p->fee_amount, $p->currency) }}<div class="text-faint">{{ money($p->fee_azn) }} · {{ money($p->fee_eur, 'EUR') }}</div></td>
+                                        <td class="num text-xs">{{ money($p->fee_amount, $p->currency) }}@if($p->fee_included)<span class="badge badge-slate ml-1">{{ __('daxil') }}</span>@endif<div class="text-faint">{{ money($p->fee_azn) }} · {{ money($p->fee_eur, 'EUR') }}</div></td>
                                         <td class="text-xs">{{ $p->account?->name }}<div class="text-faint">−{{ money($p->totalDebit(), $p->currency) }}</div></td>
                                         <td class="text-right">
                                             @can('bank.delete')

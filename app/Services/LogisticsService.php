@@ -79,8 +79,24 @@ class LogisticsService
                 if (! $same && empty($p['bank_rate'])) {
                     throw ValidationException::withMessages(["parts.$i.bank_rate" => ($i + 1).__('-ci hissə: bankın kursunu daxil edin (1 :v1 = ? :v2).', ['v1' => $act->currency, 'v2' => $p['currency']])]);
                 }
-                $p['act_amount'] = round((float) $p['amount'] / ($same ? 1 : (float) $p['bank_rate']), 2);
-                $p['paid'] = round((float) $p['amount'], 2);
+                $paid = round((float) $p['amount'], 2);
+                if (! empty($p['fee_included'])) {
+                    // the amount already includes the bank fee: the carrier gets the amount minus the fee
+                    // (the fee as typed, else by the bank's rule on the amount)
+                    if (! empty($p['fee_account_id']) && (int) $p['fee_account_id'] !== (int) $p['bank_account_id']) {
+                        throw ValidationException::withMessages(["parts.$i.fee_account_id" => ($i + 1).__('-ci hissə: komissiya məbləğə daxildirsə, eyni hesabdan ödənilir.')]);
+                    }
+                    if (! isset($p['fee_amount']) || $p['fee_amount'] === null || $p['fee_amount'] === '') {
+                        $d = ! empty($p['payment_date']) ? $p['payment_date'] : $date;
+                        $p['fee_amount'] = BankFee::for($p['currency'], $paid, $this->rate($p['currency'], $d, "parts.$i.payment_date"), $this->rate('EUR', $d, "parts.$i.payment_date"))['amount'] ?? 0.0;
+                    }
+                    $paid = round($paid - (float) $p['fee_amount'], 2);
+                    if ($paid <= 0) {
+                        throw ValidationException::withMessages(["parts.$i.fee_amount" => ($i + 1).__('-ci hissə: komissiya ödənilən məbləğdən çox ola bilməz.')]);
+                    }
+                }
+                $p['act_amount'] = round($paid / ($same ? 1 : (float) $p['bank_rate']), 2);
+                $p['paid'] = $paid;
             }
         }
         unset($p);
@@ -157,7 +173,7 @@ class LogisticsService
                     'act_amount' => $share, 'currency' => $cur, 'cbar_act_rate' => $cbarAct, 'cbar_rate' => $cbar, 'cbar_cross' => $cross, 'bank_rate' => $bankRate,
                     'amount_cbar' => $amountCbar, 'amount' => $amount, 'difference' => round($amount - $amountCbar, 2), 'difference_azn' => round(($amount - $amountCbar) * $cbar, 2),
                     'fee_percent' => $rule['percent'] ?? null, 'fee_minimum' => $rule['minimum'] ?? null, 'fee_maximum' => $rule['maximum'] ?? null,
-                    'fee_amount' => $fee, 'fee_azn' => $feeAzn, 'fee_eur' => round($fee * $cbar / $eur, 2),
+                    'fee_amount' => $fee, 'fee_included' => ! empty($p['fee_included']), 'fee_azn' => $feeAzn, 'fee_eur' => round($fee * $cbar / $eur, 2),
                     'fee_account_id' => $feeAccount->id, 'fee_account_currency' => $feeAccount->currency, 'fee_account_amount' => $feeAccAmount,
                     'fee_bank_rate' => $feeBankRate, 'fee_difference_azn' => $feeDiffAzn,
                     'bank_account_id' => $account->id, 'transaction_id' => $tx->id, 'fee_expense_id' => $feeExpense?->id,

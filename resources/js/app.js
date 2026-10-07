@@ -443,7 +443,7 @@ Alpine.data('logisticsPay', (cfg) => ({
         const acc = this.accounts.find((a) => a.currency === currency);
         return {
             currency, target: target || 0, amount: '', amountTouched: false,
-            account: acc ? String(acc.id) : '', bankRate: '', bankRateAzn: '', fee: '', feeTouched: false,
+            account: acc ? String(acc.id) : '', bankRate: '', bankRateAzn: '', fee: '', feeTouched: false, feeIncluded: false,
             feeAccount: '', feeByBank: false, feeRate: '',   // '' = the fee comes off the part's own account
             date: this.payDate,
         };
@@ -473,7 +473,11 @@ Alpine.data('logisticsPay', (cfg) => ({
     // the rate used for this part: the bank's when entered, otherwise CBAR (estimate)
     used(p) { return this.bank(p) ?? this.cross(p); },
     estimated(p) { return !this.same(p) && !this.bank(p); },
+    // the amount typed may include the bank fee: then the carrier gets the amount minus the fee
+    included(p) { return p.feeIncluded && p.amountTouched; },
+    gross(p) { return this.num(p.amount) || null; },
     pay(p) {
+        if (this.included(p)) { const g = this.gross(p); return g ? this.r2(g - this.fee(p)) : null; }
         if (p.amountTouched) return this.num(p.amount) || null;
         const r = this.used(p);
         return r && p.target ? this.r2(p.target * r) : null;
@@ -492,7 +496,7 @@ Alpine.data('logisticsPay', (cfg) => ({
         return { percent: eur.percent, min: this.r2(eur.minimum * f), max: eur.maximum != null ? this.r2(eur.maximum * f) : null };
     },
     ruleFee(p) {
-        const r = this.rule(p), pay = this.pay(p);
+        const r = this.rule(p), pay = this.included(p) ? this.gross(p) : this.pay(p);
         if (!r || pay === null) return 0;
         let fee = Math.max(pay * r.percent / 100, r.min);
         if (r.max !== null) fee = Math.min(fee, r.max);
@@ -503,7 +507,7 @@ Alpine.data('logisticsPay', (cfg) => ({
     // the fee off another account: converted at CBAR of the day, or at the bank's rate typed for it
     feeAcct(p) { return this.accounts.find((a) => String(a.id) === String(p.feeAccount || p.account)); },
     feeCur(p) { return this.feeAcct(p)?.currency; },
-    feeSeparate(p) { return !!p.feeAccount && String(p.feeAccount) !== String(p.account); },
+    feeSeparate(p) { return !p.feeIncluded && !!p.feeAccount && String(p.feeAccount) !== String(p.account); },
     feeConvertible(p) { return this.feeSeparate(p) && this.feeCur(p) !== p.currency; },
     feeBankMode(p) { return this.feeConvertible(p) && p.feeByBank; },
     feeCbar(p) { return this.feeIn(p, this.feeCur(p)); },

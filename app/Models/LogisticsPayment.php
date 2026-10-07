@@ -21,7 +21,7 @@ class LogisticsPayment extends Model
             'cbar_cross' => 'decimal:12', 'bank_rate' => 'decimal:12', 'amount_cbar' => 'decimal:2', 'amount' => 'decimal:2',
             'difference' => 'decimal:2', 'difference_azn' => 'decimal:2', 'fee_percent' => 'decimal:4', 'fee_minimum' => 'decimal:2',
             'fee_maximum' => 'decimal:2', 'fee_amount' => 'decimal:2', 'fee_azn' => 'decimal:2', 'fee_eur' => 'decimal:2',
-            'fee_account_amount' => 'decimal:2', 'fee_bank_rate' => 'decimal:12', 'fee_difference_azn' => 'decimal:2'];
+            'fee_account_amount' => 'decimal:2', 'fee_included' => 'boolean', 'fee_bank_rate' => 'decimal:12', 'fee_difference_azn' => 'decimal:2'];
     }
 
     public function act(): BelongsTo

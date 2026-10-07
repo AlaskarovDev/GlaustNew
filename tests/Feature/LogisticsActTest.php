@@ -190,6 +190,31 @@ class LogisticsActTest extends TestCase
         $this->get(route('deals.show', [$deal, 'tab' => 'logistics']))->assertOk();
     }
 
+    /** «Komissiya bu məbləğə daxildir»: the account pays the amount typed; the carrier gets it minus the fee (typed, or by the rule). */
+    public function test_amount_including_the_fee(): void
+    {
+        [$admin, $inv, $deal, $carrier, $rub] = $this->world();
+        $this->actingAs($admin);
+        $day = today()->subDay()->toDateString();
+        $rates = app(CurrencyRates::class);
+        $this->post(route('deals.logistics-acts.store', $deal), ['logistics_invoice_number' => 'LA-50', 'logistics_invoice_date' => $day, 'amount' => '9800', 'currency' => 'EUR',
+            'payment_plan' => 'invoice', 'parts' => [['amount' => '982 233,68', 'currency' => 'RUB', 'bank_account_id' => $rub->id, 'payment_date' => $day,
+                'bank_rate_azn' => '57', 'fee_amount' => '2501', 'fee_included' => '1']]])->assertSessionHasNoErrors();
+        $lp = $this->inTenant($admin, fn () => LogisticsPayment::firstOrFail());
+        $this->assertSame([979732.68, 2501.0, true], [(float) $lp->amount, (float) $lp->fee_amount, $lp->fee_included]);
+        $this->assertSame(982233.68, $lp->totalDebit(), 'the account pays exactly the amount typed');
+        $this->assertSame(round(2000000 - 982233.68, 2), $this->inTenant($admin, fn () => BankAccount::find($rub->id)->balance()));
+
+        // fee not typed: by the bank's rule on the amount
+        $this->post(route('deals.logistics-acts.store', $deal), ['logistics_invoice_number' => 'LA-51', 'logistics_invoice_date' => $day, 'amount' => '100', 'currency' => 'EUR',
+            'payment_plan' => 'invoice', 'parts' => [['amount' => '10000', 'currency' => 'RUB', 'bank_account_id' => $rub->id, 'payment_date' => $day,
+                'bank_rate_azn' => '57', 'fee_included' => '1']]])->assertSessionHasNoErrors();
+        $lp2 = $this->inTenant($admin, fn () => LogisticsPayment::latest('id')->first());
+        $rule = BankFee::for('RUB', 10000, $rates->rate('RUB', $day), $rates->rate('EUR', $day))['amount'];
+        $this->assertSame([round(10000 - $rule, 2), $rule], [(float) $lp2->amount, (float) $lp2->fee_amount]);
+        $this->assertSame(10000.0, $lp2->totalDebit());
+    }
+
     /** Split terms: each part on its own date, valued at that day's CBAR and booked on that day. */
     public function test_split_parts_on_different_dates(): void
     {

@@ -51,6 +51,12 @@
                             </select>
                         </div>
                     </div>
+                    {{-- the amount may already include the bank fee: the carrier then gets the amount minus the fee --}}
+                    <label class="flex items-center gap-2 text-sm -mt-1">
+                        <input type="hidden" :name="`parts[${i}][fee_included]`" :value="p.feeIncluded ? 1 : 0">
+                        <input type="checkbox" class="checkbox" x-model="p.feeIncluded" @change="if (p.feeIncluded) { p.feeAccount = ''; p.feeByBank = false; if (!p.amountTouched && pay(p) !== null) setAmount(p, String(pay(p))) }">
+                        {{ __('Komissiya bu məbləğə daxildir') }}
+                    </label>
                     <div>
                         <label class="field-label">{{ __('Bank hesabı (') }}<span x-text="p.currency"></span>)</label>
                         <select :name="`parts[${i}][bank_account_id]`" x-model="p.account" class="input">
@@ -74,6 +80,7 @@
                     </div>
                 </div>
                 <dl class="space-y-1.5 text-sm rounded-lg bg-surface-2/60 p-3 self-start">
+                    <div class="flex justify-between gap-2" x-show="included(p)"><dt class="text-muted">{{ __('Ödənilən (komissiya daxil)') }}</dt><dd class="font-mono" x-text="gross(p) !== null ? fmt(gross(p)) + ' ' + p.currency : '—'"></dd></div>
                     <div class="flex justify-between gap-2"><dt class="text-muted">{{ __('Köçürülür') }}</dt><dd class="font-mono font-semibold" x-text="pay(p) !== null ? fmt(pay(p)) + ' ' + p.currency : '—'"></dd></div>
                     <div class="flex justify-between gap-2"><dt class="text-muted">{{ __('Borcdan bağlanır') }}</dt>
                         <dd class="font-mono font-semibold text-right"><span x-text="covered(p) !== null ? fmt(covered(p)) + ' ' + currency : '—'"></span>
@@ -92,7 +99,7 @@
                         <div class="text-[11px] text-faint" x-show="rule(p)"><span x-text="rule(p) && String(rule(p).percent).replace('.', ',')"></span>{{ __('% · ən az') }} <span x-text="rule(p) && fmt(rule(p).min)"></span>{{ __(', ən çox') }} <span x-text="rule(p) && rule(p).max !== null ? fmt(rule(p).max) : '—'"></span> <span x-text="p.currency"></span>
                             <button type="button" class="underline" x-show="p.feeTouched" @click="p.feeTouched = false; p.fee = ''">{{ __('qaydaya qaytar') }}</button></div>
                         {{-- which account pays the fee; another currency: at CBAR or at the bank's rate typed for it --}}
-                        <div class="mt-2 space-y-1.5">
+                        <div class="mt-2 space-y-1.5" x-show="!p.feeIncluded">
                             <label class="text-[11px] text-muted" :for="`lp-fee-acc-${i}`">{{ __('Komissiya hansı hesabdan ödənilsin') }}</label>
                             <select :id="`lp-fee-acc-${i}`" :name="`parts[${i}][fee_account_id]`" :value="p.feeAccount || p.account" @change="p.feeAccount = $event.target.value === p.account ? '' : $event.target.value; p.feeByBank = false; load()" class="input !h-8 text-sm">
                                 <template x-for="a in accounts" :key="a.id"><option :value="String(a.id)" :selected="String(a.id) === String(p.feeAccount || p.account)" x-text="a.label + ' (' + a.currency + ')'"></option></template>

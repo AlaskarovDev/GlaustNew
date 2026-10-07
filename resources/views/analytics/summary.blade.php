@@ -2,7 +2,7 @@
     <x-page-header :title="$title" :icon="$icon" :subtitle="__('Satıcı fakturası, alıcı fakturası, kurslar, logistika və nəticə — hər Trade üzrə, şirkətin ATF cədvəlinin qaydası ilə')">
         <x-slot:actions>
             @if($rows)
-                <a href="{{ route('analytics.show', array_filter(['report' => 'summary', 'project_id' => $projectId, 'deal_id' => $dealId, 'as_of' => $asOf, 'format' => 'xlsx'])) }}" class="btn btn-secondary"><x-icon name="sheet" class="size-4 text-success"/> Excel</a>
+                <a href="{{ route('analytics.show', array_filter(['report' => 'summary', 'project_id' => $projectId, 'deal_id' => $dealId, 'as_month' => $asOf ? substr($asOf, 0, 7) : null, 'format' => 'xlsx'])) }}" class="btn btn-secondary"><x-icon name="sheet" class="size-4 text-success"/> Excel</a>
             @endif
         </x-slot:actions>
     </x-page-header>
@@ -50,16 +50,17 @@
         </label>
         <label class="min-w-[200px]">
             <span class="field-label">{{ __('Bitməyən Trade-lər') }}</span>
-            <select name="as_of" class="input">
-                <option value="">{{ __('akt olanda hesablanır') }}</option>
-                @foreach($monthEnds as $d)<option value="{{ $d }}" @selected($asOf === $d)>{{ __(':v1 ay sonuna', ['v1' => azdate($d)]) }}</option>@endforeach
-            </select>
+            <input type="month" name="as_month" value="{{ $month }}" max="{{ $lastMonth }}" class="input font-mono @if($monthError) is-invalid @endif" aria-describedby="as-month-hint">
+            <span id="as-month-hint" class="block text-[11px] text-muted mt-1">{{ __('ay və il — kurs ayın son gününə götürülür; boş: akt olanda') }}</span>
         </label>
         <button class="btn btn-primary"><x-icon name="filter" class="size-4"/> {{ __('Göstər') }}</button>
-        <button name="as_of" value="{{ $monthEnds->first() }}" class="btn btn-secondary" title="{{ __('Aktı olmayan Trade-lər son ay sonunun CBAR kursu ilə hesablanır') }}"><x-icon name="calendar" class="size-4"/> {{ __('Ay sonuna görə hesabla') }}</button>
+        <button name="calc" value="1" class="btn btn-secondary" title="{{ __('Seçilən ayın (seçilməyibsə — son bitmiş ayın) son gününün CBAR kursu ilə') }}"><x-icon name="calendar" class="size-4"/> {{ __('Ay sonuna görə hesabla') }}</button>
         @if($projectId || $dealId || $asOf)<a href="{{ route('analytics.show', 'summary') }}" class="btn btn-ghost">{{ __('Sıfırla') }}</a>@endif
     </form>
 
+    @if($monthError)
+        <div class="card border-danger/30 bg-danger-soft/40 p-4 mb-6 flex items-center gap-3 text-sm text-danger" role="alert"><x-icon name="alert" class="size-5 shrink-0"/> {{ $monthError }}</div>
+    @endif
     @if($asOf)
         <div class="card border-saffron/40 bg-saffron-soft/50 p-4 mb-6 flex items-start gap-3 text-sm">
             <x-icon name="calendar" class="size-5 text-saffron shrink-0"/>

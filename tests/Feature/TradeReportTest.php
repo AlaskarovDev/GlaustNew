@@ -138,8 +138,12 @@ class TradeReportTest extends TestCase
 
         $this->actingAs($admin);
         $end = today()->subMonthNoOverflow()->endOfMonth()->toDateString();
-        $this->get(route('analytics.show', ['summary', 'as_of' => $end]))->assertOk()->assertSee('Ay sonuna görə hesabla')->assertSee(azdate($end).' ay sonuna görə');
-        $this->get(route('analytics.show', ['summary', 'as_of' => '2019-01-31']))->assertOk()->assertDontSee('2019 ay sonuna görə');   // only the offered month ends
+        // the user picks a month and a year; the system takes the month's last day
+        $this->get(route('analytics.show', ['summary', 'as_month' => substr($end, 0, 7)]))->assertOk()->assertSee('Ay sonuna görə hesabla')->assertSee(azdate($end).' ay sonuna görə');
+        $this->get(route('analytics.show', ['summary', 'as_month' => '2025-02']))->assertOk()->assertSee('28.02.2025 ay sonuna görə');
+        $this->get(route('analytics.show', ['summary', 'calc' => 1]))->assertOk()->assertSee(azdate($end).' ay sonuna görə');   // the button alone: the last finished month
+        $this->get(route('analytics.show', ['summary', 'as_month' => today()->format('Y-m')]))->assertOk()->assertSee('hələ bitməyib')->assertDontSee('ay sonuna görə —', false);
+        $this->get(route('analytics.show', ['summary', 'as_month' => '2025-13']))->assertOk()->assertSee('Ayı seçin');
     }
 
     public function test_page_filters_formula_window_and_export(): void

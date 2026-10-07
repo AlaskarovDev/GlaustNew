@@ -38,8 +38,23 @@ class AnalyticsController extends Controller
         $projectId = $request->integer('project_id') ?: null;
         $dealId = $request->integer('deal_id') ?: null;
         // month-end valuation of unfinished Trades: the last 12 month ends up to today
-        $monthEnds = collect(range(0, 12))->map(fn ($i) => today()->subMonthsNoOverflow($i)->endOfMonth())->filter(fn ($d) => $d->lte(today()))->map->toDateString()->take(12)->values();
-        $asOf = in_array($request->query('as_of'), $monthEnds->all(), true) ? $request->query('as_of') : null;
+        // month-end valuation of unfinished Trades: the user picks a month (Y-m), the system takes its last day
+        $lastMonth = today()->endOfMonth()->lte(today()) ? today()->format('Y-m') : today()->subMonthNoOverflow()->format('Y-m');   // the latest month already over
+        $month = (string) $request->query('as_month', '');
+        if ($month === '' && $request->boolean('calc')) {
+            $month = $lastMonth;   // «Ay sonuna görə hesabla» without a month: the last finished one
+        }
+        $asOf = null;
+        $monthError = null;
+        if ($month !== '') {
+            if (! preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $month)) {
+                $monthError = __('Ayı seçin (ay və il).');
+            } elseif ($month > $lastMonth) {
+                $monthError = __(':v1 hələ bitməyib — ay sonunun CBAR kursu yoxdur. Bitmiş ay seçin.', ['v1' => $month]);
+            } else {
+                $asOf = \Carbon\Carbon::createFromFormat('!Y-m', $month)->endOfMonth()->toDateString();
+            }
+        }
 
         $deals = Deal::query()
             ->when($projectId, fn ($q) => $q->where('project_id', $projectId))
@@ -89,7 +104,8 @@ class AnalyticsController extends Controller
         ], $rows);
 
         return view('analytics.summary', $page + [
-            'projects' => $projects, 'dealList' => $dealList, 'projectId' => $projectId, 'dealId' => $dealId, 'asOf' => $asOf, 'monthEnds' => $monthEnds,
+            'projects' => $projects, 'dealList' => $dealList, 'projectId' => $projectId, 'dealId' => $dealId, 'asOf' => $asOf,
+            'month' => $asOf ? substr($asOf, 0, 7) : $month, 'lastMonth' => $lastMonth, 'monthError' => $monthError,
             'rows' => $rows, 'columns' => $columns, 'groups' => $groups, 'totals' => TradeReport::totals($rows), 'fmt' => $fmt, 'cells' => $cells,
         ]);
     }

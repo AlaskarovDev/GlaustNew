@@ -22,9 +22,10 @@
         ];
         $key = ['FP', 'AQ', 'BE', 'BT', 'TX'];           // the results, highlighted
         $byGroup = collect($columns)->groupBy('g', true);
+        $rateDays = \App\Support\Reports\TradeReport::rateDays();
         $meta = collect($columns)->map(fn ($c, $k) => [
             'l' => $c['l'], 'g' => $groups[$c['g']][0], 'f' => $c['f'], 'note' => $c['note'], 'ref' => $c['ref'],
-            'in' => collect($c['in'])->map(fn ($i) => ['k' => $i, 'l' => $columns[$i]['l'], 'ref' => $columns[$i]['ref']])->values(),
+            'in' => collect($c['in'])->map(fn ($i) => ['k' => $i, 'l' => $columns[$i]['l'], 'ref' => $columns[$i]['ref'], 'day' => $rateDays[$i] ?? null])->values(),
         ]);
         $sum = fn ($k) => $totals[$k] ?? null;
         $trades = collect($rows)->pluck('deal.id')->unique()->count();
@@ -204,7 +205,7 @@
                                 <div class="font-mono text-base text-ink" x-text="(meta[open].ref || '') + ' = ' + meta[open].f"></div>
                                 <ul class="mt-3 space-y-1 text-sm" x-show="meta[open].in.length">
                                     <template x-for="i in meta[open].in" :key="i.k">
-                                        <li class="flex gap-2"><span class="font-mono text-brand-ink w-10 shrink-0" x-text="i.ref || i.k"></span><span class="text-ink-2" x-text="i.l"></span></li>
+                                        <li class="flex gap-2"><span class="font-mono text-brand-ink w-10 shrink-0" x-text="i.ref || i.k"></span><span class="text-ink-2"><span x-text="i.l"></span><span class="text-muted" x-show="i.day" x-text="' — ' + i.day"></span></span></li>
                                     </template>
                                 </ul>
                             </div>
@@ -223,8 +224,8 @@
                                             <template x-for="(c, n) in cells" :key="n">
                                                 <tr>
                                                     <td class="whitespace-nowrap"><span class="font-mono" x-text="c.label"></span> <span class="block text-[11px] text-muted" x-text="'Trade ' + c.trade"></span></td>
-                                                    <template x-for="i in meta[open].in" :key="i.k"><td class="num text-muted whitespace-nowrap" x-text="c.v[i.k]"></td></template>
-                                                    <td class="num font-semibold whitespace-nowrap bg-brand-soft/30" x-text="c.v[open]"></td>
+                                                    <template x-for="i in meta[open].in" :key="i.k"><td class="num text-muted whitespace-nowrap"><span x-text="c.v[i.k]"></span><span class="block text-[11px] text-faint font-sans" x-show="c.d[i.k]" x-text="c.d[i.k]"></span></td></template>
+                                                    <td class="num font-semibold whitespace-nowrap bg-brand-soft/30"><span x-text="c.v[open]"></span><span class="block text-[11px] font-normal text-faint font-sans" x-show="c.d[open]" x-text="c.d[open]"></span></td>
                                                 </tr>
                                             </template>
                                         </tbody>

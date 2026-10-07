@@ -143,6 +143,19 @@ class TradeReport
         ];
     }
 
+    /** Rate column => the day it is taken at, for the formula window (the row's own days are in `_rd`). */
+    public static function rateDays(): array
+    {
+        return [
+            'L' => __('hesab verilən gün (K)'), 'M' => __('hesab verilən gün (K)'),
+            'U' => __('daxilolma günü (T)'), 'V' => __('daxilolma günü (T)'),
+            'Y' => __('satıcıya ödəniş günü (X)'), 'Z' => __('satıcıya ödəniş günü (X)'),
+            'AF' => __('valyuta alışı günü'), 'AG' => __('valyuta satışı günü'),
+            'AZ' => __('logistika ödənişi günü (AY)'), 'BA' => __('logistika ödənişi günü (AY)'),
+            'BJ' => __('akt günü (BI)'), 'BK' => __('akt günü (BI)'),
+        ];
+    }
+
     /** AZN per 1 unit at CBAR of the day (never a future bulletin); null when unknown. */
     private function rate(?string $cur, $date): ?float
     {
@@ -313,6 +326,17 @@ class TradeReport
 
         // exchange differences by the «Məzənnə fərqi» module (Tax Code): the act date is when goods / services pass
         $this->taxDifferences($r, $cur, $saleCur, $lps);
+
+        // the day(s) each rate is taken at — several when it is an amount-weighted average
+        $days = fn ($ds) => collect($ds)->filter()->map(fn ($d) => $d instanceof \DateTimeInterface ? $d->format('Y-m-d') : substr((string) $d, 0, 10))->unique()->sort()->values()->all();
+        $r['_rd'] = [
+            'L' => $days([$r['K']]), 'M' => $days([$r['K']]),
+            'U' => $days([$T]), 'V' => $days($in->pluck('transaction_date')),
+            'Y' => $days($sp->pluck('payment_date')), 'Z' => $days([$X]),
+            'AF' => $days($bought->pluck('exchange_date')), 'AG' => $days($sold->pluck('exchange_date')),
+            'AZ' => $days([$r['AY']]), 'BA' => $days($lps->map(fn ($x) => $x['p']->payment_date)),
+            'BJ' => $days([$BI]), 'BK' => $days([$BI]),
+        ];
 
         return $r;
     }

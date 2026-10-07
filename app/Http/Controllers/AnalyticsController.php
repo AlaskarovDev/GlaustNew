@@ -97,10 +97,16 @@ class AnalyticsController extends Controller
             return app(SpreadsheetExporter::class)->download(__('Yekun hesabat'), $cols, $rows, 'yekun-hesabat-'.now()->format('Y-m-d').'.xlsx', array_values($filters));
         }
 
-        // for the formula window: every row's values, formatted
+        // for the formula window: every row's values, formatted, and the day each rate is taken at
+        $rateDay = fn (array $ds) => match (count($ds)) {
+            0 => null,
+            1 => azdate($ds[0]),
+            default => __('orta').': '.azdate($ds[0]).' – '.azdate(end($ds)).' ('.count($ds).')',
+        };
         $cells = array_map(fn ($r) => [
             'label' => $r['seller_no'], 'trade' => $r['deal']->code,
             'v' => collect($columns)->keys()->mapWithKeys(fn ($k) => [$k => $fmt($r, $k)])->all(),
+            'd' => array_filter(array_map($rateDay, $r['_rd'] ?? [])),
         ], $rows);
 
         return view('analytics.summary', $page + [

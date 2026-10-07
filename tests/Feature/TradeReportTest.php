@@ -109,6 +109,9 @@ class TradeReportTest extends TestCase
         $this->assertEqualsWithDelta(-38.21, $r['TX_L'], 0.01, '979 732.68 × (0.017526 − 0.017487) more paid: loss');
         $this->assertSame([537.61, 11609.01, -11071.4], [$r['TX_P'], $r['TX_N'], $r['TX']]);
         $this->assertSame(['2024-12-29', '2025-01-07', '2025-01-28'], [$r['T']->format('Y-m-d'), $r['X']->format('Y-m-d'), $r['BI']->format('Y-m-d')]);
+
+        // the formula window shows the day behind each rate
+        $this->assertSame([['2024-12-29'], ['2025-01-28'], ['2025-01-28']], [$r['_rd']['V'], $r['_rd']['BK'], $r['_rd']['BJ']]);
     }
 
     /** «Ay sonuna görə hesabla»: a Trade without an act by the month end is valued at that day's CBAR. */

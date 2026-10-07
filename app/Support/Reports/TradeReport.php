@@ -21,6 +21,9 @@ class TradeReport
 {
     private array $memo = [];
 
+    /** Month-end valuation: Trades not finished by this date (no act yet) are valued at its CBAR rates. */
+    private ?string $asOf = null;
+
     public function __construct(private CurrencyRates $rates) {}
 
     /** Column groups, in order: key => [label, tone]. */
@@ -157,9 +160,14 @@ class TradeReport
         return $this->memo[$cur.$day->format('Ymd')] ??= $this->rates->tryRate($cur, $day);
     }
 
-    /** @return list<array> rows for the given Trades, oldest seller invoice first */
-    public function rows(Collection $deals): array
+    /**
+     * @param  ?string  $asOf  a month end (Y-m-d): a Trade without an act by then is valued as of that day — the day stands
+     *                         in for the act date, and payments after it have not happened yet
+     * @return list<array> rows for the given Trades, oldest seller invoice first
+     */
+    public function rows(Collection $deals, ?string $asOf = null): array
     {
+        $this->asOf = $asOf;
         $deals->loadMissing(['invoices.adjustments', 'salesDocuments', 'supplierPayments', 'payments', 'logisticsActs.payments', 'currencyExchanges']);
         $rows = [];
         foreach ($deals as $deal) {
@@ -286,6 +294,11 @@ class TradeReport
         $r['BG'] = $act?->logistics_invoice_date;
         $r['BH'] = $act?->act_number;
         $r['BI'] = $BI = $act ? ($act->act_date ?? $act->docDate()) : null;
+        $r['provisional'] = false;
+        if ($this->asOf && (! $act?->act_date || $act->act_date->format('Y-m-d') > $this->asOf)) {
+            $r['BI'] = $BI = \Carbon\Carbon::parse($this->asOf);   // not finished by the month end: valued as of it
+            $r['provisional'] = true;
+        }
         $r['BJ'] = $BJ = $this->rate($cur, $BI);
         $r['BK'] = $BK = $this->rate($saleCur, $BI);
         $r['BL'] = $BL = $mul($BJ, $D);
@@ -333,10 +346,18 @@ class TradeReport
             return $res['net'];
         };
         // the earlier event first: an advance is paid / received before the act, a debt is settled after it
-        $pair = function (string $advance, string $debt, string $c, ?float $amount, $pay, $payRate, $act, $actRate, string $caseKey, string $valueKey) use (&$r, $calc, $day) {
+        $asOf = $this->asOf;
+        $pair = function (string $advance, string $debt, string $c, ?float $amount, $pay, $payRate, $act, $actRate, string $caseKey, string $valueKey) use (&$r, $calc, $day, $asOf) {
             $r[$caseKey] = $r[$valueKey] = null;
             if (! $pay || ! $act || ! $payRate || ! $actRate || ! $amount) {
                 return;
+            }
+            if ($asOf && $day($pay) > $asOf) {
+                // not paid by the month end: a debt from the act is revalued to it; before the act there is nothing yet
+                if ($r['provisional'] || $day($act) > $asOf || ! ($endRate = $this->rate($c, $asOf))) {
+                    return;
+                }
+                [$pay, $payRate] = [$asOf, $endRate];
             }
             $case = $day($pay) <= $day($act) ? $advance : $debt;
             $r[$caseKey] = \Illuminate\Support\Str::before(\App\Support\FxDifference::labels()[$case], ' —');
@@ -349,6 +370,14 @@ class TradeReport
         foreach ($lps as $x) {   // logistics: each payment against its own act, in the act's currency
             $a = $x['a'];
             $actDay = $a->act_date ?? $a->docDate();
+            if ($this->asOf) {
+                if ($day($x['p']->payment_date) > $this->asOf) {
+                    continue;   // paid after the month end
+                }
+                if (! $a->act_date || $day($a->act_date) > $this->asOf) {
+                    $actDay = $this->asOf;   // service not received by the month end: the advance is valued at it
+                }
+            }
             $actRate = $actDay ? $this->rate($a->currency, $actDay) : null;
             $payRate = (float) $x['p']->cbar_act_rate;
             if (! $actDay || ! $actRate || ! $payRate) {

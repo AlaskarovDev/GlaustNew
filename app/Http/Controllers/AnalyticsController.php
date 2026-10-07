@@ -37,13 +37,16 @@ class AnalyticsController extends Controller
         $dealList = Deal::with('counterparty:id,name', 'supplier:id,name')->orderByDesc('deal_date')->orderByDesc('id')->get(['id', 'project_id', 'code', 'title', 'counterparty_id', 'supplier_id']);
         $projectId = $request->integer('project_id') ?: null;
         $dealId = $request->integer('deal_id') ?: null;
+        // month-end valuation of unfinished Trades: the last 12 month ends up to today
+        $monthEnds = collect(range(0, 12))->map(fn ($i) => today()->subMonthsNoOverflow($i)->endOfMonth())->filter(fn ($d) => $d->lte(today()))->map->toDateString()->take(12)->values();
+        $asOf = in_array($request->query('as_of'), $monthEnds->all(), true) ? $request->query('as_of') : null;
 
         $deals = Deal::query()
             ->when($projectId, fn ($q) => $q->where('project_id', $projectId))
             ->when($dealId, fn ($q) => $q->whereKey($dealId))
             ->with('project:id,code,name')->get();
         $report = app(TradeReport::class);
-        $rows = $report->rows($deals);
+        $rows = $report->rows($deals, $asOf);
         $columns = TradeReport::columns();
         $groups = TradeReport::groups();
 
@@ -73,6 +76,7 @@ class AnalyticsController extends Controller
             $filters = array_filter([
                 $projectId ? __('Layihə').': '.($projects->firstWhere('id', $projectId)?->name ?? '') : null,
                 $dealId ? 'Trade: '.($dealList->firstWhere('id', $dealId)?->code ?? '') : null,
+                $asOf ? __('Bitməyən Trade-lər :v1 (ay sonu) kursu ilə', ['v1' => azdate($asOf)]) : null,
             ]);
 
             return app(SpreadsheetExporter::class)->download(__('Yekun hesabat'), $cols, $rows, 'yekun-hesabat-'.now()->format('Y-m-d').'.xlsx', array_values($filters));
@@ -85,7 +89,7 @@ class AnalyticsController extends Controller
         ], $rows);
 
         return view('analytics.summary', $page + [
-            'projects' => $projects, 'dealList' => $dealList, 'projectId' => $projectId, 'dealId' => $dealId,
+            'projects' => $projects, 'dealList' => $dealList, 'projectId' => $projectId, 'dealId' => $dealId, 'asOf' => $asOf, 'monthEnds' => $monthEnds,
             'rows' => $rows, 'columns' => $columns, 'groups' => $groups, 'totals' => TradeReport::totals($rows), 'fmt' => $fmt, 'cells' => $cells,
         ]);
     }

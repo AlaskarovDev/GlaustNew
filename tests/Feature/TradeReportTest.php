@@ -111,6 +111,37 @@ class TradeReportTest extends TestCase
         $this->assertSame(['2024-12-29', '2025-01-07', '2025-01-28'], [$r['T']->format('Y-m-d'), $r['X']->format('Y-m-d'), $r['BI']->format('Y-m-d')]);
     }
 
+    /** «Ay sonuna görə hesabla»: a Trade without an act by the month end is valued at that day's CBAR. */
+    public function test_unfinished_trades_valued_at_a_month_end(): void
+    {
+        [$admin, $deal] = $this->row3();
+        $this->rates('2024-12-31', 1.7700, 0.016000);
+        $this->rates('2025-01-31', 1.7600, 0.018000);
+
+        // 31.12.2024: the act (28.01.2025) has not come, the seller is not paid yet (07.01.2025), the buyer paid on 29.12
+        $r = $this->inTenant($admin, fn () => app(TradeReport::class)->rows(Deal::whereKey($deal->id)->get(), '2024-12-31'))[0];
+        $this->assertTrue($r['provisional']);
+        $this->assertSame('2024-12-31', $r['BI']->format('Y-m-d'));
+        $this->assertNull($r['TX_S'], 'nothing paid to the seller by then');
+        $this->assertSame('Alınmış avans', $r['TX_BC']);
+        $this->assertEqualsWithDelta(9898036.68 * (0.016318 - 0.016), $r['TX_B'], 0.01, 'the advance received, valued at the month end');
+        $this->assertNull($r['TX_L'], 'logistics paid later');
+
+        // 31.01.2025: the act is in (28.01) — a finished Trade, as before; the logistics payment (10.02) is still to come
+        $r = $this->inTenant($admin, fn () => app(TradeReport::class)->rows(Deal::whereKey($deal->id)->get(), '2025-01-31'))[0];
+        $this->assertFalse($r['provisional']);
+        $this->assertEqualsWithDelta(537.61, $r['TX_S'], 0.01);
+        $this->assertNull($r['TX_L']);
+
+        // without a month end nothing changes
+        $this->assertFalse($this->inTenant($admin, fn () => app(TradeReport::class)->rows(Deal::whereKey($deal->id)->get()))[0]['provisional']);
+
+        $this->actingAs($admin);
+        $end = today()->subMonthNoOverflow()->endOfMonth()->toDateString();
+        $this->get(route('analytics.show', ['summary', 'as_of' => $end]))->assertOk()->assertSee('Ay sonuna görə hesabla')->assertSee(azdate($end).' ay sonuna görə');
+        $this->get(route('analytics.show', ['summary', 'as_of' => '2019-01-31']))->assertOk()->assertDontSee('2019 ay sonuna görə');   // only the offered month ends
+    }
+
     public function test_page_filters_formula_window_and_export(): void
     {
         [$admin, $deal] = $this->row3();

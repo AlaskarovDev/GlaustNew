@@ -2,7 +2,7 @@
     <x-page-header :title="$title" :icon="$icon" :subtitle="__('Satıcı fakturası, alıcı fakturası, kurslar, logistika və nəticə — hər Trade üzrə, şirkətin ATF cədvəlinin qaydası ilə')">
         <x-slot:actions>
             @if($rows)
-                <a href="{{ route('analytics.show', array_filter(['report' => 'summary', 'project_id' => $projectId, 'deal_id' => $dealId, 'format' => 'xlsx'])) }}" class="btn btn-secondary"><x-icon name="sheet" class="size-4 text-success"/> Excel</a>
+                <a href="{{ route('analytics.show', array_filter(['report' => 'summary', 'project_id' => $projectId, 'deal_id' => $dealId, 'as_of' => $asOf, 'format' => 'xlsx'])) }}" class="btn btn-secondary"><x-icon name="sheet" class="size-4 text-success"/> Excel</a>
             @endif
         </x-slot:actions>
     </x-page-header>
@@ -48,9 +48,25 @@
                 <template x-for="d in deals.filter(d => !project || String(d.p) === project)" :key="d.id"><option :value="String(d.id)" x-text="d.label" :selected="String(d.id) === deal"></option></template>
             </select>
         </label>
+        <label class="min-w-[200px]">
+            <span class="field-label">{{ __('Bitməyən Trade-lər') }}</span>
+            <select name="as_of" class="input">
+                <option value="">{{ __('akt olanda hesablanır') }}</option>
+                @foreach($monthEnds as $d)<option value="{{ $d }}" @selected($asOf === $d)>{{ __(':v1 ay sonuna', ['v1' => azdate($d)]) }}</option>@endforeach
+            </select>
+        </label>
         <button class="btn btn-primary"><x-icon name="filter" class="size-4"/> {{ __('Göstər') }}</button>
-        @if($projectId || $dealId)<a href="{{ route('analytics.show', 'summary') }}" class="btn btn-ghost">{{ __('Sıfırla') }}</a>@endif
+        <button name="as_of" value="{{ $monthEnds->first() }}" class="btn btn-secondary" title="{{ __('Aktı olmayan Trade-lər son ay sonunun CBAR kursu ilə hesablanır') }}"><x-icon name="calendar" class="size-4"/> {{ __('Ay sonuna görə hesabla') }}</button>
+        @if($projectId || $dealId || $asOf)<a href="{{ route('analytics.show', 'summary') }}" class="btn btn-ghost">{{ __('Sıfırla') }}</a>@endif
     </form>
+
+    @if($asOf)
+        <div class="card border-saffron/40 bg-saffron-soft/50 p-4 mb-6 flex items-start gap-3 text-sm">
+            <x-icon name="calendar" class="size-5 text-saffron shrink-0"/>
+            <div><span class="font-semibold">{{ __(':v1 ay sonuna görə', ['v1' => azdate($asOf)]) }}</span> —
+                {{ __('aktı olmayan (və ya aktı ay sonundan sonra olan) Trade-lər bu günün CBAR kursu ilə qiymətləndirilir: ay sonu akt tarixinin yerinə keçir, ondan sonrakı ödənişlər hələ baş verməmiş sayılır. Belə sətirlər «ay sonu» nişanı ilə göstərilir.') }}</div>
+        </div>
+    @endif
 
     @if(! $rows)
         <div class="card"><x-empty icon="layers" :title="__('Hesablanacaq faktura yoxdur')" :text="__('Seçilən layihədə / Trade-də satıcı fakturası daxil edildikdən sonra hesabat burada avtomatik qurulur.')"/></div>
@@ -143,6 +159,9 @@
                                         @if($k === 'seller_no')
                                             <a href="{{ route('invoices.show', $r['invoice']) }}" class="font-mono font-medium text-ink hover:text-brand-ink">{{ $v }}</a>
                                             <a href="{{ route('deals.show', $r['deal']) }}" class="block text-[10px] text-muted hover:text-brand-ink">Trade {{ $r['deal']->code }}</a>
+                                            @if($r['provisional'])<span class="badge badge-amber !text-[10px] !h-5 mt-0.5">{{ __('ay sonu') }}</span>@endif
+                                        @elseif($k === 'BI' && $r['provisional'])
+                                            {{ $fmt($r, $k) }} <span class="badge badge-amber !text-[10px] !h-5">{{ __('ay sonu') }}</span>
                                         @else
                                             {{ $fmt($r, $k) }}
                                         @endif

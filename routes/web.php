@@ -245,6 +245,12 @@ Route::middleware(['auth', 'tenant'])->group(function () {
     Route::get('/imports', [ImportController::class, 'index'])->name('imports.index');
     Route::get('/imports/template/{type}', [ImportController::class, 'template'])->name('imports.template');
     Route::post('/imports', [ImportController::class, 'store'])->name('imports.store');
+    // ATF workbook → Trades worked through end to end (before /imports/{import})
+    Route::get('/imports/atf', [\App\Http\Controllers\AtfImportController::class, 'create'])->name('imports.atf.create');
+    Route::get('/imports/atf/template', [\App\Http\Controllers\AtfImportController::class, 'template'])->name('imports.atf.template');
+    Route::post('/imports/atf', [\App\Http\Controllers\AtfImportController::class, 'store'])->name('imports.atf.store');
+    Route::get('/imports/atf/{token}', [\App\Http\Controllers\AtfImportController::class, 'show'])->where('token', '[A-Za-z0-9]{24}')->name('imports.atf.show');
+    Route::post('/imports/atf/{token}/rows/{n}', [\App\Http\Controllers\AtfImportController::class, 'row'])->where(['token' => '[A-Za-z0-9]{24}', 'n' => '[0-9]+'])->middleware('throttle:600,1')->name('imports.atf.row');
     Route::get('/imports/{import}', [ImportController::class, 'show'])->name('imports.show');
     Route::post('/imports/{import}/run', [ImportController::class, 'run'])->name('imports.run');
     Route::get('/imports/{import}/errors', [ImportController::class, 'errors'])->name('imports.errors');

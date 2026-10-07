@@ -29,7 +29,7 @@ class Invoice extends Model
         return ['invoice_date' => 'date', 'total' => 'decimal:2', 'total_azn' => 'decimal:2', 'cbar_rate' => 'decimal:8',
             'logistics_amount' => 'decimal:2', 'logistics_rate' => 'decimal:8', 'logistics_total' => 'decimal:2', 'logistics_updated_at' => 'datetime',
             'commission_rate' => 'decimal:4', 'commission_total' => 'decimal:2', 'commission_updated_at' => 'datetime',
-            'fx_date' => 'date', 'final_amount' => 'decimal:2', 'fx_bulletin_date' => 'date', 'fx_base_azn' => 'decimal:8', 'fx_target_azn' => 'decimal:8', 'fx_rate' => 'decimal:12', 'fx_updated_at' => 'datetime',
+            'fx_date' => 'date', 'final_amount' => 'decimal:2', 'sale_date' => 'date', 'fx_bulletin_date' => 'date', 'fx_base_azn' => 'decimal:8', 'fx_target_azn' => 'decimal:8', 'fx_rate' => 'decimal:12', 'fx_updated_at' => 'datetime',
             'approval_flow' => 'array', 'submitted_at' => 'datetime', 'approved_at' => 'datetime'];
     }
 

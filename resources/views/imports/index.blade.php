@@ -1,6 +1,17 @@
 <x-layouts.app :title="__('Excel import')">
     <x-page-header :title="__('Excel import')" icon="upload" :subtitle="__('Şablonu yükləyin, doldurun, faylı seçin — sütunları yoxlayıb təsdiqləyəcəksiniz')"/>
 
+    @if(auth()->user()->can('projects.create') && auth()->user()->can('bank.create'))
+        <a href="{{ route('imports.atf.create') }}" class="card card-hover p-5 mb-6 flex items-center gap-4">
+            <span class="grid place-items-center size-12 rounded-2xl bg-brand-soft text-brand-ink shrink-0"><x-icon name="layers" class="size-6"/></span>
+            <span class="min-w-0 flex-1">
+                <span class="block font-semibold">{{ __('Toplu Trade importu — ATF cədvəli') }}</span>
+                <span class="block text-sm text-muted">{{ __('ATF (kurslarla) faylından bütün Trade-lər: faktura, mədaxil, valyuta alış-satışı, satıcıya ödəniş, logistika — başdan sona avtomatik') }}</span>
+            </span>
+            <x-icon name="chevron-right" class="size-5 text-faint shrink-0"/>
+        </a>
+    @endif
+
     <div class="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] gap-6 items-start">
         <form method="POST" action="{{ route('imports.store') }}" enctype="multipart/form-data" class="card p-6 space-y-5"
               x-data="{ type: @js(old('type', $selected)), file: '' }">

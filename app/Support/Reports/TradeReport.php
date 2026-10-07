@@ -196,8 +196,8 @@ class TradeReport
         $r['D'] = $D = $inv->adjustedTotal();
         $sp = $deal->supplierPayments;
         $r['pay_date'] = $sp->max('payment_date');
-        $r['buyer_no'] = $sale?->number ?? ($inv->isManual() ? $inv->number : null);
-        $r['buyer_date'] = $sale?->doc_date ?? ($inv->isManual() ? $inv->invoice_date : null);
+        $r['buyer_no'] = $sale?->number ?? ($inv->isManual() ? ($inv->sale_number ?: $inv->number) : null);
+        $r['buyer_date'] = $sale?->doc_date ?? ($inv->isManual() ? ($inv->sale_date ?? $inv->invoice_date) : null);
         $r['H'] = $H = $sale ? $sale->grandTotal() : $inv->saleTotal();
         $r['I'] = $inv->logistics_amount !== null ? (float) $inv->logistics_amount : null;
         $r['J'] = $J = $sp->isNotEmpty() ? round((float) $sp->sum('fee_amount') * $k, 2) : (\App\Models\SupplierPayment::feeFor($cur, $D)['amount'] ?? null);

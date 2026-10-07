@@ -137,6 +137,51 @@ class AtfImportTest extends TestCase
         });
     }
 
+    /** Roubles sold in parts at different rates: AI typed as a×r1 + b×r2 → one exchange per part, the report adds them up. */
+    public function test_money_exchanged_in_parts_at_different_rates(): void
+    {
+        $this->fakeCbar();
+        $admin = $this->makeCompany();
+        [$ellis, $axios, $eur, $rub, $azn] = $this->inTenant($admin, fn () => [
+            Counterparty::create(['type' => 'supplier', 'entity_type' => 'legal', 'name' => 'Ellis GmbH', 'country' => 'Almaniya']),
+            Counterparty::create(['type' => 'customer', 'entity_type' => 'legal', 'name' => 'Axios LLC', 'country' => 'Russia']),
+            BankAccount::create(['name' => 'EURO', 'bank_name' => 'Turan', 'currency' => 'EUR', 'is_active' => true]),
+            BankAccount::create(['name' => 'RUBL', 'bank_name' => 'Turan', 'currency' => 'RUB', 'is_active' => true]),
+            BankAccount::create(['name' => 'AZN', 'bank_name' => 'Turan', 'currency' => 'AZN', 'is_active' => true]),
+        ]);
+        $this->actingAs($admin);
+        $file = $this->workbook([
+            ['A' => 3, 'B' => '916161697', 'C' => '15.01.2025', 'D' => 73166.72, 'E' => '28.01.2025', 'F' => 'ATFAXI-1402', 'G' => '24.01.2025', 'H' => 9895225.84,
+                'K' => '25.01.2025', 'N' => 1.787, 'O' => 0.0167, 'T' => '27.01.2025', 'X' => '27.01.2025', 'AF' => 1.789, 'AG' => 0.01728, 'AO' => 9895225.84, 'AP' => 73350,
+                'AH' => '=AF3*D3', 'AI' => '=9220769.58*0.01728+674456.26*0.017382'],
+            ['A' => 4, 'B' => '916161698', 'C' => '15.01.2025', 'D' => 1000, 'H' => 120000, 'T' => '27.01.2025', 'X' => '27.01.2025', 'AF' => 1.8, 'AG' => 0.018, 'AO' => 120000, 'AP' => 1000,
+                'AI' => '=AG4*H4'],   // the usual formula: one rate
+        ]);
+        $parsed = \App\Imports\Atf\AtfSheet::parse($file->getRealPath());
+        $this->assertSame([[9220769.58, 0.01728], [674456.26, 0.017382]], $parsed['rows'][0]['rub_parts']);
+        $this->assertNull($parsed['rows'][0]['eur_parts'], '=AF3*D3 refers to cells — the usual single rate');
+        $this->assertNull($parsed['rows'][1]['rub_parts']);
+        $this->assertStringContainsString('Rubl 2 hissədə, fərqli kurslarla', implode(' ', $parsed['rows'][0]['notes']));
+
+        $res = $this->post(route('imports.atf.store'), ['file' => $file, 'project_name' => 'ATF', 'supplier_id' => $ellis->id, 'buyer_id' => $axios->id,
+            'eur_account' => $eur->id, 'rub_account' => $rub->id, 'azn_account' => $azn->id]);
+        $token = basename($res->headers->get('Location'));
+        $this->postJson(route('imports.atf.row', [$token, 0]))->assertJsonPath('ok', true)->assertJsonFragment(['Rubl satışı (2 hissə)']);
+        $this->postJson(route('imports.atf.row', [$token, 1]))->assertJsonPath('ok', true);
+
+        $this->inTenant($admin, function () {
+            $deal = Invoice::where('number', '916161697')->firstOrFail()->deal;
+            $this->assertSame([['9220769.58', '0.017280000000'], ['674456.26', '0.017382000000']],
+                CurrencyExchange::where('deal_id', $deal->id)->where('direction', 'sell')->orderBy('id')->get()->map(fn ($x) => [$x->amount, $x->bank_rate])->all());
+            $this->assertSame(1, CurrencyExchange::where('deal_id', $deal->id)->where('direction', 'buy')->count());
+            $r = app(TradeReport::class)->rows(Deal::whereKey($deal->id)->get())[0];
+            $this->assertEqualsWithDelta(9220769.58 * 0.01728 + 674456.26 * 0.017382, $r['AI'], 0.01, 'AI as the sheet types it');
+            $this->assertEqualsWithDelta(9895225.84 * $r['Z'] - $r['AI'], $r['AL'], 0.01, 'AL = AD − AI');
+            $plain = Invoice::where('number', '916161698')->firstOrFail()->deal;
+            $this->assertSame(1, CurrencyExchange::where('deal_id', $plain->id)->where('direction', 'sell')->count());
+        });
+    }
+
     /** Exchanges left by Trades deleted before deleting took them along: removed from the exchanges page. */
     public function test_leftover_import_exchanges_can_be_removed(): void
     {

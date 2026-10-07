@@ -115,6 +115,10 @@ class AtfSheet
             if ($row['seller_no'] === null && $row['seller_amount'] === null) {
                 continue;   // empty line
             }
+            // money exchanged in parts at different rates: the bank-value cell holds the parts by hand,
+            // e.g. AI = 9220769.58*0.01728+674456.26*0.017382 (roubles sold) or AH likewise (euros bought)
+            $row['rub_parts'] = self::parts($sheet->getCell('AI'.$r));
+            $row['eur_parts'] = self::parts($sheet->getCell('AH'.$r));
             $rows[] = self::check($row);
         }
 
@@ -166,6 +170,32 @@ class AtfSheet
         return trim(is_float($v) && floor($v) == $v ? (string) (int) $v : (string) $v);
     }
 
+    /**
+     * "=9220769.58*0.01728+674456.26*0.017382" → [[9220769.58, 0.01728], [674456.26, 0.017382]] (amount, AZN per unit);
+     * null for anything else (the sheet's usual =AG3*H3 refers to cells and means one rate).
+     *
+     * @return list<array{0: float, 1: float}>|null
+     */
+    public static function parts(Cell $cell): ?array
+    {
+        $f = $cell->getValue();
+        if (! is_string($f) || ! str_starts_with($f, '=')) {
+            return null;
+        }
+        $f = str_replace(' ', '', substr($f, 1));
+        $num = '\\d+(?:\\.\\d+)?';
+        if (! preg_match('/^\\+?'.$num.'\\*'.$num.'(?:\\+'.$num.'\\*'.$num.')*$/', $f)) {
+            return null;
+        }
+        $out = [];
+        foreach (explode('+', ltrim($f, '+')) as $term) {
+            [$a, $b] = array_map('floatval', explode('*', $term));
+            $out[] = $a >= $b ? [$a, $b] : [$b, $a];   // the amount is the big number, the rate the small one
+        }
+
+        return $out;
+    }
+
     /** What the row lacks and how it is filled in. */
     private static function check(array $row): array
     {
@@ -173,6 +203,12 @@ class AtfSheet
         foreach (['seller_no', 'seller_date', 'seller_amount', 'buyer_amount'] as $f) {
             if ($row[$f] === null) {
                 $errors[] = __(':v1 yoxdur', ['v1' => self::label($f)]);
+            }
+        }
+        foreach (['rub_parts' => ['RUB', __('Rubl')], 'eur_parts' => ['EUR', __('Avro')]] as $key => [$cur, $name]) {
+            if (! empty($row[$key]) && count($row[$key]) > 1) {
+                $notes[] = __(':v1 :v2 hissədə, fərqli kurslarla: :v3', ['v1' => $name, 'v2' => count($row[$key]),
+                    'v3' => implode(' + ', array_map(fn ($p) => number_format($p[0], 2, ',', ' ').' '.$cur.' × '.rtrim(rtrim(number_format($p[1], 6, ',', ''), '0'), ','), $row[$key]))]);
             }
         }
         if (! $row['seller_paid_date'] && $row['operation_date']) {

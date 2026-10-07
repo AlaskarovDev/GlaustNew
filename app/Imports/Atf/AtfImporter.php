@@ -82,18 +82,25 @@ class AtfImporter
             }
 
             // 4. roubles sold, euros bought on the operation day, at the bank's rates
+            // when the sheet lists parts at different rates (AI / AH typed as a×r1 + b×r2), each part is its own exchange
             $opDate = $row['operation_date'] ?? $row['seller_paid_date'];
-            if ($opDate && $row['rub_sold'] && $row['bank_rub']) {
+            $rubParts = $row['rub_parts'] ?? null ?: ($row['rub_sold'] && $row['bank_rub'] ? [[(float) $row['rub_sold'], (float) $row['bank_rub']]] : []);
+            $eurParts = $row['eur_parts'] ?? null ?: ($row['eur_bought'] && $row['bank_eur'] ? [[(float) $row['eur_bought'], (float) $row['bank_eur']]] : []);
+            foreach ($opDate ? $rubParts : [] as [$amount, $rate]) {
                 $this->exchanges->execute(['exchange_date' => $opDate, 'direction' => 'sell', 'currency' => 'RUB', 'counter_currency' => 'AZN',
-                    'amount' => (float) $row['rub_sold'], 'bank_rate' => (float) $row['bank_rub'], 'from_account_id' => $rubAcc->id, 'to_account_id' => $azn->id,
+                    'amount' => round($amount, 2), 'bank_rate' => $rate, 'from_account_id' => $rubAcc->id, 'to_account_id' => $azn->id,
                     'project_id' => $deal->project_id, 'deal_id' => $deal->id, 'reference' => 'ATF '.$row['seller_no']]);
-                $steps[] = __('Rubl satışı');
             }
-            if ($opDate && $row['eur_bought'] && $row['bank_eur']) {
+            if ($opDate && $rubParts) {
+                $steps[] = count($rubParts) > 1 ? __('Rubl satışı (:v1 hissə)', ['v1' => count($rubParts)]) : __('Rubl satışı');
+            }
+            foreach ($opDate ? $eurParts : [] as [$amount, $rate]) {
                 $this->exchanges->execute(['exchange_date' => $opDate, 'direction' => 'buy', 'currency' => 'EUR', 'counter_currency' => 'AZN',
-                    'amount' => (float) $row['eur_bought'], 'bank_rate' => (float) $row['bank_eur'], 'from_account_id' => $azn->id, 'to_account_id' => $eur->id,
+                    'amount' => round($amount, 2), 'bank_rate' => $rate, 'from_account_id' => $azn->id, 'to_account_id' => $eur->id,
                     'project_id' => $deal->project_id, 'deal_id' => $deal->id, 'reference' => 'ATF '.$row['seller_no']]);
-                $steps[] = __('Avro alışı');
+            }
+            if ($opDate && $eurParts) {
+                $steps[] = count($eurParts) > 1 ? __('Avro alışı (:v1 hissə)', ['v1' => count($eurParts)]) : __('Avro alışı');
             }
 
             // 5. the seller is paid, with its bank fee (as typed in the sheet, else by the bank's rule)

@@ -19,7 +19,7 @@ class AnalyticsMenuTest extends TestCase
         foreach (['Cashflow', 'Alış hesabatları', 'Layihə hesabatları', 'Kurs fərqləri', 'Mənfəət və zərər', 'Xərclər hesabatı', 'Yekun hesabat', 'Digər hesabatlar'] as $label) {
             $page->assertSee($label);
         }
-        foreach (array_diff(array_keys(config('glaust.analytics')), ['summary']) as $key) {
+        foreach (array_diff(array_keys(config('glaust.analytics')), ['summary', 'cashflow']) as $key) {
             $this->get(route('analytics.show', $key))->assertOk()->assertSee('aktivləşəcək');
         }
         $this->get(route('analytics.show', 'summary'))->assertOk()->assertDontSee('aktivləşəcək')->assertSee('Hesablanacaq faktura yoxdur');   // live

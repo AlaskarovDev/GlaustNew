@@ -26,8 +26,58 @@ class AnalyticsController extends Controller
         if ($report === 'summary') {
             return $this->summary($request, compact('report', 'title', 'icon', 'description', 'all'));
         }
+        if ($report === 'cashflow') {
+            return $this->cashflow($request, compact('report', 'title', 'icon', 'description', 'all'));
+        }
 
         return view('analytics.show', compact('report', 'title', 'icon', 'description', 'contents', 'all'));
+    }
+
+    /** Cash flow by month (AZN): money in per counterparty, money out per counterparty / expense, fees and exchange results. */
+    private function cashflow(Request $request, array $page): View|Response
+    {
+        $projectId = $request->integer('project_id') ?: null;
+        $report = new \App\Support\Reports\CashflowReport($projectId);
+        [$first, $last] = $report->span();
+        $valid = fn ($m) => is_string($m) && preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $m) ? $m : null;
+        $now = today()->format('Y-m');
+        $to = $valid($request->query('to')) ?? max($last ?? $now, $now);
+        $from = $valid($request->query('from')) ?? max($first ?? $to, \Carbon\Carbon::createFromFormat('!Y-m', $to)->subMonthsNoOverflow(11)->format('Y-m'));
+        if ($from > $to) {
+            [$from, $to] = [$to, $from];
+        }
+        if (\Carbon\Carbon::createFromFormat('!Y-m', $from)->diffInMonths(\Carbon\Carbon::createFromFormat('!Y-m', $to)) > 35) {
+            $from = \Carbon\Carbon::createFromFormat('!Y-m', $to)->subMonthsNoOverflow(35)->format('Y-m');   // at most 36 columns
+        }
+        $data = $report->build($from, $to);
+        $label = fn ($m) => \Carbon\Carbon::createFromFormat('!Y-m', $m)->locale(app()->getLocale())->isoFormat('MMM YY');
+
+        if ($request->query('format') === 'xlsx') {
+            $line = fn ($name, $values, $total = null) => ['name' => $name] + $values + ['total' => $total ?? array_sum($values)];
+            $rows = [$line(__('Dövrün əvvəlinə qalıq'), $data['opening'], reset($data['opening']) ?: 0), ['name' => __('GƏLİRLƏR')]];
+            foreach ($data['income'] as $g) {
+                $rows[] = $line($g['label'], $g['values'], $g['total']);
+            }
+            $rows[] = $line(__('Cəmi gəlirlər'), $data['in']);
+            $rows[] = ['name' => __('ÖDƏNİŞLƏR')];
+            foreach ($data['payments'] as $g) {
+                $rows[] = $line($g['label'], $g['values'], $g['total']);
+            }
+            $rows[] = $line(__('Cəmi ödənişlər'), $data['out']);
+            $rows[] = $line(__('Xalis pul axını'), $data['net']);
+            $rows[] = $line(__('Dövrün sonuna qalıq'), $data['closing'], end($data['closing']) ?: 0);
+            $cols = [Column::make('CASH FLOW', 'name', 'text', 34)];
+            foreach ($data['months'] as $m) {
+                $cols[] = Column::make($label($m), fn ($r) => $r[$m] ?? null, 'money');
+            }
+            $cols[] = Column::make(__('Cəmi'), 'total', 'money');
+            $filters = array_filter([__('Dövr').': '.$label($from).' — '.$label($to), $projectId ? __('Layihə').': '.Project::find($projectId)?->name : null]);
+
+            return app(SpreadsheetExporter::class)->download('Cash flow', $cols, $rows, 'cash-flow-'.$from.'-'.$to.'.xlsx', array_values($filters));
+        }
+
+        return view('analytics.cashflow', $page + ['data' => $data, 'from' => $from, 'to' => $to, 'projectId' => $projectId, 'label' => $label,
+            'projects' => Project::whereHas('deals')->orderByDesc('start_date')->orderByDesc('id')->get(['id', 'code', 'name'])]);
     }
 
     /** Yekun hesabat: one row per seller invoice of the chosen project / Trade, every ATF column computed. */

@@ -20,7 +20,7 @@
             'slate' => 'bg-surface-2 text-ink-2', 'amber' => 'bg-saffron-soft text-ink', 'green' => 'bg-success-soft text-success',
             'teal' => 'bg-brand-soft text-brand-ink', 'blue' => 'bg-[color-mix(in_srgb,#3b82f6_12%,transparent)] text-[#2563eb]', 'rose' => 'bg-danger-soft text-danger',
         ];
-        $key = ['FP', 'AQ', 'BE', 'BT'];           // the results, highlighted
+        $key = ['FP', 'AQ', 'BE', 'BT', 'TX'];           // the results, highlighted
         $byGroup = collect($columns)->groupBy('g', true);
         $meta = collect($columns)->map(fn ($c, $k) => [
             'l' => $c['l'], 'g' => $groups[$c['g']][0], 'f' => $c['f'], 'note' => $c['note'], 'ref' => $c['ref'],
@@ -56,7 +56,7 @@
         <div class="card"><x-empty icon="layers" :title="__('Hesablanacaq faktura yoxdur')" :text="__('Seçilən layihədə / Trade-də satıcı fakturası daxil edildikdən sonra hesabat burada avtomatik qurulur.')"/></div>
     @else
         {{-- the results at a glance --}}
-        <div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6 stagger">
+        <div class="grid grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5 gap-4 mb-6 stagger">
             @foreach([
                 ['FP', __('Proqnoz mənfəət'), __('hesab verilən gün, proqnoz kurslarla'), 'target'],
                 ['AQ', __('Xalis mənfəət — pul axını'), __('satış − alış − logistika − komissiyalar'), 'trending-up'],
@@ -73,6 +73,14 @@
                 <div class="flex items-center gap-2 text-xs text-muted"><x-icon name="transfer" class="size-4"/> {{ __('Bank məzənnə fərqləri') }}</div>
                 <div @class(['mt-1 text-2xl font-semibold font-mono tabular-nums', 'text-danger' => $fx > 0, 'text-success' => $fx < 0])>{{ $fx > 0 ? '−' : ($fx < 0 ? '+' : '') }}{{ money(abs($fx)) }}</div>
                 <div class="text-[11px] text-faint mt-0.5">{{ count($rows) }} {{ __('faktura') }} · {{ $trades }} Trade</div>
+            </div>
+            <div class="card p-5" style="--i:4">
+                <div class="flex items-center gap-2 text-xs text-muted"><x-icon name="scale" class="size-4"/> {{ __('Məzənnə fərqi — Vergi Məcəlləsi ilə') }}</div>
+                <div class="mt-1 flex flex-wrap items-baseline gap-x-3 font-mono font-semibold tabular-nums">
+                    <span class="text-lg text-success" title="{{ __('Müsbət məzənnə fərqi') }} · 214">+{{ money($sum('TX_P') ?? 0) }}</span>
+                    <span class="text-lg text-danger" title="{{ __('Mənfi məzənnə fərqi') }} · 219.3">−{{ money($sum('TX_N') ?? 0) }}</span>
+                </div>
+                <div class="text-[11px] text-faint mt-0.5">{{ __('müsbət (214) / mənfi (219.3), akt tarixinə görə') }}</div>
             </div>
         </div>
 

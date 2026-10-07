@@ -100,6 +100,14 @@ class TradeReportTest extends TestCase
             $this->assertEqualsWithDelta($want, $r[$col], 0.01, "column {$col}");
         }
         $this->assertSame(['916161494', 'ATFAXI-1204', 'VAM25006583_179', 'VAM25006583'], [$r['seller_no'], $r['buyer_no'], $r['BF'], $r['BH']]);
+
+        // by the «Məzənnə fərqi» module: seller paid before the act (advance paid), buyer paid before it
+        // (advance received), logistics paid after it (payable)
+        $this->assertSame(['Verilmiş avans', 'Alınmış avans'], [$r['TX_SC'], $r['TX_BC']]);
+        $this->assertEqualsWithDelta(537.61, $r['TX_S'], 0.01, '73 644.80 × (1.7739 − 1.7666): gain');
+        $this->assertEqualsWithDelta(-11570.80, $r['TX_B'], 0.01, '9 898 036.68 × (0.016318 − 0.017487): loss');
+        $this->assertEqualsWithDelta(-38.21, $r['TX_L'], 0.01, '979 732.68 × (0.017526 − 0.017487) more paid: loss');
+        $this->assertSame([537.61, 11609.01, -11071.4], [$r['TX_P'], $r['TX_N'], $r['TX']]);
         $this->assertSame(['2024-12-29', '2025-01-07', '2025-01-28'], [$r['T']->format('Y-m-d'), $r['X']->format('Y-m-d'), $r['BI']->format('Y-m-d')]);
     }
 
@@ -110,7 +118,7 @@ class TradeReportTest extends TestCase
 
         $this->get(route('analytics.show', 'summary'))->assertOk()
             ->assertSee('Hesabat cədvəli')->assertSee('916161494')->assertSee('XALİS MƏNFƏƏT')->assertSee('BP + BQ + BR − BS − AJ − BB')
-            ->assertSee(money(10352.58));
+            ->assertSee(money(10352.58))->assertSee('Məzənnə fərqi — Vergi Məcəlləsi ilə')->assertSee(money(11609.01));
         $this->get(route('analytics.show', ['summary', 'project_id' => $deal->project_id, 'deal_id' => $deal->id]))->assertOk()->assertSee('916161494');
         $this->get(route('analytics.show', ['summary', 'project_id' => 999999]))->assertOk()->assertSee('Hesablanacaq faktura yoxdur');
         $x = $this->get(route('analytics.show', ['summary', 'deal_id' => $deal->id, 'format' => 'xlsx']))->assertOk();

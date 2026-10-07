@@ -36,6 +36,7 @@ class TradeReport
             'cash' => [__('Nəticə — pul axını'), 'green'],
             'act' => [__('Akt tarixinə'), 'slate'],
             'fx' => [__('Məzənnə fərqləri və xalis mənfəət'), 'rose'],
+            'tax' => [__('Məzənnə fərqi — Vergi Məcəlləsi ilə'), 'blue'],
         ];
     }
 
@@ -123,6 +124,19 @@ class TradeReport
             'BR' => $c('fx', __('Alış üzrə kurs fərqi'), 'azn', 'BL − AA', ['BL', 'AA'], 'BR', __('Akt tarixindən ödəniş gününə qədər avronun dəyişməsi: müsbət — qazanc.')),
             'BS' => $c('fx', __('Logistika kurs fərqi'), 'azn', 'BC − BO', ['BC', 'BO'], 'BS'),
             'BT' => $c('fx', __('XALİS MƏNFƏƏT'), 'azn', 'BP + BQ + BR − BS − AJ − BB', ['BP', 'BQ', 'BR', 'BS', 'AJ', 'BB'], 'BT', __('Pul axını ilə eyni nəticə (AQ), akt tarixi üzrə hissələrə bölünmüş.')),
+
+            // by the «Məzənnə fərqi» module (VM 69, 13.2.12, 108.1): the act date is when goods / services pass
+            'TX_SC' => $c('tax', __('Satıcı: hal'), 'text', null, [], null, __('Satıcıya ödəniş akt tarixindən əvvəldirsə — verilmiş avans, sonradırsa — alış (kreditor borcu).')),
+            'TX_S' => $c('tax', __('Satıcı üzrə'), 'azn', __('D × (akt gününə CBAR − ödəniş gününə CBAR); kreditor borcunda işarə əksinədir'), ['D', 'Y', 'BJ'], null,
+                __('Alış məbləği ödəniş günü (X) ilə akt günü (BI) arasındakı CBAR fərqi ilə. Müsbət — gəlir (214), mənfi — xərc (219.3). 31.12 aradadırsa, 31.12 məzənnəsi ilə yenidən qiymətləndirilir.')),
+            'TX_BC' => $c('tax', __('Alıcı: hal'), 'text', null, [], null, __('Pul akt tarixindən əvvəl daxil olubsa — alınmış avans, sonra daxil olubsa — satış (debitor borcu).')),
+            'TX_B' => $c('tax', __('Alıcı üzrə'), 'azn', 'H × (V − BK)', ['H', 'V', 'BK'], null,
+                __('Satış məbləği daxilolma günü (T) ilə akt günü (BI) arasındakı CBAR fərqi ilə. Müsbət — gəlir (214), mənfi — xərc (219.3).')),
+            'TX_L' => $c('tax', __('Logistika üzrə'), 'azn', __('Hər ödəniş: ödənilən hissə × (akt gününə CBAR − ödəniş gününə CBAR), işarə hala görə'), ['AX'], null,
+                __('Logistika xidməti: ödəniş aktdan əvvəldirsə — verilmiş avans, sonradırsa — kreditor borcu; aktın valyutasında, CBAR ilə.')),
+            'TX_P' => $c('tax', __('Müsbət məzənnə fərqi'), 'azn', __('Satıcı, alıcı və logistika üzrə müsbət fərqlərin cəmi'), ['TX_S', 'TX_B', 'TX_L'], '214', __('Satışdankənar gəlir (VM 13.2.12) — mənfəət bəyannaməsinin 214-cü sətri.')),
+            'TX_N' => $c('tax', __('Mənfi məzənnə fərqi'), 'azn', __('Satıcı, alıcı və logistika üzrə mənfi fərqlərin cəmi'), ['TX_S', 'TX_B', 'TX_L'], '219.3', __('Gəlirlə bağlı xərc (VM 108.1) — mənfəət bəyannaməsinin 219.3-cü sətri; xərc məbləği kimi göstərilir.')),
+            'TX' => $c('tax', __('Xalis məzənnə fərqi'), 'azn', __('Müsbət − mənfi'), ['TX_P', 'TX_N'], null),
         ];
     }
 
@@ -284,7 +298,73 @@ class TradeReport
         $r['BS'] = $BS = $sub($BC, $BO);
         $r['BT'] = $BP === null || $BQ === null || $BR === null || $BS === null || $AJ === null ? null : $BP + $BQ + $BR - $BS - $AJ - $BB;
 
+        // exchange differences by the «Məzənnə fərqi» module (Tax Code): the act date is when goods / services pass
+        $this->taxDifferences($r, $cur, $saleCur, $lps);
+
         return $r;
+    }
+
+    /**
+     * Seller: paid before the act — advance paid, after — payable. Buyer: money before the act — advance
+     * received, after — receivable. Logistics: each payment against its own act. FxDifference does the rest
+     * (sign, 31.12 revaluation of debts and — as the module's default — of advances).
+     */
+    private function taxDifferences(array &$r, string $cur, string $saleCur, Collection $lps): void
+    {
+        $pos = $neg = 0.0;
+        $known = false;
+        $day = fn ($d) => $d instanceof \DateTimeInterface ? $d->format('Y-m-d') : substr((string) $d, 0, 10);
+        $calc = function (string $case, string $c, float $amount, $d1, $r1, $d2, $r2) use (&$pos, &$neg, &$known, $day): ?float {
+            if (! $d1 || ! $d2 || ! $r1 || ! $r2 || abs($amount) < 0.005) {
+                return null;
+            }
+            [$d1, $d2] = [$day($d1), $day($d2)];
+            $yearEnd = [];
+            for ($y = (int) substr($d1, 0, 4); $y < (int) substr($d2, 0, 4); $y++) {
+                if (($ye = $this->rate($c, "{$y}-12-31")) !== null) {
+                    $yearEnd[$y] = $ye;
+                }
+            }
+            $res = \App\Support\FxDifference::calc($case, $amount, $d1, (float) $r1, $d2, (float) $r2, $yearEnd, false, true);
+            $pos += $res['positive'];
+            $neg += $res['negative'];
+            $known = true;
+
+            return $res['net'];
+        };
+        // the earlier event first: an advance is paid / received before the act, a debt is settled after it
+        $pair = function (string $advance, string $debt, string $c, ?float $amount, $pay, $payRate, $act, $actRate, string $caseKey, string $valueKey) use (&$r, $calc, $day) {
+            $r[$caseKey] = $r[$valueKey] = null;
+            if (! $pay || ! $act || ! $payRate || ! $actRate || ! $amount) {
+                return;
+            }
+            $case = $day($pay) <= $day($act) ? $advance : $debt;
+            $r[$caseKey] = \Illuminate\Support\Str::before(\App\Support\FxDifference::labels()[$case], ' —');
+            $r[$valueKey] = $case === $advance ? $calc($case, $c, $amount, $pay, $payRate, $act, $actRate) : $calc($case, $c, $amount, $act, $actRate, $pay, $payRate);
+        };
+        $pair('verilmis_avans', 'alis_borc', $cur, $r['D'], $r['X'], $r['Y'], $r['BI'], $r['BJ'], 'TX_SC', 'TX_S');
+        $pair('alinmis_avans', 'satis_borc', $saleCur, $r['H'], $r['T'], $r['V'], $r['BI'], $r['BK'], 'TX_BC', 'TX_B');
+
+        $r['TX_L'] = null;
+        foreach ($lps as $x) {   // logistics: each payment against its own act, in the act's currency
+            $a = $x['a'];
+            $actDay = $a->act_date ?? $a->docDate();
+            $actRate = $actDay ? $this->rate($a->currency, $actDay) : null;
+            $payRate = (float) $x['p']->cbar_act_rate;
+            if (! $actDay || ! $actRate || ! $payRate) {
+                continue;
+            }
+            $amount = (float) $x['p']->act_amount * $x['k'];
+            $net = $day($x['p']->payment_date) <= $day($actDay)
+                ? $calc('verilmis_avans', $a->currency, $amount, $x['p']->payment_date, $payRate, $actDay, $actRate)
+                : $calc('alis_borc', $a->currency, $amount, $actDay, $actRate, $x['p']->payment_date, $payRate);
+            if ($net !== null) {
+                $r['TX_L'] = ($r['TX_L'] ?? 0) + $net;
+            }
+        }
+        $r['TX_P'] = $known ? round($pos, 2) : null;
+        $r['TX_N'] = $known ? round($neg, 2) : null;
+        $r['TX'] = $known ? round($pos - $neg, 2) : null;
     }
 
     /** Sums of the AZN columns over rows that have them. */

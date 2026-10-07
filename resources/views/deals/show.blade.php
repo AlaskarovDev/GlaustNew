@@ -17,8 +17,8 @@
                 @php $sum = app(\App\Services\DealRemover::class)->summary($deal); @endphp
                 <x-danger-delete :action="route('deals.destroy', $deal)" :code="$deal->code" :title="__('Trade :v1 silinsin?', ['v1' => $deal->code])"
                     :items="[__('Satıcı fakturaları') => $sum['invoices'], __('Alıcı sənədləri') => $sum['documents'], __('Mədaxillər (bank hərəkəti ilə)') => $sum['payments'],
-                             __('Satıcıya ödənişlər (komissiya ilə)') => $sum['supplier_payments'], __('Logistika invoysları və ödənişləri') => $sum['logistics'], __('Trade-in xərcləri') => $sum['expenses']]"
-                    :note="__('Bank hesablarından silinmələr və mədaxillər geri qaytarılır. Valyuta alış-satışı əməliyyatları qalır, sadəcə Trade-dən ayrılır.')"/>
+                             __('Satıcıya ödənişlər (komissiya ilə)') => $sum['supplier_payments'], __('Logistika invoysları və ödənişləri') => $sum['logistics'], __('Valyuta alış-satışı') => $sum['exchanges'], __('Trade-in xərcləri') => $sum['expenses']]"
+                    :note="__('Bank hesablarından silinmələr, mədaxillər və valyuta alış-satışı (hər iki hesabdakı hərəkəti ilə) geri qaytarılır.')"/>
             @endcan
         </x-slot:actions>
     </x-page-header>

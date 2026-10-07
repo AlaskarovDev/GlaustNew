@@ -12,10 +12,10 @@
                 <a href="{{ route('deals.create', $project) }}" class="btn btn-primary"><x-icon name="plus" class="size-4"/> {{ __('Yeni Trade') }}</a>
             @endcan
             @can('projects.delete')
-                @php $dealCount = $project->deals()->count(); $invCount = \App\Models\Invoice::where('project_id', $project->id)->count(); @endphp
+                @php $dealCount = $project->deals()->count(); $invCount = \App\Models\Invoice::where('project_id', $project->id)->count(); $xCount = \App\Models\CurrencyExchange::where('project_id', $project->id)->count(); @endphp
                 <x-danger-delete :action="route('projects.destroy', $project)" :code="$project->code" :title="__('Layihə :v1 silinsin?', ['v1' => $project->code])"
-                    :items="[__('Trade-lər (bütün fakturaları, ödənişləri və logistikası ilə)') => $dealCount, __('Satıcı fakturaları') => $invCount]"
-                    :note="__('Hər Trade-in bank hərəkətləri geri qaytarılır. Tapşırıqlar arxivdə qalır.')"/>
+                    :items="[__('Trade-lər (bütün fakturaları, ödənişləri və logistikası ilə)') => $dealCount, __('Satıcı fakturaları') => $invCount, __('Valyuta alış-satışı') => $xCount]"
+                    :note="__('Hər Trade-in bank hərəkətləri və valyuta alış-satışı geri qaytarılır. Tapşırıqlar arxivdə qalır.')"/>
             @endcan
         </x-slot:actions>
     </x-page-header>

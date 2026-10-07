@@ -111,7 +111,7 @@ class DealController extends Controller
     {
         $this->authorize('projects.delete');
         // a Trade with money on it goes with everything it holds — confirmed by typing its code
-        if (trim((string) request('confirm_code')) !== $deal->code && app(\App\Services\DealRemover::class)->summary($deal) !== array_fill_keys(['invoices', 'documents', 'payments', 'supplier_payments', 'logistics', 'expenses'], 0)) {
+        if (trim((string) request('confirm_code')) !== $deal->code && app(\App\Services\DealRemover::class)->summary($deal) !== array_fill_keys(['invoices', 'documents', 'payments', 'supplier_payments', 'logistics', 'expenses', 'exchanges'], 0)) {
             return back()->with('error', __('Silmək üçün Trade-in kodunu düzgün yazın: :v1', ['v1' => $deal->code]));
         }
         $project = $deal->project_id;

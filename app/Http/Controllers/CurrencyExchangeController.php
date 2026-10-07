@@ -25,7 +25,26 @@ class CurrencyExchangeController extends Controller
             'list' => $list,
             'totals' => $totals,
             'accounts' => BankAccount::where('is_active', true)->withBalance()->orderBy('bank_name')->orderBy('currency')->get(),
+            'orphans' => self::orphans()->count(),
         ]);
+    }
+
+    /** Exchanges of the ATF import whose Trade was deleted before deleting took them along (the import always links a Trade). */
+    private static function orphans()
+    {
+        return CurrencyExchange::whereNull('deal_id')->where('reference', 'like', 'ATF %');
+    }
+
+    public function purgeOrphans(): RedirectResponse
+    {
+        $this->authorize('bank.delete');
+        $n = 0;
+        foreach (self::orphans()->get() as $x) {
+            $this->exchanges->delete($x);
+            $n++;
+        }
+
+        return back()->with('success', __(':v1 əməliyyat silindi; bank hesablarındakı hərəkətlər də silindi.', ['v1' => $n]));
     }
 
     public function store(Request $request): RedirectResponse

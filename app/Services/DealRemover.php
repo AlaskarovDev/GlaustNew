@@ -12,12 +12,13 @@ use Illuminate\Support\Facades\DB;
 /**
  * Deletes a Trade with everything that belongs to it, undoing its money on the bank accounts:
  * logistics invoices (with their payments and fees), payments to the seller (with fees), incoming
- * payments, expenses booked on it, buyer documents and seller invoices. Currency exchanges are real
- * money moves of their own: they stay and are only unlinked. A project goes with all its Trades.
+ * payments, currency bought / sold for it (both legs), expenses booked on it, buyer documents and
+ * seller invoices. A project goes with all its Trades and the exchanges linked to the project.
  */
 class DealRemover
 {
-    public function __construct(private LogisticsService $logistics, private SupplierPaymentService $supplierPayments, private ExpenseService $expenses) {}
+    public function __construct(private LogisticsService $logistics, private SupplierPaymentService $supplierPayments, private ExpenseService $expenses,
+        private CurrencyExchangeService $exchanges) {}
 
     /** What deleting the Trade will remove (shown before confirming). */
     public function summary(Deal $deal): array
@@ -29,6 +30,7 @@ class DealRemover
             'supplier_payments' => $deal->supplierPayments()->count(),
             'logistics' => $deal->logisticsActs()->count(),
             'expenses' => Expense::where('deal_id', $deal->id)->count(),
+            'exchanges' => $deal->currencyExchanges()->count(),
         ];
     }
 
@@ -45,7 +47,9 @@ class DealRemover
                 $this->expenses->delete($e);
             }
             BankTransaction::where('deal_id', $deal->id)->get()->each->delete();   // incoming payments and anything else booked on it
-            $deal->currencyExchanges()->update(['deal_id' => null]);
+            foreach ($deal->currencyExchanges()->get() as $x) {   // both legs come off the accounts
+                $this->exchanges->delete($x);
+            }
             SalesDocumentRevision::where('deal_id', $deal->id)->delete();
             $deal->salesDocuments()->get()->each->delete();
             foreach ($deal->invoices()->get() as $invoice) {
@@ -62,7 +66,9 @@ class DealRemover
             foreach ($project->deals()->get() as $deal) {
                 $this->deleteDeal($deal);
             }
-            \App\Models\CurrencyExchange::where('project_id', $project->id)->update(['project_id' => null]);
+            foreach (\App\Models\CurrencyExchange::where('project_id', $project->id)->get() as $x) {
+                $this->exchanges->delete($x);
+            }
             $project->delete();
         });
     }

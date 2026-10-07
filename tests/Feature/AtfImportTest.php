@@ -126,5 +126,38 @@ class AtfImportTest extends TestCase
             $this->assertSame('ATFAXI-1204', $rows[0]['buyer_no']);
             $this->assertNotNull($rows[0]['AQ']);
         });
+
+        // deleting the Trades takes every operation with them — the accounts are back to zero
+        foreach ($this->inTenant($admin, fn () => Deal::pluck('code', 'id')) as $id => $code) {
+            $this->delete(route('deals.destroy', $id), ['confirm_code' => $code])->assertSessionHasNoErrors();
+        }
+        $this->inTenant($admin, function () use ($eur, $rub, $azn) {
+            $this->assertSame([0, 0, 0, 0], [Deal::count(), CurrencyExchange::count(), BankTransaction::count(), Expense::count()]);
+            $this->assertSame([0.0, 0.0, 0.0], [BankAccount::find($eur->id)->balance(), BankAccount::find($rub->id)->balance(), BankAccount::find($azn->id)->balance()]);
+        });
+    }
+
+    /** Exchanges left by Trades deleted before deleting took them along: removed from the exchanges page. */
+    public function test_leftover_import_exchanges_can_be_removed(): void
+    {
+        $this->fakeCbar();
+        $admin = $this->makeCompany();
+        [$azn, $eur] = $this->inTenant($admin, fn () => [
+            BankAccount::create(['name' => 'AZN', 'bank_name' => 'Turan', 'currency' => 'AZN', 'opening_balance' => 1000000, 'is_active' => true]),
+            BankAccount::create(['name' => 'EUR', 'bank_name' => 'Turan', 'currency' => 'EUR', 'is_active' => true]),
+        ]);
+        $this->actingAs($admin);
+        $day = today()->subDay()->toDateString();
+        foreach (['ATF 916161494', ''] as $ref) {
+            $this->post(route('bank.exchanges.store'), ['exchange_date' => $day, 'direction' => 'buy', 'currency' => 'EUR', 'counter_currency' => 'AZN',
+                'amount' => '1000', 'bank_rate' => '2', 'from_account_id' => $azn->id, 'to_account_id' => $eur->id, 'reference' => $ref])->assertSessionHasNoErrors();
+        }
+        $this->get(route('bank.exchanges.index'))->assertOk()->assertSee('Silinmiş Trade-lərdən qalan 1 valyuta əməliyyatı');
+        $this->delete(route('bank.exchanges.orphans'))->assertSessionHas('success');
+        $this->inTenant($admin, function () use ($eur) {
+            $this->assertSame([''], CurrencyExchange::pluck('reference')->map(fn ($r) => (string) $r)->all(), 'only the import leftover goes');
+            $this->assertSame(1000.0, BankAccount::find($eur->id)->balance());
+        });
+        $this->get(route('bank.exchanges.index'))->assertDontSee('Silinmiş Trade-lərdən qalan');
     }
 }

@@ -180,6 +180,18 @@
         </form>
     @endcan
 
+    @if($orphans && auth()->user()->can('bank.delete'))
+        <div class="card border-saffron/40 bg-saffron-soft/50 p-4 mb-6 flex flex-wrap items-center gap-3" role="alert">
+            <x-icon name="alert" class="size-5 text-saffron shrink-0"/>
+            <div class="min-w-0 flex-1 text-sm">
+                <div class="font-semibold">{{ __('Silinmiş Trade-lərdən qalan :v1 valyuta əməliyyatı', ['v1' => $orphans]) }}</div>
+                <div class="text-muted">{{ __('Bunlar ATF importu ilə yaradılıb, Trade-ləri isə silinib. Silsəniz, bank hesablarındakı hər iki hərəkət də silinəcək.') }}</div>
+            </div>
+            <x-delete-form :action="route('bank.exchanges.orphans')" :label="__('Hamısını sil')" button="btn btn-danger btn-sm"
+                           :message="__(':v1 valyuta əməliyyatı və bank hərəkətləri silinəcək.', ['v1' => $orphans])"/>
+        </div>
+    @endif
+
     <section class="card overflow-hidden">
         <header class="px-5 py-4 border-b border-line"><h2 class="text-base font-semibold">{{ __('Əməliyyatlar') }}</h2><p class="text-xs text-muted">{{ __('Hər əməliyyat üzrə CBAR və bank kursları, məbləğlər və fərq saxlanılır') }}</p></header>
         @if($list->isEmpty())

@@ -211,6 +211,7 @@ Route::middleware(['auth', 'tenant'])->group(function () {
         Route::get('/accounts/{account}/statement', [BankAccountController::class, 'statement'])->name('accounts.statement');
         Route::get('/exchanges', [CurrencyExchangeController::class, 'index'])->name('exchanges.index');
         Route::post('/exchanges', [CurrencyExchangeController::class, 'store'])->name('exchanges.store');
+        Route::delete('/exchanges/orphans', [CurrencyExchangeController::class, 'purgeOrphans'])->name('exchanges.orphans');
         Route::delete('/exchanges/{exchange}', [CurrencyExchangeController::class, 'destroy'])->name('exchanges.destroy');
         Route::resource('accounts', BankAccountController::class)->except(['show']);
     });

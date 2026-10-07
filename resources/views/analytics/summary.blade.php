@@ -2,7 +2,7 @@
     <x-page-header :title="$title" :icon="$icon" :subtitle="__('Satıcı fakturası, alıcı fakturası, kurslar, logistika və nəticə — hər Trade üzrə, şirkətin ATF cədvəlinin qaydası ilə')">
         <x-slot:actions>
             @if($rows)
-                <a href="{{ route('analytics.show', array_filter(['report' => 'summary', 'project_id' => $projectId, 'deal_id' => $dealId, 'as_month' => $asOf ? substr($asOf, 0, 7) : null, 'format' => 'xlsx'])) }}" class="btn btn-secondary"><x-icon name="sheet" class="size-4 text-success"/> Excel</a>
+                <a href="{{ route('analytics.show', array_filter(['report' => 'summary', 'project_id' => $projectId, 'deal_id' => $dealId, 'as_month' => $asOf ? substr($asOf, 0, 7) : null, 'c1' => $oneC ? 1 : null, 'format' => 'xlsx'])) }}" class="btn btn-secondary"><x-icon name="sheet" class="size-4 text-success"/> Excel</a>
             @endif
         </x-slot:actions>
     </x-page-header>
@@ -20,7 +20,7 @@
             'slate' => 'bg-surface-2 text-ink-2', 'amber' => 'bg-saffron-soft text-ink', 'green' => 'bg-success-soft text-success',
             'teal' => 'bg-brand-soft text-brand-ink', 'blue' => 'bg-[color-mix(in_srgb,#3b82f6_12%,transparent)] text-[#2563eb]', 'rose' => 'bg-danger-soft text-danger',
         ];
-        $key = ['FP', 'AQ', 'BE', 'BT', 'TX'];           // the results, highlighted
+        $key = ['FP', 'AQ', 'BE', 'BT', 'TX', 'C1', 'C1_M'];           // the results, highlighted
         $byGroup = collect($columns)->groupBy('g', true);
         $rateDays = \App\Support\Reports\TradeReport::rateDays();
         $meta = collect($columns)->map(fn ($c, $k) => [
@@ -56,8 +56,22 @@
         </label>
         <button class="btn btn-primary"><x-icon name="filter" class="size-4"/> {{ __('Göstər') }}</button>
         <button name="calc" value="1" class="btn btn-secondary" title="{{ __('Seçilən ayın (seçilməyibsə — son bitmiş ayın) son gününün CBAR kursu ilə') }}"><x-icon name="calendar" class="size-4"/> {{ __('Ay sonuna görə hesabla') }}</button>
-        @if($projectId || $dealId || $asOf)<a href="{{ route('analytics.show', 'summary') }}" class="btn btn-ghost">{{ __('Sıfırla') }}</a>@endif
+        @if($oneC)
+            <input type="hidden" name="c1" value="1">
+            <a href="{{ route('analytics.show', array_filter(['summary', 'project_id' => $projectId, 'deal_id' => $dealId, 'as_month' => $asOf ? substr($asOf, 0, 7) : null])) }}" class="btn btn-secondary !border-brand !text-brand-ink"><x-icon name="x" class="size-4"/> {{ __('1C sütunlarını gizlət') }}</a>
+        @else
+            <button name="c1" value="1" class="btn btn-secondary" title="{{ __('Monetar maddələr (debitor, kreditor borcu, hesabdakı valyuta) ay sonları və bağlanma günü yenidən qiymətləndirilir; avanslar yox') }}"><x-icon name="layers" class="size-4"/> {{ __('1C metodu ilə məzənnə fərqi') }}</button>
+        @endif
+        @if($projectId || $dealId || $asOf || $oneC)<a href="{{ route('analytics.show', 'summary') }}" class="btn btn-ghost">{{ __('Sıfırla') }}</a>@endif
     </form>
+
+    @if($oneC)
+        <div class="card border-brand/30 bg-brand-soft/40 p-4 mb-6 flex items-start gap-3 text-sm">
+            <x-icon name="layers" class="size-5 text-brand-ink shrink-0"/>
+            <div><span class="font-semibold">{{ __('1C metodu — :v1 ay sonuna', ['v1' => azdate($oneC)]) }}</span> —
+                {{ __('«Məzənnə fərqi — 1C metodu» sütunları əlavə olundu. Monetar maddələr (alıcının borcu, satıcıya və logistikaya borc, hesabdakı rubl və avro) uçota alındığı gündən bağlanma gününə, açıq qalıbsa ay sonuna qədər CBAR ilə yenidən qiymətləndirilir. Verilmiş və alınmış avanslar qeyri-monetardır — yenidən qiymətləndirilmir (0). «Seçilmiş ay üzrə» — «Закрытие месяца»nın bu ay üçün yazacağı fərqdir.') }}</div>
+        </div>
+    @endif
 
     @if($monthError)
         <div class="card border-danger/30 bg-danger-soft/40 p-4 mb-6 flex items-center gap-3 text-sm text-danger" role="alert"><x-icon name="alert" class="size-5 shrink-0"/> {{ $monthError }}</div>

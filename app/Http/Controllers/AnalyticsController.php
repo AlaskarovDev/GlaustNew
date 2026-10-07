@@ -111,9 +111,15 @@ class AnalyticsController extends Controller
             ->when($dealId, fn ($q) => $q->whereKey($dealId))
             ->with('project:id,code,name')->get();
         $report = app(TradeReport::class);
-        $rows = $report->rows($deals, $asOf);
+        // «1C metodu ilə məzənnə fərqi»: extra columns at the chosen month's end (the last finished month by default)
+        $oneC = $request->boolean('c1') ? ($asOf ?? \Carbon\Carbon::createFromFormat('!Y-m', $lastMonth)->endOfMonth()->toDateString()) : null;
+        $rows = $report->rows($deals, $asOf, $oneC);
         $columns = TradeReport::columns();
         $groups = TradeReport::groups();
+        if (! $oneC) {
+            $columns = array_filter($columns, fn ($c) => $c['g'] !== 'onec');
+            unset($groups['onec']);
+        }
 
         $fmt = function (array $r, string $key) use ($columns): string {
             $v = $r[$key] ?? null;
@@ -142,6 +148,7 @@ class AnalyticsController extends Controller
                 $projectId ? __('Layihə').': '.($projects->firstWhere('id', $projectId)?->name ?? '') : null,
                 $dealId ? 'Trade: '.($dealList->firstWhere('id', $dealId)?->code ?? '') : null,
                 $asOf ? __('Bitməyən Trade-lər :v1 (ay sonu) kursu ilə', ['v1' => azdate($asOf)]) : null,
+                $oneC ? __('1C metodu: :v1 ay sonuna', ['v1' => azdate($oneC)]) : null,
             ]);
 
             return app(SpreadsheetExporter::class)->download(__('Yekun hesabat'), $cols, $rows, 'yekun-hesabat-'.now()->format('Y-m-d').'.xlsx', array_values($filters));
@@ -161,7 +168,7 @@ class AnalyticsController extends Controller
 
         return view('analytics.summary', $page + [
             'projects' => $projects, 'dealList' => $dealList, 'projectId' => $projectId, 'dealId' => $dealId, 'asOf' => $asOf,
-            'month' => $asOf ? substr($asOf, 0, 7) : $month, 'lastMonth' => $lastMonth, 'monthError' => $monthError,
+            'month' => $asOf ? substr($asOf, 0, 7) : $month, 'lastMonth' => $lastMonth, 'monthError' => $monthError, 'oneC' => $oneC,
             'rows' => $rows, 'columns' => $columns, 'groups' => $groups, 'totals' => TradeReport::totals($rows), 'fmt' => $fmt, 'cells' => $cells,
         ]);
     }

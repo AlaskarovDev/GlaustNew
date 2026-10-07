@@ -96,6 +96,33 @@ class TradeReportTest extends TestCase
         $this->get(route('analytics.show', ['summary', 'as_month' => '2025-13']))->assertOk()->assertSee('Ayı seçin');
     }
 
+    /** «1C metodu ilə məzənnə fərqi»: monetary items revalued at month ends and settlement; advances are not. */
+    public function test_one_c_method_at_a_month_end(): void
+    {
+        [$admin, $deal] = $this->row3();
+        $this->rates('2024-12-31', 1.7700, 0.016000);
+        $this->rates('2025-01-31', 1.7600, 0.018000);
+        $r = $this->inTenant($admin, fn () => app(TradeReport::class)->rows(Deal::whereKey($deal->id)->get(), null, '2025-01-31'))[0];
+
+        $this->assertSame([0.0, 0.0], [$r['C1_S'], $r['C1_B']], 'seller paid and buyer paid before the act: advances — not revalued');
+        $this->assertStringContainsString('satıcı: avans', $r['C1_H']);
+        $this->assertEqualsWithDelta(-979732.68 * (0.018 - 0.017487), $r['C1_L'], 0.01, 'logistics: a payable since the act (28.01), open at the month end');
+        $rub = 9898036.68 * (0.015962 - 0.016318);   // roubles on the account from 29.12 until sold on 07.01
+        $eur = (73829 - 73644.8) * (1.76 - 1.7666);  // euros bought on 07.01, the part not paid to the seller still there on 31.01
+        $this->assertEqualsWithDelta($rub + $eur, $r['C1_C'], 0.01);
+        $this->assertEqualsWithDelta(-979732.68 * 0.000513 + 9898036.68 * (0.015962 - 0.016) + $eur, $r['C1_M'], 0.01, 'January: the roubles from 31.12 on');
+        $this->assertEqualsWithDelta(0.0, $r['C1_P'], 0.001);
+        $this->assertEqualsWithDelta(-($r['C1_L'] + $r['C1_C']), $r['C1_N'], 0.01);
+        $this->assertEqualsWithDelta($r['C1_P'] - $r['C1_N'], $r['C1'], 0.01);
+
+        // off by default; the page adds the columns with the button
+        $this->assertArrayNotHasKey('C1', $this->inTenant($admin, fn () => app(TradeReport::class)->rows(Deal::whereKey($deal->id)->get()))[0]);
+        $this->actingAs($admin);
+        $this->get(route('analytics.show', 'summary'))->assertOk()->assertSee('1C metodu ilə məzənnə fərqi')->assertDontSee('1C: xalis məzənnə fərqi');
+        $this->get(route('analytics.show', ['summary', 'c1' => 1, 'as_month' => '2025-01']))->assertOk()
+            ->assertSee('1C metodu — 31.01.2025 ay sonuna')->assertSee('1C: xalis məzənnə fərqi')->assertSee('1C: seçilmiş ay üzrə');
+    }
+
     public function test_page_filters_formula_window_and_export(): void
     {
         [$admin, $deal] = $this->row3();

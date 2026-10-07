@@ -145,21 +145,26 @@ class TradeReport
             'TX_N' => $c('tax', __('Mənfi məzənnə fərqi'), 'azn', __('Satıcı, alıcı və logistika üzrə mənfi fərqlərin cəmi'), ['TX_S', 'TX_B', 'TX_L'], '219.3', __('Gəlirlə bağlı xərc (VM 108.1) — mənfəət bəyannaməsinin 219.3-cü sətri; xərc məbləği kimi göstərilir.')),
             'TX' => $c('tax', __('Xalis məzənnə fərqi'), 'azn', __('Müsbət − mənfi'), ['TX_P', 'TX_N'], null),
 
-            // 1C: monetary items (receivables, payables, currency on accounts) revalued at every month end and at
-            // settlement, at CBAR; advances given / received are non-monetary and are not revalued
-            'C1_H' => $c('onec', __('1C: hal'), 'text', null, [], null, __('Satıcı / alıcı / logistika: ödəniş aktdan əvvəldirsə — avans (yenidən qiymətləndirilmir), sonradırsa — borc (ay sonları və bağlanma günü yenidən qiymətləndirilir).')),
-            'C1_S' => $c('onec', __('1C: satıcıya borc'), 'azn', __('Kreditor borcu: −D × (bağlanma və ya ay sonu CBAR − akt günü CBAR); avansda 0'), ['D', 'BJ', 'Y'], null,
-                __('Öhdəlik: məzənnə artanda mənfi (xərc), azalanda müsbət (gəlir). Avans ödənilibsə qeyri-monetar maddədir — fərq yoxdur.')),
-            'C1_B' => $c('onec', __('1C: alıcının borcu'), 'azn', __('Debitor borcu: H × (bağlanma və ya ay sonu CBAR − akt günü CBAR); avansda 0'), ['H', 'BK', 'V'], null,
-                __('Aktiv: məzənnə artanda müsbət (gəlir), azalanda mənfi (xərc). Pul aktdan əvvəl alınıbsa — alınmış avans, yenidən qiymətləndirilmir.')),
-            'C1_L' => $c('onec', __('1C: logistika borcu'), 'azn', __('Hər ödəniş: aktdan sonra ödənilibsə kreditor borcu kimi yenidən qiymətləndirilir; aktdan əvvəl — avans, 0'), ['AX'], null),
-            'C1_C' => $c('onec', __('1C: valyuta hesabı'), 'azn', __('Hesabda saxlanan valyuta: daxil olan rubl satılana qədər, alınan avro satıcıya ödənilənə qədər (qalan hissə — ay sonuna) CBAR fərqi ilə'), ['H', 'AO', 'AP'], null,
-                __('Bank hesabındakı valyuta monetar aktivdir: hər ay sonu və xərclənən gün yenidən qiymətləndirilir. Bankın kursu ilə CBAR fərqi (valyuta alış-satışı) 1C-də ayrıca «digər gəlir/xərc»dir, bura daxil deyil.')),
-            'C1_M' => $c('onec', __('1C: seçilmiş ay üzrə'), 'azn', __('Yalnız seçilmiş ayda tanınan fərq: əvvəlki ay sonundan (və ya ay içində uçota alınma günündən) bu ay sonuna / bağlanma gününə qədər'), ['C1_S', 'C1_B', 'C1_L', 'C1_C'], null,
-                __('«Закрытие месяца» bu ay üçün nə yazacaq: Dt/Kt məzənnə fərqi hesabı.')),
-            'C1_P' => $c('onec', __('1C: müsbət fərq'), 'azn', __('Ay sonuna qədər müsbət fərqlərin cəmi'), ['C1_S', 'C1_B', 'C1_L', 'C1_C'], null, __('Dt valyuta / hesablaşma hesabı — Kt məzənnə fərqindən gəlir.')),
-            'C1_N' => $c('onec', __('1C: mənfi fərq'), 'azn', __('Ay sonuna qədər mənfi fərqlərin cəmi'), ['C1_S', 'C1_B', 'C1_L', 'C1_C'], null, __('Dt məzənnə fərqindən xərc — Kt valyuta / hesablaşma hesabı. Xərc məbləği kimi göstərilir.')),
-            'C1' => $c('onec', __('1C: xalis məzənnə fərqi'), 'azn', __('Müsbət − mənfi (ay sonuna qədər)'), ['C1_P', 'C1_N'], null),
+            // 1C («Закрытие месяца», mənfəət hesabatının 214 / 219.3 sətirləri): every currency balance of the Trade —
+            // roubles and euros on the bank, advances given / received, receivables and payables — revalued at CBAR
+            // from the day it arises, at every month end in between and on the day it closes; each step is a posting
+            'C1_H' => $c('onec', __('1C: hallar'), 'text', null, [], null, __('Hər tərəf üçün: pul aktdan (logistikada — invoysdan) əvvəldirsə avans, sonradırsa borc. Avanslar da yenidən qiymətləndirilir.')),
+            'C1_A' => $c('onec', __('1C: bankdakı rubl'), 'azn', __('Aktiv: daxilolma → rublun satıldığı gün, hər satış ayrıca'), [], 'A',
+                __('Rubl daxil olduğu gündən satıldığı günə qədər (FIFO), aradakı hər ay sonu ayrıca yazılış. Konvertasiyadan sonra hesabda qalan rubl (məs. logistikaya sonra ödənilən) daxil edilmir.')),
+            'C1_B' => $c('onec', __('1C: alıcı ilə hesablaşma'), 'azn', __('Pul aktdan əvvəl: alınmış avans (öhdəlik) daxilolma → akt; sonra: debitor borcu (aktiv) akt → daxilolma'), [], 'B'),
+            'C1_C' => $c('onec', __('1C: bankdakı avro'), 'azn', __('Aktiv: avronun alındığı gün → satıcıya ödəniş günü (ödənilən məbləğ üzrə; komissiya daxil deyil)'), [], 'C'),
+            'C1_D' => $c('onec', __('1C: satıcı ilə hesablaşma'), 'azn', __('Ödəniş aktdan əvvəl: verilmiş avans (aktiv) ödəniş → akt; sonra: kreditor borcu (öhdəlik) akt → ödəniş'), [], 'D'),
+            'C1_E' => $c('onec', __('1C: logistika'), 'azn', __('İnvoys ödənişdən əvvəl: kreditor borcu (öhdəlik) invoys → ödəniş; əks halda verilmiş avans (aktiv) ödəniş → invoys'), [], 'E'),
+            'C1_M214' => $c('onec', __('1C: seçilmiş ay — 214'), 'azn', __('Seçilmiş ayda tarixlənən müsbət yazılışların cəmi'), [], null),
+            'C1_M219' => $c('onec', __('1C: seçilmiş ay — 219.3'), 'azn', __('Seçilmiş ayda tarixlənən mənfi yazılışların mütləq cəmi'), [], null),
+            'C1_P' => $c('onec', __('1C: 214 — müsbət fərq'), 'azn', __('Dövrün (1 yanvar → ay sonu) müsbət yazılışlarının cəmi, əvəzləşdirmədən'), [], '214',
+                __('Xarici valyutaların manata nisbətən müsbət məzənnə fərqi.')),
+            'C1_N' => $c('onec', __('1C: 219.3 — mənfi fərq'), 'azn', __('Dövrün (1 yanvar → ay sonu) mənfi yazılışlarının mütləq cəmi, əvəzləşdirmədən'), [], '219.3',
+                __('Xarici valyutaların manata nisbətən məzənnəsinin dəyişməsindən yaranan mənfi fərq.')),
+            'C1' => $c('onec', __('1C: xalis'), 'azn', '214 − 219.3', ['C1_P', 'C1_N'], null),
+            'C1_FX' => $c('onec', __('Valyuta alqı-satqısı fərqi'), 'azn', __('Rubl satışı: məbləğ × (bank − AMB); avro alışı: məbləğ × (AMB − bank)'), [], null,
+                __('Bank kursu ilə AMB kursu arasındakı fərq — 214 / 219.3-ə daxil deyil, ayrıca göstərilir.')),
+            'C1_W' => $c('onec', __('1C: xəbərdarlıq'), 'text', null, [], null, __('Konvertasiya günü bankın avro kursu AMB-dən aşağıdırsa və ya rubl kursu AMB-dən 2%-dən çox aşağıdırsa.')),
         ];
     }
 
@@ -349,7 +354,7 @@ class TradeReport
         // exchange differences by the «Məzənnə fərqi» module (Tax Code): the act date is when goods / services pass
         $this->taxDifferences($r, $cur, $saleCur, $lps);
         if ($this->oneC) {
-            $this->oneCDifferences($r, $cur, $saleCur, $actReal, $in, $sp, $sold, $bought, $lps, $k);
+            $this->oneC($r, $cur, $saleCur, $actReal, $in, $sp, $sold, $bought, $lps, $k);
         }
 
         // the day(s) each rate is taken at — several when it is an amount-weighted average
@@ -446,125 +451,208 @@ class TradeReport
     }
 
     /**
-     * 1C («Переоценка валютных средств»): a monetary item is revalued from the day it is booked to its settlement,
-     * or to the month end while still open. Sign: asset — rate up is a gain; liability — rate up is a loss.
+     * The postings of one currency balance (1C): points = the day it arises, every month end in between, the day it
+     * closes (or, still open, the period's month end); each consecutive pair is a posting
+     * asset ROUND(amount × (new − old), 2), liability ROUND(amount × (old − new), 2), dated on the new point.
      *
-     * @return array{0: float, 1: float}|null [cumulative to the month end, the part recognised in that month]
+     * @return list<array{item: string, date: string, from: string, old: float, new: float, amount: float, cur: string, diff: float}>|null null when a rate is missing
      */
-    private function reval(float $amount, string $cur, $start, ?float $startRate, $settle, ?float $settleRate, bool $asset): ?array
+    private function postings(string $item, float $amount, string $cur, string $start, ?string $end, bool $asset): ?array
     {
-        $day = fn ($d) => $d instanceof \DateTimeInterface ? $d->format('Y-m-d') : substr((string) $d, 0, 10);
-        $end = $this->oneC;
-        if (! $start || ! $startRate || abs($amount) < 0.005 || $day($start) > $end) {
-            return null;   // not booked by the month end
+        $last = $this->oneC;
+        if ($amount < 0.005 || $start > $last) {
+            return [];
         }
-        if ($settle && $day($settle) <= $end && $settleRate) {
-            [$to, $toRate] = [$day($settle), $settleRate];
-        } else {
-            [$to, $toRate] = [$end, $this->rate($cur, $end)];
+        $close = $end && $end <= $last ? $end : $last;
+        if ($close <= $start) {
+            return [];   // same day: no posting
         }
-        if (! $toRate) {
-            return null;
+        $points = [$start];
+        for ($m = \Carbon\Carbon::parse($start)->endOfMonth(); $m->toDateString() < $close; $m = $m->addDay()->endOfMonth()) {
+            if ($m->toDateString() > $start) {
+                $points[] = $m->toDateString();
+            }
         }
-        $sign = $asset ? 1 : -1;
-        $total = $amount * ($toRate - $startRate) * $sign;
-        $monthStart = substr($end, 0, 7).'-01';
-        if ($to < $monthStart) {
-            return [$total, 0.0];   // settled before this month
-        }
-        $base = $day($start) >= $monthStart ? $startRate : $this->rate($cur, \Carbon\Carbon::parse($monthStart)->subDay()->toDateString());
-
-        return [$total, $base ? $amount * ($toRate - $base) * $sign : 0.0];
-    }
-
-    private function oneCDifferences(array &$r, string $cur, string $saleCur, $act, Collection $in, Collection $sp, Collection $sold, Collection $bought, Collection $lps, float $k): void
-    {
-        $day = fn ($d) => $d instanceof \DateTimeInterface ? $d->format('Y-m-d') : substr((string) $d, 0, 10);
-        $cases = [];
-        $month = $pos = $neg = 0.0;
-        $any = false;
-        $take = function (?array $res) use (&$month, &$pos, &$neg, &$any): ?float {
-            if ($res === null) {
+        $points[] = $close;
+        $out = [];
+        for ($i = 1; $i < count($points); $i++) {
+            $old = $this->rate($cur, $points[$i - 1]);
+            $new = $this->rate($cur, $points[$i]);
+            if ($old === null || $new === null) {
                 return null;
             }
-            [$total, $m] = $res;
-            $month += $m;
-            if ($total > 0) {
-                $pos += $total;
-            } else {
-                $neg -= $total;
+            $diff = round($amount * ($new - $old) * ($asset ? 1 : -1), 2);
+            if (abs($diff) >= 0.005) {
+                $out[] = ['item' => $item, 'date' => $points[$i], 'from' => $points[$i - 1], 'old' => $old, 'new' => $new, 'amount' => $amount, 'cur' => $cur, 'diff' => $diff];
             }
-            $any = true;
+        }
 
-            return $total;
-        };
+        return $out;
+    }
 
-        // the seller: a payable from the act to the payment; paid before the act — an advance, not revalued
-        $r['C1_S'] = null;
-        if ($act && $r['X'] && $day($r['X']) <= $day($act)) {
-            $cases[] = __('satıcı: avans');
-            $r['C1_S'] = 0.0;
-        } elseif ($act) {
-            $cases[] = __('satıcı: kreditor borcu');
-            $r['C1_S'] = $take($this->reval((float) $r['D'], $cur, $act, $this->rate($cur, $act), $r['X'], $r['Y'], false));
-        }
-        // the buyer: a receivable from the act to the money in; paid before the act — an advance received
-        $r['C1_B'] = null;
-        if ($act && $r['T'] && $day($r['T']) <= $day($act)) {
-            $cases[] = __('alıcı: avans');
-            $r['C1_B'] = 0.0;
-        } elseif ($act && $r['H']) {
-            $cases[] = __('alıcı: debitor borcu');
-            $r['C1_B'] = $take($this->reval((float) $r['H'], $saleCur, $act, $this->rate($saleCur, $act), $r['T'], $r['V'], true));
-        }
-        // logistics: each payment against its own act
-        $r['C1_L'] = null;
-        foreach ($lps as $x) {
-            $a = $x['a'];
-            $actDay = $a->act_date ?? $a->docDate();
-            if (! $actDay) {
-                continue;
-            }
-            if ($day($x['p']->payment_date) <= $day($actDay)) {
-                $r['C1_L'] = $r['C1_L'] ?? 0.0;
-                continue;   // an advance to the carrier
-            }
-            $v = $take($this->reval((float) $x['p']->act_amount * $x['k'], $a->currency, $actDay, $this->rate($a->currency, $actDay), $x['p']->payment_date, (float) $x['p']->cbar_act_rate, false));
-            if ($v !== null) {
-                $r['C1_L'] = ($r['C1_L'] ?? 0) + $v;
+    /**
+     * Lots in, outflows consuming them first in, first out: [[amount, from, to]] — what was held from when to when.
+     * What is never spent stays open only when it is more than a small remainder (2 % of what came in).
+     */
+    private static function fifo(array $ins, array $outs): array
+    {
+        usort($ins, fn ($a, $b) => strcmp($a[1], $b[1]));
+        usort($outs, fn ($a, $b) => strcmp($a[1], $b[1]));
+        $held = [];
+        $total = array_sum(array_column($ins, 0));
+        foreach ($outs as [$amount, $day]) {
+            while ($amount > 0.005 && $ins) {
+                $take = min($amount, $ins[0][0]);
+                $held[] = [$take, $ins[0][1], $day];
+                $ins[0][0] -= $take;
+                $amount -= $take;
+                if ($ins[0][0] < 0.005) {
+                    array_shift($ins);
+                }
             }
         }
-        // currency on the accounts: roubles in until sold, euros bought until paid to the seller (the rest to the month end)
-        $r['C1_C'] = null;
-        $hold = function (Collection $ins, Collection $outs, string $c, callable $inDate, callable $inAmt, callable $inRate, callable $outDate, callable $outAmt, callable $outRate) use ($take, $k, &$r) {
-            $inSum = $ins->sum($inAmt) * $k;
-            if ($inSum < 0.005) {
+        foreach ($ins as [$left, $day]) {
+            if ($left > 0.02 * $total) {
+                $held[] = [$left, $day, null];   // still on the account
+            }
+        }
+
+        return $held;
+    }
+
+    private function oneC(array &$r, string $cur, string $saleCur, $act, Collection $in, Collection $sp, Collection $sold, Collection $bought, Collection $lps, float $k): void
+    {
+        $day = fn ($d) => $d instanceof \DateTimeInterface ? $d->format('Y-m-d') : ($d ? substr((string) $d, 0, 10) : null);
+        $act = $day($act);
+        $entries = [];
+        $cases = [];
+        $warn = [];
+        $missing = false;
+        $add = function (string $col, string $item, float $amount, string $c, string $start, ?string $end, bool $asset) use (&$entries, &$missing) {
+            $p = $this->postings($item, $amount, $c, $start, $end, $asset);
+            if ($p === null) {
+                $missing = true;
+
                 return;
             }
-            $inDay = $ins->max($inDate);
-            $inRateAvg = $ins->sum(fn ($x) => $inAmt($x) * $inRate($x)) / max(1e-9, $ins->sum($inAmt));
-            $outSum = min($inSum, $outs->sum($outAmt) * $k);
-            if ($outSum >= 0.005) {
-                $outDay = $outs->max($outDate);
-                $outRateAvg = $outs->sum(fn ($x) => $outAmt($x) * $outRate($x)) / max(1e-9, $outs->sum($outAmt));
-                $v = $take($this->reval($outSum, $c, $inDay, $inRateAvg, $outDay, $outRateAvg, true));
-                $r['C1_C'] = $v === null ? $r['C1_C'] : ($r['C1_C'] ?? 0) + $v;
-            }
-            if ($inSum - $outSum >= 0.005) {   // still on the account
-                $v = $take($this->reval($inSum - $outSum, $c, $inDay, $inRateAvg, null, null, true));
-                $r['C1_C'] = $v === null ? $r['C1_C'] : ($r['C1_C'] ?? 0) + $v;
+            foreach ($p as $e) {
+                $entries[] = $e + ['col' => $col];
             }
         };
-        $hold($in, $sold, $saleCur, fn ($t) => $t->transaction_date->format('Y-m-d'), fn ($t) => (float) $t->amount, fn ($t) => (float) $t->cbar_rate,
-            fn ($x) => $x->exchange_date->format('Y-m-d'), fn ($x) => (float) $x->amount, fn ($x) => (float) $x->cbar_rate);
-        $hold($bought, $sp, $cur, fn ($x) => $x->exchange_date->format('Y-m-d'), fn ($x) => (float) $x->amount, fn ($x) => (float) $x->cbar_rate,
-            fn ($p) => $p->payment_date->format('Y-m-d'), fn ($p) => (float) $p->amount, fn ($p) => (float) $p->cbar_rate);
 
-        $r['C1_H'] = $cases ? implode(', ', $cases) : null;
-        $r['C1_M'] = $any ? round($month, 2) : null;
-        $r['C1_P'] = $any ? round($pos, 2) : null;
-        $r['C1_N'] = $any ? round($neg, 2) : null;
-        $r['C1'] = $any ? round($pos - $neg, 2) : null;
+        // A) roubles on the bank: from coming in until sold, each sale on its own. What stays after the conversion
+        //    (and pays the carrier later) is left out — as in the company's verified 1C figures (Trades 916162025, 916162331)
+        $rubIns = $in->map(fn ($t) => [(float) $t->amount * $k, $day($t->transaction_date)])->values()->all();
+        $rubOuts = $sold->map(fn ($x) => [(float) $x->amount * $k, $day($x->exchange_date)])->values()->all();
+        foreach (array_filter(self::fifo($rubIns, $rubOuts), fn ($h) => $h[2] !== null) as [$amount, $from, $to]) {
+            $add('C1_A', __('Bankdakı rubl'), $amount, $saleCur, $from, $to, true);
+        }
+
+        // B) the buyer: money before the act — an advance received (liability) until the act; after — a receivable (asset)
+        $received = 0.0;
+        foreach ($in as $t) {
+            $amount = (float) $t->amount * $k;
+            $received += $amount;
+            $paid = $day($t->transaction_date);
+            if (! $act || $paid <= $act) {
+                $cases['B'] = __('alıcı: alınmış avans');
+                $add('C1_B', __('Alınmış avans'), $amount, $saleCur, $paid, $act, false);
+            } else {
+                $cases['B'] = __('alıcı: debitor borcu');
+                $add('C1_B', __('Debitor borcu'), $amount, $saleCur, $act, $paid, true);
+            }
+        }
+        if ($act && $r['H'] && $r['H'] - $received > 0.005) {   // billed, not paid yet
+            $cases['B'] ??= __('alıcı: debitor borcu');
+            $add('C1_B', __('Debitor borcu'), $r['H'] - $received, $saleCur, $act, null, true);
+        }
+
+        // C) euros on the bank: from bought until paid to the seller (the payment; its fee is left out, as in the
+        //    company's verified 1C figures — Trade 916161697 matches only so)
+        $eurIns = $bought->map(fn ($x) => [(float) $x->amount * $k, $day($x->exchange_date)])->values()->all();
+        $eurOuts = $sp->map(fn ($p) => [(float) $p->amount * $k, $day($p->payment_date)])->values()->all();
+        foreach (self::fifo($eurIns, $eurOuts) as [$amount, $from, $to]) {
+            $add('C1_C', __('Bankdakı avro'), $amount, $cur, $from, $to, true);
+        }
+
+        // D) the seller: paid before the act — an advance given (asset) until the act; after — a payable (liability)
+        $paidSeller = 0.0;
+        foreach ($sp as $p) {
+            $amount = (float) $p->amount * $k;
+            $paidSeller += $amount;
+            $paid = $day($p->payment_date);
+            if (! $act || $paid <= $act) {
+                $cases['D'] = __('satıcı: verilmiş avans');
+                $add('C1_D', __('Verilmiş avans'), $amount, $cur, $paid, $act, true);
+            } else {
+                $cases['D'] = __('satıcı: kreditor borcu');
+                $add('C1_D', __('Kreditor borcu'), $amount, $cur, $act, $paid, false);
+            }
+        }
+        if ($act && $r['D'] - $paidSeller > 0.005) {
+            $cases['D'] ??= __('satıcı: kreditor borcu');
+            $add('C1_D', __('Kreditor borcu'), $r['D'] - $paidSeller, $cur, $act, null, false);
+        }
+
+        // E) logistics: the invoice before the payment — a payable; the payment first — an advance given
+        foreach ($lps as $x) {
+            $a = $x['a'];
+            $inv = $day($a->logistics_invoice_date ?? $a->act_date);
+            $paid = $day($x['p']->payment_date);
+            $amount = (float) $x['p']->act_amount * $x['k'];
+            if ($inv && $inv <= $paid) {
+                $cases['E'] = __('logistika: kreditor borcu');
+                $add('C1_E', __('Logistika borcu'), $amount, $a->currency, $inv, $paid, false);
+            } else {
+                $cases['E'] = __('logistika: verilmiş avans');
+                $add('C1_E', __('Logistikaya avans'), $amount, $a->currency, $paid, $inv, true);
+            }
+        }
+
+        // conversion: the bank against CBAR — not part of 214 / 219.3, shown on its own; a suspicious day is flagged
+        $fx = 0.0;
+        foreach ($sold as $x) {
+            $cbar = $this->rate($saleCur, $x->exchange_date);
+            if ($cbar) {
+                $fx += (float) $x->amount * $k * ((float) $x->bank_rate - $cbar);
+                if ((float) $x->bank_rate < $cbar * 0.98) {
+                    $warn[] = __('Rubl :v1 tarixində AMB-dən 2%-dən çox aşağı satılıb — konvertasiya tarixi səhv ola bilər, bank çıxarışı ilə yoxlayın.', ['v1' => azdate($x->exchange_date)]);
+                }
+            }
+        }
+        foreach ($bought as $x) {
+            $cbar = $this->rate($cur, $x->exchange_date);
+            if ($cbar) {
+                $fx += (float) $x->amount * $k * ($cbar - (float) $x->bank_rate);
+                if ((float) $x->bank_rate < $cbar) {
+                    $warn[] = __('Avro :v1 tarixində AMB-dən ucuz alınıb — konvertasiya tarixi səhv ola bilər, bank çıxarışı ilə yoxlayın.', ['v1' => azdate($x->exchange_date)]);
+                }
+            }
+        }
+        if ($missing) {
+            $warn[] = __('Bəzi tarixlər üçün AMB məzənnəsi yoxdur — həmin yazılışlar hesablanmadı.');
+        }
+
+        // the period: 1 January of the year → the month end (1C's running total); the month on its own too
+        $from = substr($this->oneC, 0, 4).'-01-01';
+        $monthFrom = substr($this->oneC, 0, 7).'-01';
+        $in = array_values(array_filter($entries, fn ($e) => $e['date'] >= $from && $e['date'] <= $this->oneC));
+        $sum = fn (array $es, string $col) => ($v = array_filter($es, fn ($e) => $e['col'] === $col)) ? round(array_sum(array_column($v, 'diff')), 2) : null;
+        foreach (['C1_A', 'C1_B', 'C1_C', 'C1_D', 'C1_E'] as $col) {
+            $r[$col] = $sum($in, $col);
+        }
+        $pos = fn (array $es) => round(array_sum(array_filter(array_column($es, 'diff'), fn ($d) => $d > 0)), 2);
+        $neg = fn (array $es) => round(-array_sum(array_filter(array_column($es, 'diff'), fn ($d) => $d < 0)), 2);
+        $month = array_filter($in, fn ($e) => $e['date'] >= $monthFrom);
+        $r['C1_P'] = $pos($in);
+        $r['C1_N'] = $neg($in);
+        $r['C1'] = round($r['C1_P'] - $r['C1_N'], 2);
+        $r['C1_M214'] = $pos($month);
+        $r['C1_M219'] = $neg($month);
+        $r['C1_FX'] = ($sold->isNotEmpty() || $bought->isNotEmpty()) ? round($fx, 2) : null;
+        $r['C1_H'] = $cases ? implode(' · ', $cases) : null;
+        $r['C1_W'] = $warn ? implode(' ', array_unique($warn)) : null;
+        $r['_c1'] = $in;   // the postings, for the formula window
     }
 
     /** Sums of the AZN columns over rows that have them. */

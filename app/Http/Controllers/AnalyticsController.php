@@ -164,6 +164,10 @@ class AnalyticsController extends Controller
             'label' => $r['seller_no'], 'trade' => $r['deal']->code,
             'v' => collect($columns)->keys()->mapWithKeys(fn ($k) => [$k => $fmt($r, $k)])->all(),
             'd' => array_filter(array_map($rateDay, $r['_rd'] ?? [])),
+            // 1C: every posting of the period, as the formula window lists it
+            'e' => array_map(fn ($e) => ['col' => $e['col'], 'item' => $e['item'], 'when' => azdate($e['from']).' → '.azdate($e['date']),
+                'calc' => num($e['amount']).' '.$e['cur'].' × ('.rate_fmt($e['new']).' − '.rate_fmt($e['old']).')', 'diff' => $e['diff'],
+                'line' => $e['diff'] > 0 ? '214' : '219.3'], $r['_c1'] ?? []),
         ], $rows);
 
         return view('analytics.summary', $page + [

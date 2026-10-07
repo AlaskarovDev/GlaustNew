@@ -26,6 +26,7 @@
         $meta = collect($columns)->map(fn ($c, $k) => [
             'l' => $c['l'], 'g' => $groups[$c['g']][0], 'f' => $c['f'], 'note' => $c['note'], 'ref' => $c['ref'],
             'in' => collect($c['in'])->map(fn ($i) => ['k' => $i, 'l' => $columns[$i]['l'], 'ref' => $columns[$i]['ref'], 'day' => $rateDays[$i] ?? null])->values(),
+            'onec' => $c['g'] === 'onec', 'key' => $k,
         ]);
         $sum = fn ($k) => $totals[$k] ?? null;
         $trades = collect($rows)->pluck('deal.id')->unique()->count();
@@ -225,6 +226,32 @@
                             </div>
                             <p class="text-sm text-ink-2" x-show="meta[open].note" x-text="meta[open].note"></p>
                             <p class="text-sm text-ink-2" x-show="!meta[open].f && !meta[open].note">{{ __('Bu sütun məlumatdan birbaşa götürülür.') }}</p>
+                            {{-- 1C: the postings behind the figure, each a step between two points (no netting) --}}
+                            <template x-if="meta[open].onec">
+                                <div>
+                                    <div class="text-[11px] uppercase tracking-wider text-muted mb-2">{{ __('Yazılışlar (dövr: 1 yanvar → ay sonu)') }}</div>
+                                    <div class="space-y-3">
+                                        <template x-for="(c, n) in cells.filter(c => c.e && c.e.length)" :key="'e' + n">
+                                            <div class="rounded-lg border border-line overflow-hidden">
+                                                <div class="px-3 py-2 bg-surface-2 text-sm"><span class="font-mono font-medium" x-text="c.label"></span> <span class="text-[11px] text-muted" x-text="'· Trade ' + c.trade"></span></div>
+                                                <table class="table-g text-[12px]">
+                                                    <tbody>
+                                                    <template x-for="(e, j) in c.e.filter(e => ['C1_A', 'C1_B', 'C1_C', 'C1_D', 'C1_E'].includes(meta[open].key) ? e.col === meta[open].key : true)" :key="j">
+                                                        <tr>
+                                                            <td class="whitespace-nowrap" x-text="e.item"></td>
+                                                            <td class="font-mono text-muted whitespace-nowrap" x-text="e.when"></td>
+                                                            <td class="font-mono text-muted" x-text="e.calc"></td>
+                                                            <td class="num font-semibold whitespace-nowrap" :class="e.diff > 0 ? 'text-success' : 'text-danger'" x-text="(e.diff > 0 ? '+' : '−') + glaustFmt.fmt(Math.abs(e.diff), 2)"></td>
+                                                            <td class="text-[11px] text-muted" x-text="e.line"></td>
+                                                        </tr>
+                                                    </template>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
                             <div>
                                 <div class="text-[11px] uppercase tracking-wider text-muted mb-2">{{ __('Hər faktura üzrə') }}</div>
                                 <div class="overflow-x-auto rounded-lg border border-line">

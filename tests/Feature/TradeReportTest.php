@@ -96,7 +96,10 @@ class TradeReportTest extends TestCase
         $this->get(route('analytics.show', ['summary', 'as_month' => '2025-13']))->assertOk()->assertSee('Ayı seçin');
     }
 
-    /** «1C metodu ilə məzənnə fərqi»: monetary items revalued at month ends and settlement; advances are not. */
+    /**
+     * «1C metodu ilə məzənnə fərqi»: every currency balance — advances too — revalued at CBAR from the day it arises,
+     * at every month end and on the day it closes; each step a posting, positives to 214, negatives to 219.3, no netting.
+     */
     public function test_one_c_method_at_a_month_end(): void
     {
         [$admin, $deal] = $this->row3();
@@ -104,23 +107,38 @@ class TradeReportTest extends TestCase
         $this->rates('2025-01-31', 1.7600, 0.018000);
         $r = $this->inTenant($admin, fn () => app(TradeReport::class)->rows(Deal::whereKey($deal->id)->get(), null, '2025-01-31'))[0];
 
-        $this->assertSame([0.0, 0.0], [$r['C1_S'], $r['C1_B']], 'seller paid and buyer paid before the act: advances — not revalued');
-        $this->assertStringContainsString('satıcı: avans', $r['C1_H']);
-        $this->assertEqualsWithDelta(-979732.68 * (0.018 - 0.017487), $r['C1_L'], 0.01, 'logistics: a payable since the act (28.01), open at the month end');
-        $rub = 9898036.68 * (0.015962 - 0.016318);   // roubles on the account from 29.12 until sold on 07.01
-        $eur = (73829 - 73644.8) * (1.76 - 1.7666);  // euros bought on 07.01, the part not paid to the seller still there on 31.01
-        $this->assertEqualsWithDelta($rub + $eur, $r['C1_C'], 0.01);
-        $this->assertEqualsWithDelta(-979732.68 * 0.000513 + 9898036.68 * (0.015962 - 0.016) + $eur, $r['C1_M'], 0.01, 'January: the roubles from 31.12 on');
-        $this->assertEqualsWithDelta(0.0, $r['C1_P'], 0.001);
-        $this->assertEqualsWithDelta(-($r['C1_L'] + $r['C1_C']), $r['C1_N'], 0.01);
-        $this->assertEqualsWithDelta($r['C1_P'] - $r['C1_N'], $r['C1'], 0.01);
+        $H = 9898036.68;
+        // A) roubles in 29.12 → sold 07.01: the 31.12 step is 2024's, January gets 31.12 → 07.01
+        $this->assertSame(round($H * (0.015962 - 0.016), 2), $r['C1_A']);
+        // B) money before the act: an advance received (liability) 29.12 → 28.01; January: 31.12 → 28.01
+        $this->assertSame(round(-$H * (0.017487 - 0.016), 2), $r['C1_B']);
+        $this->assertStringContainsString('alıcı: alınmış avans', $r['C1_H']);
+        // C) euros bought and paid the same day: no posting
+        $this->assertNull($r['C1_C']);
+        // D) paid before the act: an advance given (asset) 07.01 → 28.01 — revalued too
+        $this->assertSame(round(73644.8 * (1.7739 - 1.7666), 2), $r['C1_D']);
+        // E) logistics invoice 28.01, paid 10.02: a payable, open at 31.01
+        $this->assertSame(round(-979732.68 * (0.018 - 0.017487), 2), $r['C1_E']);
+
+        $this->assertSame(round(73644.8 * (1.7739 - 1.7666), 2), $r['C1_P'], '214: the positive postings');
+        $this->assertEqualsWithDelta(abs(round($H * (0.015962 - 0.016), 2)) + abs(round(-$H * (0.017487 - 0.016), 2)) + abs(round(-979732.68 * 0.000513, 2)), $r['C1_N'], 0.001, '219.3: the negative ones, not netted');
+        $this->assertSame([$r['C1_P'], $r['C1_N']], [$r['C1_M214'], $r['C1_M219']], 'January is the whole period here');
+        $this->assertSame(round(9898036.68 * (0.0159 - 0.015962) + 73829 * (1.7666 - 1.779), 2), $r['C1_FX'], 'conversion: bank against CBAR, apart');
+        $this->assertCount(4, $r['_c1']);
+
+        // February: the year's running total; the 31.01 → 10.02 logistics step lands in February
+        $this->rates('2025-02-28', 1.7500, 0.019000);
+        $f = $this->inTenant($admin, fn () => app(TradeReport::class)->rows(Deal::whereKey($deal->id)->get(), null, '2025-02-28'))[0];
+        $feb = round(-979732.68 * (0.017526 - 0.018), 2);   // + : the rouble fell back by the payment day
+        $this->assertSame($feb, $f['C1_M214']);
+        $this->assertSame(round($r['C1_P'] + $feb, 2), $f['C1_P']);
 
         // off by default; the page adds the columns with the button
         $this->assertArrayNotHasKey('C1', $this->inTenant($admin, fn () => app(TradeReport::class)->rows(Deal::whereKey($deal->id)->get()))[0]);
         $this->actingAs($admin);
-        $this->get(route('analytics.show', 'summary'))->assertOk()->assertSee('1C metodu ilə məzənnə fərqi')->assertDontSee('1C: xalis məzənnə fərqi');
+        $this->get(route('analytics.show', 'summary'))->assertOk()->assertSee('1C metodu ilə məzənnə fərqi')->assertDontSee('1C: 214 — müsbət fərq');
         $this->get(route('analytics.show', ['summary', 'c1' => 1, 'as_month' => '2025-01']))->assertOk()
-            ->assertSee('1C metodu — 31.01.2025 ay sonuna')->assertSee('1C: xalis məzənnə fərqi')->assertSee('1C: seçilmiş ay üzrə');
+            ->assertSee('1C metodu — 31.01.2025 ay sonuna')->assertSee('1C: 214 — müsbət fərq')->assertSee('1C: seçilmiş ay — 219.3')->assertSee('Yazılışlar (dövr: 1 yanvar → ay sonu)');
     }
 
     public function test_page_filters_formula_window_and_export(): void

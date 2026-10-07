@@ -462,12 +462,12 @@ Alpine.data('logisticsPay', (cfg) => ({
     same(p) { return p.currency === this.currency; },
     pd(p) { return p.date || this.payDate; },
     cross(p) { if (!p.date) return null; const a = this.rate(this.currency, p.date), b = this.rate(p.currency, p.date); return a && b ? a / b : null; },
-    // paid in a currency other than manat: the bank's rate is typed as "1 AZN = ? RUB" and the act currency
-    // is taken at CBAR of the day (1 EUR = CBAR EUR in AZN × RUB per AZN); paid in manat: "1 EUR = ? AZN"
+    // paid in a currency other than manat: the bank's rate is typed as "1 RUB = ? AZN" and the act currency
+    // is taken at CBAR of the day (1 EUR = CBAR EUR in AZN ÷ AZN per RUB); paid in manat: "1 EUR = ? AZN"
     perAzn(p) { return !this.same(p) && p.currency !== 'AZN'; },
     bank(p) {
         if (this.same(p)) return 1;
-        if (this.perAzn(p)) { const a = this.rate(this.currency, p.date), x = this.num(p.bankRateAzn); return a && x ? a * x : null; }
+        if (this.perAzn(p)) { const a = this.rate(this.currency, p.date), x = this.num(p.bankRateAzn); return a && x ? a / x : null; }
         return this.num(p.bankRate) || null;
     },
     // the rate used for this part: the bank's when entered, otherwise CBAR (estimate)

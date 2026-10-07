@@ -157,7 +157,7 @@ class LogisticsActController extends Controller
             'parts.*.currency' => ['required', Rule::in(config('glaust.currencies'))],
             'parts.*.bank_account_id' => ['required', 'integer', TenantExists::in('bank_accounts')],
             'parts.*.bank_rate' => ['nullable', 'numeric', 'gt:0', 'max:10000000'],
-            'parts.*.bank_rate_azn' => ['nullable', 'numeric', 'gt:0', 'max:10000000'],   // typed as 1 AZN = ? RUB
+            'parts.*.bank_rate_azn' => ['nullable', 'numeric', 'gt:0', 'max:10000000'],   // typed as 1 RUB = ? AZN
             'parts.*.fee_amount' => ['nullable', 'numeric', 'min:0'],
             'parts.*.fee_included' => ['nullable', 'boolean'],
             'parts.*.fee_account_id' => ['nullable', 'integer', TenantExists::in('bank_accounts')],

@@ -66,12 +66,12 @@
                         <p class="text-[11px] mt-1" x-show="account(p) && debit(p) !== null" :class="account(p) && account(p).balance - debit(p) < 0 ? 'text-danger' : 'text-muted'">
                             {{ __('Qalıq:') }} <span class="font-mono" x-text="account(p) && fmt(account(p).balance)"></span> → <span class="font-mono" x-text="account(p) && debit(p) !== null && fmt(account(p).balance - debit(p))"></span></p>
                     </div>
-                    {{-- the bank's rate as the bank gives it: "1 AZN = ? RUB"; the act currency goes through CBAR of the day --}}
+                    {{-- the bank's rate as the bank gives it: "1 RUB = ? AZN" (e.g. 0,017526); the act currency goes through CBAR of the day --}}
                     <div x-show="!same(p) && perAzn(p)">
-                        <label class="field-label">{{ __('Bankın kursu: 1 AZN = ?') }} <span x-text="p.currency"></span> <span class="text-danger">*</span></label>
-                        <input :name="`parts[${i}][bank_rate_azn]`" x-model="p.bankRateAzn" :disabled="same(p) || !p.date || !perAzn(p)" inputmode="decimal" :placeholder="rate(p.currency, p.date) ? rf(1 / rate(p.currency, p.date)) : ''" class="input font-mono text-right" :class="p.date && !bank(p) && 'border-saffron'">
-                        <p class="text-[11px] text-muted mt-1" x-show="rate(p.currency, p.date)">CBAR (<span x-text="p.date && p.date.split('-').reverse().join('.')"></span>): 1 AZN = <span class="font-mono" x-text="rf(1 / rate(p.currency, p.date))"></span> <span x-text="p.currency"></span></p>
-                        <p class="text-[11px] text-muted" x-show="bank(p)">= 1 <span x-text="currency"></span> = <span class="font-mono text-ink" x-text="rf(bank(p))"></span> <span x-text="p.currency"></span> <span class="text-faint">(CBAR <span x-text="currency"></span> <span class="font-mono" x-text="rf(rate(currency, p.date))"></span> ₼ × <span class="font-mono" x-text="num(p.bankRateAzn)"></span>)</span></p>
+                        <label class="field-label">{{ __('Bankın kursu: 1') }} <span x-text="p.currency"></span> = ? AZN <span class="text-danger">*</span></label>
+                        <input :name="`parts[${i}][bank_rate_azn]`" x-model="p.bankRateAzn" :disabled="same(p) || !p.date || !perAzn(p)" inputmode="decimal" :placeholder="rate(p.currency, p.date) ? rf(rate(p.currency, p.date)) : ''" class="input font-mono text-right" :class="p.date && !bank(p) && 'border-saffron'">
+                        <p class="text-[11px] text-muted mt-1" x-show="rate(p.currency, p.date)">CBAR (<span x-text="p.date && p.date.split('-').reverse().join('.')"></span>): 1 <span x-text="p.currency"></span> = <span class="font-mono" x-text="rf(rate(p.currency, p.date))"></span> AZN</p>
+                        <p class="text-[11px] text-muted" x-show="bank(p)">= 1 <span x-text="currency"></span> = <span class="font-mono text-ink" x-text="rf(bank(p))"></span> <span x-text="p.currency"></span> <span class="text-faint">(CBAR <span x-text="currency"></span> <span class="font-mono" x-text="rf(rate(currency, p.date))"></span> ÷ <span class="font-mono" x-text="num(p.bankRateAzn)"></span>)</span></p>
                     </div>
                     <div x-show="!same(p) && !perAzn(p)">
                         <label class="field-label">{{ __('Bankın kursu: 1') }} <span x-text="currency"></span> = ? <span x-text="p.currency"></span> <span class="text-danger">*</span></label>

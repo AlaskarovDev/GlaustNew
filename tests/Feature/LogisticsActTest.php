@@ -173,7 +173,7 @@ class LogisticsActTest extends TestCase
         $this->assertSame([round(100 * $rubRate, 2), null], [(float) $lp2->fee_account_amount, $lp2->fee_bank_rate]);
     }
 
-    /** An EUR invoice paid in roubles: the bank's rate typed as "1 AZN = ? RUB", EUR taken at CBAR of the day. */
+    /** An EUR invoice paid in roubles: the bank's rate typed as "1 RUB = ? AZN" (0,017526), EUR taken at CBAR of the day. */
     public function test_bank_rate_typed_per_manat(): void
     {
         [$admin, $inv, $deal, $carrier, $rub] = $this->world();
@@ -182,11 +182,11 @@ class LogisticsActTest extends TestCase
         $eurAzn = app(CurrencyRates::class)->rate('EUR', $day);
         $this->post(route('deals.logistics-acts.store', $deal), ['logistics_invoice_number' => 'LA-40', 'logistics_invoice_date' => $day, 'amount' => '9325', 'currency' => 'EUR',
             'payment_plan' => 'invoice', 'parts' => [['amount' => '932 872,45', 'currency' => 'RUB', 'bank_account_id' => $rub->id, 'payment_date' => $day,
-                'bank_rate_azn' => '52,5', 'fee_amount' => '0']]])->assertSessionHasNoErrors();
+                'bank_rate_azn' => '0,017526', 'fee_amount' => '0']]])->assertSessionHasNoErrors();
 
         $lp = $this->inTenant($admin, fn () => LogisticsPayment::firstOrFail());
-        $this->assertEqualsWithDelta($eurAzn * 52.5, (float) $lp->bank_rate, 1e-6, '1 EUR = CBAR EUR (AZN) × 52.5 RUB');
-        $this->assertSame([932872.45, round(932872.45 / ($eurAzn * 52.5), 2)], [(float) $lp->amount, (float) $lp->act_amount]);
+        $this->assertEqualsWithDelta($eurAzn / 0.017526, (float) $lp->bank_rate, 1e-6, '1 EUR = CBAR EUR (AZN) ÷ 0.017526');
+        $this->assertSame([932872.45, round(932872.45 / ($eurAzn / 0.017526), 2)], [(float) $lp->amount, (float) $lp->act_amount]);
         $this->get(route('deals.show', [$deal, 'tab' => 'logistics']))->assertOk();
     }
 
@@ -199,7 +199,7 @@ class LogisticsActTest extends TestCase
         $rates = app(CurrencyRates::class);
         $this->post(route('deals.logistics-acts.store', $deal), ['logistics_invoice_number' => 'LA-50', 'logistics_invoice_date' => $day, 'amount' => '9800', 'currency' => 'EUR',
             'payment_plan' => 'invoice', 'parts' => [['amount' => '982 233,68', 'currency' => 'RUB', 'bank_account_id' => $rub->id, 'payment_date' => $day,
-                'bank_rate_azn' => '57', 'fee_amount' => '2501', 'fee_included' => '1']]])->assertSessionHasNoErrors();
+                'bank_rate_azn' => '0,017526', 'fee_amount' => '2501', 'fee_included' => '1']]])->assertSessionHasNoErrors();
         $lp = $this->inTenant($admin, fn () => LogisticsPayment::firstOrFail());
         $this->assertSame([979732.68, 2501.0, true], [(float) $lp->amount, (float) $lp->fee_amount, $lp->fee_included]);
         $this->assertSame(982233.68, $lp->totalDebit(), 'the account pays exactly the amount typed');
@@ -208,7 +208,7 @@ class LogisticsActTest extends TestCase
         // fee not typed: by the bank's rule on the amount
         $this->post(route('deals.logistics-acts.store', $deal), ['logistics_invoice_number' => 'LA-51', 'logistics_invoice_date' => $day, 'amount' => '100', 'currency' => 'EUR',
             'payment_plan' => 'invoice', 'parts' => [['amount' => '10000', 'currency' => 'RUB', 'bank_account_id' => $rub->id, 'payment_date' => $day,
-                'bank_rate_azn' => '57', 'fee_included' => '1']]])->assertSessionHasNoErrors();
+                'bank_rate_azn' => '0,017526', 'fee_included' => '1']]])->assertSessionHasNoErrors();
         $lp2 = $this->inTenant($admin, fn () => LogisticsPayment::latest('id')->first());
         $rule = BankFee::for('RUB', 10000, $rates->rate('RUB', $day), $rates->rate('EUR', $day))['amount'];
         $this->assertSame([round(10000 - $rule, 2), $rule], [(float) $lp2->amount, (float) $lp2->fee_amount]);

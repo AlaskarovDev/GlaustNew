@@ -48,13 +48,10 @@ class TradeReportTest extends TestCase
         }
         $this->assertSame(['916161494', 'ATFAXI-1204', 'VAM25006583_179', 'VAM25006583'], [$r['seller_no'], $r['buyer_no'], $r['BF'], $r['BH']]);
 
-        // by the «Məzənnə fərqi» module: seller paid before the act (advance paid), buyer paid before it
-        // (advance received), logistics paid after it (payable)
-        $this->assertSame(['Verilmiş avans', 'Alınmış avans'], [$r['TX_SC'], $r['TX_BC']]);
-        $this->assertEqualsWithDelta(537.61, $r['TX_S'], 0.01, '73 644.80 × (1.7739 − 1.7666): gain');
-        $this->assertEqualsWithDelta(-11570.80, $r['TX_B'], 0.01, '9 898 036.68 × (0.016318 − 0.017487): loss');
-        $this->assertEqualsWithDelta(-38.21, $r['TX_L'], 0.01, '979 732.68 × (0.017526 − 0.017487) more paid: loss');
-        $this->assertSame([537.61, 11609.01, -11071.4], [$r['TX_P'], $r['TX_N'], $r['TX']]);
+        // exchange differences only by the 1C method; no month chosen — the Trade's whole life
+        $this->assertArrayNotHasKey('TX_P', $r);
+        $this->assertSame('alıcı: alınmış avans · satıcı: verilmiş avans · logistika: kreditor borcu', $r['C1_H']);
+        $this->assertNull($r['C1_M214'], 'the month columns need a month');
         $this->assertSame(['2024-12-29', '2025-01-07', '2025-01-28'], [$r['T']->format('Y-m-d'), $r['X']->format('Y-m-d'), $r['BI']->format('Y-m-d')]);
 
         // the formula window shows the day behind each rate
@@ -72,16 +69,14 @@ class TradeReportTest extends TestCase
         $r = $this->inTenant($admin, fn () => app(TradeReport::class)->rows(Deal::whereKey($deal->id)->get(), '2024-12-31'))[0];
         $this->assertTrue($r['provisional']);
         $this->assertSame('2024-12-31', $r['BI']->format('Y-m-d'));
-        $this->assertNull($r['TX_S'], 'nothing paid to the seller by then');
-        $this->assertSame('Alınmış avans', $r['TX_BC']);
-        $this->assertEqualsWithDelta(9898036.68 * (0.016318 - 0.016), $r['TX_B'], 0.01, 'the advance received, valued at the month end');
-        $this->assertNull($r['TX_L'], 'logistics paid later');
+        $this->assertNull($r['C1_D'], 'nothing paid to the seller by then');
+        $this->assertSame(round(-9898036.68 * (0.016 - 0.016318), 2), $r['C1_B'], 'the advance received, valued at the month end');
+        $this->assertNull($r['C1_E'], 'logistics invoiced later');
 
         // 31.01.2025: the act is in (28.01) — a finished Trade, as before; the logistics payment (10.02) is still to come
         $r = $this->inTenant($admin, fn () => app(TradeReport::class)->rows(Deal::whereKey($deal->id)->get(), '2025-01-31'))[0];
         $this->assertFalse($r['provisional']);
-        $this->assertEqualsWithDelta(537.61, $r['TX_S'], 0.01);
-        $this->assertNull($r['TX_L']);
+        $this->assertSame(round(73644.8 * (1.7739 - 1.7666), 2), $r['C1_D']);
 
         // without a month end nothing changes
         $this->assertFalse($this->inTenant($admin, fn () => app(TradeReport::class)->rows(Deal::whereKey($deal->id)->get()))[0]['provisional']);
@@ -133,12 +128,20 @@ class TradeReportTest extends TestCase
         $this->assertSame($feb, $f['C1_M214']);
         $this->assertSame(round($r['C1_P'] + $feb, 2), $f['C1_P']);
 
-        // off by default; the page adds the columns with the button
-        $this->assertArrayNotHasKey('C1', $this->inTenant($admin, fn () => app(TradeReport::class)->rows(Deal::whereKey($deal->id)->get()))[0]);
+        // no month: the whole life — every posting, none filtered by the period
+        $w = $this->inTenant($admin, fn () => app(TradeReport::class)->rows(Deal::whereKey($deal->id)->get()))[0];
+        $diffs = array_column($w['_c1'], 'diff');
+        $this->assertCount(7, $diffs, 'A and B: 29.12 → 31.12 → close; D; E: 28.01 → 31.01 → 10.02');
+        $this->assertSame(round(array_sum(array_filter($diffs, fn ($d) => $d > 0)), 2), $w['C1_P']);
+        $this->assertSame(round(-array_sum(array_filter($diffs, fn ($d) => $d < 0)), 2), $w['C1_N']);
+        $this->assertSame(round(9898036.68 * 0.000318, 2) + 537.61 + round(979732.68 * 0.000474, 2), $w['C1_P']);
+
+        // the page: no button any more; a month adds the 1C detail columns
         $this->actingAs($admin);
-        $this->get(route('analytics.show', 'summary'))->assertOk()->assertSee('1C metodu ilə məzənnə fərqi')->assertDontSee('1C: 214 — müsbət fərq');
-        $this->get(route('analytics.show', ['summary', 'c1' => 1, 'as_month' => '2025-01']))->assertOk()
-            ->assertSee('1C metodu — 31.01.2025 ay sonuna')->assertSee('1C: 214 — müsbət fərq')->assertSee('1C: seçilmiş ay — 219.3')->assertSee('Yazılışlar (dövr: 1 yanvar → ay sonu)');
+        $this->get(route('analytics.show', 'summary'))->assertOk()->assertDontSee('1C metodu ilə məzənnə fərqi')
+            ->assertSee('Müsbət məzənnə fərqi (214)')->assertDontSee('1C: seçilmiş ay — 219.3')->assertSee('Yazılışlar (Trade-in bütün müddəti)');
+        $this->get(route('analytics.show', ['summary', 'as_month' => '2025-01']))->assertOk()
+            ->assertSee('Müsbət məzənnə fərqi (214)')->assertSee('1C: seçilmiş ay — 219.3')->assertSee('Yazılışlar (dövr: 1 yanvar → ay sonu)');
     }
 
     public function test_page_filters_formula_window_and_export(): void
@@ -148,7 +151,7 @@ class TradeReportTest extends TestCase
 
         $this->get(route('analytics.show', 'summary'))->assertOk()
             ->assertSee('Hesabat cədvəli')->assertSee('916161494')->assertSee('XALİS MƏNFƏƏT')->assertSee('BP + BQ + BR − BS − AJ − BB')
-            ->assertSee(money(10352.58))->assertSee('Məzənnə fərqi — Vergi Məcəlləsi ilə')->assertSee(money(11609.01));
+            ->assertSee(money(10352.58))->assertSee('Məzənnə fərqi — 214 / 219.3')->assertDontSee('Vergi Məcəlləsi');
         $this->get(route('analytics.show', ['summary', 'project_id' => $deal->project_id, 'deal_id' => $deal->id]))->assertOk()->assertSee('916161494');
         $this->get(route('analytics.show', ['summary', 'project_id' => 999999]))->assertOk()->assertSee('Hesablanacaq faktura yoxdur');
         $x = $this->get(route('analytics.show', ['summary', 'deal_id' => $deal->id, 'format' => 'xlsx']))->assertOk();

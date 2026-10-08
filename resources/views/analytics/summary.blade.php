@@ -2,7 +2,7 @@
     <x-page-header :title="$title" :icon="$icon" :subtitle="__('Satıcı fakturası, alıcı fakturası, kurslar, logistika və nəticə — hər Trade üzrə, şirkətin ATF cədvəlinin qaydası ilə')">
         <x-slot:actions>
             @if($rows)
-                <a href="{{ route('analytics.show', array_filter(['report' => 'summary', 'project_id' => $projectId, 'deal_id' => $dealId, 'as_month' => $asOf ? substr($asOf, 0, 7) : null, 'c1' => $oneC ? 1 : null, 'format' => 'xlsx'])) }}" class="btn btn-secondary"><x-icon name="sheet" class="size-4 text-success"/> Excel</a>
+                <a href="{{ route('analytics.show', array_filter(['report' => 'summary', 'project_id' => $projectId, 'deal_id' => $dealId, 'as_month' => $asOf ? substr($asOf, 0, 7) : null, 'format' => 'xlsx'])) }}" class="btn btn-secondary"><x-icon name="sheet" class="size-4 text-success"/> Excel</a>
             @endif
         </x-slot:actions>
     </x-page-header>
@@ -20,7 +20,7 @@
             'slate' => 'bg-surface-2 text-ink-2', 'amber' => 'bg-saffron-soft text-ink', 'green' => 'bg-success-soft text-success',
             'teal' => 'bg-brand-soft text-brand-ink', 'blue' => 'bg-[color-mix(in_srgb,#3b82f6_12%,transparent)] text-[#2563eb]', 'rose' => 'bg-danger-soft text-danger',
         ];
-        $key = ['FP', 'AQ', 'BE', 'BT', 'TX', 'C1', 'C1_M'];           // the results, highlighted
+        $key = ['FP', 'AQ', 'BE', 'BT', 'C1'];           // the results, highlighted
         $byGroup = collect($columns)->groupBy('g', true);
         $rateDays = \App\Support\Reports\TradeReport::rateDays();
         $meta = collect($columns)->map(fn ($c, $k) => [
@@ -57,22 +57,8 @@
         </label>
         <button class="btn btn-primary"><x-icon name="filter" class="size-4"/> {{ __('Göstər') }}</button>
         <button name="calc" value="1" class="btn btn-secondary" title="{{ __('Seçilən ayın (seçilməyibsə — son bitmiş ayın) son gününün CBAR kursu ilə') }}"><x-icon name="calendar" class="size-4"/> {{ __('Ay sonuna görə hesabla') }}</button>
-        @if($oneC)
-            <input type="hidden" name="c1" value="1">
-            <a href="{{ route('analytics.show', array_filter(['summary', 'project_id' => $projectId, 'deal_id' => $dealId, 'as_month' => $asOf ? substr($asOf, 0, 7) : null])) }}" class="btn btn-secondary !border-brand !text-brand-ink"><x-icon name="x" class="size-4"/> {{ __('1C sütunlarını gizlət') }}</a>
-        @else
-            <button name="c1" value="1" class="btn btn-secondary" title="{{ __('Monetar maddələr (debitor, kreditor borcu, hesabdakı valyuta) ay sonları və bağlanma günü yenidən qiymətləndirilir; avanslar yox') }}"><x-icon name="layers" class="size-4"/> {{ __('1C metodu ilə məzənnə fərqi') }}</button>
-        @endif
-        @if($projectId || $dealId || $asOf || $oneC)<a href="{{ route('analytics.show', 'summary') }}" class="btn btn-ghost">{{ __('Sıfırla') }}</a>@endif
+        @if($projectId || $dealId || $asOf)<a href="{{ route('analytics.show', 'summary') }}" class="btn btn-ghost">{{ __('Sıfırla') }}</a>@endif
     </form>
-
-    @if($oneC)
-        <div class="card border-brand/30 bg-brand-soft/40 p-4 mb-6 flex items-start gap-3 text-sm">
-            <x-icon name="layers" class="size-5 text-brand-ink shrink-0"/>
-            <div><span class="font-semibold">{{ __('1C metodu — :v1 ay sonuna', ['v1' => azdate($oneC)]) }}</span> —
-                {{ __('«Məzənnə fərqi — 1C metodu» sütunları əlavə olundu. Monetar maddələr (alıcının borcu, satıcıya və logistikaya borc, hesabdakı rubl və avro) uçota alındığı gündən bağlanma gününə, açıq qalıbsa ay sonuna qədər CBAR ilə yenidən qiymətləndirilir. Verilmiş və alınmış avanslar qeyri-monetardır — yenidən qiymətləndirilmir (0). «Seçilmiş ay üzrə» — «Закрытие месяца»nın bu ay üçün yazacağı fərqdir.') }}</div>
-        </div>
-    @endif
 
     @if($monthError)
         <div class="card border-danger/30 bg-danger-soft/40 p-4 mb-6 flex items-center gap-3 text-sm text-danger" role="alert"><x-icon name="alert" class="size-5 shrink-0"/> {{ $monthError }}</div>
@@ -81,7 +67,8 @@
         <div class="card border-saffron/40 bg-saffron-soft/50 p-4 mb-6 flex items-start gap-3 text-sm">
             <x-icon name="calendar" class="size-5 text-saffron shrink-0"/>
             <div><span class="font-semibold">{{ __(':v1 ay sonuna görə', ['v1' => azdate($asOf)]) }}</span> —
-                {{ __('aktı olmayan (və ya aktı ay sonundan sonra olan) Trade-lər bu günün CBAR kursu ilə qiymətləndirilir: ay sonu akt tarixinin yerinə keçir, ondan sonrakı ödənişlər hələ baş verməmiş sayılır. Belə sətirlər «ay sonu» nişanı ilə göstərilir.') }}</div>
+                {{ __('aktı olmayan (və ya aktı ay sonundan sonra olan) Trade-lər bu günün CBAR kursu ilə qiymətləndirilir: ay sonu akt tarixinin yerinə keçir, ondan sonrakı ödənişlər hələ baş verməmiş sayılır. Belə sətirlər «ay sonu» nişanı ilə göstərilir.') }}
+                {{ __('Məzənnə fərqi 1C metodu ilə 1 yanvar → ay sonu dövrü üçün hesablanır; maddələr üzrə və seçilmiş ayın sütunları əlavə olundu.') }}</div>
         </div>
     @endif
 
@@ -108,12 +95,12 @@
                 <div class="text-[11px] text-faint mt-0.5">{{ count($rows) }} {{ __('faktura') }} · {{ $trades }} Trade</div>
             </div>
             <div class="card p-5" style="--i:4">
-                <div class="flex items-center gap-2 text-xs text-muted"><x-icon name="scale" class="size-4"/> {{ __('Məzənnə fərqi — Vergi Məcəlləsi ilə') }}</div>
+                <div class="flex items-center gap-2 text-xs text-muted"><x-icon name="scale" class="size-4"/> {{ __('Məzənnə fərqi — 214 / 219.3') }}</div>
                 <div class="mt-1 flex flex-wrap items-baseline gap-x-3 font-mono font-semibold tabular-nums">
-                    <span class="text-lg text-success" title="{{ __('Müsbət məzənnə fərqi') }} · 214">+{{ money($sum('TX_P') ?? 0) }}</span>
-                    <span class="text-lg text-danger" title="{{ __('Mənfi məzənnə fərqi') }} · 219.3">−{{ money($sum('TX_N') ?? 0) }}</span>
+                    <span class="text-lg text-success" title="{{ __('Müsbət məzənnə fərqi') }} · 214">+{{ money($sum('C1_P') ?? 0) }}</span>
+                    <span class="text-lg text-danger" title="{{ __('Mənfi məzənnə fərqi') }} · 219.3">−{{ money($sum('C1_N') ?? 0) }}</span>
                 </div>
-                <div class="text-[11px] text-faint mt-0.5">{{ __('müsbət (214) / mənfi (219.3), akt tarixinə görə') }}</div>
+                <div class="text-[11px] text-faint mt-0.5">{{ $oneC ? __('1C metodu: 1 yanvar → :v1', ['v1' => azdate($oneC)]) : __('1C metodu: Trade-lərin bütün müddəti') }}</div>
             </div>
         </div>
 
@@ -229,7 +216,7 @@
                             {{-- 1C: the postings behind the figure, each a step between two points (no netting) --}}
                             <template x-if="meta[open].onec">
                                 <div>
-                                    <div class="text-[11px] uppercase tracking-wider text-muted mb-2">{{ __('Yazılışlar (dövr: 1 yanvar → ay sonu)') }}</div>
+                                    <div class="text-[11px] uppercase tracking-wider text-muted mb-2">{{ $oneC ? __('Yazılışlar (dövr: 1 yanvar → ay sonu)') : __('Yazılışlar (Trade-in bütün müddəti)') }}</div>
                                     <div class="space-y-3">
                                         <template x-for="(c, n) in cells.filter(c => c.e && c.e.length)" :key="'e' + n">
                                             <div class="rounded-lg border border-line overflow-hidden">

@@ -1,8 +1,14 @@
 <x-layouts.app :title="$title" wide>
     <x-page-header :title="$title" :icon="$icon" :subtitle="__('Satıcı fakturası, alıcı fakturası, kurslar, logistika və nəticə — hər Trade üzrə, şirkətin ATF cədvəlinin qaydası ilə')">
         <x-slot:actions>
+            @php $q = array_filter(['report' => 'summary', 'project_id' => $projectId, 'deal_id' => $dealId, 'as_month' => $asOf ? substr($asOf, 0, 7) : null]); @endphp
+            @if($forecast)
+                <a href="{{ route('analytics.show', $q) }}" class="btn btn-secondary !border-saffron"><x-icon name="x" class="size-4"/> {{ __('Faktiki hesabata qayıt') }}</a>
+            @else
+                <a href="{{ route('analytics.show', $q + ['forecast' => 1]) }}" class="btn btn-secondary" title="{{ __('Proqnoz düz olsaydı — bütün kurslar hesab verilən günün proqnozu ilə') }}"><x-icon name="target" class="size-4 text-saffron"/> {{ __('Proqnoz üzrə bax') }}</a>
+            @endif
             @if($rows)
-                <a href="{{ route('analytics.show', array_filter(['report' => 'summary', 'project_id' => $projectId, 'deal_id' => $dealId, 'as_month' => $asOf ? substr($asOf, 0, 7) : null, 'format' => 'xlsx'])) }}" class="btn btn-secondary"><x-icon name="sheet" class="size-4 text-success"/> Excel</a>
+                <a href="{{ route('analytics.show', $q + array_filter(['forecast' => $forecast ? 1 : null, 'format' => 'xlsx'])) }}" class="btn btn-secondary"><x-icon name="sheet" class="size-4 text-success"/> Excel</a>
             @endif
         </x-slot:actions>
     </x-page-header>
@@ -55,6 +61,7 @@
             <input type="month" name="as_month" value="{{ $month }}" max="{{ $lastMonth }}" class="input font-mono @if($monthError) is-invalid @endif" aria-describedby="as-month-hint">
             <span id="as-month-hint" class="block text-[11px] text-muted mt-1">{{ __('ay və il — kurs ayın son gününə götürülür; boş: akt olanda') }}</span>
         </label>
+        @if($forecast)<input type="hidden" name="forecast" value="1">@endif
         <button class="btn btn-primary"><x-icon name="filter" class="size-4"/> {{ __('Göstər') }}</button>
         <button name="calc" value="1" class="btn btn-secondary" title="{{ __('Seçilən ayın (seçilməyibsə — son bitmiş ayın) son gününün CBAR kursu ilə') }}"><x-icon name="calendar" class="size-4"/> {{ __('Ay sonuna görə hesabla') }}</button>
         @if($projectId || $dealId || $asOf)<a href="{{ route('analytics.show', 'summary') }}" class="btn btn-ghost">{{ __('Sıfırla') }}</a>@endif
@@ -69,6 +76,16 @@
             <div><span class="font-semibold">{{ __(':v1 ay sonuna görə', ['v1' => azdate($asOf)]) }}</span> —
                 {{ __('aktı olmayan (və ya aktı ay sonundan sonra olan) Trade-lər bu günün CBAR kursu ilə qiymətləndirilir: ay sonu akt tarixinin yerinə keçir, ondan sonrakı ödənişlər hələ baş verməmiş sayılır. Belə sətirlər «ay sonu» nişanı ilə göstərilir.') }}
                 {{ __('Məzənnə fərqi 1C metodu ilə 1 yanvar → ay sonu dövrü üçün hesablanır; maddələr üzrə və seçilmiş ayın sütunları əlavə olundu.') }}</div>
+        </div>
+    @endif
+
+    @if($forecast)
+        @php $noFc = collect($rows)->where('noForecast', true)->count(); @endphp
+        <div class="card border-saffron/40 bg-saffron-soft/50 p-4 mb-6 flex items-start gap-3 text-sm">
+            <x-icon name="target" class="size-5 text-saffron shrink-0"/>
+            <div><span class="font-semibold">{{ __('Proqnoz üzrə') }}</span> —
+                {{ __('proqnoz düz olsaydı: hər fakturada bütün kurslar (CBAR, bankın alış-satışı, logistika) hesab verilən günün proqnozudur — EUR «Proqnoz EUR», RUB «Proqnoz RUB». Məbləğlər, tarixlər və komissiyalar faktikidir, ona görə kurs fərqləri sıfırdır.') }}
+                @if($noFc) <span class="text-danger">{{ __(':v1 fakturada proqnoz kursu yoxdur — onlar faktiki kurslarla qalıb.', ['v1' => $noFc]) }}</span>@endif</div>
         </div>
     @endif
 
@@ -87,6 +104,9 @@
                     <div class="flex items-center gap-2 text-xs text-muted"><x-icon :name="$ico" class="size-4"/> {{ $label }}</div>
                     <div @class(['mt-1 text-2xl font-semibold font-mono tabular-nums', 'text-success' => $v > 0, 'text-danger' => $v < 0, 'text-faint' => $v === null])>{{ $v === null ? '—' : money($v) }}</div>
                     <div class="text-[11px] text-faint mt-0.5">{{ $hint }}</div>
+                    @if($actualTotals && $k !== 'FP' && $v !== null && ($a = $actualTotals[$k] ?? null) !== null)
+                        <div class="text-[11px] text-muted mt-1 font-mono">{{ __('fakt') }}: {{ money($a) }} · <span @class(['text-success' => $v - $a > 0, 'text-danger' => $v - $a < 0])>{{ $v - $a > 0 ? '+' : '' }}{{ money($v - $a) }}</span></div>
+                    @endif
                 </div>
             @endforeach
             <div class="card p-5" style="--i:3">

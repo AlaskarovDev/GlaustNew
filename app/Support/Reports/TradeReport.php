@@ -30,6 +30,14 @@ class TradeReport
     /** The last day balances are revalued to: the chosen month end, or today. */
     private string $c1End = '';
 
+    /** «Proqnoz üzrə bax»: every rate is the forecast of the invoice date — as if the forecast had come true. */
+    private bool $forecast = false;
+
+    /** The current row's forecast rates by currency, null — real rates. */
+    private ?array $fc = null;
+
+    private $fcDate = null;
+
     public function __construct(private CurrencyRates $rates) {}
 
     /** Column groups, in order: key => [label, tone]. */
@@ -179,6 +187,9 @@ class TradeReport
         if ($cur === 'AZN') {
             return 1.0;
         }
+        if ($this->fc !== null) {
+            return $this->forecastRate($cur);
+        }
         $day = $this->rates->normalize($date instanceof \DateTimeInterface ? $date->format('Y-m-d') : substr((string) $date, 0, 10));
         if ($day->gt($this->rates->today())) {
             return null;
@@ -187,14 +198,31 @@ class TradeReport
         return $this->memo[$cur.$day->format('Ymd')] ??= $this->rates->tryRate($cur, $day);
     }
 
+    /** Forecast mode: the invoice's forecast for its own two currencies, any other at CBAR of the invoice date. */
+    private function forecastRate(string $cur): ?float
+    {
+        if ($cur === 'AZN') {
+            return 1.0;
+        }
+        if (! array_key_exists($cur, $this->fc)) {
+            $fc = $this->fc;
+            $this->fc = null;
+            $fc[$cur] = $this->rate($cur, $this->fcDate);
+            $this->fc = $fc;
+        }
+
+        return $this->fc[$cur];
+    }
+
     /**
      * @param  ?string  $asOf  a month end (Y-m-d): a Trade without an act by then is valued as of that day — the day stands
      *                         in for the act date, and payments after it have not happened yet
      * @return list<array> rows for the given Trades, oldest seller invoice first
      */
-    public function rows(Collection $deals, ?string $asOf = null, ?string $oneC = null): array
+    public function rows(Collection $deals, ?string $asOf = null, ?string $oneC = null, bool $forecast = false): array
     {
         $this->asOf = $asOf;
+        $this->forecast = $forecast;
         $this->oneC = $oneC ?? $asOf;   // the 1C period ends at the chosen month end
         $this->c1End = $this->oneC ?? $this->rates->today()->toDateString();
         $deals->loadMissing(['invoices.adjustments', 'salesDocuments', 'supplierPayments', 'payments', 'logisticsActs.payments', 'currencyExchanges']);
@@ -207,6 +235,7 @@ class TradeReport
                 $rows[] = $this->row($deal, $inv, $weights[$inv->id] / $sum);
             }
         }
+        $this->fc = null;
         usort($rows, fn ($a, $b) => [$a['_sort'], $a['_id']] <=> [$b['_sort'], $b['_id']]);
         foreach ($rows as $i => &$r) {
             $r['no'] = $i + 1;
@@ -217,6 +246,7 @@ class TradeReport
 
     private function row(Deal $deal, Invoice $inv, float $k): array
     {
+        $this->fc = null;
         $cur = $inv->currency;
         $sale = $deal->salesDocuments->where('source_invoice_id', $inv->id)->firstWhere('kind', 'commercial')
             ?? $deal->salesDocuments->where('source_invoice_id', $inv->id)->firstWhere('kind', 'proforma');
@@ -252,18 +282,26 @@ class TradeReport
         $r['S'] = $S = $mul($J, $N);
         $r['FP'] = $sub($Q, $P, $R, $S);
 
+        // «Proqnoz üzrə bax»: from here on every rate — CBAR, the bank's, logistics — is the forecast; amounts, dates and fees stay real
+        $r['forecast'] = $this->forecast && $N && $O;
+        $r['noForecast'] = $this->forecast && ! $r['forecast'];
+        if ($r['forecast']) {
+            $this->fcDate = $inv->fx_date;
+            $this->fc = [$cur => $N, $saleCur => $O] + ($logRate && $inv->logistics_currency ? [$inv->logistics_currency => $logRate] : []);
+        }
+
         // money in from the buyer
         $in = $deal->payments->where('currency', $saleCur);
         $inSum = (float) $in->sum('amount');
         $r['T'] = $T = $in->max('transaction_date');
         $r['U'] = $this->rate($cur, $T);
-        $r['V'] = $V = $inSum > 0 ? $in->sum(fn ($t) => (float) $t->amount * (float) $t->cbar_rate) / $inSum : null;
+        $r['V'] = $V = $inSum > 0 ? ($this->fc !== null ? $this->forecastRate($saleCur) : $in->sum(fn ($t) => (float) $t->amount * (float) $t->cbar_rate) / $inSum) : null;
         $r['W'] = $W = $mul($H, $V);
 
         // operation: payment to the seller
         $paid = (float) $sp->sum('amount');
         $r['X'] = $X = $r['pay_date'];
-        $r['Y'] = $Y = $paid > 0 ? $sp->sum(fn ($p) => (float) $p->amount * (float) $p->cbar_rate) / $paid : null;
+        $r['Y'] = $Y = $paid > 0 ? ($this->fc !== null ? $this->forecastRate($cur) : $sp->sum(fn ($p) => (float) $p->amount * (float) $p->cbar_rate) / $paid) : null;
         $r['Z'] = $Z = $this->rate($saleCur, $X);
         $r['AA'] = $AA = $mul($D, $Y);
         $r['AC'] = $AC = $mul($H, $Z);
@@ -274,9 +312,9 @@ class TradeReport
         $soldSum = (float) $sold->sum('amount');
         $boughtSum = (float) $bought->sum('amount');
         $r['AO'] = $AO = $soldSum > 0 ? round($soldSum * $k, 2) : null;
-        $r['AG'] = $AG = $soldSum > 0 ? $sold->sum(fn (CurrencyExchange $x) => (float) $x->amount * (float) $x->bank_rate) / $soldSum : null;
+        $r['AG'] = $AG = $soldSum > 0 ? ($this->fc !== null ? $this->forecastRate($saleCur) : $sold->sum(fn (CurrencyExchange $x) => (float) $x->amount * (float) $x->bank_rate) / $soldSum) : null;
         $r['AP'] = $AP = $boughtSum > 0 ? round($boughtSum * $k, 2) : null;
-        $r['AF'] = $AF = $boughtSum > 0 ? $bought->sum(fn (CurrencyExchange $x) => (float) $x->amount * (float) $x->bank_rate) / $boughtSum : null;
+        $r['AF'] = $AF = $boughtSum > 0 ? ($this->fc !== null ? $this->forecastRate($cur) : $bought->sum(fn (CurrencyExchange $x) => (float) $x->amount * (float) $x->bank_rate) / $boughtSum) : null;
         $r['AD'] = $mul($AO, $Z);
         $r['AE'] = $sub($W, $AA);
         $r['AH'] = $AH = $mul($AF, $D);
@@ -297,7 +335,7 @@ class TradeReport
             $mine = $lps->filter(fn ($x) => $x['p']->currency === $r['axCur']);
             $aznOf = function ($x) {   // AZN that really left: at the bank's rate of the payment
                 $p = $x['p'];
-                $per = match (true) { $p->currency === 'AZN' => 1.0, $p->currency === $x['a']->currency => (float) $p->cbar_act_rate, default => (float) $p->cbar_act_rate / max(1e-12, (float) $p->bank_rate) };
+                $per = match (true) { $p->currency === 'AZN' => 1.0, $this->fc !== null => (float) $this->forecastRate($p->currency), $p->currency === $x['a']->currency => (float) $p->cbar_act_rate, default => (float) $p->cbar_act_rate / max(1e-12, (float) $p->bank_rate) };
 
                 return (float) $p->amount * $per * $x['k'];
             };
@@ -521,7 +559,7 @@ class TradeReport
         $fx = 0.0;
         foreach ($sold as $x) {
             $cbar = $this->rate($saleCur, $x->exchange_date);
-            if ($cbar) {
+            if ($cbar && $this->fc === null) {
                 $fx += (float) $x->amount * $k * ((float) $x->bank_rate - $cbar);
                 if ((float) $x->bank_rate < $cbar * 0.98) {
                     $warn[] = __('Rubl :v1 tarixində AMB-dən 2%-dən çox aşağı satılıb — konvertasiya tarixi səhv ola bilər, bank çıxarışı ilə yoxlayın.', ['v1' => azdate($x->exchange_date)]);
@@ -530,7 +568,7 @@ class TradeReport
         }
         foreach ($bought as $x) {
             $cbar = $this->rate($cur, $x->exchange_date);
-            if ($cbar) {
+            if ($cbar && $this->fc === null) {
                 $fx += (float) $x->amount * $k * ($cbar - (float) $x->bank_rate);
                 if ((float) $x->bank_rate < $cbar) {
                     $warn[] = __('Avro :v1 tarixində AMB-dən ucuz alınıb — konvertasiya tarixi səhv ola bilər, bank çıxarışı ilə yoxlayın.', ['v1' => azdate($x->exchange_date)]);

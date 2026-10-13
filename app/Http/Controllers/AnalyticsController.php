@@ -114,7 +114,10 @@ class AnalyticsController extends Controller
         // exchange differences by the 1C method: a month chosen — 1 January → its end, with the detail columns;
         // none — each Trade's whole life
         $oneC = $asOf;
-        $rows = $report->rows($deals, $asOf, $oneC);
+        // «Proqnoz üzrə bax»: the same report as if every forecast had come true; the real totals beside it
+        $forecast = $request->boolean('forecast');
+        $rows = $report->rows($deals, $asOf, $oneC, $forecast);
+        $actualTotals = $forecast ? TradeReport::totals($report->rows($deals, $asOf, $oneC)) : null;
         $columns = TradeReport::columns();
         $groups = TradeReport::groups();
         if (! $oneC) {
@@ -148,6 +151,7 @@ class AnalyticsController extends Controller
                 $projectId ? __('Layihə').': '.($projects->firstWhere('id', $projectId)?->name ?? '') : null,
                 $dealId ? 'Trade: '.($dealList->firstWhere('id', $dealId)?->code ?? '') : null,
                 $asOf ? __('Bitməyən Trade-lər :v1 (ay sonu) kursu ilə', ['v1' => azdate($asOf)]) : null,
+                $forecast ? __('Proqnoz üzrə: bütün kurslar hesab verilən günün proqnozu') : null,
             ]);
 
             return app(SpreadsheetExporter::class)->download(__('Yekun hesabat'), $cols, $rows, 'yekun-hesabat-'.now()->format('Y-m-d').'.xlsx', array_values($filters));
@@ -171,7 +175,7 @@ class AnalyticsController extends Controller
 
         return view('analytics.summary', $page + [
             'projects' => $projects, 'dealList' => $dealList, 'projectId' => $projectId, 'dealId' => $dealId, 'asOf' => $asOf,
-            'month' => $asOf ? substr($asOf, 0, 7) : $month, 'lastMonth' => $lastMonth, 'monthError' => $monthError, 'oneC' => $oneC,
+            'month' => $asOf ? substr($asOf, 0, 7) : $month, 'lastMonth' => $lastMonth, 'monthError' => $monthError, 'oneC' => $oneC, 'forecast' => $forecast, 'actualTotals' => $actualTotals,
             'rows' => $rows, 'columns' => $columns, 'groups' => $groups, 'totals' => TradeReport::totals($rows), 'fmt' => $fmt, 'cells' => $cells,
         ]);
     }

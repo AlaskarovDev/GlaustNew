@@ -144,6 +144,35 @@ class TradeReportTest extends TestCase
             ->assertSee('Müsbət məzənnə fərqi (214)')->assertSee('1C: seçilmiş ay — 219.3')->assertSee('Yazılışlar (dövr: 1 yanvar → ay sonu)');
     }
 
+    /** «Proqnoz üzrə bax»: the same report as if the forecast rates of the invoice date had come true. */
+    public function test_forecast_view(): void
+    {
+        [$admin, $deal] = $this->row3();
+        $real = $this->inTenant($admin, fn () => app(TradeReport::class)->rows(Deal::whereKey($deal->id)->get()))[0];
+        $r = $this->inTenant($admin, fn () => app(TradeReport::class)->rows(Deal::whereKey($deal->id)->get(), null, null, true))[0];
+
+        $this->assertTrue($r['forecast']);
+        [$N, $O] = [$real['N'], $real['O']];
+        $this->assertSame([$N, $O, $O, $N], [$r['Y'], $r['Z'], $r['AG'], $r['AF']], 'every rate is the forecast');
+        $this->assertSame([$real['L'], $real['M'], $real['FP']], [$r['L'], $r['M'], $r['FP']], 'the forecast block itself stays');
+        // no exchange differences left; the profit is the forecast one with the real logistics and fees
+        $this->assertEqualsWithDelta(0, $r['AL'], 0.001);
+        $this->assertEqualsWithDelta(0, $r['AM'], 0.001);
+        $this->assertSame([0.0, 0.0], [$r['C1_P'], $r['C1_N']]);
+        $want = $r['H'] * $O - $r['D'] * $N - $r['AX'] * $O - $r['J'] * $N - $r['BB'];
+        foreach (['AQ', 'BE', 'BT'] as $col) {
+            $this->assertEqualsWithDelta($want, $r[$col], 0.01, $col);
+        }
+        $this->assertFalse(isset($real['forecast']) && $real['forecast'], 'the normal report is untouched');
+        $this->assertNotEquals($real['AQ'], $r['AQ']);
+
+        $this->actingAs($admin);
+        $this->get(route('analytics.show', 'summary'))->assertOk()->assertSee('Proqnoz üzrə bax');
+        $this->get(route('analytics.show', ['summary', 'forecast' => 1]))->assertOk()
+            ->assertSee('Faktiki hesabata qayıt')->assertSee('proqnoz düz olsaydı')->assertSee(money($real['AQ']));
+        $this->assertStringContainsString('spreadsheetml', $this->get(route('analytics.show', ['summary', 'forecast' => 1, 'format' => 'xlsx']))->assertOk()->headers->get('content-type'));
+    }
+
     public function test_page_filters_formula_window_and_export(): void
     {
         [$admin, $deal] = $this->row3();

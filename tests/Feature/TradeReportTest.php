@@ -167,7 +167,8 @@ class TradeReportTest extends TestCase
         $this->assertNotEquals($real['AQ'], $r['AQ']);
 
         $this->actingAs($admin);
-        $this->get(route('analytics.show', 'summary'))->assertOk()->assertSee('Proqnoz üzrə bax');
+        // the «Proqnoz mənfəət» card shows the forecast view's profit
+        $this->get(route('analytics.show', 'summary'))->assertOk()->assertSee('Proqnoz üzrə bax')->assertSee(money($r['AQ']))->assertSee('proqnoz düz olsaydı — faktiki logistika və komissiyalarla');
         $this->get(route('analytics.show', ['summary', 'forecast' => 1]))->assertOk()
             ->assertSee('Faktiki hesabata qayıt')->assertSee('proqnoz düz olsaydı')->assertSee(money($real['AQ']));
         $this->assertStringContainsString('spreadsheetml', $this->get(route('analytics.show', ['summary', 'forecast' => 1, 'format' => 'xlsx']))->assertOk()->headers->get('content-type'));

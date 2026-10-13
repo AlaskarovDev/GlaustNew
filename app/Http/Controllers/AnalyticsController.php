@@ -118,6 +118,8 @@ class AnalyticsController extends Controller
         $forecast = $request->boolean('forecast');
         $rows = $report->rows($deals, $asOf, $oneC, $forecast);
         $actualTotals = $forecast ? TradeReport::totals($report->rows($deals, $asOf, $oneC)) : null;
+        // the «Proqnoz mənfəət» card: the profit of the forecast view (forecast rates, real logistics and fees)
+        $forecastProfit = ($forecast ? TradeReport::totals($rows) : TradeReport::totals($report->rows($deals, $asOf, $oneC, true)))['AQ'] ?? null;
         $columns = TradeReport::columns();
         $groups = TradeReport::groups();
         if (! $oneC) {
@@ -175,7 +177,7 @@ class AnalyticsController extends Controller
 
         return view('analytics.summary', $page + [
             'projects' => $projects, 'dealList' => $dealList, 'projectId' => $projectId, 'dealId' => $dealId, 'asOf' => $asOf,
-            'month' => $asOf ? substr($asOf, 0, 7) : $month, 'lastMonth' => $lastMonth, 'monthError' => $monthError, 'oneC' => $oneC, 'forecast' => $forecast, 'actualTotals' => $actualTotals,
+            'month' => $asOf ? substr($asOf, 0, 7) : $month, 'lastMonth' => $lastMonth, 'monthError' => $monthError, 'oneC' => $oneC, 'forecast' => $forecast, 'actualTotals' => $actualTotals, 'forecastProfit' => $forecastProfit,
             'rows' => $rows, 'columns' => $columns, 'groups' => $groups, 'totals' => TradeReport::totals($rows), 'fmt' => $fmt, 'cells' => $cells,
         ]);
     }

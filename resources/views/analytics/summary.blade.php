@@ -95,11 +95,11 @@
         {{-- the results at a glance --}}
         <div class="grid grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5 gap-4 mb-6 stagger">
             @foreach([
-                ['FP', __('Proqnoz mənfəət'), __('hesab verilən gün, proqnoz kurslarla'), 'target'],
+                ['FP', __('Proqnoz mənfəət'), __('proqnoz düz olsaydı — faktiki logistika və komissiyalarla'), 'target'],
                 ['AQ', __('Xalis mənfəət — pul axını'), __('satış − alış − logistika − komissiyalar'), 'trending-up'],
                 ['BE', __('Gəlir — kurs fərqləri ilə'), __('bank məzənnə fərqləri çıxılmaqla'), 'coins'],
             ] as $i => [$k, $label, $hint, $ico])
-                @php $v = $sum($k); @endphp
+                @php $v = $k === 'FP' ? $forecastProfit : $sum($k); @endphp
                 <div class="card p-5" style="--i:{{ $i }}">
                     <div class="flex items-center gap-2 text-xs text-muted"><x-icon :name="$ico" class="size-4"/> {{ $label }}</div>
                     <div @class(['mt-1 text-2xl font-semibold font-mono tabular-nums', 'text-success' => $v > 0, 'text-danger' => $v < 0, 'text-faint' => $v === null])>{{ $v === null ? '—' : money($v) }}</div>

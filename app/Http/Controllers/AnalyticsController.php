@@ -64,6 +64,12 @@ class AnalyticsController extends Controller
                 $rows[] = $line($g['label'], $g['values'], $g['total']);
             }
             $rows[] = $line(__('Cəmi ödənişlər'), $data['out']);
+            if ($data['other']) {
+                $rows[] = ['name' => __('DİGƏR ƏMƏLİYYAT GƏLİRİ (XƏRCİ)')];
+                foreach ($data['other'] as $g) {
+                    $rows[] = $line($g['label'], $g['values'], $g['total']);
+                }
+            }
             $rows[] = $line(__('Xalis pul axını'), $data['net']);
             $rows[] = $line(__('Dövrün sonuna qalıq'), $data['closing'], end($data['closing']) ?: 0);
             $cols = [Column::make('CASH FLOW', 'name', 'text', 34)];

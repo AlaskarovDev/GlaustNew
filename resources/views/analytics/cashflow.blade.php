@@ -17,6 +17,10 @@
         $months = $data['months'];
         $sumIn = array_sum($data['in']);
         $sumOut = array_sum($data['out']);
+        $sumOth = array_sum($data['oth']);
+        $sumNet = $sumIn - $sumOut + $sumOth;
+        // other income (+) / expense (−) in the sheet's way: a loss in brackets
+        $acc = fn ($v) => abs($v) < 0.005 ? '—' : ($v < 0 ? '('.num(abs($v)).')' : num($v));
         $openFirst = reset($data['opening']) ?: 0;
         $closeLast = end($data['closing']) ?: 0;
         $n = fn ($v) => abs($v) < 0.005 ? '—' : ($v < 0 ? '−' : '').num(abs($v));
@@ -54,6 +58,13 @@
                 $why["{$side}{$gi}|all"] = ['h' => $g['label'], 's' => $period, 'rows' => $sorted(array_merge([], ...array_values($g['details']))), 'v' => $g['total'], 'fx' => $g['kind'] === 'fx'];
             }
         }
+        foreach ($data['other'] as $gi => $g) {
+            foreach ($months as $m) {
+                $why["x{$gi}|{$m}"] = ['h' => $g['label'], 's' => $label($m), 'rows' => $sorted($g['details'][$m] ?? []), 'v' => $g['values'][$m], 'gain' => true, 'w' => $data['revalWarn'],
+                    'f' => __('Partiya: valyuta məbləği × (daxilolma məzənnəsi − çıxış məzənnəsi); ay sonu: uçot AZN qalığı − valyuta qalığı × ay sonu məzənnəsi. Müsbət — gəlir, mənfi — xərc.')];
+            }
+            $why["x{$gi}|all"] = ['h' => $g['label'], 's' => $period, 'rows' => $sorted(array_merge([], ...array_values($g['details']))), 'v' => $g['total'], 'gain' => true, 'w' => $data['revalWarn']];
+        }
         $lines = fn (array $groups, ?string $m) => collect($groups)->map(fn ($g) => ['l' => $g['label'], 'v' => $m ? $g['values'][$m] : $g['total']])->filter(fn ($x) => abs($x['v']) >= 0.005)->values()->all();
         foreach (array_merge($months, [null]) as $i => $m) {
             $k = $m ?? 'all';
@@ -62,16 +73,18 @@
             $out = $m ? $data['out'][$m] : $sumOut;
             $why["in|{$k}"] = ['h' => __('Cəmi gəlirlər'), 's' => $s, 'lines' => $lines($data['income'], $m), 'v' => $in];
             $why["out|{$k}"] = ['h' => __('Cəmi ödənişlər'), 's' => $s, 'lines' => $lines($data['payments'], $m), 'v' => $out];
-            $why["net|{$k}"] = ['h' => __('Xalis pul axını'), 's' => $s, 'f' => __('Cəmi gəlirlər − Cəmi ödənişlər'), 'lines' => [['l' => __('Cəmi gəlirlər'), 'v' => $in], ['l' => __('Cəmi ödənişlər'), 'v' => -$out]], 'v' => $in - $out];
+            $oth = $m ? $data['oth'][$m] : $sumOth;
+            $why["net|{$k}"] = ['h' => __('Xalis pul axını'), 's' => $s, 'f' => __('Cəmi gəlirlər − Cəmi ödənişlər + digər əməliyyat gəliri (xərci)'),
+                'lines' => [['l' => __('Cəmi gəlirlər'), 'v' => $in], ['l' => __('Cəmi ödənişlər'), 'v' => -$out], ['l' => __('Valyutanın yenidən qiymətləndirilməsi'), 'v' => $oth]], 'v' => $in - $out + $oth];
             $open = $m ? $data['opening'][$m] : $openFirst;
             $why["open|{$k}"] = ['h' => __('Dövrün əvvəlinə qalıq'), 's' => $s,
                 'f' => $m && $m !== $from ? __('Əvvəlki ayın sonuna qalıq') : __(':v1 ayından əvvəlki bütün daxilolmalar − ödənişlər', ['v1' => $label($from)]),
                 'lines' => $m && $m !== $from
                     ? [['l' => __('Dövrün sonuna qalıq').' · '.$label($months[$i - 1]), 'v' => $data['closing'][$months[$i - 1]]]]
-                    : [['l' => __('Əvvəlki daxilolmalar'), 'v' => $data['before']['in']], ['l' => __('Əvvəlki ödənişlər'), 'v' => -$data['before']['out']]],
+                    : [['l' => __('Əvvəlki daxilolmalar'), 'v' => $data['before']['in']], ['l' => __('Əvvəlki ödənişlər'), 'v' => -$data['before']['out']], ['l' => __('Valyutanın yenidən qiymətləndirilməsi'), 'v' => $data['before']['other']]],
                 'v' => $open];
             $why["close|{$k}"] = ['h' => __('Dövrün sonuna qalıq'), 's' => $s, 'f' => __('Dövrün əvvəlinə qalıq + Xalis pul axını'),
-                'lines' => [['l' => __('Dövrün əvvəlinə qalıq'), 'v' => $open], ['l' => __('Xalis pul axını'), 'v' => $in - $out]], 'v' => $m ? $data['closing'][$m] : $closeLast];
+                'lines' => [['l' => __('Dövrün əvvəlinə qalıq'), 'v' => $open], ['l' => __('Xalis pul axını'), 'v' => $in - $out + $oth]], 'v' => $m ? $data['closing'][$m] : $closeLast];
         }
         // a clickable figure
         $tip = fn (string $key) => 'role="button" tabindex="0" @click="show(\''.$key.'\')" @keydown.enter="show(\''.$key.'\')"';
@@ -114,7 +127,7 @@
         <div class="card p-5" style="--i:3">
             <div class="flex items-center gap-2 text-xs text-muted"><x-icon name="layers" class="size-4"/> {{ __('Dövrün sonuna qalıq') }}</div>
             <div @class(['mt-1 text-2xl font-semibold font-mono tabular-nums', 'text-danger' => $closeLast < 0])>{{ money($closeLast) }}</div>
-            <div @class(['text-[11px]', 'text-success' => $sumIn - $sumOut > 0, 'text-danger' => $sumIn - $sumOut < 0])>{{ __('xalis axın') }}: {{ ($sumIn - $sumOut >= 0 ? '+' : '−').money(abs($sumIn - $sumOut)) }}</div>
+            <div @class(['text-[11px]', 'text-success' => $sumNet > 0, 'text-danger' => $sumNet < 0])>{{ __('xalis axın') }}: {{ ($sumNet >= 0 ? '+' : '−').money(abs($sumNet)) }}</div>
         </div>
     </div>
 
@@ -193,12 +206,31 @@
                             <td class="cursor-pointer hover:underline decoration-dotted underline-offset-4 px-4 py-2.5 text-right font-mono tabular-nums text-danger" {!! $tip('out|all') !!}>{{ $n($sumOut) }}</td>
                         </tr>
 
+                        {{-- other operating income (expense): the currency revaluation --}}
+                        <tr><td colspan="{{ count($months) + 2 }}" class="sticky left-0 px-4 pt-6 pb-2 text-xs font-bold uppercase tracking-wider text-ink-2"><span class="inline-flex items-center gap-1.5"><x-icon name="scale" class="size-4"/> {{ __('Digər əməliyyat gəliri (xərci)') }}</span></td></tr>
+                        @forelse($data['other'] as $gi => $g)
+                            <tr class="group">
+                                <td class="sticky left-0 z-10 bg-surface group-hover:bg-surface-2 px-4 py-2 border-b border-line">
+                                    <span class="inline-flex items-center gap-1.5"><x-icon name="transfer" class="size-3.5 text-faint"/> {{ $g['label'] }}</span>
+                                    @if($data['revalWarn'])<x-icon name="alert" class="size-3.5 text-saffron inline" title="{{ __('Xəbərdarlıq var — rəqəmə toxunun') }}"/>@endif
+                                </td>
+                                @foreach($months as $m)
+                                    @php $v = $g['values'][$m]; @endphp
+                                    <td @class(['px-4 py-2 text-right font-mono tabular-nums border-b border-line group-hover:bg-surface-2', 'text-faint' => abs($v) < 0.005, 'text-success' => $v > 0.005, 'text-danger' => $v < -0.005, 'cursor-pointer hover:underline decoration-dotted underline-offset-4' => abs($v) >= 0.005])
+                                        @if(abs($v) >= 0.005) {!! $tip("x$gi|$m") !!} @endif>{{ $acc($v) }}</td>
+                                @endforeach
+                                <td @class(['cursor-pointer hover:underline decoration-dotted underline-offset-4 px-4 py-2 text-right font-mono tabular-nums font-semibold border-b border-line bg-surface-2/60 group-hover:bg-surface-2', 'text-success' => $g['total'] > 0.005, 'text-danger' => $g['total'] < -0.005]) {!! $tip("x$gi|all") !!}>{{ $acc($g['total']) }}</td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="{{ count($months) + 2 }}" class="sticky left-0 px-4 py-2 text-muted text-xs">{{ $data['revalued'] ? __('Bu dövrdə valyuta qalıqlarının yenidən qiymətləndirilməsi yoxdur') : __('Valyutanın yenidən qiymətləndirilməsi bank hesabları üzrə bütün şirkət üçün hesablanır — layihə seçiləndə göstərilmir.') }}</td></tr>
+                        @endforelse
+
                         {{-- result --}}
                         <tr><td colspan="{{ count($months) + 2 }}" class="h-4"></td></tr>
                         <tr class="font-semibold">
                             <td class="sticky left-0 z-10 bg-surface px-4 py-2.5 border-y border-line">{{ __('Xalis pul axını') }}</td>
                             @foreach($months as $m)<td @class(['cursor-pointer hover:underline decoration-dotted underline-offset-4 px-4 py-2.5 text-right font-mono tabular-nums border-y border-line', 'text-success' => $data['net'][$m] > 0.005, 'text-danger' => $data['net'][$m] < -0.005]) {!! $tip("net|$m") !!}>{{ $data['net'][$m] > 0.005 ? '+' : '' }}{{ $n($data['net'][$m]) }}</td>@endforeach
-                            <td @class(['cursor-pointer hover:underline decoration-dotted underline-offset-4 px-4 py-2.5 text-right font-mono tabular-nums border-y border-line', 'text-success' => $sumIn - $sumOut > 0, 'text-danger' => $sumIn - $sumOut < 0]) {!! $tip('net|all') !!}>{{ $n($sumIn - $sumOut) }}</td>
+                            <td @class(['cursor-pointer hover:underline decoration-dotted underline-offset-4 px-4 py-2.5 text-right font-mono tabular-nums border-y border-line', 'text-success' => $sumNet > 0, 'text-danger' => $sumNet < 0]) {!! $tip('net|all') !!}>{{ $n($sumNet) }}</td>
                         </tr>
                         <tr class="bg-[#9a4a0c]/10 font-bold">
                             <td class="sticky left-0 z-10 bg-[#f6ebe2] dark:bg-[#3a2416] px-4 py-3">{{ __('Dövrün sonuna qalıq') }}</td>
@@ -211,6 +243,7 @@
             <p class="px-5 py-3 border-t border-line text-[11px] text-muted leading-relaxed">
                 <span class="font-medium text-ink-2">{{ __('Rəqəmə toxunun — necə yarandığı açılacaq.') }}</span>
                 {{ __('Daxilolmalar və ödənişlər öz tarixinin CBAR kursu ilə AZN-ə çevrilir. Satıcıya ödəniş CBAR ilə (D × Y) göstərilir, bankın kursu ilə fərqi «Kurs fərqi» sətrindədir; valyuta alış-satışının bank ilə CBAR fərqi də oradadır (mənfi — qazanc). Satıcı və logistika köçürmələrinin komissiyası «Valyuta köçürmə komissiyası», digər bank komissiyaları «Ölkədaxili bank komissiyası» sətrindədir. Hesablar arası köçürmə və konvertasiya pul axını deyil.') }}
+                {{ __('«Valyutanın yenidən qiymətləndirilməsi» bank hesablarındakı valyutanı partiyalar üzrə (FIFO) izləyir: daxilolma günün CBAR kursu ilə uçota alınır, çıxışda və hər ay sonunda fərq yaranır (IAS 21); bank spredi «Kurs fərqi»ndədir, ikiqat hesablanmır.') }}
             </p>
 
             {{-- what a figure is made of --}}
@@ -227,6 +260,13 @@
                             <button type="button" class="btn btn-ghost btn-icon" @click="open = null" aria-label="{{ __('Bağla') }}"><x-icon name="x" class="size-5"/></button>
                         </header>
                         <div class="overflow-auto flex-1">
+                            <template x-if="why[open].w && why[open].w.length">
+                                <div class="mx-5 mt-4 rounded-lg border border-saffron/40 bg-saffron-soft/50 p-3 text-[12px] space-y-1">
+                                    <div class="font-semibold flex items-center gap-1.5"><x-icon name="alert" class="size-4 text-saffron"/> {{ __('Xəbərdarlıqlar') }}</div>
+                                    <template x-for="(w, i) in why[open].w.slice(0, 8)" :key="i"><div x-text="'• ' + w"></div></template>
+                                    <div class="text-muted" x-show="why[open].w.length > 8" x-text="'… +' + (why[open].w.length - 8)"></div>
+                                </div>
+                            </template>
                             {{-- the money movements --}}
                             <template x-if="why[open].rows">
                                 <table class="table-g text-[13px]">
@@ -237,7 +277,7 @@
                                                 <td class="font-mono whitespace-nowrap text-muted" x-text="r.d"></td>
                                                 <td><template x-if="r.u"><a :href="r.u" class="hover:text-brand-ink underline decoration-dotted underline-offset-2" x-text="r.t"></a></template><span x-show="!r.u" x-text="r.t"></span></td>
                                                 <td class="font-mono text-[12px] text-muted" x-text="r.c || ''"></td>
-                                                <td class="num font-semibold whitespace-nowrap" :class="why[open].fx && r.v < 0 ? 'text-success' : ''" x-text="glaustFmt.fmt(r.v, 2)"></td>
+                                                <td class="num font-semibold whitespace-nowrap" :class="(why[open].fx && r.v < 0) || (why[open].gain && r.v > 0) ? 'text-success' : (why[open].gain && r.v < 0 ? 'text-danger' : '')" x-text="glaustFmt.fmt(r.v, 2)"></td>
                                             </tr>
                                         </template>
                                     </tbody>
@@ -255,7 +295,7 @@
                             </template>
                         </div>
                         <footer class="flex items-center justify-between gap-3 px-5 py-3 border-t border-line bg-surface-2 text-sm">
-                            <span class="text-muted"><span x-show="why[open].rows" x-text="(why[open].rows || []).length + ' {{ __('əməliyyat') }}'"></span> <span x-show="why[open].fx">· {{ __('mənfi — qazanc') }}</span></span>
+                            <span class="text-muted"><span x-show="why[open].rows" x-text="(why[open].rows || []).length + ' {{ __('əməliyyat') }}'"></span> <span x-show="why[open].fx">· {{ __('mənfi — qazanc') }}</span><span x-show="why[open].gain">· {{ __('müsbət — gəlir, mənfi — xərc') }}</span></span>
                             <span class="font-semibold">{{ __('Cəmi') }}: <span class="font-mono" x-text="(why[open].v < 0 ? '−' : '') + glaustFmt.fmt(Math.abs(why[open].v), 2) + ' ₼'"></span></span>
                         </footer>
                     </div>

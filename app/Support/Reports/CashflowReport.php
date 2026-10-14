@@ -19,7 +19,11 @@ use Illuminate\Support\Collection;
  *                «Kurs fərqi» (bank vs CBAR: currency bought / sold, seller payments at a bank cross rate),
  *                «Valyuta köçürmə komissiyası» (fees of seller and logistics transfers).
  * Transfers between own accounts and conversions are not cash flow; only their exchange result counts.
- * The opening of the first month is everything before it, so the months chain: closing = opening + in − out.
+ * «Digər əməliyyat gəliri (xərci)» — the revaluation of the currency on the bank (IAS 21), the whole company only:
+ *   every foreign currency is followed in lots at CBAR of the day it comes in (its AZN book value); a lot that leaves
+ *   gives lot × (in rate − out rate), the balance at each month end gives book AZN − balance × the month-end rate.
+ *   The bank's spread on conversions stays in «Kurs fərqi» (the conversions leave at CBAR), so nothing counts twice.
+ * The opening of the first month is everything before it, so the months chain: closing = opening + in − out + other.
  */
 class CashflowReport
 {
@@ -34,13 +38,19 @@ class CashflowReport
 
     private array $out = [];
 
+    /** Other operating income (+) / expense (−): the currency revaluation. */
+    private array $other = [];
+
+    /** @var list<array{0: string, 1: string}> [month, text] — what the revaluation could not settle (missing rates, more out than in) */
+    private array $revalWarn = [];
+
     private bool $collected = false;
 
     /** First and last month with any money moved (Y-m), null when nothing. */
     public function span(): array
     {
         $this->collect();
-        $all = array_merge([], ...array_map(fn ($g) => array_keys($g['months']), array_values($this->in + $this->out)));
+        $all = array_merge([], ...array_map(fn ($g) => array_keys($g['months']), array_values($this->in + $this->out + $this->other)));
 
         return $all ? [min($all), max($all)] : [null, null];
     }
@@ -61,13 +71,14 @@ class CashflowReport
         $sum = fn (array $groups, callable $keep) => array_sum(array_map(fn ($g) => array_sum(array_filter($g['months'], $keep, ARRAY_FILTER_USE_KEY)), $groups));
 
         // whatever happened before the first month opens it
-        $opening = $sum($this->in, fn ($m) => $m < $from) - $sum($this->out, fn ($m) => $m < $from);
-        $in = $out = $net = $open = $close = [];
+        $opening = $sum($this->in, fn ($m) => $m < $from) - $sum($this->out, fn ($m) => $m < $from) + $sum($this->other, fn ($m) => $m < $from);
+        $in = $out = $oth = $net = $open = $close = [];
         foreach ($months as $m) {
             $open[$m] = round($opening, 2);
             $in[$m] = round($sum($this->in, fn ($k) => $k === $m), 2);
             $out[$m] = round($sum($this->out, fn ($k) => $k === $m), 2);
-            $net[$m] = round($in[$m] - $out[$m], 2);
+            $oth[$m] = round($sum($this->other, fn ($k) => $k === $m), 2);
+            $net[$m] = round($in[$m] - $out[$m] + $oth[$m], 2);
             $opening += $net[$m];
             $close[$m] = round($opening, 2);
         }
@@ -79,10 +90,12 @@ class CashflowReport
             ->sortBy([['order', 'asc'], ['total', 'desc']])->values()->all();
         [$first, $last] = $this->span();
         // what the opening of the first month is made of
-        $before = ['in' => round($sum($this->in, fn ($m) => $m < $from), 2), 'out' => round($sum($this->out, fn ($m) => $m < $from), 2)];
+        $before = ['in' => round($sum($this->in, fn ($m) => $m < $from), 2), 'out' => round($sum($this->out, fn ($m) => $m < $from), 2),
+            'other' => round($sum($this->other, fn ($m) => $m < $from), 2)];
 
-        return ['months' => $months, 'before' => $before, 'income' => $rows($this->in), 'payments' => $rows($this->out),
-            'opening' => $open, 'closing' => $close, 'in' => $in, 'out' => $out, 'net' => $net, 'first' => $first, 'last' => $last];
+        return ['months' => $months, 'before' => $before, 'income' => $rows($this->in), 'payments' => $rows($this->out), 'other' => $rows($this->other),
+            'opening' => $open, 'closing' => $close, 'in' => $in, 'out' => $out, 'oth' => $oth, 'net' => $net, 'first' => $first, 'last' => $last,
+            'revalued' => $this->projectId === null, 'revalWarn' => array_values(array_unique(array_column(array_filter($this->revalWarn, fn ($w) => $w[0] >= $from && $w[0] <= $to), 1)))];
     }
 
     /**
@@ -98,6 +111,113 @@ class CashflowReport
         $side[$key] ??= ['label' => $label, 'kind' => $kind, 'order' => $order, 'url' => $url, 'months' => [], 'items' => []];
         $side[$key]['months'][$m] = ($side[$key]['months'][$m] ?? 0) + $azn;
         $side[$key]['items'][$m][] = ['d' => azdate($day), 's' => $day, 't' => $why['t'] ?? $label, 'c' => $why['c'] ?? null, 'u' => $why['u'] ?? null, 'v' => round($azn, 2)];
+    }
+
+    /**
+     * Valyutanın yenidən qiymətləndirilməsi: FIFO lots per currency at their AZN book value; each lot that leaves
+     * is settled at CBAR of that day, what stays is revalued at every month end. Gains go in as +, losses as −.
+     */
+    private function revalue(): void
+    {
+        $rates = app(\App\Services\Cbar\CurrencyRates::class);
+        $today = $rates->today()->toDateString();
+        $label = __('Valyutanın yenidən qiymətləndirilməsi');
+        $fmt = fn (float $r) => rate_fmt(round($r, $r < 1 ? 7 : 4));
+        $rate = fn (float $azn, float $qty) => $qty > 0 ? $fmt($azn / $qty) : '—';
+        $post = function (string $day, float $loss, string $what, string $calc) use ($label) {
+            $this->add($this->other, 'reval', $label, 'reval', $day, -round($loss, 2), 1, null, ['t' => $what, 'c' => $calc]);
+        };
+
+        $events = [];
+        foreach (\App\Models\BankAccount::where('currency', '!=', 'AZN')->get() as $a) {
+            if ((float) $a->opening_balance <= 0.005) {
+                continue;
+            }
+            $day = $a->opening_date?->format('Y-m-d');
+            $r = $day ? $rates->tryRate($a->currency, $day) : null;
+            if (! $r) {
+                $this->revalWarn[] = [$day ? substr($day, 0, 7) : '0000-00', __(':v1 hesabının açılış qalığının AZN dəyəri məlum deyil (açılış tarixi və ya onun CBAR kursu yoxdur) — qiymətləndirməyə daxil edilmədi.', ['v1' => $a->name])];
+
+                continue;
+            }
+            $events[] = ['cur' => $a->currency, 'day' => $day, 'in' => true, 'qty' => (float) $a->opening_balance, 'azn' => round((float) $a->opening_balance * $r, 2),
+                'what' => __('açılış qalığı').' · '.$a->name, 'id' => 0];
+        }
+        $txs = BankTransaction::where('currency', '!=', 'AZN')->where('kind', '!=', 'transfer')->get(['id', 'transaction_date', 'direction', 'kind', 'currency', 'amount', 'cbar_amount_azn', 'purpose']);
+        foreach ($txs as $t) {
+            $events[] = ['cur' => $t->currency, 'day' => $t->transaction_date->format('Y-m-d'), 'in' => $t->direction === 'in', 'qty' => (float) $t->amount,
+                'azn' => (float) $t->cbar_amount_azn, 'what' => $t->kind === 'conversion' ? __('konvertasiya') : \Illuminate\Support\Str::limit((string) $t->purpose, 60), 'id' => $t->id];
+        }
+        if (! $events) {
+            return;
+        }
+        usort($events, fn ($a, $b) => [$a['day'], $b['in'], $a['id']] <=> [$b['day'], $a['in'], $b['id']]);   // a day's money in first
+
+        $lots = [];   // cur => list of [qty, azn, day]
+        $monthEnd = function (string $me) use (&$lots, $rates, $post, $fmt) {
+            foreach ($lots as $cur => &$ls) {
+                $qty = array_sum(array_column($ls, 0));
+                if ($qty < 0.005) {
+                    continue;
+                }
+                $r = $rates->tryRate($cur, $me);
+                if (! $r) {
+                    $this->revalWarn[] = [substr($me, 0, 7), __(':v1 tarixinə :v2 CBAR kursu yoxdur — ay sonu qalığı qiymətləndirilmədi.', ['v1' => azdate($me), 'v2' => $cur])];
+
+                    continue;
+                }
+                $book = array_sum(array_column($ls, 1));
+                $post($me, $book - $qty * $r, __(':v1 qalığı — ay sonu', ['v1' => $cur]),
+                    __('uçot').' '.num($book).' − '.num($qty).' '.$cur.' × '.rate_fmt($r));
+                foreach ($ls as &$l) {
+                    $l[1] = $l[0] * $r;
+                }
+                unset($l);
+            }
+            unset($ls);
+        };
+        // the month ends from the first money to the last month already over
+        $ends = [];
+        for ($m = \Carbon\Carbon::parse($events[0]['day'])->endOfMonth(); $m->toDateString() < $today; $m = $m->addDay()->endOfMonth()) {
+            $ends[] = $m->toDateString();
+        }
+        foreach ($events as $e) {
+            while ($ends && $ends[0] < $e['day']) {
+                $monthEnd(array_shift($ends));
+            }
+            if ($e['qty'] < 0.005) {
+                continue;
+            }
+            if ($e['in']) {
+                $lots[$e['cur']][] = [$e['qty'], $e['azn'], $e['day']];
+
+                continue;
+            }
+            // money out: the oldest lots first, each at its own book rate against CBAR of the day
+            $left = $e['qty'];
+            $outRate = $e['azn'] / $e['qty'];
+            while ($left > 0.005 && ! empty($lots[$e['cur']])) {
+                $l = &$lots[$e['cur']][0];
+                $take = min($left, $l[0]);
+                $takeAzn = $l[1] * $take / $l[0];
+                $post($e['day'], $takeAzn - $take * $outRate,
+                    __(':v1 partiyası :v2 → :v3', ['v1' => $e['cur'], 'v2' => azdate($l[2]), 'v3' => $e['what']]),
+                    num($take).' '.$e['cur'].' × ('.$rate($takeAzn, $take).' − '.$fmt($outRate).')');
+                $l[0] -= $take;
+                $l[1] -= $takeAzn;
+                $left -= $take;
+                unset($l);
+                if ($lots[$e['cur']][0][0] < 0.005) {
+                    array_shift($lots[$e['cur']]);
+                }
+            }
+            if ($left > 0.005) {
+                $this->revalWarn[] = [substr($e['day'], 0, 7), __(':v1 tarixində :v2 :v3 çıxış qalıqdan çoxdur — çıxarışda daxilolma sətri və ya açılış qalığı çatışmır.', ['v1' => azdate($e['day']), 'v2' => num($left), 'v3' => $e['cur']])];
+            }
+        }
+        foreach ($ends as $me) {
+            $monthEnd($me);
+        }
     }
 
     /** «1 000,00 EUR × 1,7000 CBAR» */
@@ -176,6 +296,11 @@ class CashflowReport
             $this->add($this->out, $key, $label, 'party', $t->transaction_date, (float) $t->cbar_amount_azn, 1, $url,
                 ['t' => __('Bank məxarici').($t->purpose ? ' · '.$t->purpose : '').($t->reference ? ' · '.$t->reference : ''), 'c' => self::calc($t->amount, $t->currency, $t->cbar_rate)]);
         }
+        // the currency on the bank, revalued — accounts belong to the whole company, so only without a project filter
+        if (! $p) {
+            $this->revalue();
+        }
+
         // currency bought / sold: the bank against CBAR (+ loss, − gain)
         foreach (CurrencyExchange::when($p, fn ($q) => $q->where('project_id', $p))->get() as $x) {
             $this->add($this->out, 'fx', __(self::FX), 'fx', $x->exchange_date, (float) $x->difference_azn, 9, null,

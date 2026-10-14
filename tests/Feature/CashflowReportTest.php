@@ -58,7 +58,7 @@ class CashflowReportTest extends TestCase
         $this->assertStringContainsString('Trade '.$deal->code, $seller['details']['2025-01'][0]['t']);
         $fx = collect($d['payments'])->firstWhere('label', 'Kurs fərqi');
         $this->assertSame([613.68, 915.48], collect($fx['details']['2025-01'])->pluck('v')->sort()->values()->all());
-        $this->assertSame(['in' => 0.0, 'out' => 0.0], $d['before']);
+        $this->assertSame(['in' => 0.0, 'out' => 0.0, 'other' => 0.0], $d['before']);
 
         $this->actingAs($admin);
         $this->get(route('analytics.show', ['cashflow', 'from' => '2024-12', 'to' => '2025-02']))->assertOk()
@@ -68,5 +68,50 @@ class CashflowReportTest extends TestCase
         $x = $this->get(route('analytics.show', ['cashflow', 'from' => '2024-12', 'to' => '2025-02', 'format' => 'xlsx']))->assertOk();
         $this->assertStringContainsString('spreadsheetml', $x->headers->get('content-type'));
         $this->get(route('analytics.show', 'cashflow'))->assertOk();
+    }
+
+    /**
+     * «Valyutanın yenidən qiymətləndirilməsi»: the January 2025 example — the December rouble lot sold on 07.01, the January
+     * lot sold the next day, euros bought and paid out with a remainder revalued at the month end.
+     */
+    public function test_currency_revaluation_by_lots_and_month_ends(): void
+    {
+        $admin = $this->makeCompany();
+        \Illuminate\Support\Facades\Http::fake(fn () => \Illuminate\Support\Facades\Http::response('', 503));   // only the stored rates
+        $this->rates('2024-12-31', 1.7700, 0.016318);   // 31.12: the bulletin of the 29th still stands — no December difference
+        $this->rates('2025-01-31', 1.7711, 0.0175);
+        $this->rates('2025-02-28', 1.7700, 0.0180);
+        $this->inTenant($admin, function () {
+            $rub = \App\Models\BankAccount::create(['name' => 'RUB', 'bank_name' => 'Bank', 'currency' => 'RUB', 'opening_balance' => 0, 'is_active' => true]);
+            $eur = \App\Models\BankAccount::create(['name' => 'EUR', 'bank_name' => 'Bank', 'currency' => 'EUR', 'opening_balance' => 0, 'is_active' => true]);
+            $tx = fn ($a, $dir, $kind, $date, $qty, $azn) => \App\Models\BankTransaction::create(['bank_account_id' => $a->id, 'direction' => $dir, 'kind' => $kind,
+                'transaction_date' => $date, 'amount' => $qty, 'currency' => $a->currency, 'cbar_rate' => round($azn / $qty, 8), 'applied_rate' => round($azn / $qty, 8),
+                'amount_azn' => $azn, 'cbar_amount_azn' => $azn, 'purpose' => 'x']);
+            $tx($rub, 'in', 'regular', '2024-12-29', 9898036.68, 161516.16);
+            $tx($rub, 'out', 'conversion', '2025-01-07', 9898036.68, 157992.46);
+            $tx($rub, 'in', 'regular', '2025-01-27', 9729097.44, round(9729097.44 * 0.017382, 2));
+            $tx($rub, 'out', 'conversion', '2025-01-28', 9729097.44, round(9729097.44 * 0.017487, 2));
+            $tx($eur, 'in', 'conversion', '2025-01-27', 73416.93, round(73416.93 * 1.7786, 2));
+            $tx($eur, 'out', 'regular', '2025-01-28', 73350.00, round(73350 * 1.7739, 2));
+            $tx($rub, 'in', 'transfer', '2025-01-29', 100, 1.75);   // between own accounts: not a lot
+        });
+
+        $d = $this->inTenant($admin, fn () => (new CashflowReport)->build('2024-12', '2025-01'));
+        $items = collect($d['other'][0]['details']['2025-01'])->keyBy('t');
+        $this->assertSame(-3523.70, $items['RUB partiyası 29.12.2024 → konvertasiya']['v'], '9 898 036.68 × (0.0163181 − 0.015962): a loss');
+        $this->assertSame(1021.56, $items['RUB partiyası 27.01.2025 → konvertasiya']['v'], '9 729 097.44 × (0.017382 − 0.017487): a gain');
+        $this->assertSame(round(-73350 * (1.7786 - 1.7739), 2), $items['EUR partiyası 27.01.2025 → x']['v']);
+        $this->assertSame(round(66.93 * 1.7711 - 66.93 * 1.7786, 2), $items['EUR qalığı — ay sonu']['v'], 'book − balance × the 31.01 rate');
+        $this->assertSame(0.0, $d['oth']['2024-12']);
+        $this->assertEqualsWithDelta(-3523.70 + 1021.56 + round(-73350 * 0.0047, 2) + round(66.93 * (1.7711 - 1.7786), 2), $d['oth']['2025-01'], 0.011, 'each posting rounded on its own');
+        $this->assertSame([], $d['revalWarn']);
+        // it moves the balance: net = in − out + other
+        $this->assertEqualsWithDelta($d['in']['2025-01'] - $d['out']['2025-01'] + $d['oth']['2025-01'], $d['net']['2025-01'], 0.001);
+        // a project filter leaves it out — the accounts belong to the whole company
+        $this->assertSame([], $this->inTenant($admin, fn () => (new CashflowReport(999))->build('2024-12', '2025-01'))['other']);
+
+        $this->actingAs($admin);
+        $this->get(route('analytics.show', ['cashflow', 'from' => '2024-12', 'to' => '2025-01']))->assertOk()
+            ->assertSee('Digər əməliyyat gəliri (xərci)')->assertSee('Valyutanın yenidən qiymətləndirilməsi')->assertSee('('.num(abs($d['oth']['2025-01'])).')');
     }
 }

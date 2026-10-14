@@ -50,8 +50,19 @@ class CashflowReportTest extends TestCase
         // a later range opens with everything before it
         $this->assertSame($d['closing']['2025-01'], $this->inTenant($admin, fn () => (new CashflowReport)->build('2025-02', '2025-02'))['opening']['2025-02']);
 
+        // every figure carries the movements behind it, for the popup
+        $seller = collect($d['payments'])->firstWhere('label', 'Satıcılar');
+        $this->assertCount(1, $seller['details']['2025-01']);
+        $this->assertSame(130100.9, $seller['details']['2025-01'][0]['v']);
+        $this->assertStringContainsString(num(73644.8).' EUR × 1,7666', $seller['details']['2025-01'][0]['c']);
+        $this->assertStringContainsString('Trade '.$deal->code, $seller['details']['2025-01'][0]['t']);
+        $fx = collect($d['payments'])->firstWhere('label', 'Kurs fərqi');
+        $this->assertSame([613.68, 915.48], collect($fx['details']['2025-01'])->pluck('v')->sort()->values()->all());
+        $this->assertSame(['in' => 0.0, 'out' => 0.0], $d['before']);
+
         $this->actingAs($admin);
         $this->get(route('analytics.show', ['cashflow', 'from' => '2024-12', 'to' => '2025-02']))->assertOk()
+            ->assertSee('Rəqəmə toxunun — necə yarandığı açılacaq.')->assertSee('Satıcıya ödəniş')->assertSee('Cəmi gəlirlər − Cəmi ödənişlər')
             ->assertSee('CASH FLOW')->assertSee('Dövrün əvvəlinə qalıq')->assertSee(num(161516.16))->assertSee(num(130100.9))->assertSee('Kurs fərqi');
         $this->get(route('analytics.show', ['cashflow', 'from' => '2024-12', 'to' => '2025-02', 'project_id' => $deal->project_id]))->assertOk()->assertSee(num(130100.9));
         $x = $this->get(route('analytics.show', ['cashflow', 'from' => '2024-12', 'to' => '2025-02', 'format' => 'xlsx']))->assertOk();

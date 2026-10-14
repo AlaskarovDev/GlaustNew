@@ -107,11 +107,19 @@ class CashflowReportTest extends TestCase
         $this->assertSame([], $d['revalWarn']);
         // it moves the balance: net = in − out + other
         $this->assertEqualsWithDelta($d['in']['2025-01'] - $d['out']['2025-01'] + $d['oth']['2025-01'], $d['net']['2025-01'], 0.001);
+        // Net Cash: each account at the month end, in AZN at that day's CBAR
+        $cash = collect($d['cash']['accounts'])->keyBy('label');
+        $this->assertSame(['2024-12' => 161516.16, '2025-01' => 1.75], $cash['RUB']['values'], '9 898 036.68 × 0.016318; 100 RUB × 0.0175');
+        $this->assertSame(round(66.93 * 1.7711, 2), $cash['EUR']['values']['2025-01'], '66.93 EUR × 1.7711');
+        $this->assertSame(round(1.75 + round(66.93 * 1.7711, 2), 2), $d['cash']['total']['2025-01']);
+        $this->assertNull((new CashflowReport(999))->build('2024-12', '2025-01')['cash'] ?? null);
+
         // a project filter leaves it out — the accounts belong to the whole company
         $this->assertSame([], $this->inTenant($admin, fn () => (new CashflowReport(999))->build('2024-12', '2025-01'))['other']);
 
         $this->actingAs($admin);
         $this->get(route('analytics.show', ['cashflow', 'from' => '2024-12', 'to' => '2025-01']))->assertOk()
-            ->assertSee('Digər əməliyyat gəliri (xərci)')->assertSee('Valyutanın yenidən qiymətləndirilməsi')->assertSee('('.num(abs($d['oth']['2025-01'])).')');
+            ->assertSee('Digər əməliyyat gəliri (xərci)')->assertSee('Valyutanın yenidən qiymətləndirilməsi')->assertSee('('.num(abs($d['oth']['2025-01'])).')')
+            ->assertSee('Net Cash (Xalis pul vəsaitləri) açıqlaması')->assertSee('Hesablarda cəmi')->assertSee(num(161516.16));
     }
 }

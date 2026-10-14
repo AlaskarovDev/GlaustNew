@@ -86,6 +86,18 @@
             $why["close|{$k}"] = ['h' => __('Dövrün sonuna qalıq'), 's' => $s, 'f' => __('Dövrün əvvəlinə qalıq + Xalis pul axını'),
                 'lines' => [['l' => __('Dövrün əvvəlinə qalıq'), 'v' => $open], ['l' => __('Xalis pul axını'), 'v' => $in - $out + $oth]], 'v' => $m ? $data['closing'][$m] : $closeLast];
         }
+        // Net Cash: each account at the month end, in AZN
+        $cash = $data['cash'];
+        $lastM = end($months);
+        foreach ($cash['accounts'] ?? [] as $ai => $a) {
+            foreach (array_merge($months, [null]) as $m) {
+                $mm = $m ?? $lastM;
+                $why["b{$ai}|".($m ?? 'all')] = ['h' => $a['label'].' · '.$a['sub'], 's' => azdate($cash['day'][$mm]),
+                    'f' => $a['currency'] === 'AZN' ? __('Hesabın günün sonuna qalığı') : __('Valyuta qalığı × həmin günün CBAR kursu'),
+                    'lines' => [['l' => num($a['native'][$mm]).' '.$a['currency'].($a['currency'] !== 'AZN' && $a['rates'][$mm] ? ' × '.rate_fmt($a['rates'][$mm]).' CBAR' : ''), 'v' => $a['values'][$mm] ?? 0]],
+                    'v' => $a['values'][$mm] ?? 0];
+            }
+        }
         // a clickable figure
         $tip = fn (string $key) => 'role="button" tabindex="0" @click="show(\''.$key.'\')" @keydown.enter="show(\''.$key.'\')"';
     @endphp
@@ -237,6 +249,38 @@
                             @foreach($months as $m)<td @class(['cursor-pointer hover:underline decoration-dotted underline-offset-4 px-4 py-3 text-right font-mono tabular-nums', 'text-danger' => $data['closing'][$m] < 0]) {!! $tip("close|$m") !!}>{{ $n($data['closing'][$m]) }}</td>@endforeach
                             <td @class(['cursor-pointer hover:underline decoration-dotted underline-offset-4 px-4 py-3 text-right font-mono tabular-nums', 'text-danger' => $closeLast < 0]) {!! $tip('close|all') !!}>{{ $n($closeLast) }}</td>
                         </tr>
+
+                        {{-- Net Cash: where the closing balance sits — each account at the month end, in AZN --}}
+                        @if($cash)
+                            <tr><td colspan="{{ count($months) + 2 }}" class="sticky left-0 px-4 pt-7 pb-2 text-xs font-bold uppercase tracking-wider text-ink-2"><span class="inline-flex items-center gap-1.5"><x-icon name="wallet" class="size-4"/> {{ __('Net Cash (Xalis pul vəsaitləri) açıqlaması') }}</span></td></tr>
+                            @foreach($cash['accounts'] as $ai => $a)
+                                <tr class="group">
+                                    <td class="sticky left-0 z-10 bg-surface group-hover:bg-surface-2 px-4 py-2 border-b border-line">{{ $a['label'] }} <span class="text-[11px] text-faint">· {{ $a['sub'] }}</span></td>
+                                    @foreach($months as $m)
+                                        @php $v = $a['values'][$m]; @endphp
+                                        <td @class(['px-4 py-2 text-right font-mono tabular-nums border-b border-line group-hover:bg-surface-2', 'text-faint' => $v !== null && abs($v) < 0.005, 'text-danger' => $v !== null && $v < -0.005, 'cursor-pointer hover:underline decoration-dotted underline-offset-4' => $v !== null && abs($v) >= 0.005])
+                                            @if($v !== null && abs($v) >= 0.005) {!! $tip("b$ai|$m") !!} @endif
+                                            @if($v === null) title="{{ __('CBAR kursu yoxdur') }}" @endif>{{ $v === null ? '?' : $n($v) }}</td>
+                                    @endforeach
+                                    @php $v = $a['values'][$lastM]; @endphp
+                                    <td class="px-4 py-2 text-right font-mono tabular-nums font-semibold border-b border-line bg-surface-2/60 group-hover:bg-surface-2 cursor-pointer" {!! $tip("b$ai|all") !!}>{{ $v === null ? '?' : $n($v) }}</td>
+                                </tr>
+                            @endforeach
+                            <tr class="bg-[#9a4a0c]/10 font-bold">
+                                <td class="sticky left-0 z-10 bg-[#f6ebe2] dark:bg-[#3a2416] px-4 py-3">{{ __('Hesablarda cəmi') }}</td>
+                                @foreach($months as $m)<td class="px-4 py-3 text-right font-mono tabular-nums">{{ $n($cash['total'][$m]) }}</td>@endforeach
+                                <td class="px-4 py-3 text-right font-mono tabular-nums">{{ $n($cash['total'][$lastM]) }}</td>
+                            </tr>
+                            <tr class="text-[12px]">
+                                <td class="sticky left-0 z-10 bg-surface px-4 py-2 text-muted" title="{{ __('Dövrün sonuna qalıq − hesablarda cəmi: sıfır deyilsə, sistemdə uçota düşməyən hərəkət var (nağd xərc, hesabın açılış qalığı və s.)') }}">{{ __('Fərq (qalıq − hesablar)') }}</td>
+                                @foreach($months as $m)
+                                    @php $gap = round($data['closing'][$m] - $cash['total'][$m], 2); @endphp
+                                    <td @class(['px-4 py-2 text-right font-mono tabular-nums', 'text-faint' => abs($gap) < 0.005, 'text-danger' => abs($gap) >= 0.005])>{{ abs($gap) < 0.005 ? '—' : ($gap < 0 ? '−' : '').num(abs($gap)) }}</td>
+                                @endforeach
+                                @php $gap = round($closeLast - $cash['total'][$lastM], 2); @endphp
+                                <td @class(['px-4 py-2 text-right font-mono tabular-nums', 'text-faint' => abs($gap) < 0.005, 'text-danger' => abs($gap) >= 0.005])>{{ abs($gap) < 0.005 ? '—' : ($gap < 0 ? '−' : '').num(abs($gap)) }}</td>
+                            </tr>
+                        @endif
                     </tbody>
                 </table>
             </div>

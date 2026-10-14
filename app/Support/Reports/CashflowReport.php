@@ -95,7 +95,7 @@ class CashflowReport
 
         return ['months' => $months, 'before' => $before, 'income' => $rows($this->in), 'payments' => $rows($this->out), 'other' => $rows($this->other),
             'opening' => $open, 'closing' => $close, 'in' => $in, 'out' => $out, 'oth' => $oth, 'net' => $net, 'first' => $first, 'last' => $last,
-            'revalued' => $this->projectId === null, 'revalWarn' => array_values(array_unique(array_column(array_filter($this->revalWarn, fn ($w) => $w[0] >= $from && $w[0] <= $to), 1)))];
+            'revalued' => $this->projectId === null, 'cash' => $this->projectId === null ? $this->cash($months) : null, 'revalWarn' => array_values(array_unique(array_column(array_filter($this->revalWarn, fn ($w) => $w[0] >= $from && $w[0] <= $to), 1)))];
     }
 
     /**
@@ -218,6 +218,50 @@ class CashflowReport
         foreach ($ends as $me) {
             $monthEnd($me);
         }
+    }
+
+    /**
+     * «Net Cash (Xalis pul vəsaitləri) açıqlaması»: each account's balance at the month end (today for the running
+     * month), in AZN at CBAR of that day — what «Dövrün sonuna qalıq» should come to.
+     *
+     * @return array{accounts: list<array{label: string, sub: string, currency: string, values: array<string, ?float>, native: array<string, float>, rates: array<string, ?float>}>,
+     *               total: array<string, float>, day: array<string, string>}
+     */
+    private function cash(array $months): array
+    {
+        $rates = app(\App\Services\Cbar\CurrencyRates::class);
+        $today = $rates->today()->toDateString();
+        $day = [];
+        foreach ($months as $m) {
+            $end = \Carbon\Carbon::createFromFormat('!Y-m', $m)->endOfMonth()->toDateString();
+            $day[$m] = min($end, $today);
+        }
+        $out = [];
+        $total = array_fill_keys($months, 0.0);
+        foreach (\App\Models\BankAccount::orderBy('bank_name')->orderBy('currency')->orderBy('name')->get() as $a) {
+            $moves = BankTransaction::where('bank_account_id', $a->id)
+                ->selectRaw("DATE(transaction_date) as d, SUM(CASE WHEN direction = 'in' THEN amount ELSE -amount END) as s")->groupBy('d')->pluck('s', 'd')->all();
+            $values = $native = $used = [];
+            foreach ($months as $m) {
+                $d = $day[$m];
+                $bal = $a->opening_date === null || $a->opening_date->toDateString() <= $d ? (float) $a->opening_balance : 0.0;
+                foreach ($moves as $md => $sum) {
+                    if ($md <= $d) {
+                        $bal += (float) $sum;
+                    }
+                }
+                $native[$m] = round($bal, 2);
+                $r = $a->currency === 'AZN' ? 1.0 : (abs($bal) >= 0.005 ? $rates->tryRate($a->currency, $d) : null);
+                $used[$m] = $r;
+                $values[$m] = abs($bal) < 0.005 ? 0.0 : ($r === null ? null : round($bal * $r, 2));
+                $total[$m] += $values[$m] ?? 0;
+            }
+            if (collect($native)->contains(fn ($v) => abs($v) >= 0.005)) {
+                $out[] = ['label' => $a->name, 'sub' => $a->bank_name, 'currency' => $a->currency, 'values' => $values, 'native' => $native, 'rates' => $used];
+            }
+        }
+
+        return ['accounts' => $out, 'total' => array_map(fn ($v) => round($v, 2), $total), 'day' => $day];
     }
 
     /** «1 000,00 EUR × 1,7000 CBAR» */

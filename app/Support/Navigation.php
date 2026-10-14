@@ -25,6 +25,7 @@ class Navigation
                 ['label' => __('Bank hesabları'), 'route' => 'bank.accounts.index', 'active' => 'bank.accounts.*', 'icon' => 'wallet', 'can' => 'bank.view'],
                 ['label' => __('Valyuta alış-satışı'), 'route' => 'bank.exchanges.index', 'active' => 'bank.exchanges.*', 'icon' => 'transfer', 'can' => 'bank.view'],
                 ['label' => __('Bank əməliyyatları'), 'route' => 'bank.transactions.index', 'active' => 'bank.transactions.*', 'icon' => 'bank', 'can' => 'bank.view'],
+                ['label' => __('Bank hesabları auditi'), 'route' => 'bank.audits.index', 'active' => 'bank.audits.*', 'icon' => 'list-checks', 'can' => 'bank.view'],
                 ['label' => __('Valyuta məzənnələri'), 'route' => 'currency.index', 'active' => 'currency.*', 'icon' => 'coins', 'can' => 'currency.view'],
                 ['label' => __('Məzənnə fərqi'), 'route' => 'fx-difference.index', 'active' => 'fx-difference.*', 'icon' => 'scale', 'can' => 'currency.view'],
             ]],

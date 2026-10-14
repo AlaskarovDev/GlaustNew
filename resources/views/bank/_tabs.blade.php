@@ -2,6 +2,7 @@
     <a href="{{ route('bank.transactions.index') }}" @class(['tab-link', 'is-active' => request()->routeIs('bank.transactions.*')])>{{ __('Əməliyyatlar') }}</a>
     <a href="{{ route('bank.exchanges.index') }}" @class(['tab-link', 'is-active' => request()->routeIs('bank.exchanges.*')])>{{ __('Valyuta alış-satışı') }}</a>
     <a href="{{ route('bank.accounts.index') }}" @class(['tab-link', 'is-active' => request()->routeIs('bank.accounts.*')])>{{ __('Bank hesabları') }}</a>
+    <a href="{{ route('bank.audits.index') }}" @class(['tab-link', 'is-active' => request()->routeIs('bank.audits.*')])>{{ __('Hesab auditi') }}</a>
     @can('bank.import')
         <a href="{{ route('imports.index', ['type' => 'bank_transactions']) }}" class="tab-link">{{ __('Çıxarış importu') }}</a>
     @endcan

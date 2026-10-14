@@ -6,6 +6,7 @@ use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\Auth;
 use App\Http\Controllers\BankAccountController;
+use App\Http\Controllers\BankAuditController;
 use App\Http\Controllers\BankTransactionController;
 use App\Http\Controllers\ContractController;
 use App\Http\Controllers\CounterpartyController;
@@ -214,6 +215,11 @@ Route::middleware(['auth', 'tenant'])->group(function () {
         Route::delete('/exchanges/orphans', [CurrencyExchangeController::class, 'purgeOrphans'])->name('exchanges.orphans');
         Route::delete('/exchanges/{exchange}', [CurrencyExchangeController::class, 'destroy'])->name('exchanges.destroy');
         Route::resource('accounts', BankAccountController::class)->except(['show']);
+        Route::get('/audits', [BankAuditController::class, 'index'])->name('audits.index');
+        Route::post('/audits', [BankAuditController::class, 'store'])->name('audits.store');
+        Route::get('/audits/{audit}', [BankAuditController::class, 'show'])->name('audits.show');
+        Route::post('/audits/{audit}/fix', [BankAuditController::class, 'fix'])->name('audits.fix');
+        Route::delete('/audits/{audit}', [BankAuditController::class, 'destroy'])->name('audits.destroy');
     });
 
     /* Logistics */

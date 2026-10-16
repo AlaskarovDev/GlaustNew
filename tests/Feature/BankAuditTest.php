@@ -117,4 +117,51 @@ class BankAuditTest extends TestCase
         $this->delete(route('bank.audits.destroy', $audit))->assertRedirect(route('bank.audits.index'));
         $this->assertSame(7, $this->inTenant($admin, fn () => BankTransaction::count()), 'deleting the statement leaves the movements');
     }
+
+    /**
+     * A payment the bank made in one line on 28.01 (−146 522.16) that the system booked per Trade, one part a day early;
+     * the transfer fee charged 293.04 + 6.96 two days later, booked 149.80 + 150.20.
+     */
+    public function test_a_line_booked_in_parts_on_nearby_days(): void
+    {
+        $admin = $this->makeCompany();
+        $account = $this->inTenant($admin, function () {
+            $a = BankAccount::create(['name' => 'Turan AZN', 'bank_name' => 'Turan Bank', 'currency' => 'AZN', 'iban' => self::IBAN, 'opening_balance' => 0, 'is_active' => true]);
+            $l = app(BankLedger::class);
+            foreach ([['in', '2025-01-02', 200000], ['out', '2025-01-27', 73166.72], ['out', '2025-01-27', 149.80], ['out', '2025-01-28', 73355.44], ['out', '2025-01-28', 150.20]] as [$dir, $date, $amount]) {
+                $l->record($a, ['direction' => $dir, 'transaction_date' => $date, 'amount' => $amount, 'purpose' => 'sistem']);
+            }
+
+            return $a;
+        });
+        $file = $this->statement([
+            ['2025-01-02', 200000, 'Daxilolma'],
+            ['2025-01-28', -146522.16, 'Swift köçürmə — iki faktura'],
+            ['2025-01-28', -293.04, 'Swift komissiya'],
+            ['2025-01-30', -6.96, 'ƏSKİK TUTULMUŞ KOM'],
+        ]);
+        $this->actingAs($admin);
+        $this->post(route('bank.audits.store'), ['file' => new UploadedFile($file, 'turan.xlsx', null, null, true)])->assertRedirect();   // found by IBAN
+        $audit = $this->inTenant($admin, fn () => BankAudit::firstOrFail());
+
+        $r = $this->inTenant($admin, fn () => (new Reconciler($audit))->run());
+        $this->assertEquals(['ok' => 1, 'date' => 1, 'regroup' => 1], $r['counts']);
+        $row = collect($r['rows'])->firstWhere('status', 'date');
+        $this->assertCount(2, $row['txs'], 'both parts of the payment');
+        $this->assertSame('date', $row['fix']['action']);
+        $this->assertCount(1, $row['fix']['txs'], 'only the part booked a day early moves');
+        $this->get(route('bank.audits.show', $audit))->assertOk()->assertSee('Tarixi 28.01.2025 et')->assertSee('Auditi sil');
+        $this->get(route('bank.audits.show', [$audit, 'show' => 'ok']))->assertOk()->assertSee('Uyğun — bölgü fərqlidir');
+
+        $this->post(route('bank.audits.fix', $audit), $row['fix'])->assertSessionHas('success');
+        $this->inTenant($admin, fn () => $this->assertSame('2025-01-28', BankTransaction::where('amount', 73166.72)->first()->transaction_date->toDateString()));
+        $after = $this->inTenant($admin, fn () => (new Reconciler($audit))->run());
+        $this->assertEquals(['ok' => 1, 'split' => 1, 'regroup' => 1], $after['counts'], 'now the same day: a split payment');
+
+        // delete the audit and upload the statement again
+        $this->delete(route('bank.audits.destroy', $audit))->assertRedirect(route('bank.audits.index'));
+        $this->post(route('bank.audits.store'), ['file' => new UploadedFile($file, 'turan.xlsx', null, null, true)])->assertRedirect();
+        $this->assertSame(1, $this->inTenant($admin, fn () => BankAudit::count()));
+        $this->assertSame($account->id, $this->inTenant($admin, fn () => BankAudit::first()->bank_account_id));
+    }
 }

@@ -4,16 +4,18 @@
         $acc = $audit->account;
         $b = $r['balances'];
         $c = $r['counts'];
-        $okCount = ($c['ok'] ?? 0) + ($c['split'] ?? 0) + ($c['joined'] ?? 0);
+        $matched = \App\Support\BankAudit\Reconciler::MATCHED;
+        $okCount = array_sum(array_intersect_key($c, array_flip($matched)));
         $rows = collect($r['rows'])->filter(fn ($row) => match ($filter) {
-            'issues' => ! in_array($row['status'], ['ok', 'split', 'joined'], true),
-            'ok' => in_array($row['status'], ['ok', 'split', 'joined'], true),
+            'issues' => ! in_array($row['status'], $matched, true),
+            'ok' => in_array($row['status'], $matched, true),
             default => true,
         });
         $status = [
             'ok' => [__('Uyğun'), 'badge-green'],
             'split' => [__('Uyğun — sistemdə bölünüb'), 'badge-green'],
             'joined' => [__('Uyğun — bankda bir neçə sətir'), 'badge-green'],
+            'regroup' => [__('Uyğun — bölgü fərqlidir'), 'badge-blue'],
             'date' => [__('Tarix fərqlidir'), 'badge-amber'],
             'amount' => [__('Məbləğ fərqlidir'), 'badge-amber'],
             'missing_sys' => [__('Sistemdə yoxdur'), 'badge-rose'],
@@ -24,7 +26,12 @@
     @endphp
     <x-page-header :title="__('Bank hesabları auditi')" icon="list-checks" :subtitle="$acc?->bank_name.' · '.$acc?->name.' ('.$cur.')'.($audit->iban ? ' · '.$audit->iban : '').' · '.azdate($audit->period_from).' — '.azdate($audit->period_to)">
         <x-slot:actions>
-            <a href="{{ route('bank.audits.index') }}" class="btn btn-secondary"><x-icon name="arrow-left" class="size-4"/> {{ __('Çıxarışlar') }}</a>
+            <a href="{{ route('bank.audits.index') }}" class="btn btn-secondary"><x-icon name="upload" class="size-4"/> {{ __('Yeni çıxarış yüklə') }}</a>
+            @can('bank.import')
+                <form method="POST" action="{{ route('bank.audits.destroy', $audit) }}" data-confirm="{{ __('Çıxarış silinsin? Sistemdəki əməliyyatlara toxunulmayacaq — sonra yenidən yükləyə bilərsiniz.') }}" data-confirm-action="{{ __('Sil') }}">
+                    @csrf @method('DELETE')<button class="btn btn-secondary text-danger"><x-icon name="trash" class="size-4"/> {{ __('Auditi sil') }}</button>
+                </form>
+            @endcan
         </x-slot:actions>
     </x-page-header>
     @include('bank._tabs')
@@ -83,7 +90,7 @@
                             $ls = $row['lines'];
                             $ts = $row['txs'];
                             $fix = $row['fix'];
-                            $src = $ts ? ($r['sources'][$ts[0]['id']] ?? null) : null;
+                            $src = $ts ? ($r['sources'][$fix['txs'][0] ?? $ts[0]['id']] ?? null) : null;
                         @endphp
                         <tr @class(['bg-danger-soft/30' => in_array($row['status'], ['missing_sys', 'missing_bank'], true), 'bg-saffron-soft/30' => in_array($row['status'], ['date', 'amount'], true)])>
                             <td data-label="{{ __('Tarix') }}" class="font-mono text-xs whitespace-nowrap">{{ azdate(($ls[0] ?? $ts[0])['date']) }}</td>
@@ -131,6 +138,7 @@
                                             <input type="hidden" name="action" value="{{ $fix['action'] }}">
                                             @isset($fix['line'])<input type="hidden" name="line" value="{{ $fix['line'] }}">@endisset
                                             @isset($fix['tx'])<input type="hidden" name="tx" value="{{ $fix['tx'] }}">@endisset
+                                            @foreach($fix['txs'] ?? [] as $tid)<input type="hidden" name="txs[]" value="{{ $tid }}">@endforeach
                                             <button @class(['btn btn-sm whitespace-nowrap', 'btn-danger' => $fix['action'] === 'delete', 'btn-primary' => $fix['action'] !== 'delete'])><x-icon :name="$fix['action'] === 'delete' ? 'trash' : 'check'" class="size-4"/> {{ $btn }}</button>
                                         </form>
                                     @endcan

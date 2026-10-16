@@ -87,17 +87,22 @@ class BankAuditController extends Controller
     public function fix(Request $request, BankAudit $audit, BankAuditFixer $fixer): RedirectResponse
     {
         $this->authorize('bank.update');
-        $d = $request->validate(['action' => ['required', 'in:create,date,amount,delete'], 'line' => ['nullable', 'integer'], 'tx' => ['nullable', 'integer']]);
+        $d = $request->validate(['action' => ['required', 'in:create,date,amount,delete'], 'line' => ['nullable', 'integer'], 'tx' => ['nullable', 'integer'],
+            'txs' => ['nullable', 'array', 'max:4'], 'txs.*' => ['integer']]);
         $line = isset($d['line']) ? BankAuditLine::where('bank_audit_id', $audit->id)->findOrFail($d['line']) : null;
-        $tx = isset($d['tx']) ? BankTransaction::where('bank_account_id', $audit->bank_account_id)->findOrFail($d['tx']) : null;
-        if (($d['action'] !== 'delete' && ! $line) || ($d['action'] !== 'create' && ! $tx)) {
+        // one movement, or — a bank line booked in parts — the parts that sit on another day
+        $ids = isset($d['txs']) ? $d['txs'] : (isset($d['tx']) ? [$d['tx']] : []);
+        $txs = BankTransaction::where('bank_account_id', $audit->bank_account_id)->whereKey($ids)->get();
+        $tx = $txs->first();
+        if (($d['action'] !== 'delete' && ! $line) || ($d['action'] !== 'create' && (! $tx || $txs->count() !== count(array_unique($ids))))
+            || (count($ids) > 1 && $d['action'] !== 'date')) {
             abort(422);
         }
 
         try {
             match ($d['action']) {
                 'create' => $fixer->create($audit->account, $line),
-                'date' => $fixer->date($tx, $line->line_date->toDateString()),
+                'date' => $txs->each(fn ($t) => $fixer->date($t, $line->line_date->toDateString())),
                 'amount' => $fixer->amount($tx, $line),
                 'delete' => $fixer->delete($tx),
             };

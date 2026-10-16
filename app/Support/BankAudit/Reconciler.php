@@ -17,6 +17,9 @@ use Illuminate\Support\Collection;
  *   2. one bank line = several system movements of that day (a purchase split by Trade)  → uyğun (bölünüb)
  *   3. one system movement = 2–4 bank lines of that day (a conversion + «MultiCurrency Auto Transaction») → uyğun (birləşib)
  *   4. the same amount up to 15 days apart                                       → tarix fərqlidir
+ *      one bank line = parts booked on nearby days (a payment split by Trade, one part a day early) → tarix fərqlidir
+ *      one movement = bank lines of nearby days, or several = several (a fee charged 293.04 + 6.96, booked
+ *      149.80 + 150.20): the same money cut differently in time                                  → uyğun (bölgü fərqli)
  *   5. the same day, the same direction, the amount off by ≤ 2 % (at least 1.00) → məbləğ fərqlidir
  *   6. what is left: a bank line the system lacks / a system movement the bank never made
  * Plus the balances: the opening, the closing and the first day the end-of-day balance parts ways.
@@ -99,6 +102,54 @@ class Reconciler
                 $take('date', [$l], [$best[0]], ['action' => 'date', 'tx' => $best[0]['id'], 'line' => $l['id']]);
             }
         }
+        // 4b. one bank line, parts booked on nearby days: the off-day parts move to the bank's day
+        $dist = fn (array $x, string $d) => abs(strtotime($x['date']) - strtotime($d));
+        $near = function (array $set, array $of) use ($dist) {
+            $c = array_filter($set, fn ($x) => $x['amount'] * $of['amount'] > 0 && $dist($x, $of['date']) <= self::WINDOW * 86400);
+            usort($c, fn ($a, $b) => $dist($a, $of['date']) <=> $dist($b, $of['date']));
+
+            return array_slice($c, 0, 14);
+        };
+        foreach ($freeL as $l) {
+            if (isset($freeL[$l['id']]) && ($set = self::subset($near($freeT, $l), $l['amount'], 4))) {
+                $moved = array_values(array_filter($set, fn ($t) => $t['date'] !== $l['date']));
+                $take('date', [$l], $set, ['action' => 'date', 'txs' => array_column($moved, 'id'), 'line' => $l['id']]);
+            }
+        }
+        // 4c. one movement, bank lines of nearby days — the bank cut it in time
+        foreach ($freeT as $t) {
+            if (isset($freeT[$t['id']]) && ($set = self::subset($near($freeL, $t), $t['amount'], 4))) {
+                $take('regroup', $set, [$t]);
+            }
+        }
+        // 4d. several bank lines = several movements of nearby days, cut differently
+        foreach ($freeL as $l) {
+            if (! isset($freeL[$l['id']])) {
+                continue;
+            }
+            $others = array_values(array_filter($near($freeL, $l), fn ($x) => $x['id'] !== $l['id']));
+            $ts = $near($freeT, $l);
+            foreach (array_merge([[]], array_map(fn ($x) => [$x], $others)) as $extra) {
+                $group = [$l, ...$extra];
+                $sum = array_sum(array_column($group, 'amount'));
+                if ($set = self::subset($ts, $sum, 3, count($group) > 1 ? 1 : 2)) {
+                    $take('regroup', $group, $set);
+                    break;
+                }
+            }
+            if (! isset($freeL[$l['id']])) {
+                continue;
+            }
+            for ($i = 0; $i < count($others); $i++) {
+                for ($j = $i + 1; $j < count($others); $j++) {
+                    $group = [$l, $others[$i], $others[$j]];
+                    if (isset($freeL[$l['id']]) && ($set = self::subset($ts, array_sum(array_column($group, 'amount')), 3, 1))) {
+                        $take('regroup', $group, $set);
+                        break 2;
+                    }
+                }
+            }
+        }
         // 5. the same day and direction, a slightly different amount
         foreach ($freeL as $l) {
             $best = null;
@@ -129,10 +180,13 @@ class Reconciler
         return ['rows' => $rows, 'counts' => $counts, 'balances' => $this->balances($lines, $from, $to), 'sources' => $this->sources];
     }
 
+    /** The statuses that mean «it matches». */
+    public const MATCHED = ['ok', 'split', 'joined', 'regroup'];
+
     /** Problems first within a day. */
     private static function rank(array $row): int
     {
-        return in_array($row['status'], ['ok', 'split', 'joined'], true) ? 1 : 0;
+        return in_array($row['status'], self::MATCHED, true) ? 1 : 0;
     }
 
     private static function day(array $row): string
@@ -140,16 +194,17 @@ class Reconciler
         return ($row['lines'][0] ?? $row['txs'][0])['date'];
     }
 
-    /** A subset of 2..$max items whose amounts add up to $target, null when none. */
-    private static function subset(array $items, float $target, int $max): ?array
+    /** A subset of $min..$max items whose amounts add up to $target, null when none. */
+    private static function subset(array $items, float $target, int $max, int $min = 2): ?array
     {
+        $items = array_values($items);
         $n = count($items);
         $found = null;
-        $walk = function (int $start, array $picked, float $sum) use (&$walk, &$found, $items, $n, $target, $max) {
+        $walk = function (int $start, array $picked, float $sum) use (&$walk, &$found, $items, $n, $target, $max, $min) {
             if ($found !== null) {
                 return;
             }
-            if (count($picked) >= 2 && abs($sum - $target) < 0.015) {
+            if (count($picked) >= $min && abs($sum - $target) < 0.015) {
                 $found = $picked;
 
                 return;

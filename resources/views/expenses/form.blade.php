@@ -23,6 +23,7 @@
             fmt: (v) => glaustFmt.fmt(v, 2),
           }" x-init="sync(); $watch('currency', () => sync())">
         @csrf @if($editing) @method('PUT') @endif
+        @if(! $editing && request('back'))<input type="hidden" name="back" value="{{ request('back') }}">@endif
         <div class="space-y-6 min-w-0">
             <section class="card p-6 space-y-4">
                 <h2 class="text-base font-semibold">{{ __('Xərc') }}</h2>

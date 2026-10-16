@@ -39,6 +39,18 @@ class BankAuditFixer
         ]);
     }
 
+    /** A bank line that is an expense: the expense of the category, paid from the account — it books the movement itself. */
+    public function expense(BankAccount $account, BankAuditLine $line, int $categoryId): Expense
+    {
+        return $this->expenses->save(new Expense, [
+            'expense_date' => $line->line_date->toDateString(), 'category_id' => $categoryId,
+            'description' => Str::limit((string) $line->description ?: __('Bank çıxarışı'), 250, '…'),
+            'amount' => abs((float) $line->amount), 'currency' => $account->currency,
+            'status' => 'paid', 'payment_method' => 'bank', 'paid_at' => $line->line_date->toDateString(), 'bank_account_id' => $account->id,
+            'reference' => __('Bank çıxarışı'),
+        ]);
+    }
+
     /** @throws RateUnavailable */
     public function amount(BankTransaction $tx, BankAuditLine $line): void
     {

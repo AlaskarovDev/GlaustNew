@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\BankAccount;
 use App\Models\BankAudit;
 use App\Models\BankAuditLine;
+use App\Models\BankAuditLink;
 use App\Models\BankTransaction;
 use App\Rules\SpreadsheetFile;
 use App\Rules\TenantExists;
@@ -80,21 +81,23 @@ class BankAuditController extends Controller
         $result = (new Reconciler($audit))->run();
         $filter = in_array($request->query('show'), ['all', 'ok'], true) ? $request->query('show') : 'issues';
 
-        return view('bank.audits.show', ['audit' => $audit, 'r' => $result, 'filter' => $filter, 'issues' => self::issueCount($result['counts'])]);
+        return view('bank.audits.show', ['audit' => $audit, 'r' => $result, 'filter' => $filter, 'issues' => self::issueCount($result['counts']),
+            'categories' => \App\Models\Category::where('scope', 'expense')->orderBy('name')->get(['id', 'name'])]);
     }
 
     /** One «Düzəlt»: action create | date | amount | delete. */
     public function fix(Request $request, BankAudit $audit, BankAuditFixer $fixer): RedirectResponse
     {
         $this->authorize('bank.update');
-        $d = $request->validate(['action' => ['required', 'in:create,date,amount,delete'], 'line' => ['nullable', 'integer'], 'tx' => ['nullable', 'integer'],
+        $d = $request->validate(['action' => ['required', 'in:create,expense,date,amount,delete'], 'line' => ['nullable', 'integer'], 'tx' => ['nullable', 'integer'],
+            'category_id' => ['required_if:action,expense', 'nullable', 'integer', \Illuminate\Validation\Rule::exists('categories', 'id')->where('company_id', tenant()->id)->where('scope', 'expense')],
             'txs' => ['nullable', 'array', 'max:4'], 'txs.*' => ['integer']]);
         $line = isset($d['line']) ? BankAuditLine::where('bank_audit_id', $audit->id)->findOrFail($d['line']) : null;
         // one movement, or — a bank line booked in parts — the parts that sit on another day
         $ids = isset($d['txs']) ? $d['txs'] : (isset($d['tx']) ? [$d['tx']] : []);
         $txs = BankTransaction::where('bank_account_id', $audit->bank_account_id)->whereKey($ids)->get();
         $tx = $txs->first();
-        if (($d['action'] !== 'delete' && ! $line) || ($d['action'] !== 'create' && (! $tx || $txs->count() !== count(array_unique($ids))))
+        if (($d['action'] !== 'delete' && ! $line) || (! in_array($d['action'], ['create', 'expense'], true) && (! $tx || $txs->count() !== count(array_unique($ids))))
             || (count($ids) > 1 && $d['action'] !== 'date')) {
             abort(422);
         }
@@ -102,12 +105,14 @@ class BankAuditController extends Controller
         try {
             match ($d['action']) {
                 'create' => $fixer->create($audit->account, $line),
+                'expense' => $fixer->expense($audit->account, $line, (int) $d['category_id']),
                 'date' => $txs->each(fn ($t) => $fixer->date($t, $line->line_date->toDateString())),
                 'amount' => $fixer->amount($tx, $line),
                 'delete' => $fixer->delete($tx),
             };
             $message = match ($d['action']) {
                 'create' => __('Əməliyyat sistemə əlavə olundu — bank çıxarışındakı kimi.'),
+                'expense' => __('Xərc kimi əlavə olundu və hesabdan silindi — bank çıxarışındakı kimi.'),
                 'date' => __('Tarix :v1 edildi; CBAR kursları həmin günə yenidən hesablandı.', ['v1' => azdate($line->line_date)]),
                 'amount' => __('Məbləğ :v1 edildi.', ['v1' => money(abs((float) $line->amount), $audit->currency)]),
                 'delete' => __('Bankda olmayan əməliyyat sistemdən silindi.'),
@@ -119,6 +124,58 @@ class BankAuditController extends Controller
         }
 
         return back()->with('success', $message);
+    }
+
+    /**
+     * «Birləşdir»: statement lines and system movements the user ties by hand — their totals must be the same.
+     * With «align» the movements also take the bank's day (when the chosen lines are all of one day).
+     */
+    public function link(Request $request, BankAudit $audit, BankAuditFixer $fixer): RedirectResponse
+    {
+        $this->authorize('bank.update');
+        $d = $request->validate(['lines' => ['required', 'array', 'min:1', 'max:50'], 'lines.*' => ['integer'],
+            'txs' => ['required', 'array', 'min:1', 'max:50'], 'txs.*' => ['integer'], 'align' => ['nullable', 'boolean']]);
+        $lines = BankAuditLine::where('bank_audit_id', $audit->id)->whereKey($d['lines'])->get();
+        $txs = BankTransaction::where('bank_account_id', $audit->bank_account_id)->whereKey($d['txs'])->get();
+        if ($lines->count() !== count(array_unique($d['lines'])) || $txs->count() !== count(array_unique($d['txs']))) {
+            abort(422);
+        }
+        $bank = round($lines->sum(fn ($l) => (float) $l->amount), 2);
+        $system = round($txs->sum(fn ($t) => ($t->direction === 'in' ? 1 : -1) * (float) $t->amount), 2);
+        if (abs($bank - $system) >= 0.005) {
+            return back()->with('error', __('Cəmlər eyni deyil: bankda :v1, sistemdə :v2. Birləşdirmək üçün iki tərəfin cəmi eyni olmalıdır.', ['v1' => money($bank, $audit->currency), 'v2' => money($system, $audit->currency)]));
+        }
+        $days = $lines->map(fn ($l) => $l->line_date->toDateString())->unique();
+        $align = $request->boolean('align') && $days->count() === 1;
+
+        try {
+            DB::transaction(function () use ($audit, $lines, $txs, $align, $days, $fixer) {
+                if ($align) {
+                    $txs->filter(fn ($t) => $t->transaction_date->toDateString() !== $days->first())->each(fn ($t) => $fixer->date($t, $days->first()));
+                }
+                $group = (string) \Illuminate\Support\Str::uuid();
+                foreach ($lines as $l) {
+                    BankAuditLink::create(['bank_audit_id' => $audit->id, 'group' => $group, 'bank_audit_line_id' => $l->id, 'created_by' => auth()->id()]);
+                }
+                foreach ($txs as $t) {
+                    BankAuditLink::create(['bank_audit_id' => $audit->id, 'group' => $group, 'bank_transaction_id' => $t->id, 'created_by' => auth()->id()]);
+                }
+            });
+        } catch (RateUnavailable $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', __(':v1 bank sətri :v2 sistem əməliyyatı ilə birləşdirildi (:v3).', ['v1' => $lines->count(), 'v2' => $txs->count(), 'v3' => money(abs($bank), $audit->currency)])
+            .($align ? ' '.__('Tarix :v1 edildi.', ['v1' => azdate($days->first())]) : ''));
+    }
+
+    /** «Ayır»: the hand-made group goes; nothing in the system changes. */
+    public function unlink(BankAudit $audit, string $group): RedirectResponse
+    {
+        $this->authorize('bank.update');
+        BankAuditLink::where('bank_audit_id', $audit->id)->where('group', $group)->delete();
+
+        return back()->with('success', __('Birləşdirmə ayrıldı.'));
     }
 
     public function destroy(BankAudit $audit): RedirectResponse

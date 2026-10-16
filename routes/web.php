@@ -219,6 +219,8 @@ Route::middleware(['auth', 'tenant'])->group(function () {
         Route::post('/audits', [BankAuditController::class, 'store'])->name('audits.store');
         Route::get('/audits/{audit}', [BankAuditController::class, 'show'])->name('audits.show');
         Route::post('/audits/{audit}/fix', [BankAuditController::class, 'fix'])->name('audits.fix');
+        Route::post('/audits/{audit}/link', [BankAuditController::class, 'link'])->name('audits.link');
+        Route::delete('/audits/{audit}/link/{group}', [BankAuditController::class, 'unlink'])->whereUuid('group')->name('audits.unlink');
         Route::delete('/audits/{audit}', [BankAuditController::class, 'destroy'])->name('audits.destroy');
     });
 

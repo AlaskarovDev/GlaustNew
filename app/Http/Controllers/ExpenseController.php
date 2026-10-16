@@ -87,9 +87,15 @@ class ExpenseController extends Controller
         $this->authorize('expenses.create');
         $deal = $request->integer('deal_id') ? Deal::find($request->integer('deal_id')) : null;
 
+        // filled from elsewhere (the bank audit's «Başqa xərc»): the day, amount, currency, account and text of the bank line
+        $date = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $request->query('date')) ? $request->query('date') : today()->toDateString();
+        $account = $request->integer('bank_account_id') ? \App\Models\BankAccount::find($request->integer('bank_account_id')) : null;
+
         return $this->form(new Expense([
-            'expense_date' => today(), 'currency' => 'AZN', 'status' => 'paid', 'payment_method' => 'bank', 'paid_at' => today(),
-            'deal_id' => $deal?->id, 'project_id' => $deal?->project_id,
+            'expense_date' => $date, 'currency' => $account?->currency ?? 'AZN', 'status' => 'paid', 'payment_method' => 'bank', 'paid_at' => $date,
+            'deal_id' => $deal?->id, 'project_id' => $deal?->project_id, 'bank_account_id' => $account?->id,
+            'amount' => $request->filled('amount') ? abs((float) $request->query('amount')) : null,
+            'description' => \Illuminate\Support\Str::limit((string) $request->query('description', ''), 250, '…') ?: null,
         ]));
     }
 
@@ -98,7 +104,10 @@ class ExpenseController extends Controller
         $this->authorize('expenses.create');
         $expense = $this->expenses->save(new Expense, $this->validated($request));
 
-        return redirect()->to($request->boolean('another') ? route('expenses.create') : route('expenses.index'))
+        $back = (string) $request->input('back');
+        $back = str_starts_with($back, url('/').'/') ? $back : null;   // only back into the app
+
+        return redirect()->to($request->boolean('another') ? route('expenses.create') : ($back ?? route('expenses.index')))
             ->with('success', __('Xərc əlavə edildi').($expense->bank_transaction_id ? __(' və ').$expense->account?->name.__(' hesabından silindi') : '').'.');
     }
 

@@ -22,6 +22,7 @@ use Illuminate\Support\Collection;
  *      149.80 + 150.20): the same money cut differently in time                                  → uyğun (bölgü fərqli)
  *   5. the same day, the same direction, the amount off by ≤ 2 % (at least 1.00) → məbləğ fərqlidir
  *   6. what is left: a bank line the system lacks / a system movement the bank never made
+ * Before all of it: the groups the user tied by hand («Birləşdir») — as long as both sides still add up to the same.
  * Plus the balances: the opening, the closing and the first day the end-of-day balance parts ways.
  */
 class Reconciler
@@ -44,8 +45,11 @@ class Reconciler
         $to = $audit->period_to->toDateString();
         $lines = $audit->lines()->orderBy('line_date')->orderByDesc('line_no')->get()
             ->map(fn ($l) => ['id' => $l->id, 'date' => $l->line_date->toDateString(), 'amount' => (float) $l->amount, 'm' => $l])->keyBy('id')->all();
+        // the window: the period, widened to the lines' own days should the header say less, and the matching margin
+        $first = min($from, ...array_column($lines, 'date') ?: [$from]);
+        $last = max($to, ...array_column($lines, 'date') ?: [$to]);
         $pool = BankTransaction::where('bank_account_id', $account->id)
-            ->whereBetween('transaction_date', [date('Y-m-d', strtotime($from.' -'.self::WINDOW.' days')), date('Y-m-d', strtotime($to.' +'.self::WINDOW.' days')).' 23:59:59'])
+            ->whereBetween('transaction_date', [date('Y-m-d', strtotime($first.' -'.self::WINDOW.' days')), date('Y-m-d', strtotime($last.' +'.self::WINDOW.' days')).' 23:59:59'])
             ->orderBy('transaction_date')->orderBy('id')->get();
         $txs = $pool->map(fn ($t) => ['id' => $t->id, 'date' => $t->transaction_date->toDateString(), 'amount' => ($t->direction === 'in' ? 1 : -1) * (float) $t->amount, 'm' => $t])
             ->keyBy('id')->all();
@@ -53,19 +57,29 @@ class Reconciler
 
         $rows = [];
         $freeL = $lines;
+        $groups = \App\Models\BankAuditLink::where('bank_audit_id', $audit->id)->get()->groupBy('group');
         $freeT = $txs;
         $eq = fn (float $a, float $b) => abs($a - $b) < 0.005;
         $byDate = fn (array $set, string $d) => array_filter($set, fn ($x) => $x['date'] === $d);
-        $take = function (string $status, array $ls, array $ts, ?array $fix = null) use (&$rows, &$freeL, &$freeT) {
+        $take = function (string $status, array $ls, array $ts, ?array $fix = null, ?string $group = null) use (&$rows, &$freeL, &$freeT) {
             foreach ($ls as $l) {
                 unset($freeL[$l['id']]);
             }
             foreach ($ts as $t) {
                 unset($freeT[$t['id']]);
             }
-            $rows[] = ['status' => $status, 'lines' => array_values($ls), 'txs' => array_values($ts), 'fix' => $fix];
+            $rows[] = ['status' => $status, 'lines' => array_values($ls), 'txs' => array_values($ts), 'fix' => $fix, 'group' => $group];
         };
 
+        // 0. tied by hand
+        foreach ($groups as $g => $members) {
+            $ls = array_values(array_filter(array_map(fn ($id) => $freeL[$id] ?? null, $members->pluck('bank_audit_line_id')->filter()->all())));
+            $ts = array_values(array_filter(array_map(fn ($id) => $freeT[$id] ?? null, $members->pluck('bank_transaction_id')->filter()->all())));
+            if ($ls && $ts && count($ls) === $members->whereNotNull('bank_audit_line_id')->count() && count($ts) === $members->whereNotNull('bank_transaction_id')->count()
+                && $eq(array_sum(array_column($ls, 'amount')), array_sum(array_column($ts, 'amount')))) {
+                $take('manual', $ls, $ts, null, $g);
+            }
+        }
         // 1. one to one
         foreach ($lines as $l) {
             foreach ($byDate($freeT, $l['date']) as $t) {
@@ -169,7 +183,7 @@ class Reconciler
             $take('missing_sys', [$l], [], ['action' => 'create', 'line' => $l['id']]);
         }
         foreach ($freeT as $t) {
-            if ($t['date'] >= $from && $t['date'] <= $to) {
+            if ($t['date'] >= $first && $t['date'] <= $last) {
                 $take('missing_bank', [], [$t], ['action' => 'delete', 'tx' => $t['id']]);
             }
         }
@@ -181,7 +195,7 @@ class Reconciler
     }
 
     /** The statuses that mean «it matches». */
-    public const MATCHED = ['ok', 'split', 'joined', 'regroup'];
+    public const MATCHED = ['ok', 'split', 'joined', 'regroup', 'manual'];
 
     /** Problems first within a day. */
     private static function rank(array $row): int

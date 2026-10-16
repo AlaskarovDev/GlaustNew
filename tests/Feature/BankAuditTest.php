@@ -164,4 +164,67 @@ class BankAuditTest extends TestCase
         $this->assertSame(1, $this->inTenant($admin, fn () => BankAudit::count()));
         $this->assertSame($account->id, $this->inTenant($admin, fn () => BankAudit::first()->bank_account_id));
     }
+
+    /**
+     * «Birləşdir»: five small bank fees of a day tied by hand to the one fee expense booked for them the next day;
+     * «Sistemə əlavə et» of money out as an expense of a category, or on the expense page filled from the line.
+     */
+    public function test_link_by_hand_and_add_as_an_expense(): void
+    {
+        $admin = $this->makeCompany();
+        [$account, $fee] = $this->inTenant($admin, function () {
+            $a = BankAccount::create(['name' => 'Turan AZN', 'bank_name' => 'Turan Bank', 'currency' => 'AZN', 'iban' => self::IBAN, 'opening_balance' => 0, 'is_active' => true]);
+            app(BankLedger::class)->record($a, ['direction' => 'in', 'transaction_date' => '2025-02-01', 'amount' => 5000, 'purpose' => 'x']);
+            $fee = app(BankLedger::class)->record($a, ['direction' => 'out', 'transaction_date' => '2025-02-28', 'amount' => 9.70, 'purpose' => 'Komissiya']);
+
+            return [$a, $fee];
+        });
+        $cat = $this->inTenant($admin, fn () => \App\Models\Category::create(['scope' => 'expense', 'name' => 'Əmək haqqı', 'color' => '#64748b']));
+        $file = $this->statement([
+            ['2025-02-01', 5000, 'Daxilolma'],
+            ['2025-02-27', -1.00, 'XOHKS xidmət haqqı'], ['2025-02-27', -1.00, 'XOHKS xidmət haqqı'], ['2025-02-27', -1.00, 'XOHKS xidmət haqqı'],
+            ['2025-02-27', -1.60, 'XOHKS xidmət haqqı'], ['2025-02-27', -5.10, 'Internet banking komissiya'],
+            ['2025-02-27', -728.00, 'Internet banking, Yanvar Fevral 2025 EH'],
+        ]);
+        $this->actingAs($admin);
+        $this->post(route('bank.audits.store'), ['file' => new UploadedFile($file, 'turan.xlsx', null, null, true)])->assertRedirect();
+        $audit = $this->inTenant($admin, fn () => BankAudit::firstOrFail());
+        $fees = $this->inTenant($admin, fn () => $audit->lines()->where('amount', '>', -10)->where('amount', '<', 0)->pluck('id')->all());
+        $this->assertCount(5, $fees);
+        $this->get(route('bank.audits.show', $audit))->assertOk()->assertSee('Birləşdir')->assertSee('Bu sətir sistemə nə kimi əlavə olunsun?')->assertSee('Əmək haqqı');
+
+        // the totals must agree
+        $this->post(route('bank.audits.link', $audit), ['lines' => array_slice($fees, 0, 4), 'txs' => [$fee->id]])->assertSessionHas('error');
+        $this->post(route('bank.audits.link', $audit), ['lines' => $fees, 'txs' => [$fee->id], 'align' => 1])->assertSessionHas('success');
+        $this->inTenant($admin, fn () => $this->assertSame('2025-02-27', $fee->fresh()->transaction_date->toDateString(), 'aligned to the bank day'));
+        $r = $this->inTenant($admin, fn () => (new Reconciler($audit))->run());
+        $manual = collect($r['rows'])->firstWhere('status', 'manual');
+        $this->assertCount(5, $manual['lines']);
+        $this->get(route('bank.audits.show', [$audit, 'show' => 'ok']))->assertOk()->assertSee('Əl ilə birləşdirilib')->assertSee('Ayır');
+
+        // the salary: an expense of its category, paid from the account
+        $salary = $this->inTenant($admin, fn () => $audit->lines()->where('amount', -728)->value('id'));
+        $this->post(route('bank.audits.fix', $audit), ['action' => 'expense', 'line' => $salary])->assertSessionHasErrors('category_id');
+        $this->post(route('bank.audits.fix', $audit), ['action' => 'expense', 'line' => $salary, 'category_id' => $cat->id])->assertSessionHas('success');
+        $this->inTenant($admin, function () use ($cat, $account) {
+            $e = \App\Models\Expense::where('category_id', $cat->id)->firstOrFail();
+            $this->assertSame([728.0, '2025-02-27', 'paid', $account->id], [(float) $e->amount, $e->paid_at->toDateString(), $e->status, $e->bank_account_id]);
+            $this->assertNotNull($e->bank_transaction_id);
+        });
+        $after = $this->inTenant($admin, fn () => (new Reconciler($audit))->run());
+        $this->assertSame([], array_intersect_key($after['counts'], array_flip(['date', 'amount', 'missing_sys', 'missing_bank'])));
+
+        // «Ayır» unties the group; nothing in the system changes
+        $this->delete(route('bank.audits.unlink', [$audit, $manual['group']]))->assertSessionHas('success');
+        $this->assertSame(0, $this->inTenant($admin, fn () => \App\Models\BankAuditLink::count()));
+
+        // «Başqa xərc»: the expense page comes filled and leads back
+        $back = route('bank.audits.show', $audit);
+        $this->get(route('expenses.create', ['date' => '2025-02-27', 'amount' => 5.10, 'bank_account_id' => $account->id, 'description' => 'Internet banking komissiya', 'back' => $back]))
+            ->assertOk()->assertSee('2025-02-27')->assertSee('Internet banking komissiya')->assertSee('name="back"', false);
+        $this->post(route('expenses.store'), ['expense_date' => '2025-02-27', 'category_id' => $cat->id, 'description' => 'x', 'amount' => '5.10', 'currency' => 'AZN',
+            'status' => 'paid', 'payment_method' => 'bank', 'paid_at' => '2025-02-27', 'bank_account_id' => $account->id, 'back' => $back])->assertRedirect($back);
+        $this->post(route('expenses.store'), ['expense_date' => '2025-02-27', 'description' => 'x', 'amount' => '1', 'currency' => 'AZN',
+            'status' => 'paid', 'payment_method' => 'bank', 'paid_at' => '2025-02-27', 'bank_account_id' => $account->id, 'back' => 'https://evil.example/x'])->assertRedirect(route('expenses.index'));
+    }
 }

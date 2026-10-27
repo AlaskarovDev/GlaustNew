@@ -18,7 +18,7 @@ use Illuminate\Console\Command;
  */
 class ReportCheckCommand extends Command
 {
-    protected $signature = 'glaust:report-check {company? : id or a part of the name} {--from=2024-12} {--to=2025-02}';
+    protected $signature = 'glaust:report-check {company? : id or a part of the name} {--from=2024-12} {--to=2025-02} {--only= : cash|trades|expenses|mz|balance} {--valuation=bank}';
 
     protected $description = 'Hesabatların rəqəmlərini çap edir (yalnız oxuyur)';
 
@@ -40,11 +40,37 @@ class ReportCheckCommand extends Command
         $to = (string) $this->option('to');
         $end = \Carbon\Carbon::createFromFormat('!Y-m', $to)->endOfMonth()->toDateString();
 
-        app(Tenant::class)->runAs($company, function () use ($from, $to, $end) {
+        $only = (string) $this->option('only');
+        $want = fn (string $part) => $only === '' || $only === $part;
+        app(Tenant::class)->runAs($company, function () use ($from, $to, $end, $want) {
             $n = fn ($v) => $v === null ? '—' : number_format((float) $v, 2, '.', ' ');
 
+            if ($want('mz')) {
+                $this->info("== MZ {$from} … {$to}");
+                $pl = (new \App\Support\Reports\ProfitLossReport)->build($from, $to);
+                foreach ($pl['lines'] as $code => $l) {
+                    $this->line(str_pad($code, 9).str_pad(mb_substr($l['label'], 0, 40), 42).implode(' ', array_map(fn ($v) => str_pad($n($v), 14, ' ', STR_PAD_LEFT), $l['values'])).'  Σ '.$n($l['total']));
+                }
+                foreach (['in', 'out', 'result', 'tax'] as $k) {
+                    $this->line(str_pad('= '.$k, 51).implode(' ', array_map(fn ($v) => str_pad($n($v), 14, ' ', STR_PAD_LEFT), $pl[$k])).'  Σ '.$n(array_sum($pl[$k])));
+                }
+            }
+            if ($want('balance')) {
+                $b = app(\App\Support\Reports\BalanceReport::class)->build($end);
+                $this->info("== BALANCE {$end}");
+                foreach (['assets', 'liabilities'] as $side) {
+                    foreach ($b[$side] as $code => $l) {
+                        $this->line(str_pad($code, 5).str_pad(mb_substr($l['label'], 0, 44), 46).str_pad($n($l['value']), 16, ' ', STR_PAD_LEFT));
+                    }
+                }
+                $this->line('assets '.$n($b['assetsTotal']).' · liabilities '.$n($b['liabilitiesTotal']).' · gap '.$n($b['gap']));
+            }
+            if (! $want('cash') && ! $want('trades') && ! $want('expenses')) {
+                return;
+            }
+
             $this->info("== CASH FLOW {$from} … {$to}");
-            $d = (new CashflowReport)->build($from, $to);
+            $d = (new CashflowReport(null, (string) $this->option('valuation')))->build($from, $to);
             $row = fn ($label, $vals) => $this->line(str_pad(mb_substr($label, 0, 34), 36).implode(' ', array_map(fn ($v) => str_pad($n($v), 15, ' ', STR_PAD_LEFT), array_values($vals))));
             $row('opening', $d['opening']);
             foreach ($d['income'] as $g) {

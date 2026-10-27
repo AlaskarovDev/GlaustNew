@@ -55,7 +55,14 @@ class CashflowReport
         return $all ? [min($all), max($all)] : [null, null];
     }
 
-    public function __construct(private ?int $projectId = null) {}
+    /**
+     * @param  string  $valuation  how a currency balance is valued at a month end: 'bank' — as the bank statement does,
+     *                             at CBAR of the last day the balance moved (the company's «Cash Flow» sheet); 'cbar' — at
+     *                             CBAR of the month end itself (IAS 21, the balance sheet)
+     */
+    public function __construct(private ?int $projectId = null, private string $valuation = 'cbar') {}
+
+    public const VALUATIONS = ['bank', 'cbar'];
 
     /**
      * @return array{months: list<string>, income: list<array>, payments: list<array>, opening: array<string, float>, closing: array<string, float>,
@@ -154,21 +161,24 @@ class CashflowReport
         usort($events, fn ($a, $b) => [$a['day'], $b['in'], $a['id']] <=> [$b['day'], $a['in'], $b['id']]);   // a day's money in first
 
         $lots = [];   // cur => list of [qty, azn, day]
-        $monthEnd = function (string $me) use (&$lots, $rates, $post, $fmt) {
+        $lastDay = [];   // cur => the last day its money moved
+        $monthEnd = function (string $me) use (&$lots, &$lastDay, $rates, $post, $fmt) {
             foreach ($lots as $cur => &$ls) {
                 $qty = array_sum(array_column($ls, 0));
                 if ($qty < 0.005) {
                     continue;
                 }
-                $r = $rates->tryRate($cur, $me);
+                // the bank's way: the balance keeps the rate of the last day it moved; IAS 21: the month end's
+                $at = $this->valuation === 'bank' ? ($lastDay[$cur] ?? $me) : $me;
+                $r = $rates->tryRate($cur, $at);
                 if (! $r) {
-                    $this->revalWarn[] = [substr($me, 0, 7), __(':v1 tarixinə :v2 CBAR kursu yoxdur — ay sonu qalığı qiymətləndirilmədi.', ['v1' => azdate($me), 'v2' => $cur])];
+                    $this->revalWarn[] = [substr($me, 0, 7), __(':v1 tarixinə :v2 CBAR kursu yoxdur — ay sonu qalığı qiymətləndirilmədi.', ['v1' => azdate($at), 'v2' => $cur])];
 
                     continue;
                 }
                 $book = array_sum(array_column($ls, 1));
                 $post($me, $book - $qty * $r, __(':v1 qalığı — ay sonu', ['v1' => $cur]),
-                    __('uçot').' '.num($book).' − '.num($qty).' '.$cur.' × '.rate_fmt($r));
+                    __('uçot').' '.num($book).' − '.num($qty).' '.$cur.' × '.rate_fmt($r).($at !== $me ? ' ('.azdate($at).')' : ''));
                 foreach ($ls as &$l) {
                     $l[1] = $l[0] * $r;
                 }
@@ -185,6 +195,7 @@ class CashflowReport
             while ($ends && $ends[0] < $e['day']) {
                 $monthEnd(array_shift($ends));
             }
+            $lastDay[$e['cur']] = $e['day'];
             if ($e['qty'] < 0.005) {
                 continue;
             }
@@ -241,7 +252,7 @@ class CashflowReport
         foreach (\App\Models\BankAccount::orderBy('bank_name')->orderBy('currency')->orderBy('name')->get() as $a) {
             $moves = BankTransaction::where('bank_account_id', $a->id)
                 ->selectRaw("DATE(transaction_date) as d, SUM(CASE WHEN direction = 'in' THEN amount ELSE -amount END) as s")->groupBy('d')->pluck('s', 'd')->all();
-            $values = $native = $used = [];
+            $values = $native = $used = $usedDay = [];
             foreach ($months as $m) {
                 $d = $day[$m];
                 $bal = $a->opening_date === null || $a->opening_date->toDateString() <= $d ? (float) $a->opening_balance : 0.0;
@@ -251,13 +262,20 @@ class CashflowReport
                     }
                 }
                 $native[$m] = round($bal, 2);
-                $r = $a->currency === 'AZN' ? 1.0 : (abs($bal) >= 0.005 ? $rates->tryRate($a->currency, $d) : null);
+                // the bank's way: at CBAR of the last day the account moved; IAS 21: of the day itself
+                $at = $d;
+                if ($this->valuation === 'bank') {
+                    $moved = array_filter(array_keys($moves), fn ($md) => $md <= $d);
+                    $at = $moved ? max($moved) : $d;
+                }
+                $r = $a->currency === 'AZN' ? 1.0 : (abs($bal) >= 0.005 ? $rates->tryRate($a->currency, $at) : null);
                 $used[$m] = $r;
+                $usedDay[$m] = $at;
                 $values[$m] = abs($bal) < 0.005 ? 0.0 : ($r === null ? null : round($bal * $r, 2));
                 $total[$m] += $values[$m] ?? 0;
             }
             if (collect($native)->contains(fn ($v) => abs($v) >= 0.005)) {
-                $out[] = ['label' => $a->name, 'sub' => $a->bank_name, 'currency' => $a->currency, 'values' => $values, 'native' => $native, 'rates' => $used];
+                $out[] = ['label' => $a->name, 'sub' => $a->bank_name, 'currency' => $a->currency, 'values' => $values, 'native' => $native, 'rates' => $used, 'rateDays' => $usedDay];
             }
         }
 

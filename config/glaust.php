@@ -149,6 +149,8 @@ return [
             ['Valyuta alış-satışı', 'Satıcıya ödənişlər və alıcıdan daxilolmalar', 'Valyutalar və dövr üzrə itki / qazanc (AZN)']],
         'profit' => ['Mənfəət və zərər', 'chart', 'Gəlirlər, xərclər və nəticə.',
             ['Satış gəliri və alış maya dəyəri', 'Logistika, komissiya, bank xərcləri, digər xərclər', 'Kurs fərqlərinin nəticəyə təsiri']],
+        'balance' => ['Balans', 'scale', 'Ay sonuna aktivlər və passivlər: hesablar, avanslar, borclar, mənfəət.',
+            ['Bank hesabları (AZN və valyuta, CBAR ilə)', 'Verilmiş / alınmış avanslar, debitor və kreditor borcları', 'Dövrün mənfəəti']],
         'expenses' => ['Xərclər hesabatı', 'receipt', 'Xərclər kateqoriya, dövr, layihə və ödəniş üsulu üzrə.',
             ['Kateqoriyalar üzrə cəm və pay', 'Ödənilmiş / ödənilməmiş', 'Nağd / bank köçürməsi']],
         'summary' => ['Yekun hesabat', 'layers', 'Şirkətin ümumi vəziyyəti bir səhifədə.',

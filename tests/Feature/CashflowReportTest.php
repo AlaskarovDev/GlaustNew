@@ -118,7 +118,17 @@ class CashflowReportTest extends TestCase
         $this->assertSame([], $this->inTenant($admin, fn () => (new CashflowReport(999))->build('2024-12', '2025-01'))['other']);
 
         $this->actingAs($admin);
-        $this->get(route('analytics.show', ['cashflow', 'from' => '2024-12', 'to' => '2025-01']))->assertOk()
+        // the bank's way (the company's Cash Flow sheet): a balance keeps the rate of the last day it moved — EUR last moved
+        // on 28.01, RUB on 29.01 (the transfer), so the 31.01 rate does not count
+        $this->rates('2025-01-28', 1.7739, 0.017487);
+        $b = $this->inTenant($admin, fn () => (new CashflowReport(null, 'bank'))->build('2024-12', '2025-01'));
+        $bitems = collect($b['other'][0]['details']['2025-01'])->keyBy('t');
+        $this->assertSame(round(66.93 * 1.7739 - 66.93 * 1.7786, 2), $bitems['EUR qalığı — ay sonu']['v'], 'book − balance × the 28.01 rate');
+        $this->assertSame(round(66.93 * 1.7739, 2), collect($b['cash']['accounts'])->keyBy('label')['EUR']['values']['2025-01']);
+        $this->assertSame('2025-01-28', collect($b['cash']['accounts'])->keyBy('label')['EUR']['rateDays']['2025-01']);
+        $this->assertSame(-3523.70, $bitems['RUB partiyası 29.12.2024 → konvertasiya']['v'], 'lots leave the same way');
+
+        $this->get(route('analytics.show', ['cashflow', 'from' => '2024-12', 'to' => '2025-01', 'valuation' => 'cbar']))->assertOk()
             ->assertSee('Digər əməliyyat gəliri (xərci)')->assertSee('Valyutanın yenidən qiymətləndirilməsi')->assertSee('('.num(abs($d['oth']['2025-01'])).')')
             ->assertSee('Net Cash (Xalis pul vəsaitləri) açıqlaması')->assertSee('Hesablarda cəmi')->assertSee(num(161516.16));
     }

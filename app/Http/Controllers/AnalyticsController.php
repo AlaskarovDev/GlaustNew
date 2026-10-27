@@ -29,6 +29,12 @@ class AnalyticsController extends Controller
         if ($report === 'cashflow') {
             return $this->cashflow($request, compact('report', 'title', 'icon', 'description', 'all'));
         }
+        if ($report === 'profit') {
+            return $this->profit($request, compact('report', 'title', 'icon', 'description', 'all'));
+        }
+        if ($report === 'balance') {
+            return $this->balance($request, compact('report', 'title', 'icon', 'description', 'all'));
+        }
 
         return view('analytics.show', compact('report', 'title', 'icon', 'description', 'contents', 'all'));
     }
@@ -37,7 +43,9 @@ class AnalyticsController extends Controller
     private function cashflow(Request $request, array $page): View|Response
     {
         $projectId = $request->integer('project_id') ?: null;
-        $report = new \App\Support\Reports\CashflowReport($projectId);
+        // the currency on the bank at a month end: as the bank statement values it (default — the company's sheet) or at CBAR of the month end
+        $valuation = in_array($request->query('valuation'), \App\Support\Reports\CashflowReport::VALUATIONS, true) ? $request->query('valuation') : 'bank';
+        $report = new \App\Support\Reports\CashflowReport($projectId, $valuation);
         [$first, $last] = $report->span();
         $valid = fn ($m) => is_string($m) && preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $m) ? $m : null;
         $now = today()->format('Y-m');
@@ -89,8 +97,89 @@ class AnalyticsController extends Controller
             return app(SpreadsheetExporter::class)->download('Cash flow', $cols, $rows, 'cash-flow-'.$from.'-'.$to.'.xlsx', array_values($filters));
         }
 
-        return view('analytics.cashflow', $page + ['data' => $data, 'from' => $from, 'to' => $to, 'projectId' => $projectId, 'label' => $label,
+        return view('analytics.cashflow', $page + ['data' => $data, 'from' => $from, 'to' => $to, 'projectId' => $projectId, 'label' => $label, 'valuation' => $valuation,
             'projects' => Project::whereHas('deals')->orderByDesc('start_date')->orderByDesc('id')->get(['id', 'code', 'name'])]);
+    }
+
+    /** The last month already over (Y-m) and a valid «Y-m» from the query or the default. */
+    private static function month(Request $request, string $key, string $default): string
+    {
+        $v = $request->query($key);
+
+        return is_string($v) && preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $v) ? $v : $default;
+    }
+
+    /** Mənfəət və zərər (the company's «MZ» sheet): by month and for the period, from 1 January by default. */
+    private function profit(Request $request, array $page): View|Response
+    {
+        $last = today()->endOfMonth()->lte(today()) ? today()->format('Y-m') : today()->subMonthNoOverflow()->format('Y-m');
+        $to = self::month($request, 'to', $last);
+        $from = self::month($request, 'from', substr($to, 0, 4).'-01');
+        if ($from > $to) {
+            [$from, $to] = [$to, $from];
+        }
+        if (\Carbon\Carbon::createFromFormat('!Y-m', $from)->diffInMonths(\Carbon\Carbon::createFromFormat('!Y-m', $to)) > 23) {
+            $from = \Carbon\Carbon::createFromFormat('!Y-m', $to)->subMonthsNoOverflow(23)->format('Y-m');
+        }
+        $data = (new \App\Support\Reports\ProfitLossReport)->build($from, $to);
+        $label = fn ($m) => \Carbon\Carbon::createFromFormat('!Y-m', $m)->locale(app()->getLocale())->isoFormat('MMM YY');
+
+        if ($request->query('format') === 'xlsx') {
+            $line = fn ($code, $name, $values) => ['code' => $code, 'name' => $name] + $values + ['total' => round(array_sum($values), 2)];
+            $rows = [['name' => __('GƏLİRLƏR')]];
+            foreach ($data['lines'] as $code => $l) {
+                if ($l['side'] === 'in') {
+                    $rows[] = $line($code, $l['label'], $l['values']);
+                }
+            }
+            $rows[] = $line('', __('CƏMİ'), $data['in']);
+            $rows[] = ['name' => __('XƏRCLƏR')];
+            foreach ($data['lines'] as $code => $l) {
+                if ($l['side'] === 'out') {
+                    $rows[] = $line($code, $l['label'], $l['values']);
+                }
+            }
+            $rows[] = $line('', __('CƏMİ'), $data['out']);
+            $rows[] = $line('', __('HESABAT DÖVRÜNDƏ MƏNFƏƏT (ZƏRƏR)'), $data['result']);
+            $rows[] = $line('', __('MV 20%'), $data['tax']);
+            $cols = [Column::make(__('Hesab №-si'), 'code', 'text', 10), Column::make(__('Gəlir-Xərc maddələri'), 'name', 'text', 60)];
+            foreach ($data['months'] as $m) {
+                $cols[] = Column::make($label($m), fn ($r) => $r[$m] ?? null, 'money');
+            }
+            $cols[] = Column::make(__('Cəmi'), 'total', 'money');
+
+            return app(SpreadsheetExporter::class)->download(__('Mənfəət və zərər'), $cols, $rows, 'mz-'.$from.'-'.$to.'.xlsx', [__('Dövr').': '.$label($from).' — '.$label($to)]);
+        }
+
+        return view('analytics.profit', $page + ['data' => $data, 'from' => $from, 'to' => $to, 'label' => $label]);
+    }
+
+    /** Balans (the company's «BALANS» sheet) at a month end. */
+    private function balance(Request $request, array $page): View|Response
+    {
+        $last = today()->endOfMonth()->lte(today()) ? today()->format('Y-m') : today()->subMonthNoOverflow()->format('Y-m');
+        $month = self::month($request, 'month', $last);
+        $date = min(\Carbon\Carbon::createFromFormat('!Y-m', $month)->endOfMonth()->toDateString(), today()->toDateString());
+        $data = app(\App\Support\Reports\BalanceReport::class)->build($date);
+
+        if ($request->query('format') === 'xlsx') {
+            $rows = [['name' => __('AKTİVLƏR')]];
+            foreach ($data['assets'] as $code => $l) {
+                $rows[] = ['code' => $code, 'name' => $l['label'], 'value' => $l['value']];
+            }
+            $rows[] = ['name' => __('Cəmi aktivlər'), 'value' => $data['assetsTotal']];
+            $rows[] = ['name' => __('PASSİVLƏR')];
+            foreach ($data['liabilities'] as $code => $l) {
+                $rows[] = ['code' => $code, 'name' => $l['label'], 'value' => $l['value']];
+            }
+            $rows[] = ['name' => __('Cəmi passivlər'), 'value' => $data['liabilitiesTotal']];
+            $rows[] = ['name' => __('Fərq (kapital və uçotdan kənar hərəkətlər)'), 'value' => $data['gap']];
+
+            return app(SpreadsheetExporter::class)->download(__('Balans'), [Column::make(__('Hesab №-si'), 'code', 'text', 10), Column::make(__('Açıqlaması'), 'name', 'text', 60),
+                Column::make(azdate($date), 'value', 'money')], $rows, 'balans-'.$date.'.xlsx', []);
+        }
+
+        return view('analytics.balance', $page + ['data' => $data, 'month' => $month, 'last' => $last]);
     }
 
     /** Yekun hesabat: one row per seller invoice of the chosen project / Trade, every ATF column computed. */

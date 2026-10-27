@@ -7,12 +7,15 @@
             @if($categories->isEmpty())
                 <x-empty icon="list" :title="__('Kateqoriya yoxdur')" :text="__('Məs: İcarə, Maaş, Nəqliyyat, Kommunal, Vergi və rüsumlar.')"/>
             @else
+                @php $plLines = \App\Support\Reports\ProfitLossReport::expenseLines(); @endphp
                 <ul class="divide-y divide-line">
                     @foreach($categories as $c)
                         <li class="px-5 py-3" x-data="{ edit: false }">
                             <div class="flex items-center gap-3" x-show="!edit">
                                 <span class="size-3 rounded-full shrink-0" style="background: {{ $c->color ?: '#94a3b8' }}"></span>
                                 <a href="{{ route('expenses.index', ['category_id' => $c->id, 'from' => '2000-01-01', 'to' => today()->addYears(5)->toDateString()]) }}" class="font-medium flex-1 min-w-0 truncate hover:text-brand-ink">{{ $c->name }}</a>
+                                @php $pl = \App\Support\Reports\ProfitLossReport::lineOf($c); @endphp
+                                <span class="badge badge-slate font-mono" title="{{ __('Mənfəət və zərər hesabatında sətir') }}: {{ $plLines[$pl][0] ?? '' }}{{ $c->pl_line ? '' : ' ('.__('adına görə').')' }}">{{ $pl }}</span>
                                 <span class="text-xs text-muted">{{ $c->expenses_count }} {{ __('xərc') }}</span>
                                 <span class="font-mono text-sm w-32 text-right">{{ money($c->expenses_sum_amount_azn ?? 0) }}</span>
                                 @can('expenses.update')<button type="button" class="btn btn-ghost btn-icon btn-sm" @click="edit = true" aria-label="{{ __('Adını dəyiş') }}"><x-icon name="pencil" class="size-4"/></button>@endcan
@@ -27,6 +30,10 @@
                                     @csrf @method('PUT')
                                     <input type="color" name="color" value="{{ $c->color ?: '#94a3b8' }}" class="size-9 rounded-lg border border-line bg-surface p-1" aria-label="{{ __('Rəng') }}">
                                     <input name="name" value="{{ $c->name }}" class="input flex-1" required aria-label="{{ __('Ad') }}">
+                                    <select name="pl_line" class="input !w-auto" aria-label="{{ __('MZ sətri') }}" title="{{ __('Mənfəət və zərər hesabatında sətir') }}">
+                                        <option value="">{{ __('MZ: adına görə') }}</option>
+                                        @foreach($plLines as $code => [$plLabel])<option value="{{ $code }}" @selected($c->pl_line === $code)>{{ $code }} · {{ $plLabel }}</option>@endforeach
+                                    </select>
                                     <button class="btn btn-primary btn-sm">{{ __('Saxla') }}</button>
                                     <button type="button" class="btn btn-ghost btn-sm" @click="edit = false">{{ __('Ləğv') }}</button>
                                 </form>
@@ -43,6 +50,12 @@
                 <h2 class="text-sm font-semibold">{{ __('Yeni kateqoriya') }}</h2>
                 <x-field :label="__('Ad')" name="name" required><input name="name" value="{{ old('name') }}" maxlength="120" class="input @error('name') is-invalid @enderror" placeholder="{{ __('Məs: İcarə') }}" required></x-field>
                 <x-field :label="__('Rəng')" name="color"><input type="color" name="color" value="{{ old('color', '#0f9d82') }}" class="h-10 w-full rounded-lg border border-line bg-surface p-1"></x-field>
+                <x-field :label="__('MZ sətri')" name="pl_line">
+                    <select name="pl_line" class="input">
+                        <option value="">{{ __('MZ: adına görə') }}</option>
+                        @foreach(\App\Support\Reports\ProfitLossReport::expenseLines() as $code => [$plLabel])<option value="{{ $code }}" @selected(old('pl_line') === $code)>{{ $code }} · {{ $plLabel }}</option>@endforeach
+                    </select>
+                </x-field>
                 <button class="btn btn-primary w-full"><x-icon name="plus" class="size-4"/> {{ __('Əlavə et') }}</button>
             </form>
         @endcan

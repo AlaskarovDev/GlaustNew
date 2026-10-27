@@ -1,7 +1,7 @@
 <x-layouts.app :title="__('Cash flow')" wide>
     <x-page-header title="Cash flow" :icon="$icon" :subtitle="__('Aylar üzrə pul axını, AZN — daxilolmalar və ödənişlər kontragent üzrə, CBAR kursu ilə; komissiyalar və kurs fərqi ayrıca')">
         <x-slot:actions>
-            <a href="{{ route('analytics.show', array_filter(['report' => 'cashflow', 'from' => $from, 'to' => $to, 'project_id' => $projectId, 'format' => 'xlsx'])) }}" class="btn btn-secondary"><x-icon name="sheet" class="size-4 text-success"/> Excel</a>
+            <a href="{{ route('analytics.show', array_filter(['report' => 'cashflow', 'from' => $from, 'to' => $to, 'project_id' => $projectId, 'valuation' => $valuation === 'bank' ? null : $valuation, 'format' => 'xlsx'])) }}" class="btn btn-secondary"><x-icon name="sheet" class="size-4 text-success"/> Excel</a>
         </x-slot:actions>
     </x-page-header>
 
@@ -24,7 +24,7 @@
         $openFirst = reset($data['opening']) ?: 0;
         $closeLast = end($data['closing']) ?: 0;
         $n = fn ($v) => abs($v) < 0.005 ? '—' : ($v < 0 ? '−' : '').num(abs($v));
-        $base = array_filter(['report' => 'cashflow', 'project_id' => $projectId]);
+        $base = array_filter(['report' => 'cashflow', 'project_id' => $projectId, 'valuation' => $valuation === 'bank' ? null : $valuation]);
         $now = today();
         $quick = [
             __('Son 6 ay') => [$now->copy()->subMonthsNoOverflow(5)->format('Y-m'), $now->format('Y-m')],
@@ -93,8 +93,8 @@
             foreach (array_merge($months, [null]) as $m) {
                 $mm = $m ?? $lastM;
                 $why["b{$ai}|".($m ?? 'all')] = ['h' => $a['label'].' · '.$a['sub'], 's' => azdate($cash['day'][$mm]),
-                    'f' => $a['currency'] === 'AZN' ? __('Hesabın günün sonuna qalığı') : __('Valyuta qalığı × həmin günün CBAR kursu'),
-                    'lines' => [['l' => num($a['native'][$mm]).' '.$a['currency'].($a['currency'] !== 'AZN' && $a['rates'][$mm] ? ' × '.rate_fmt($a['rates'][$mm]).' CBAR' : ''), 'v' => $a['values'][$mm] ?? 0]],
+                    'f' => $a['currency'] === 'AZN' ? __('Hesabın günün sonuna qalığı') : ($valuation === 'bank' ? __('Valyuta qalığı × son hərəkət gününün CBAR kursu (bank çıxarışı kimi)') : __('Valyuta qalığı × həmin günün CBAR kursu')),
+                    'lines' => [['l' => num($a['native'][$mm]).' '.$a['currency'].($a['currency'] !== 'AZN' && $a['rates'][$mm] ? ' × '.rate_fmt($a['rates'][$mm]).' CBAR · '.azdate($a['rateDays'][$mm]) : ''), 'v' => $a['values'][$mm] ?? 0]],
                     'v' => $a['values'][$mm] ?? 0];
             }
         }
@@ -110,6 +110,13 @@
             <select name="project_id" class="input">
                 <option value="">{{ __('Bütün şirkət') }}</option>
                 @foreach($projects as $p)<option value="{{ $p->id }}" @selected($projectId === $p->id)>{{ $p->code }} · {{ $p->name }}</option>@endforeach
+            </select>
+        </label>
+        <label class="min-w-[230px]">
+            <span class="field-label">{{ __('Valyuta qalığının dəyəri') }}</span>
+            <select name="valuation" class="input" title="{{ __('Bank çıxarışı kimi: qalıq son hərəkət gününün CBAR kursu ilə (şirkətin Cash Flow cədvəli). Ay sonu CBAR: ayın son gününün kursu ilə (IAS 21, balans).') }}">
+                <option value="bank" @selected($valuation === 'bank')>{{ __('Bank çıxarışı kimi (son hərəkət günü)') }}</option>
+                <option value="cbar" @selected($valuation === 'cbar')>{{ __('Ay sonu CBAR (IAS 21)') }}</option>
             </select>
         </label>
         <button class="btn btn-primary"><x-icon name="filter" class="size-4"/> {{ __('Göstər') }}</button>

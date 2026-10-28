@@ -15,7 +15,7 @@
                                 <span class="size-3 rounded-full shrink-0" style="background: {{ $c->color ?: '#94a3b8' }}"></span>
                                 <a href="{{ route('expenses.index', ['category_id' => $c->id, 'from' => '2000-01-01', 'to' => today()->addYears(5)->toDateString()]) }}" class="font-medium flex-1 min-w-0 truncate hover:text-brand-ink">{{ $c->name }}</a>
                                 @php $pl = \App\Support\Reports\ProfitLossReport::lineOf($c); @endphp
-                                <span class="badge badge-slate font-mono" title="{{ __('Mənfəət və zərər hesabatında sətir') }}: {{ $plLines[$pl][0] ?? '' }}{{ $c->pl_line ? '' : ' ('.__('adına görə').')' }}">{{ $pl }}</span>
+                                <span class="badge badge-slate font-mono" title="{{ __('Mənfəət və zərər hesabatında sətir') }}: {{ $pl ? $plLines[$pl][0] ?? '' : __('MZ-yə daxil deyil') }}{{ $c->pl_line ? '' : ' ('.__('adına görə').')' }}">{{ $pl ?? '—' }}</span>
                                 <span class="text-xs text-muted">{{ $c->expenses_count }} {{ __('xərc') }}</span>
                                 <span class="font-mono text-sm w-32 text-right">{{ money($c->expenses_sum_amount_azn ?? 0) }}</span>
                                 @can('expenses.update')<button type="button" class="btn btn-ghost btn-icon btn-sm" @click="edit = true" aria-label="{{ __('Adını dəyiş') }}"><x-icon name="pencil" class="size-4"/></button>@endcan
@@ -33,6 +33,7 @@
                                     <select name="pl_line" class="input !w-auto" aria-label="{{ __('MZ sətri') }}" title="{{ __('Mənfəət və zərər hesabatında sətir') }}">
                                         <option value="">{{ __('MZ: adına görə') }}</option>
                                         @foreach($plLines as $code => [$plLabel])<option value="{{ $code }}" @selected($c->pl_line === $code)>{{ $code }} · {{ $plLabel }}</option>@endforeach
+                                        <option value="none" @selected($c->pl_line === 'none')>— {{ __('MZ-yə daxil deyil') }}</option>
                                     </select>
                                     <button class="btn btn-primary btn-sm">{{ __('Saxla') }}</button>
                                     <button type="button" class="btn btn-ghost btn-sm" @click="edit = false">{{ __('Ləğv') }}</button>
@@ -54,6 +55,7 @@
                     <select name="pl_line" class="input">
                         <option value="">{{ __('MZ: adına görə') }}</option>
                         @foreach(\App\Support\Reports\ProfitLossReport::expenseLines() as $code => [$plLabel])<option value="{{ $code }}" @selected(old('pl_line') === $code)>{{ $code }} · {{ $plLabel }}</option>@endforeach
+                        <option value="none" @selected(old('pl_line') === 'none')>— {{ __('MZ-yə daxil deyil') }}</option>
                     </select>
                 </x-field>
                 <button class="btn btn-primary w-full"><x-icon name="plus" class="size-4"/> {{ __('Əlavə et') }}</button>

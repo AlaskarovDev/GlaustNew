@@ -154,7 +154,7 @@ class ExpenseController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120', Rule::unique('categories')->where('company_id', tenant()->id)->where('scope', 'expense')],
             'color' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
-            'pl_line' => ['nullable', Rule::in(array_keys(\App\Support\Reports\ProfitLossReport::expenseLines()))],
+            'pl_line' => ['nullable', Rule::in([...array_keys(\App\Support\Reports\ProfitLossReport::expenseLines()), \App\Support\Reports\ProfitLossReport::NONE])],
         ], ['name.unique' => __('Bu adda kateqoriya var.')], ['name' => 'Ad']);
         Category::create($data + ['scope' => 'expense']);
 
@@ -168,7 +168,7 @@ class ExpenseController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120', Rule::unique('categories')->where('company_id', tenant()->id)->where('scope', 'expense')->ignore($category->id)],
             'color' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
-            'pl_line' => ['nullable', Rule::in(array_keys(\App\Support\Reports\ProfitLossReport::expenseLines()))],
+            'pl_line' => ['nullable', Rule::in([...array_keys(\App\Support\Reports\ProfitLossReport::expenseLines()), \App\Support\Reports\ProfitLossReport::NONE])],
         ], ['name.unique' => __('Bu adda kateqoriya var.')], ['name' => 'Ad']);
         $category->update($data + ['pl_line' => null]);
 

@@ -10,6 +10,7 @@ use App\Services\SupplierPaymentService;
  * Mənfəət və zərər (the company's «MZ» sheet), by month, in AZN — from recorded data:
  *   GƏLİRLƏR
  *     217.2  AR hüdudlarından kənarda əldə edilmiş gəlirlər — each Trade's sale at CBAR of its act date (H × BK), in the act's month
+ *     212    Digər faiz gəlirləri  — money in on the bank with an income category put on 212 (e.g. a deposit's interest)
  *     214    müsbət məzənnə fərqi   — the 1C postings (TradeReport::oneC), positives
  *     219.3  mənfi məzənnə fərqi    — the 1C postings, negatives (shown with a minus, as the sheet does)
  *   XƏRCLƏR
@@ -18,7 +19,8 @@ use App\Services\SupplierPaymentService;
  *     232.1  AR hüdudlarından kənarda gəlirlərin əldə edilməsi ilə bağlı xərclər — the purchase (D × BJ) and the logistics
  *            (BO) of the same Trades at CBAR of the act date
  *   Mənfəət (zərər) = gəlirlər − xərclər; MV 20 %.
- * A category goes to a line by its «MZ sətri» (categories.pl_line) or, when unset, by its name.
+ * A category goes to a line by its «MZ sətri» (categories.pl_line) or, when unset, by its name; «none» keeps it out
+ * (a profit tax paid ahead, a fixed asset bought — not an expense of the period).
  */
 class ProfitLossReport
 {
@@ -27,6 +29,7 @@ class ProfitLossReport
     {
         return [
             '217.2' => [__('AR hüdudlarından kənarda əldə edilmiş gəlirlər'), 'in'],
+            '212' => [__('Digər faiz gəlirləri'), 'in'],
             '214' => [__('Xarici valyutaların manata nisbətən müsbət məzənnə fərqi'), 'in'],
             '219.3' => [__('Xarici valyutaların manata nisbətən məzənnəsinin dəyişməsindən yaranan mənfi fərq'), 'in'],
             '221.1.2' => [__('Əmək haqqı və ona bərabər tutulan ödəmələr'), 'out'],
@@ -44,15 +47,23 @@ class ProfitLossReport
         return array_filter(self::lines(), fn ($l, $code) => $l[1] === 'out' && $code !== '232.1', ARRAY_FILTER_USE_BOTH);
     }
 
-    /** A category's line: its own choice, else by its name. */
-    public static function lineOf(?\App\Models\Category $c): string
+    /** «MZ sətri» of a category that stays out of the report. */
+    public const NONE = 'none';
+
+    /** A category's line: its own choice, else by its name; null — not in the report. */
+    public static function lineOf(?\App\Models\Category $c): ?string
     {
+        if ($c?->pl_line === self::NONE) {
+            return null;
+        }
         if ($c?->pl_line && isset(self::lines()[$c->pl_line])) {
             return $c->pl_line;
         }
         $name = mb_strtolower((string) $c?->name);
 
         return match (true) {
+            str_contains($name, 'mənfəət vergisi') => null,   // the profit tax is not an expense of the period
+            $c?->scope === 'income' => str_contains($name, 'faiz') ? '212' : null,
             $c?->name === SupplierPaymentService::FEE_CATEGORY, str_contains($name, 'bank') && str_contains($name, 'komis') => '221.13',
             str_contains($name, 'əmək haqq'), str_contains($name, 'maaş') => '221.1.2',
             str_contains($name, 'dsmf'), str_contains($name, 'sosial') => '221.2',
@@ -75,9 +86,9 @@ class ProfitLossReport
         foreach (self::lines() as $code => [$label, $side]) {
             $lines[$code] = ['label' => $label, 'side' => $side, 'values' => array_fill_keys($months, 0.0), 'items' => []];
         }
-        $add = function (string $code, string $day, float $azn, array $why) use (&$lines, $months) {
+        $add = function (?string $code, string $day, float $azn, array $why) use (&$lines, $months) {
             $m = substr($day, 0, 7);
-            if (! in_array($m, $months, true) || abs($azn) < 0.005) {
+            if ($code === null || ! in_array($m, $months, true) || abs($azn) < 0.005) {
                 return;
             }
             $lines[$code]['values'][$m] += $azn;
@@ -122,6 +133,16 @@ class ProfitLossReport
             $azn = (float) ($e->amount_azn ?? $e->amount);
             $add(self::lineOf($e->category), $e->expense_date->format('Y-m-d'), $azn,
                 ['t' => ($e->category?->name ?? __('Xərc')).' · '.$e->description, 'c' => num((float) $e->amount).' '.$e->currency, 'u' => route('expenses.edit', $e)]);
+        }
+
+        // money in with an income category (e.g. a deposit's interest)
+        foreach (\App\Models\BankTransaction::with('category')->where('direction', 'in')->where('kind', 'regular')->whereNotNull('category_id')
+            ->whereBetween('transaction_date', [$from1, $end.' 23:59:59'])->get() as $t) {
+            $code = self::lineOf($t->category);
+            if ($code && self::lines()[$code][1] === 'in') {
+                $add($code, $t->transaction_date->format('Y-m-d'), (float) $t->cbar_amount_azn, ['t' => $t->category->name.($t->purpose ? ' · '.$t->purpose : ''),
+                    'c' => num((float) $t->amount).' '.$t->currency, 'u' => route('bank.transactions.show', $t)]);
+            }
         }
 
         $in = $out = $result = $tax = [];

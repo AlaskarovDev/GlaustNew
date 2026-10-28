@@ -304,9 +304,10 @@ class CashflowReport
         $party = fn ($c) => $c ? ['cp-'.$c->id, $c->name, route('counterparties.show', $c)] : null;
 
         // money in, at CBAR of the day
-        $txs = BankTransaction::with('counterparty')->where('kind', 'regular')->when($p, fn ($q) => $q->where('project_id', $p))->get();
+        $txs = BankTransaction::with('counterparty', 'category')->where('kind', 'regular')->when($p, fn ($q) => $q->where('project_id', $p))->get();
         foreach ($txs->where('direction', 'in') as $t) {
-            [$key, $label, $url] = $party($t->counterparty) ?? ['in-other', __('Digər daxilolmalar'), null];
+            // by counterparty; money without one by its category (e.g. «Faiz gəlirləri»), else «Digər daxilolmalar»
+            [$key, $label, $url] = $party($t->counterparty) ?? ($t->category ? ['in-cat-'.$t->category_id, $t->category->name, null] : ['in-other', __('Digər daxilolmalar'), null]);
             $this->add($this->in, $key, $label, 'party', $t->transaction_date, (float) $t->cbar_amount_azn, 1, $url,
                 ['t' => __('Bank daxilolması').($t->purpose ? ' · '.$t->purpose : '').($t->reference ? ' · '.$t->reference : ''), 'c' => self::calc($t->amount, $t->currency, $t->cbar_rate)]);
         }

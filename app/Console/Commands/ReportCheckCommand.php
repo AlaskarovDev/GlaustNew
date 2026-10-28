@@ -120,8 +120,8 @@ class ReportCheckCommand extends Command
                 $sum = ['BM' => 0, 'BL' => 0, 'BO' => 0, 'C1_P' => 0, 'C1_N' => 0];
                 foreach ($rows as $r) {
                     $act = $r['provisional'] ? 'ay sonu' : ($r['BI']?->format('Y-m-d') ?? '—');
-                    $this->line(sprintf('%-12s %-10s %-10s BM %14s BL %14s BO %12s  214 %10s 219.3 %10s', $r['seller_no'], $r['deal']->code, $act,
-                        $n($r['BM']), $n($r['BL']), $n($r['BO']), $n($r['C1_P']), $n($r['C1_N'])));
+                    // short, so a whole year fits the agent's output: seller invoice, act day, BM, BL, BO
+                    $this->line($r['seller_no'].' '.$act.' '.round((float) $r['BM'], 2).' '.round((float) $r['BL'], 2).' '.round((float) $r['BO'], 2));
                     if (! $r['provisional'] && $r['BI'] && $r['BI']->format('Y-m-d') >= substr($end, 0, 4).'-01-01') {
                         foreach (['BM', 'BL', 'BO'] as $k) {
                             $sum[$k] += (float) $r[$k];

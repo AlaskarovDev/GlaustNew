@@ -113,6 +113,14 @@ Route::middleware(['auth', 'tenant'])->group(function () {
     });
 
     Route::get('/currency', [CurrencyController::class, 'index'])->middleware('can:currency.view')->name('currency.index');
+    Route::middleware('can:currency.import')->prefix('currency/import')->name('currency.import.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\CurrencyImportController::class, 'index'])->name('index');
+        Route::get('/template', [\App\Http\Controllers\CurrencyImportController::class, 'template'])->name('template');
+        Route::post('/xml', [\App\Http\Controllers\CurrencyImportController::class, 'xml'])->name('xml');
+        Route::post('/excel', [\App\Http\Controllers\CurrencyImportController::class, 'excel'])->name('excel');
+        Route::post('/', [\App\Http\Controllers\CurrencyImportController::class, 'store'])->name('store');
+        Route::delete('/{rate}', [\App\Http\Controllers\CurrencyImportController::class, 'destroy'])->name('destroy');
+    });
     Route::get('/fx-difference', [\App\Http\Controllers\FxDifferenceController::class, 'index'])->middleware('can:currency.view')->name('fx-difference.index');
 
     /* Projects & tasks */
@@ -287,6 +295,10 @@ Route::middleware(['auth', 'tenant'])->group(function () {
             Route::post('/users/{user}/logout', [Settings\UserController::class, 'forceLogout'])->middleware('can:users.update')->name('users.logout');
             Route::post('/users/{user}/unlock', [Settings\UserController::class, 'unlock'])->middleware('can:users.update')->name('users.unlock');
             Route::resource('roles', Settings\RoleController::class)->except(['show']);
+            Route::get('/permissions', [Settings\PermissionController::class, 'index'])->name('permissions.index');
+            Route::put('/permissions/roles', [Settings\PermissionController::class, 'updateRoles'])->middleware('can:users.update')->name('permissions.roles');
+            Route::get('/permissions/users/{user}', [Settings\PermissionController::class, 'user'])->name('permissions.user');
+            Route::put('/permissions/users/{user}', [Settings\PermissionController::class, 'updateUser'])->middleware('can:users.update')->name('permissions.user.update');
         });
         Route::middleware('can:logs.view')->group(function () {
             Route::get('/logs/logins', [Settings\LogController::class, 'logins'])->name('logs.logins');

@@ -13,4 +13,10 @@ class CurrencyRate extends Model
     {
         return ['rate_date' => 'date', 'bulletin_date' => 'date', 'rate' => 'decimal:8', 'value' => 'decimal:8', 'nominal' => 'decimal:2'];
     }
+
+    /** Who entered a hand-made rate (null for CBAR's own). */
+    public function creator(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
 }

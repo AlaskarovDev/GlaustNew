@@ -4,6 +4,7 @@
         $u->can('settings.view') ? ['settings.company', __('Şirkət')] : null,
         $u->can('users.view') ? ['settings.users.index', __('İstifadəçilər'), 'settings.users.*'] : null,
         $u->can('users.view') ? ['settings.roles.index', __('Rollar'), 'settings.roles.*'] : null,
+        $u->can('users.view') ? ['settings.permissions.index', __('İcazələr'), 'settings.permissions.*'] : null,
         $u->can('settings.view') ? ['settings.general', __('Ümumi')] : null,
         $u->can('settings.view') && \App\Services\InvoiceApprovalService::flowEnabled() ? ['settings.approvals', __('Təsdiq axını')] : null,
         $u->can('settings.view') ? ['settings.mail', 'Mail'] : null,

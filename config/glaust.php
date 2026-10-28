@@ -34,7 +34,7 @@ return [
         'logistics' => ['label' => 'Logistika', 'actions' => ['view', 'create', 'update', 'delete', 'export', 'import']],
         'expenses' => ['label' => 'Xərclər', 'actions' => ['view', 'create', 'update', 'delete', 'export']],
         'reports' => ['label' => 'Hesabatlar', 'actions' => ['view', 'export']],
-        'currency' => ['label' => 'Valyuta məzənnələri', 'actions' => ['view']],
+        'currency' => ['label' => 'Valyuta məzənnələri', 'actions' => ['view', 'import']],
         'settings' => ['label' => 'Tənzimləmələr', 'actions' => ['view', 'update']],
         'users' => ['label' => 'İstifadəçilər', 'actions' => ['view', 'create', 'update', 'delete']],
         'logs' => ['label' => 'Loglar və audit', 'actions' => ['view', 'export']],

@@ -254,6 +254,34 @@ class CurrencyRates
         return true;
     }
 
+    /** Sources of the rates people bring in themselves (CBAR's own is «CBAR»). */
+    public const MANUAL_SOURCES = ['CBAR fayl', 'Excel', 'Əl ilə', 'ATF Excel'];
+
+    /**
+     * A rate someone brings in while CBAR cannot be reached (an XML bulletin downloaded from cbar.az, an Excel list, a
+     * typed rate): AZN per one unit. CBAR's own row is never touched; another hand-made row of that day is corrected.
+     * The next time CBAR answers for the day, its bulletin replaces it (snapshot()).
+     *
+     * @return string added | updated | kept (CBAR's own is there)
+     */
+    public function putManual(string $currency, string $date, float $rate, float $nominal, ?string $name, string $source, ?int $userId): string
+    {
+        $currency = strtoupper(trim($currency));
+        $day = $this->normalize($date)->format('Y-m-d');
+        $row = CurrencyRate::where('currency_code', $currency)->where('rate_date', $day)->first();
+        if ($row?->source === 'CBAR') {
+            return 'kept';
+        }
+        $values = ['bulletin_date' => $day, 'rate' => round($rate, 8), 'nominal' => $nominal, 'value' => round($rate * $nominal, 8),
+            'name' => mb_substr($name ?: $currency, 0, 190), 'source' => mb_substr($source, 0, 16), 'created_by' => $userId];
+        // through the query builder, like store(): the day stays a plain Y-m-d (the lookups compare it as text)
+        $row ? CurrencyRate::whereKey($row->id)->update($values + ['updated_at' => now()])
+            : CurrencyRate::insert(['currency_code' => $currency, 'rate_date' => $day] + $values + ['created_at' => now(), 'updated_at' => now()]);
+        Cache::forget('cbar_rates_'.str_replace('-', '', $day));
+
+        return $row ? 'updated' : 'added';
+    }
+
     /** A CBAR bulletin fetched elsewhere (cbar.az unreachable from the server): stored as CBAR's own. */
     public function storeBulletin(string $date, ?string $bulletin, array $rates): void
     {

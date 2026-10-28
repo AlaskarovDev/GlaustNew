@@ -38,6 +38,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'permission_overrides' => 'array',
             'password' => 'hashed',
             'is_active' => 'boolean',
             'is_super_admin' => 'boolean',
@@ -90,6 +91,17 @@ class User extends Authenticatable
         $module = explode('.', $ability, 2)[0];
         if ($this->company && ! $this->company->hasModule($module)) {
             return false;
+        }
+
+        // the user's own exceptions: a «deny» wins over the role, a «grant» adds to it (an admin is never narrowed)
+        $o = $this->permission_overrides ?? [];
+        if ($o && ! $this->role?->is_admin) {
+            if (\App\Support\Permissions::denied($o['deny'] ?? [], $ability)) {
+                return false;
+            }
+            if (\App\Support\Permissions::listed($o['grant'] ?? [], $ability)) {
+                return true;
+            }
         }
 
         return (bool) $this->role?->allows($ability);

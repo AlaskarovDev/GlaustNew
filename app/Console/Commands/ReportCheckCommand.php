@@ -121,7 +121,9 @@ class ReportCheckCommand extends Command
                 foreach ($rows as $r) {
                     $act = $r['provisional'] ? 'ay sonu' : ($r['BI']?->format('Y-m-d') ?? '—');
                     // short, so a whole year fits the agent's output: seller invoice, act day, BM, BL, BO
-                    $this->line($r['seller_no'].' '.$act.' '.round((float) $r['BM'], 2).' '.round((float) $r['BL'], 2).' '.round((float) $r['BO'], 2));
+                    $acts = $r['deal']->logisticsActs()->withCount('payments')->get()
+                        ->map(fn ($x) => ($x->act_number ?? '—').'@'.($x->act_date?->format('Y-m-d') ?? '—').'/'.(float) $x->amount.'×'.$x->payments_count)->implode(',');
+                    $this->line($r['seller_no'].' '.$act.' '.round((float) $r['BM'], 2).' '.round((float) $r['BL'], 2).' '.round((float) $r['BO'], 2).' acts['.$acts.']');
                     if (! $r['provisional'] && $r['BI'] && $r['BI']->format('Y-m-d') >= substr($end, 0, 4).'-01-01') {
                         foreach (['BM', 'BL', 'BO'] as $k) {
                             $sum[$k] += (float) $r[$k];

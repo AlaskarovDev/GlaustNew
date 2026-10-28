@@ -291,4 +291,40 @@ class AtfImportTest extends TestCase
         // a second run leaves it be
         $this->postJson(route('imports.atf.row', [$token, 0]))->assertJsonPath('skipped', true);
     }
+
+    /** glaust:atf-complete: the same completion from a command — the carrier and accounts of the company's other logistics. */
+    public function test_complete_command_adds_missing_logistics(): void
+    {
+        $this->fakeCbar();
+        $admin = $this->makeCompany();
+        [$ellis, $axios, $carrier, $eur, $rub, $azn] = $this->inTenant($admin, fn () => [
+            Counterparty::create(['type' => 'supplier', 'entity_type' => 'legal', 'name' => 'Ellis GmbH', 'country' => 'Almaniya']),
+            Counterparty::create(['type' => 'customer', 'entity_type' => 'legal', 'name' => 'Axios LLC', 'country' => 'Russia']),
+            Counterparty::create(['type' => 'logistics', 'entity_type' => 'legal', 'name' => 'Xezer Logistic', 'country' => 'Azərbaycan']),
+            BankAccount::create(['name' => 'EURO', 'bank_name' => 'Turan', 'currency' => 'EUR', 'is_active' => true]),
+            BankAccount::create(['name' => 'RUBL', 'bank_name' => 'Turan', 'currency' => 'RUB', 'is_active' => true]),
+            BankAccount::create(['name' => 'AZN', 'bank_name' => 'Turan', 'currency' => 'AZN', 'is_active' => true]),
+        ]);
+        $this->actingAs($admin);
+        $row = fn ($no) => ['B' => $no, 'C' => '04.02.2025', 'D' => 1000, 'H' => 120000, 'T' => '10.02.2025', 'X' => '10.02.2025', 'AF' => 1.759, 'AG' => 0.0174, 'AO' => 120000, 'AP' => 1000];
+        $withLogistics = ['AX' => 50000, 'AY' => '26.02.2025', 'BA' => 0.0197, 'BB' => 10, 'BF' => 'INV-1', 'BG' => '25.02.2025', 'BH' => 'AKT-1', 'BI' => '25.02.2025'];
+        $res = $this->post(route('imports.atf.store'), ['file' => $this->workbook([$row('A-1') + $withLogistics, $row('B-2')]), 'project_name' => 'ATF', 'supplier_id' => $ellis->id,
+            'buyer_id' => $axios->id, 'logistics_id' => $carrier->id, 'eur_account' => $eur->id, 'rub_account' => $rub->id, 'azn_account' => $azn->id]);
+        $token = basename($res->headers->get('Location'));
+        $this->postJson(route('imports.atf.row', [$token, 0]))->assertJsonPath('ok', true);
+        $this->postJson(route('imports.atf.row', [$token, 1]))->assertJsonPath('ok', true);
+
+        $later = $this->workbook([$row('B-2') + ['AX' => 60000, 'AY' => '14.03.2025', 'BA' => 0.0197, 'BB' => 12, 'BF' => 'INV-2', 'BG' => '12.03.2025', 'BH' => 'AKT-2', 'BI' => '12.03.2025'], $row('A-1') + $withLogistics]);
+        $payload = base64_encode(gzencode(json_encode(['rows' => \App\Imports\Atf\AtfSheet::parse($later->getRealPath())['rows']])));
+        $this->artisan('glaust:atf-complete', ['company' => (string) $admin->company_id, 'payload' => $payload, '--dry' => true])
+            ->expectsOutputToContain('B-2 TR-2026-0002: əlavə olunacaq')->assertSuccessful();
+        $this->assertSame(1, $this->inTenant($admin, fn () => \App\Models\LogisticsAct::count()), 'a dry run adds nothing');
+        $this->artisan('glaust:atf-complete', ['company' => (string) $admin->company_id, 'payload' => $payload])
+            ->expectsOutputToContain('logistika əlavə olundu')->expectsOutputToContain('A-1')->assertSuccessful();
+        $this->inTenant($admin, function () use ($carrier, $rub) {
+            $act = Invoice::where('number', 'B-2')->firstOrFail()->deal->logisticsActs()->with('payments')->sole();
+            $this->assertSame(['AKT-2', $carrier->id, $rub->id], [$act->act_number, $act->counterparty_id, $act->payments->sole()->bank_account_id]);
+            $this->assertSame(2, \App\Models\LogisticsAct::count());
+        });
+    }
 }

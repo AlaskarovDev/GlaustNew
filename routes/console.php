@@ -80,6 +80,29 @@ Artisan::command('glaust:cbar-backfill {days=45}', function (CurrencyRates $rate
     $this->info($rates->backfill((int) $this->argument('days')).' gün yükləndi.');
 })->purpose('Fill missing days of CBAR history');
 
+// cbar.az may refuse the hosting: bulletins fetched from another machine come in as base64(gzip(json))
+// {"Y-m-d": {"bulletin": "Y-m-d", "rates": {"USD": {"rate": 1.7, "nominal": 1, "value": 1.7, "name": "…"}, …}}, …}
+Artisan::command('glaust:cbar-store {payload}', function (CurrencyRates $rates) {
+    $json = @gzdecode((string) base64_decode((string) $this->argument('payload'), true));
+    $days = $json === false ? null : json_decode($json, true);
+    if (! is_array($days)) {
+        $this->error('Məlumat oxunmadı.');
+
+        return 1;
+    }
+    $n = 0;
+    foreach ($days as $date => $b) {
+        $list = array_filter((array) ($b['rates'] ?? []), fn ($r, $code) => preg_match('/^[A-Z]{3}$/', (string) $code) && is_numeric($r['rate'] ?? null) && $r['rate'] > 0, ARRAY_FILTER_USE_BOTH);
+        if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $date) || ! $list) {
+            continue;
+        }
+        $rates->storeBulletin($date, $b['bulletin'] ?? null, array_map(fn ($r) => ['rate' => (float) $r['rate'], 'nominal' => (float) ($r['nominal'] ?? 1),
+            'value' => (float) ($r['value'] ?? $r['rate']), 'name' => (string) ($r['name'] ?? '')], $list));
+        $n++;
+    }
+    $this->info("{$n} gün yazıldı.");
+})->purpose('Store CBAR bulletins fetched from another machine');
+
 Artisan::command('glaust:sweep-sessions', function (AuthLogger $log) {
     $this->info($log->sweepExpiredSessions().' sessiya bitmiş kimi qeyd edildi.');
 })->purpose('Log session_expired for sessions that ended without a logout');

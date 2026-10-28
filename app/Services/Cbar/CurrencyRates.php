@@ -47,7 +47,7 @@ class CurrencyRates
             $recent ? config('glaust.cbar.recent_ttl') : config('glaust.cbar.past_ttl'),
             function () use ($day, $key, $recent) {
                 $stored = $this->fromDatabase($key);
-                if ($stored['rates'] && ! $recent) {
+                if ($stored['rates'] && $stored['cbar'] && ! $recent) {
                     return $stored; // published history never changes
                 }
 
@@ -62,7 +62,8 @@ class CurrencyRates
                 }
                 Cache::put($failKey, true, 300);
 
-                // Rows already stored for this exact date are real CBAR rates, not a substitute.
+                // Rows already stored for this exact date: CBAR's own, or the same day's CBAR rate as a workbook
+                // recorded it (seed) — never another day's rate.
                 return $stored['rates'] ? $stored : throw RateUnavailable::for('—', $key, __('CBAR əlçatan deyil.'));
             });
     }
@@ -224,6 +225,7 @@ class CurrencyRates
 
         return [
             'bulletin' => $rows->first()?->bulletin_date?->format('Y-m-d'),
+            'cbar' => $rows->every(fn (CurrencyRate $r) => $r->source === 'CBAR'),
             'rates' => $rows->mapWithKeys(fn (CurrencyRate $r) => [$r->currency_code => [
                 'rate' => (float) $r->rate,
                 'nominal' => (float) $r->nominal,
@@ -231,6 +233,34 @@ class CurrencyRates
                 'name' => (string) $r->name,
             ]])->all(),
         ];
+    }
+
+    /**
+     * The CBAR rate of a day as a document recorded it (the ATF workbook's «MB EUR / MB RUB» columns), for when CBAR
+     * cannot be reached: kept only if nothing is stored for that currency and day, marked with its source, and
+     * replaced by CBAR's own bulletin the next time CBAR answers for that day. Returns whether it was kept.
+     */
+    public function seed(string $currency, string $date, float $rate, string $source): bool
+    {
+        $currency = strtoupper(trim($currency));
+        $day = $this->normalize($date)->format('Y-m-d');
+        if ($currency === 'AZN' || $rate <= 0 || CurrencyRate::where('currency_code', $currency)->where('rate_date', $day)->exists()) {
+            return false;
+        }
+        CurrencyRate::insert(['currency_code' => $currency, 'rate_date' => $day, 'bulletin_date' => $day, 'rate' => $rate, 'nominal' => 1, 'value' => $rate,
+            'name' => $currency, 'source' => mb_substr($source, 0, 16), 'created_at' => now(), 'updated_at' => now()]);
+        Cache::forget('cbar_rates_'.str_replace('-', '', $day));
+
+        return true;
+    }
+
+    /** A CBAR bulletin fetched elsewhere (cbar.az unreachable from the server): stored as CBAR's own. */
+    public function storeBulletin(string $date, ?string $bulletin, array $rates): void
+    {
+        $day = $this->normalize($date)->format('Y-m-d');
+        $this->store($day, $bulletin, $rates);
+        Cache::forget('cbar_rates_'.str_replace('-', '', $day));
+        Cache::forget('cbar_fail_'.str_replace('-', '', $day));
     }
 
     private function store(string $date, ?string $bulletin, array $rates): void
@@ -245,6 +275,6 @@ class CurrencyRates
             ];
         }
 
-        DB::transaction(fn () => CurrencyRate::upsert($rows, ['currency_code', 'rate_date'], ['bulletin_date', 'rate', 'nominal', 'value', 'name', 'updated_at']));
+        DB::transaction(fn () => CurrencyRate::upsert($rows, ['currency_code', 'rate_date'], ['bulletin_date', 'rate', 'nominal', 'value', 'name', 'source', 'updated_at']));
     }
 }

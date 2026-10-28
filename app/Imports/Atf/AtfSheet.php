@@ -92,6 +92,12 @@ class AtfSheet
         return $book;
     }
 
+    /**
+     * The sheet's own CBAR columns: a date column => [its «MB EUR» column, its «MB RUB» column]. The import keeps them
+     * as that day's CBAR rate when CBAR itself cannot be reached (CurrencyRates::seed) — never for another day.
+     */
+    public const CBAR_COLUMNS = ['K' => ['L', 'M'], 'T' => ['U', 'V'], 'X' => ['Y', 'Z'], 'AY' => ['AZ', null], 'BI' => ['BJ', 'BK']];
+
     /** Header text the ATF template has (row 2), to recognise the sheet. */
     private const SIGNATURE = ['B' => 'инвойса', 'H' => 'инвойса', 'AX' => 'LOGISTIKA', 'BI' => 'AKT'];
 
@@ -119,6 +125,16 @@ class AtfSheet
             // e.g. AI = 9220769.58*0.01728+674456.26*0.017382 (roubles sold) or AH likewise (euros bought)
             $row['rub_parts'] = self::parts($sheet->getCell('AI'.$r));
             $row['eur_parts'] = self::parts($sheet->getCell('AH'.$r));
+            $row['cbar'] = [];
+            foreach (self::CBAR_COLUMNS as $dateCol => $rateCols) {
+                $day = self::value($sheet->getCell($dateCol.$r), 'date');
+                foreach (array_combine(['EUR', 'RUB'], $rateCols) as $cur => $col) {
+                    $rate = $col && $day ? self::value($sheet->getCell($col.$r), 'number') : null;
+                    if (is_float($rate) && $rate > 0) {
+                        $row['cbar'][] = [$cur, $day, $rate];
+                    }
+                }
+            }
             $rows[] = self::check($row);
         }
 

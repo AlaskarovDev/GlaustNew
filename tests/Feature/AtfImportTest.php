@@ -205,4 +205,39 @@ class AtfImportTest extends TestCase
         });
         $this->get(route('bank.exchanges.index'))->assertDontSee('Silinmiş Trade-lərdən qalan');
     }
+
+    /** cbar.az unreachable: the sheet's own CBAR columns (L/M, U/V, Y/Z, BJ/BK) stand in for their days, nothing else. */
+    public function test_cbar_down_the_sheets_rates_of_the_same_days_are_used(): void
+    {
+        $this->fakeCbar(['11.03.2025', '14.03.2025', '07.04.2025']);
+        $admin = $this->makeCompany();
+        [$ellis, $axios, $eur, $rub, $azn] = $this->inTenant($admin, fn () => [
+            Counterparty::create(['type' => 'supplier', 'entity_type' => 'legal', 'name' => 'Ellis GmbH', 'country' => 'Almaniya']),
+            Counterparty::create(['type' => 'customer', 'entity_type' => 'legal', 'name' => 'Axios LLC', 'country' => 'Russia']),
+            BankAccount::create(['name' => 'EURO', 'bank_name' => 'Turan', 'currency' => 'EUR', 'is_active' => true]),
+            BankAccount::create(['name' => 'RUBL', 'bank_name' => 'Turan', 'currency' => 'RUB', 'is_active' => true]),
+            BankAccount::create(['name' => 'AZN', 'bank_name' => 'Turan', 'currency' => 'AZN', 'is_active' => true]),
+        ]);
+        $this->actingAs($admin);
+        $file = $this->workbook([
+            ['A' => 1, 'B' => '916163090', 'C' => '11.03.2025', 'D' => 76054.39, 'E' => '14.03.2025', 'F' => 'ATFAXI-0303', 'G' => '11.03.2025', 'H' => 9198534.96,
+                'K' => '11.03.2025', 'L' => 1.8435, 'M' => 0.019551, 'N' => 1.85, 'O' => 0.0196,
+                'T' => '14.03.2025', 'U' => 1.8429, 'V' => 0.019736, 'X' => '14.03.2025', 'Y' => 1.8429, 'Z' => 0.019736,
+                'AF' => 1.851, 'AG' => 0.0196, 'AO' => 9198534.96, 'AP' => 76054.39, 'BI' => '07.04.2025', 'BJ' => 1.8592, 'BK' => 0.020224],
+        ]);
+        $parsed = \App\Imports\Atf\AtfSheet::parse($file->getRealPath());
+        $this->assertContains(['EUR', '2025-03-11', 1.8435], $parsed['rows'][0]['cbar']);
+        $this->assertContains(['RUB', '2025-04-07', 0.020224], $parsed['rows'][0]['cbar']);
+
+        $res = $this->post(route('imports.atf.store'), ['file' => $file, 'project_name' => 'ATF', 'supplier_id' => $ellis->id, 'buyer_id' => $axios->id,
+            'eur_account' => $eur->id, 'rub_account' => $rub->id, 'azn_account' => $azn->id]);
+        $token = basename($res->headers->get('Location'));
+        $this->postJson(route('imports.atf.row', [$token, 0]))->assertJsonPath('ok', true);
+
+        $this->inTenant($admin, function () {
+            $inv = Invoice::where('number', '916163090')->firstOrFail();
+            $this->assertSame('1.84350000', (string) $inv->cbar_rate, 'the invoice at the sheet rate of 11.03');
+            $this->assertSame(['ATF Excel'], \App\Models\CurrencyRate::where('rate_date', '2025-03-11')->pluck('source')->unique()->values()->all());
+        });
+    }
 }

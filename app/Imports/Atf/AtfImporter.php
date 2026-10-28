@@ -48,6 +48,11 @@ class AtfImporter
         $azn = BankAccount::findOrFail($s['azn_account']);
         $steps = [];
 
+        // the sheet's CBAR rates of its own days, kept for when CBAR cannot be reached (the bulletin replaces them later)
+        foreach ($row['cbar'] ?? [] as [$cur, $day, $rate]) {
+            app(\App\Services\Cbar\CurrencyRates::class)->seed($cur, $day, (float) $rate, 'ATF Excel');
+        }
+
         return DB::transaction(function () use ($row, $s, $userId, $eur, $rubAcc, $azn, &$steps) {
             // 1. the Trade
             $deal = Deal::create([

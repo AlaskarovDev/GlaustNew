@@ -29,6 +29,50 @@ class AtfImporter
         private BankLedger $ledger, private CurrencyExchangeService $exchanges, private SupplierPaymentService $suppliers, private LogisticsService $logistics,
     ) {}
 
+    /** An imported Trade still without logistics while its row has them (a later version of the sheet). */
+    public static function lacksLogistics(Invoice $inv, array $row): bool
+    {
+        return $row['logistics_paid'] && $row['logistics_date'] && $inv->deal && ! $inv->deal->logisticsActs()->exists();
+    }
+
+    /**
+     * Brings an imported Trade up to its row: the logistics invoice, act and payment it lacks. Nothing else is touched.
+     *
+     * @return list<string> the steps done
+     *
+     * @throws ValidationException
+     */
+    public function complete(Invoice $inv, array $row, array $s): array
+    {
+        if (! self::lacksLogistics($inv, $row)) {
+            return [];
+        }
+        foreach ($row['cbar'] ?? [] as [$cur, $day, $rate]) {
+            app(\App\Services\Cbar\CurrencyRates::class)->seed($cur, $day, (float) $rate, 'ATF Excel');
+        }
+
+        return DB::transaction(function () use ($inv, $row, $s) {
+            $this->logisticsOf($inv->deal, $inv, $row, $s, BankAccount::findOrFail($s['rub_account']), BankAccount::findOrFail($s['azn_account']));
+
+            return [__('Logistika')];
+        });
+    }
+
+    private function logisticsOf(Deal $deal, Invoice $inv, array $row, array $s, BankAccount $rubAcc, BankAccount $azn): void
+    {
+        $part = ['amount' => (float) $row['logistics_paid'], 'currency' => 'RUB', 'bank_account_id' => $rubAcc->id, 'payment_date' => $row['logistics_date']];
+        if ($row['logistics_fee_azn'] !== null && $row['logistics_rate']) {
+            $part += ['fee_amount' => round((float) $row['logistics_fee_azn'] / (float) $row['logistics_rate'], 2), 'fee_account_id' => $azn->id, 'fee_bank_rate' => (float) $row['logistics_rate']];
+        }
+        $this->logistics->createAct($deal, [
+            'counterparty_id' => $s['logistics_id'] ?? null, 'invoice_id' => $inv->id,
+            'logistics_invoice_number' => $row['logistics_no'] ?: 'ATF-'.$row['seller_no'],
+            'logistics_invoice_date' => $row['logistics_inv_date'] ?? $row['logistics_date'],
+            'act_number' => $row['act_no'], 'act_date' => $row['act_date'],
+            'currency' => 'RUB', 'amount' => (float) $row['logistics_paid'], 'payment_plan' => 'invoice',
+        ], [$part], $row['logistics_date']);
+    }
+
     /** The Trade already imported for this seller invoice in the project, if any. */
     public static function existing(int $projectId, string $sellerNo): ?Invoice
     {
@@ -119,17 +163,7 @@ class AtfImporter
 
             // 6. logistics: the carrier's invoice (and act), paid in roubles; the fee off the AZN account at the bank's rate
             if ($row['logistics_paid'] && $row['logistics_date']) {
-                $part = ['amount' => (float) $row['logistics_paid'], 'currency' => 'RUB', 'bank_account_id' => $rubAcc->id, 'payment_date' => $row['logistics_date']];
-                if ($row['logistics_fee_azn'] !== null && $row['logistics_rate']) {
-                    $part += ['fee_amount' => round((float) $row['logistics_fee_azn'] / (float) $row['logistics_rate'], 2), 'fee_account_id' => $azn->id, 'fee_bank_rate' => (float) $row['logistics_rate']];
-                }
-                $this->logistics->createAct($deal, [
-                    'counterparty_id' => $s['logistics_id'] ?? null, 'invoice_id' => $inv->id,
-                    'logistics_invoice_number' => $row['logistics_no'] ?: 'ATF-'.$row['seller_no'],
-                    'logistics_invoice_date' => $row['logistics_inv_date'] ?? $row['logistics_date'],
-                    'act_number' => $row['act_no'], 'act_date' => $row['act_date'],
-                    'currency' => 'RUB', 'amount' => (float) $row['logistics_paid'], 'payment_plan' => 'invoice',
-                ], [$part], $row['logistics_date']);
+                $this->logisticsOf($deal, $inv, $row, $s, $rubAcc, $azn);
                 $steps[] = __('Logistika');
             }
 

@@ -111,7 +111,12 @@ class AtfImportController extends Controller
             return redirect()->route('imports.atf.create')->with('error', __('Import sessiyası bitib — faylı yenidən yükləyin.'));
         }
         $s = $job['setup'];
-        $rows = array_map(fn ($r) => $r + ['exists' => (bool) AtfImporter::existing($s['project_id'], (string) $r['seller_no'])], $job['rows']);
+        $rows = array_map(function ($r) use ($s) {
+            $inv = AtfImporter::existing($s['project_id'], (string) $r['seller_no']);
+
+            // an imported Trade that still lacks the row's logistics gets them («Yenilənəcək»)
+            return $r + ['exists' => (bool) $inv, 'update' => $inv && AtfImporter::lacksLogistics($inv, $r)];
+        }, $job['rows']);
 
         return view('imports.atf-preview', [
             'token' => $token, 'job' => $job, 'rows' => $rows,
@@ -134,7 +139,17 @@ class AtfImportController extends Controller
             return response()->json(['ok' => false, 'message' => implode('; ', $row['errors'])]);
         }
         if ($inv = AtfImporter::existing($job['setup']['project_id'], (string) $row['seller_no'])) {
-            return response()->json(['ok' => true, 'skipped' => true, 'message' => __('Artıq var — Trade :v1', ['v1' => $inv->deal?->code]), 'url' => $inv->deal ? route('deals.show', $inv->deal) : null]);
+            if (! AtfImporter::lacksLogistics($inv, $row)) {
+                return response()->json(['ok' => true, 'skipped' => true, 'message' => __('Artıq var — Trade :v1', ['v1' => $inv->deal?->code]), 'url' => $inv->deal ? route('deals.show', $inv->deal) : null]);
+            }
+            try {
+                $steps = $importer->complete($inv, $row, $job['setup']);
+            } catch (ValidationException $e) {
+                return response()->json(['ok' => false, 'message' => collect($e->errors())->flatten()->first()]);
+            }
+
+            return response()->json(['ok' => true, 'updated' => true, 'code' => $inv->deal->code, 'url' => route('deals.show', $inv->deal), 'steps' => $steps,
+                'message' => __('Yeniləndi — Trade :v1: logistika əlavə olundu', ['v1' => $inv->deal->code])]);
         }
         @set_time_limit(120);
         try {

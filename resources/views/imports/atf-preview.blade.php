@@ -4,8 +4,9 @@
 
     @php
         $s = $job['setup'];
-        $ready = collect($rows)->filter(fn ($r) => ! $r['errors'] && ! $r['exists'])->count();
-        $state = collect($rows)->map(fn ($r, $i) => ['i' => $i, 'status' => $r['errors'] ? 'error' : ($r['exists'] ? 'exists' : 'ready'), 'message' => $r['errors'] ? implode('; ', $r['errors']) : '', 'url' => null, 'steps' => []])->values();
+        $ready = collect($rows)->filter(fn ($r) => ! $r['errors'] && (! $r['exists'] || $r['update']))->count();
+        // «update»: imported already, but its logistics (a later version of the sheet) are still to come
+        $state = collect($rows)->map(fn ($r, $i) => ['i' => $i, 'status' => $r['errors'] ? 'error' : ($r['update'] ? 'update' : ($r['exists'] ? 'exists' : 'ready')), 'message' => $r['errors'] ? implode('; ', $r['errors']) : '', 'url' => null, 'steps' => []])->values();
         $acc = fn ($id) => ($a = $accounts[$id] ?? null) ? $a->name.' · '.$a->currency : '—';
     @endphp
 
@@ -20,18 +21,18 @@
 
     <section class="card overflow-hidden" x-data="{
             rows: @js($state), running: false, done: false, current: null,
-            get todo() { return this.rows.filter(r => r.status === 'ready'); },
+            get todo() { return this.rows.filter(r => r.status === 'ready' || r.status === 'update'); },
             count(s) { return this.rows.filter(r => r.status === s).length; },
-            get progress() { const t = this.rows.filter(r => r.wasReady).length || 1; return Math.round(this.rows.filter(r => r.wasReady && ['done', 'failed', 'skipped'].includes(r.status)).length / t * 100); },
+            get progress() { const t = this.rows.filter(r => r.wasReady).length || 1; return Math.round(this.rows.filter(r => r.wasReady && ['done', 'updated', 'failed', 'skipped'].includes(r.status)).length / t * 100); },
             async run() {
                 this.running = true;
-                this.rows.forEach(r => { if (r.status === 'ready') r.wasReady = true; });
+                this.rows.forEach(r => { if (r.status === 'ready' || r.status === 'update') r.wasReady = true; });
                 for (const r of this.rows) {
-                    if (r.status !== 'ready') continue;
+                    if (r.status !== 'ready' && r.status !== 'update') continue;
                     r.status = 'running'; this.current = r.i;
                     try {
                         const d = await glaustApi(@js(route('imports.atf.row', [$token, '__N__'])).replace('__N__', r.i), { method: 'POST' });
-                        r.status = d.ok ? (d.skipped ? 'skipped' : 'done') : 'failed';
+                        r.status = d.ok ? (d.skipped ? 'skipped' : (d.updated ? 'updated' : 'done')) : 'failed';
                         r.message = d.message || ''; r.url = d.url || null; r.steps = d.steps || []; r.code = d.code || '';
                     } catch (e) { r.status = 'failed'; r.message = e.message; }
                 }
@@ -46,7 +47,9 @@
             <div class="flex items-center gap-3">
                 <div class="flex gap-1.5 text-[11px]">
                     <span class="badge badge-teal" x-show="count('ready')"><span x-text="count('ready')"></span> {{ __('hazır') }}</span>
+                    <span class="badge badge-blue" x-show="count('update')"><span x-text="count('update')"></span> {{ __('yenilənəcək') }}</span>
                     <span class="badge badge-green" x-show="count('done')"><span x-text="count('done')"></span> {{ __('yaradıldı') }}</span>
+                    <span class="badge badge-green" x-show="count('updated')"><span x-text="count('updated')"></span> {{ __('yeniləndi') }}</span>
                     <span class="badge badge-slate" x-show="count('exists') + count('skipped')"><span x-text="count('exists') + count('skipped')"></span> {{ __('artıq var') }}</span>
                     <span class="badge badge-rose" x-show="count('error') + count('failed')"><span x-text="count('error') + count('failed')"></span> {{ __('xəta') }}</span>
                 </div>
@@ -79,6 +82,10 @@
                         <td class="text-xs"><span class="font-mono">{{ $r['act_no'] ?? '—' }}</span><div class="text-muted">{{ $r['act_date'] ? azdate($r['act_date']) : '' }}</div></td>
                         <td class="text-xs">
                             <template x-if="rows[{{ $i }}].status === 'ready'"><span class="badge badge-teal">{{ __('Hazır') }}</span></template>
+                            <template x-if="rows[{{ $i }}].status === 'update'"><span><span class="badge badge-blue">{{ __('Yenilənəcək') }}</span>
+                                <span class="block mt-1 text-[11px] text-muted">{{ __('Trade artıq var, logistikası yoxdur — akt və ödəniş əlavə olunacaq') }}</span></span></template>
+                            <template x-if="rows[{{ $i }}].status === 'updated'"><span><a :href="rows[{{ $i }}].url" class="badge badge-green hover:underline" x-text="'↻ ' + rows[{{ $i }}].code"></a>
+                                <span class="block mt-1 text-[11px] text-muted" x-text="rows[{{ $i }}].message"></span></span></template>
                             <template x-if="rows[{{ $i }}].status === 'running'"><span class="badge badge-amber">{{ __('İşlənir…') }}</span></template>
                             <template x-if="rows[{{ $i }}].status === 'exists' || rows[{{ $i }}].status === 'skipped'"><span class="badge badge-slate">{{ __('Artıq var') }}</span></template>
                             <template x-if="rows[{{ $i }}].status === 'done'"><span><a :href="rows[{{ $i }}].url" class="badge badge-green hover:underline" x-text="'✓ ' + rows[{{ $i }}].code"></a>

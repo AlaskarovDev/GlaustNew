@@ -111,25 +111,28 @@ class AtfSheet
             return ['rows' => [], 'errors' => [__('ATF cədvəli tanınmadı: «ATF» vərəqində B sütununda «Номер инвойса», AX-da «ODENIS LOGISTIKA», BI-də «AKT TARIX» başlıqları olmalıdır.')]];
         }
 
+        // the columns by their headers: a workbook where columns were deleted or moved (e.g. AS…AU gone, the logistics
+        // from AV instead of AX) is read as the template's layout
+        $at = self::columnMap($sheet, $headerRow);
         $rows = [];
         $max = $sheet->getHighestDataRow();
         for ($r = $headerRow + 1; $r <= $max; $r++) {
             $row = ['line' => $r];
             foreach (self::COLUMNS as $col => [$field, $kind]) {
-                $row[$field] = self::value($sheet->getCell($col.$r), $kind);
+                $row[$field] = self::value($sheet->getCell($at[$col].$r), $kind);
             }
             if ($row['seller_no'] === null && $row['seller_amount'] === null) {
                 continue;   // empty line
             }
             // money exchanged in parts at different rates: the bank-value cell holds the parts by hand,
             // e.g. AI = 9220769.58*0.01728+674456.26*0.017382 (roubles sold) or AH likewise (euros bought)
-            $row['rub_parts'] = self::parts($sheet->getCell('AI'.$r));
-            $row['eur_parts'] = self::parts($sheet->getCell('AH'.$r));
+            $row['rub_parts'] = self::parts($sheet->getCell($at['AI'].$r));
+            $row['eur_parts'] = self::parts($sheet->getCell($at['AH'].$r));
             $row['cbar'] = [];
             foreach (self::CBAR_COLUMNS as $dateCol => $rateCols) {
-                $day = self::value($sheet->getCell($dateCol.$r), 'date');
+                $day = self::value($sheet->getCell($at[$dateCol].$r), 'date');
                 foreach (array_combine(['EUR', 'RUB'], $rateCols) as $cur => $col) {
-                    $rate = $col && $day ? self::value($sheet->getCell($col.$r), 'number') : null;
+                    $rate = $col && $day ? self::value($sheet->getCell($at[$col].$r), 'number') : null;
                     if (is_float($rate) && $rate > 0) {
                         $row['cbar'][] = [$cur, $day, $rate];
                     }
@@ -143,20 +146,52 @@ class AtfSheet
 
     private static function headerRow(Worksheet $sheet): ?int
     {
+        $last = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($sheet->getHighestDataColumn());
         for ($r = 1; $r <= 6; $r++) {
-            $ok = true;
-            foreach (self::SIGNATURE as $col => $needle) {
-                if (! str_contains(mb_strtolower((string) $sheet->getCell($col.$r)->getValue()), mb_strtolower($needle))) {
-                    $ok = false;
-                    break;
-                }
+            $texts = [];
+            for ($c = 1; $c <= $last; $c++) {
+                $texts[] = mb_strtolower((string) $sheet->getCell([$c, $r])->getValue());
             }
+            // every signature header somewhere on the row (the columns may have moved)
+            $ok = collect(self::SIGNATURE)->every(fn ($needle) => collect($texts)->contains(fn ($t) => str_contains($t, mb_strtolower($needle))));
             if ($ok) {
                 return $r;
             }
         }
 
         return null;
+    }
+
+    /**
+     * Template letter => the letter it is at in this workbook: its own when its header is there, else the nearest
+     * column with the same header (duplicates such as «MB EUR» are told apart by being nearest).
+     *
+     * @return array<string, string>
+     */
+    private static function columnMap(Worksheet $sheet, int $headerRow): array
+    {
+        $norm = fn ($v) => preg_replace('/\s+/u', ' ', mb_strtolower(trim((string) $v)));
+        $last = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($sheet->getHighestDataColumn());
+        $have = [];
+        for ($c = 1; $c <= $last; $c++) {
+            $have[$c] = $norm($sheet->getCell([$c, $headerRow])->getValue());
+        }
+        $want = array_unique(array_merge(array_keys(self::COLUMNS), ['AH', 'AI'], array_keys(self::CBAR_COLUMNS), array_filter(array_merge(...array_values(self::CBAR_COLUMNS)))));
+        $map = [];
+        foreach ($want as $letter) {
+            $idx = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($letter);
+            $title = $norm(self::HEADERS[$letter] ?? '');
+            if ($title === '' || ($have[$idx] ?? null) === $title) {
+                $map[$letter] = $letter;
+
+                continue;
+            }
+            $found = array_keys(array_filter($have, fn ($h) => $h === $title));
+            usort($found, fn ($a, $b) => abs($a - $idx) <=> abs($b - $idx));
+            $map[$letter] = $found ? \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($found[0]) : $letter;
+        }
+
+        return $map;
     }
 
     /** The value Excel shows: a formula's cached result, dates as Y-m-d (also "15.06.26" typed as text). */

@@ -26,11 +26,11 @@ class AtfImportTest extends TestCase
     use RefreshDatabase;
 
     /** A workbook in the ATF layout (sheet «ATF», headers on row 2, data from row 3). */
-    private function workbook(array $rows): UploadedFile
+    private function workbook(array $rows, ?array $headers = null): UploadedFile
     {
         $book = new Spreadsheet;
         $sheet = $book->getActiveSheet()->setTitle('ATF');
-        foreach (['B' => 'Номер инвойса Ellis', 'H' => 'Цена инвойса AXIOS', 'AX' => 'ODENIS LOGISTIKA', 'BI' => 'AKT TARIX'] as $col => $h) {
+        foreach ($headers ?? ['B' => 'Номер инвойса Ellis', 'H' => 'Цена инвойса AXIOS', 'AX' => 'ODENIS LOGISTIKA', 'BI' => 'AKT TARIX'] as $col => $h) {
             $sheet->setCellValue($col.'2', $h);
         }
         foreach ($rows as $i => $row) {
@@ -239,5 +239,56 @@ class AtfImportTest extends TestCase
             $this->assertSame('1.84350000', (string) $inv->cbar_rate, 'the invoice at the sheet rate of 11.03');
             $this->assertSame(['ATF Excel'], \App\Models\CurrencyRate::where('rate_date', '2025-03-11')->pluck('source')->unique()->values()->all());
         });
+    }
+
+    /**
+     * A later copy of the sheet whose columns moved (AS…AU deleted: the logistics from AV, the act in BF/BG) is read by its
+     * headers; a Trade imported before without logistics gets them from it, nothing else changes.
+     */
+    public function test_shifted_columns_and_logistics_added_to_an_imported_trade(): void
+    {
+        $this->fakeCbar();
+        $admin = $this->makeCompany();
+        [$ellis, $axios, $carrier, $eur, $rub, $azn] = $this->inTenant($admin, fn () => [
+            Counterparty::create(['type' => 'supplier', 'entity_type' => 'legal', 'name' => 'Ellis GmbH', 'country' => 'Almaniya']),
+            Counterparty::create(['type' => 'customer', 'entity_type' => 'legal', 'name' => 'Axios LLC', 'country' => 'Russia']),
+            Counterparty::create(['type' => 'logistics', 'entity_type' => 'legal', 'name' => 'OOO ORIENTLOG', 'country' => 'Russia']),
+            BankAccount::create(['name' => 'EURO', 'bank_name' => 'Turan', 'currency' => 'EUR', 'is_active' => true]),
+            BankAccount::create(['name' => 'RUBL', 'bank_name' => 'Turan', 'currency' => 'RUB', 'is_active' => true]),
+            BankAccount::create(['name' => 'AZN', 'bank_name' => 'Turan', 'currency' => 'AZN', 'is_active' => true]),
+        ]);
+        $this->actingAs($admin);
+        $base = ['A' => 7, 'B' => '916162010', 'C' => '04.02.2025', 'D' => 79859.88, 'E' => '10.02.2025', 'F' => 'ATFAXI-0201', 'G' => '07.02.2025', 'H' => 10126927.68,
+            'T' => '10.02.2025', 'X' => '10.02.2025', 'AF' => 1.759, 'AG' => 0.0174, 'AO' => 10126927.68, 'AP' => 80050];
+        $setup = ['project_name' => 'ATF', 'supplier_id' => $ellis->id, 'buyer_id' => $axios->id, 'logistics_id' => $carrier->id,
+            'eur_account' => $eur->id, 'rub_account' => $rub->id, 'azn_account' => $azn->id];
+
+        // 1. the first copy: no logistics yet
+        $res = $this->post(route('imports.atf.store'), ['file' => $this->workbook([$base])] + $setup);
+        $this->postJson(route('imports.atf.row', [basename($res->headers->get('Location')), 0]))->assertJsonPath('ok', true);
+        $project = $this->inTenant($admin, fn () => \App\Models\Project::firstOrFail());
+        $deal = $this->inTenant($admin, fn () => Invoice::where('number', '916162010')->firstOrFail()->deal);
+        $this->assertSame(0, $this->inTenant($admin, fn () => $deal->logisticsActs()->count()));
+
+        // 2. the later copy, columns shifted two to the left from AV on
+        $shifted = ['B' => 'Номер инвойса Ellis', 'H' => 'Цена инвойса AXIOS', 'AV' => 'ODENIS LOGISTIKA', 'AW' => 'Log OdemeTARIX', 'AX' => 'MB Rubl', 'AY' => 'MB EUR',
+            'AZ' => 'LOGISTIKA KOMISSIYA (AZN)', 'BD' => 'INV N', 'BE' => 'INV TARIX', 'BF' => 'AKT N', 'BG' => 'AKT TARIX', 'BH' => 'MB EUR AKTIN TARIXI', 'BI' => 'MB RUR AKTIN TARIXI '];
+        $file = $this->workbook([$base + ['AV' => 854077, 'AW' => '05.03.2025', 'AX' => 0.018942, 'AY' => 1.8053, 'AZ' => 40.45,
+            'BD' => 'VAM25006712_398', 'BE' => '03.03.2025', 'BF' => 'VAM25006712', 'BG' => '03.03.2025', 'BH' => 1.771, 'BI' => 0.019004]], $shifted);
+        $row = \App\Imports\Atf\AtfSheet::parse($file->getRealPath())['rows'][0];
+        $this->assertSame([854077.0, '2025-03-05', 'VAM25006712_398', '2025-03-03', 'VAM25006712', '2025-03-03', 0.018942],
+            [$row['logistics_paid'], $row['logistics_date'], $row['logistics_no'], $row['logistics_inv_date'], $row['act_no'], $row['act_date'], $row['logistics_rate']]);
+
+        $res = $this->post(route('imports.atf.store'), ['file' => $file, 'project_id' => $project->id] + array_diff_key($setup, ['project_name' => 1]));
+        $token = basename($res->headers->get('Location'));
+        $this->get(route('imports.atf.show', $token))->assertOk()->assertSee('Yenilənəcək');
+        $this->postJson(route('imports.atf.row', [$token, 0]))->assertJsonPath('ok', true)->assertJsonPath('updated', true);
+        $this->inTenant($admin, function () use ($deal, $carrier) {
+            $act = $deal->logisticsActs()->with('payments')->sole();
+            $this->assertSame(['VAM25006712', '2025-03-03', $carrier->id, '854077.00'], [$act->act_number, $act->act_date->toDateString(), $act->counterparty_id, (string) $act->payments->sole()->amount]);
+            $this->assertSame(1, Invoice::where('number', '916162010')->count(), 'no second Trade');
+        });
+        // a second run leaves it be
+        $this->postJson(route('imports.atf.row', [$token, 0]))->assertJsonPath('skipped', true);
     }
 }

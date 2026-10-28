@@ -33,6 +33,7 @@ class BookCommandTest extends TestCase
         $args = ['company' => (string) $admin->company_id, 'payload' => $payload, '--tag' => 'CF2025'];
 
         $this->artisan('glaust:book', $args + ['--dry' => true])->expectsOutputToContain('Yoxlama: 2 xərc, 1 köçürmə, 1 daxilolma')->assertSuccessful();
+        $this->assertSame([0, 0], $this->inTenant($admin, fn () => [BankAccount::where('name', 'Kapital Bank AZN')->count(), Category::where('name', 'Mənfəət Vergisi')->count()]), 'a dry run creates nothing');
         $this->artisan('glaust:book', $args)->expectsOutputToContain('Yazıldı: 2 xərc, 1 köçürmə, 1 daxilolma; artıq var: 0.')->assertSuccessful();
         $this->artisan('glaust:book', $args)->expectsOutputToContain('artıq var: 4.')->assertSuccessful();
 

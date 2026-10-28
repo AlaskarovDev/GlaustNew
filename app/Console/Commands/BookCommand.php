@@ -61,10 +61,10 @@ class BookCommand extends Command
             }
 
             return DB::transaction(function () use ($data, $ledger, $expenses, $tag) {
-                foreach ($data['accounts'] ?? [] as $a) {
+                foreach ($this->option('dry') ? [] : $data['accounts'] ?? [] as $a) {
                     BankAccount::firstOrCreate(['name' => $a['name']], ['bank_name' => $a['bank_name'], 'currency' => $a['currency'] ?? 'AZN', 'opening_balance' => 0, 'is_active' => true]);
                 }
-                foreach ($data['categories'] ?? [] as $name => [$scope, $line]) {
+                foreach ($this->option('dry') ? [] : $data['categories'] ?? [] as $name => [$scope, $line]) {
                     Category::firstOrCreate(['scope' => $scope, 'name' => $name], ['color' => '#64748b', 'pl_line' => $line]);
                 }
                 $account = fn (string $name) => BankAccount::where('name', $name)->firstOrFail();

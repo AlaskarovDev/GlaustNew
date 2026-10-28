@@ -7,9 +7,12 @@ use App\Models\Company;
 use App\Models\CurrencyExchange;
 use App\Models\Deal;
 use App\Models\Expense;
+use App\Support\Reports\BalanceReport;
 use App\Support\Reports\CashflowReport;
+use App\Support\Reports\ProfitLossReport;
 use App\Support\Reports\TradeReport;
 use App\Support\Tenancy\Tenant;
+use Carbon\Carbon;
 use Illuminate\Console\Command;
 
 /**
@@ -18,7 +21,7 @@ use Illuminate\Console\Command;
  */
 class ReportCheckCommand extends Command
 {
-    protected $signature = 'glaust:report-check {company? : id or a part of the name} {--from=2024-12} {--to=2025-02} {--only= : cash|trades|expenses|mz|balance} {--valuation=bank}';
+    protected $signature = 'glaust:report-check {company? : id or a part of the name} {--from=2024-12} {--to=2025-02} {--only= : cash|items|trades|expenses|mz|balance} {--label= : with --only=items: the cash flow line(s) whose name contains it} {--valuation=bank}';
 
     protected $description = 'Hesabatların rəqəmlərini çap edir (yalnız oxuyur)';
 
@@ -38,7 +41,7 @@ class ReportCheckCommand extends Command
         }
         $from = (string) $this->option('from');
         $to = (string) $this->option('to');
-        $end = \Carbon\Carbon::createFromFormat('!Y-m', $to)->endOfMonth()->toDateString();
+        $end = Carbon::createFromFormat('!Y-m', $to)->endOfMonth()->toDateString();
 
         $only = (string) $this->option('only');
         $want = fn (string $part) => $only === '' || $only === $part;
@@ -47,7 +50,7 @@ class ReportCheckCommand extends Command
 
             if ($want('mz')) {
                 $this->info("== MZ {$from} … {$to}");
-                $pl = (new \App\Support\Reports\ProfitLossReport)->build($from, $to);
+                $pl = (new ProfitLossReport)->build($from, $to);
                 foreach ($pl['lines'] as $code => $l) {
                     $this->line(str_pad($code, 9).str_pad(mb_substr($l['label'], 0, 40), 42).implode(' ', array_map(fn ($v) => str_pad($n($v), 14, ' ', STR_PAD_LEFT), $l['values'])).'  Σ '.$n($l['total']));
                 }
@@ -56,7 +59,7 @@ class ReportCheckCommand extends Command
                 }
             }
             if ($want('balance')) {
-                $b = app(\App\Support\Reports\BalanceReport::class)->build($end);
+                $b = app(BalanceReport::class)->build($end);
                 $this->info("== BALANCE {$end}");
                 foreach (['assets', 'liabilities'] as $side) {
                     foreach ($b[$side] as $code => $l) {
@@ -65,49 +68,73 @@ class ReportCheckCommand extends Command
                 }
                 $this->line('assets '.$n($b['assetsTotal']).' · liabilities '.$n($b['liabilitiesTotal']).' · gap '.$n($b['gap']));
             }
-            if (! $want('cash') && ! $want('trades') && ! $want('expenses')) {
-                return;
-            }
-
-            $this->info("== CASH FLOW {$from} … {$to}");
-            $d = (new CashflowReport(null, (string) $this->option('valuation')))->build($from, $to);
-            $row = fn ($label, $vals) => $this->line(str_pad(mb_substr($label, 0, 34), 36).implode(' ', array_map(fn ($v) => str_pad($n($v), 15, ' ', STR_PAD_LEFT), array_values($vals))));
-            $row('opening', $d['opening']);
-            foreach ($d['income'] as $g) {
-                $row('+ '.$g['label'], $g['values']);
-            }
-            $row('= in', $d['in']);
-            foreach ($d['payments'] as $g) {
-                $row('- '.$g['label'], $g['values']);
-            }
-            $row('= out', $d['out']);
-            foreach ($d['other'] as $g) {
-                $row('± '.$g['label'], $g['values']);
-            }
-            $row('= net', $d['net']);
-            $row('= closing', $d['closing']);
-            foreach ($d['cash']['accounts'] ?? [] as $a) {
-                $row('  '.$a['label'].' '.$a['currency'], $a['values']);
-                $row('    native', $a['native']);
-            }
-            $row('  accounts total', $d['cash']['total'] ?? []);
-
-            $this->info("== TRADES (act ≤ {$end}): BM sale @act, BL purchase @act, BO logistics @act, 1C 214 / 219.3 (1 Jan → {$end})");
-            $rows = app(TradeReport::class)->rows(Deal::query()->get(), $end);
-            $sum = ['BM' => 0, 'BL' => 0, 'BO' => 0, 'C1_P' => 0, 'C1_N' => 0];
-            foreach ($rows as $r) {
-                $act = $r['provisional'] ? 'ay sonu' : ($r['BI']?->format('Y-m-d') ?? '—');
-                $this->line(sprintf('%-12s %-10s %-10s BM %14s BL %14s BO %12s  214 %10s 219.3 %10s', $r['seller_no'], $r['deal']->code, $act,
-                    $n($r['BM']), $n($r['BL']), $n($r['BO']), $n($r['C1_P']), $n($r['C1_N'])));
-                if (! $r['provisional'] && $r['BI'] && $r['BI']->format('Y-m-d') >= substr($end, 0, 4).'-01-01') {
-                    foreach (['BM', 'BL', 'BO'] as $k) {
-                        $sum[$k] += (float) $r[$k];
+            if ($this->option('only') === 'items') {
+                // every movement behind the cash flow lines whose name contains --label
+                $d = (new CashflowReport(null, (string) $this->option('valuation')))->build($from, $to);
+                $needle = mb_strtolower((string) $this->option('label'));
+                foreach (array_merge($d['income'], $d['payments'], $d['other']) as $g) {
+                    if ($needle !== '' && ! str_contains(mb_strtolower($g['label']), $needle)) {
+                        continue;
+                    }
+                    $this->info('== '.$g['label']);
+                    foreach ($g['details'] as $m => $items) {
+                        foreach ($items as $i) {
+                            $this->line($i['d'].' '.str_pad($n($i['v']), 14, ' ', STR_PAD_LEFT).'  '.mb_substr($i['t'], 0, 80).($i['c'] ? ' | '.$i['c'] : ''));
+                        }
                     }
                 }
-                $sum['C1_P'] += (float) $r['C1_P'];
-                $sum['C1_N'] += (float) $r['C1_N'];
+
+                return;
             }
-            $this->line('acts in the year: '.json_encode(array_map(fn ($v) => round($v, 2), $sum)));
+            if ($want('cash')) {
+                $this->info("== CASH FLOW {$from} … {$to}");
+                $d = (new CashflowReport(null, (string) $this->option('valuation')))->build($from, $to);
+                $row = fn ($label, $vals) => $this->line(str_pad(mb_substr($label, 0, 34), 36).implode(' ', array_map(fn ($v) => str_pad($n($v), 15, ' ', STR_PAD_LEFT), array_values($vals))));
+                $row('opening', $d['opening']);
+                foreach ($d['income'] as $g) {
+                    $row('+ '.$g['label'], $g['values']);
+                }
+                $row('= in', $d['in']);
+                foreach ($d['payments'] as $g) {
+                    $row('- '.$g['label'], $g['values']);
+                }
+                $row('= out', $d['out']);
+                foreach ($d['other'] as $g) {
+                    $row('± '.$g['label'], $g['values']);
+                }
+                $row('= net', $d['net']);
+                $row('= closing', $d['closing']);
+                foreach ($d['cash']['accounts'] ?? [] as $a) {
+                    $row('  '.$a['label'].' '.$a['currency'], $a['values']);
+                    $row('    native', $a['native']);
+                }
+                $row('  accounts total', $d['cash']['total'] ?? []);
+            }
+            if (! $want('trades') && ! $want('expenses')) {
+                return;
+            }
+            if ($want('trades')) {
+
+                $this->info("== TRADES (act ≤ {$end}): BM sale @act, BL purchase @act, BO logistics @act, 1C 214 / 219.3 (1 Jan → {$end})");
+                $rows = app(TradeReport::class)->rows(Deal::query()->get(), $end);
+                $sum = ['BM' => 0, 'BL' => 0, 'BO' => 0, 'C1_P' => 0, 'C1_N' => 0];
+                foreach ($rows as $r) {
+                    $act = $r['provisional'] ? 'ay sonu' : ($r['BI']?->format('Y-m-d') ?? '—');
+                    $this->line(sprintf('%-12s %-10s %-10s BM %14s BL %14s BO %12s  214 %10s 219.3 %10s', $r['seller_no'], $r['deal']->code, $act,
+                        $n($r['BM']), $n($r['BL']), $n($r['BO']), $n($r['C1_P']), $n($r['C1_N'])));
+                    if (! $r['provisional'] && $r['BI'] && $r['BI']->format('Y-m-d') >= substr($end, 0, 4).'-01-01') {
+                        foreach (['BM', 'BL', 'BO'] as $k) {
+                            $sum[$k] += (float) $r[$k];
+                        }
+                    }
+                    $sum['C1_P'] += (float) $r['C1_P'];
+                    $sum['C1_N'] += (float) $r['C1_N'];
+                }
+                $this->line('acts in the year: '.json_encode(array_map(fn ($v) => round($v, 2), $sum)));
+            }
+            if (! $want('expenses')) {
+                return;
+            }
 
             $this->info('== EXPENSES by category and month (expense_date), AZN');
             Expense::with('category:id,name')->whereBetween('expense_date', [$from.'-01', $end])->get()

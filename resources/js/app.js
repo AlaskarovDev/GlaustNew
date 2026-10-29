@@ -279,7 +279,8 @@ function themed(config) {
         yaxis: config.yaxis || { labels: { formatter: yFmt, style: { fontSize: '12px' } } },
         grid: { borderColor: line, strokeDashArray: 4, padding: { left: 6, right: 6 } },
         dataLabels: { enabled: false },
-        legend: { position: 'bottom', fontSize: '13px', markers: { size: 6, shape: 'circle' }, itemMargin: { horizontal: 10, vertical: 4 } },
+        // legend: false — the page draws its own (e.g. a list with amounts under a donut)
+        legend: { show: config.legend !== false, position: 'bottom', fontSize: '13px', markers: { size: 6, shape: 'circle' }, itemMargin: { horizontal: 10, vertical: 4 } },
         stroke: config.stroke || (config.type === 'area' || config.type === 'line' ? { curve: 'smooth', width: 2.5 } : { width: config.type === 'donut' ? 2 : 0, colors: config.type === 'donut' ? [css.getPropertyValue('--g-surface').trim()] : undefined }),
         fill: config.type === 'area' ? { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.32, opacityTo: 0.02, stops: [0, 95] } } : { opacity: 1 },
         plotOptions: {

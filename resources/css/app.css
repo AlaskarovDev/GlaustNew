@@ -369,3 +369,9 @@
     .no-print { display: none !important; }
     body { background: white; }
 }
+
+/* rows that scroll sideways on a phone (filters, report chips, cards) without a visible bar */
+@utility no-scrollbar {
+    scrollbar-width: none;
+    &::-webkit-scrollbar { display: none; }
+}

@@ -29,6 +29,9 @@ class AnalyticsController extends Controller
         if ($report === 'cashflow') {
             return $this->cashflow($request, compact('report', 'title', 'icon', 'description', 'all'));
         }
+        if ($report === 'founders') {
+            return $this->founders($request, compact('report', 'title', 'icon', 'description', 'all'));
+        }
         if ($report === 'profit') {
             return $this->profit($request, compact('report', 'title', 'icon', 'description', 'all'));
         }
@@ -107,6 +110,26 @@ class AnalyticsController extends Controller
         $v = $request->query($key);
 
         return is_string($v) && preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $v) ? $v : $default;
+    }
+
+    /** Təsisçi hesabatı: revenue, expenses, net profit — a dashboard for the founders, by period, project and Trade. */
+    private function founders(Request $request, array $page): View
+    {
+        $valid = fn ($v) => is_string($v) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $v) && strtotime($v) ? $v : null;
+        $to = $valid($request->query('to')) ?? today()->toDateString();
+        $from = $valid($request->query('from')) ?? substr($to, 0, 4).'-01-01';
+        if ($from > $to) {
+            [$from, $to] = [$to, $from];
+        }
+        $projectId = $request->integer('project_id') ?: null;
+        $dealId = $request->integer('deal_id') ?: null;
+
+        return view('analytics.founders', $page + [
+            'data' => (new \App\Support\Reports\FounderReport)->build($from, $to, $projectId, $dealId),
+            'projectId' => $projectId, 'dealId' => $dealId,
+            'projects' => Project::whereHas('deals')->orderByDesc('start_date')->orderByDesc('id')->get(['id', 'code', 'name']),
+            'dealList' => Deal::with('counterparty:id,name', 'supplier:id,name')->orderByDesc('deal_date')->orderByDesc('id')->get(['id', 'project_id', 'code', 'counterparty_id', 'supplier_id']),
+        ]);
     }
 
     /** Mənfəət və zərər (the company's «MZ» sheet): by month and for the period, from 1 January by default. */

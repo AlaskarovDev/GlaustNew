@@ -139,6 +139,8 @@ return [
 
     // Hesabatlar menu. The rules of each report are still to be agreed; until then a page shows what it will cover.
     'analytics' => [
+        'founders' => ['Təsisçi hesabatı', 'crown', 'Gəlir, xərc və xalis mənfəət — layihə, Trade və dövr üzrə, bir baxışda.',
+            ['Gəlir, xərclər, xalis mənfəət və marja', 'Aylar üzrə dinamika və xərclərin strukturu', 'Ən gəlirli Trade-lər və layihələr']],
         'cashflow' => ['Cashflow', 'trending-up', 'Pul axını: hesablar üzrə daxilolma və məxaric, dövrün əvvəlinə və sonuna qalıq.',
             ['Bank hesabları üzrə mədaxil / məxaric', 'Valyutalar üzrə və AZN ekvivalentində', 'Dövr və hesab filtri, gözlənilən ödənişlər']],
         'purchases' => ['Alış hesabatları', 'package', 'Satıcılardan alışlar: fakturalar, ödənişlər, qalıq borclar.',

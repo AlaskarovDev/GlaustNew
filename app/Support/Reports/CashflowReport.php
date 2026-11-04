@@ -339,6 +339,11 @@ class CashflowReport
             $azn = (float) ($e->amount_azn ?? $e->amount);
             $why = ['t' => ($e->category?->name ?? __('Xərc')).($e->description ? ' · '.$e->description : '').($e->bank_transaction_id ? '' : ' · '.__('nağd')),
                 'c' => self::calc($e->amount, $e->currency, $e->currency === 'AZN' ? null : $e->cbar_rate)];
+            if ($e->category?->name === __(self::TRANSFER_FEES)) {   // a transfer's fee booked on its own (not of a seller / logistics payment)
+                $this->add($this->out, 'transfer-fees', __(self::TRANSFER_FEES), 'fees', $date, $azn, 10, null, $why);
+
+                continue;
+            }
             if ($e->category?->name === SupplierPaymentService::FEE_CATEGORY) {
                 in_array($e->id, $transferFees, true)
                     ? $this->add($this->out, 'transfer-fees', __(self::TRANSFER_FEES), 'fees', $date, $azn, 10, null, $why)

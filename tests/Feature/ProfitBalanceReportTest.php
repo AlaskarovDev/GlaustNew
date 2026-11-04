@@ -72,6 +72,15 @@ class ProfitBalanceReportTest extends TestCase
         $this->assertSame(round($tr['profit'] - $tr['fc'], 2), $tr['diff']);
         $this->assertSame($tr['diff'], $pr['total']['diff']);
         $this->get(route('analytics.show', ['projects', 'from' => '2025-01', 'to' => '2025-01', 'forecast' => 1]))->assertOk()->assertSee('Proqnoz mənfəət')->assertSee('Proqnozu gizlət');
+        // «Əməliyyat tarixinə»: the profit on the seller's payment day, before the act — AC − AA − AJ − AL − AM − the logistics forecast
+        $op = $this->inTenant($admin, fn () => (new \App\Support\Reports\ProjectReport)->build('2025-01-01', '2025-01-31', null, false, true));
+        $ot = $op['projects'][0]['trades'][0];
+        $this->assertNotNull($ot['op']);
+        $this->assertSame('2025-01-07', $ot['opDay']);
+        $this->assertSame(round($ot['profit'] - $ot['op'], 2), $ot['opDiff']);
+        $this->assertNull($ot['fc'], 'the forecast is not asked for');
+        $this->get(route('analytics.show', ['projects', 'from' => '2025-01', 'to' => '2025-01', 'op' => 1, 'forecast' => 1]))->assertOk()
+            ->assertSee('Əməliyyat tarixinə mənfəət')->assertSee('Əməliyyat tarixini gizlət')->assertSee('Proqnozu gizlət');
         // the category page shows and keeps the line
         $this->get(route('expenses.categories'))->assertOk()->assertSee('221.1.2');
     }

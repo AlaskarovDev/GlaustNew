@@ -3,6 +3,7 @@
 namespace App\Support\Reports;
 
 use App\Models\Deal;
+use App\Services\Cbar\CurrencyRates;
 
 /**
  * Layihə hesabatları — each project and its Trades, from the same Trade figures as the Təsisçi hesabatı (TradeReport):
@@ -10,13 +11,16 @@ use App\Models\Deal;
  *   fees (AJ + BB), the bank's rates against CBAR (AL + AM), profit = «Gəlir — kurs fərqləri ilə» (BE), margin = BE ÷ AC;
  *   the money: received from the buyer (in the sale currency) and paid to the seller (in the purchase currency).
  * Trades without an act yet are «açıq»: shown with their money only.
- * $forecast: beside the fact, the profit had every rate been the forecast of the invoice (the RUB conversion's forecast
- * EUR / RUB — TradeReport's «Proqnoz üzrə bax»: real amounts, dates and fees) and the difference; null — no forecast entered.
+ * Beside the fact, on request, and the difference (fact − it); null — not computable for the Trade:
+ *   fc — «Proqnozla»: every rate the forecast of the invoice (the RUB conversion's forecast EUR / RUB — TradeReport's
+ *        «Proqnoz üzrə bax»: real amounts, dates and fees);
+ *   op — «Əməliyyat tarixinə»: what the Trade earned on its operation day (the seller paid), before the act —
+ *        AC − AA − AJ − AL − AM − the invoice's logistics forecast (I) at CBAR of the operation day; for open Trades too.
  */
 class ProjectReport
 {
     /** @return array{projects: list<array>, open: list<array>, total: array} */
-    public function build(string $from, string $to, ?int $projectId = null, bool $forecast = false): array
+    public function build(string $from, string $to, ?int $projectId = null, bool $forecast = false, bool $operation = false): array
     {
         $deals = Deal::with(['project:id,code,name', 'supplier:id,name', 'counterparty:id,name', 'payments', 'supplierPayments'])
             ->when($projectId, fn ($q) => $q->where('project_id', $projectId))->get();
@@ -31,6 +35,13 @@ class ProjectReport
         $zero = ['revenue' => 0.0, 'purchase' => 0.0, 'logistics' => 0.0, 'fees' => 0.0, 'fx' => 0.0, 'profit' => 0.0];
         $projects = $open = [];
         $total = $zero;
+        $add = function (array &$sum, string $v, ?float $value, float $fact) {
+            if ($value !== null) {
+                $sum[$v] = round(($sum[$v] ?? 0) + $value, 2);
+                $sum[$v.'Fact'] = round(($sum[$v.'Fact'] ?? 0) + $fact, 2);
+                $sum[$v.'Count'] = ($sum[$v.'Count'] ?? 0) + 1;
+            }
+        };
 
         foreach (collect($rows)->groupBy(fn ($r) => $r['deal']->id) as $rs) {
             $deal = $rs->first()['deal'];
@@ -38,10 +49,12 @@ class ProjectReport
             $day = $done ? $rs->max(fn ($r) => $r['BI']->format('Y-m-d')) : null;
             $saleCur = $rs->first()['saleCur'];
             $cur = $rs->first()['cur'];
+            $op = $operation ? $this->operation($rs) : null;
             $trade = ['code' => $deal->code, 'url' => route('deals.show', $deal), 'title' => ($deal->supplier?->name ?? '—').' → '.($deal->counterparty?->name ?? '—'),
                 'invoices' => $rs->pluck('seller_no')->filter()->implode(', '), 'day' => $day,
+                'opDay' => $rs->max(fn ($r) => $r['X'] instanceof \DateTimeInterface ? $r['X']->format('Y-m-d') : null),
                 'sold' => (float) $rs->sum('H'), 'saleCur' => $saleCur, 'received' => (float) $deal->payments->where('currency', $saleCur)->sum('amount'),
-                'bought' => (float) $rs->sum('D'), 'cur' => $cur, 'paid' => (float) $deal->supplierPayments->sum('amount')];
+                'bought' => (float) $rs->sum('D'), 'cur' => $cur, 'paid' => (float) $deal->supplierPayments->sum('amount'), 'op' => $op];
             if (! $done) {
                 $open[] = $trade + ['project' => $deal->project?->name ?? __('Layihəsiz')];
 
@@ -58,34 +71,64 @@ class ProjectReport
             $projects[$key] ??= ['name' => $deal->project?->name ?? __('Layihəsiz'), 'code' => $deal->project?->code, 'url' => $deal->project ? route('projects.show', $deal->project) : null,
                 'trades' => [], 'sum' => $zero];
             $fp = $fc[$deal->id] ?? null;
-            $projects[$key]['trades'][] = $trade + $f + ['margin' => self::margin($f), 'fc' => $fp, 'diff' => $fp === null ? null : round($f['profit'] - $fp, 2)];
+            $projects[$key]['trades'][] = $trade + $f + ['margin' => self::margin($f),
+                'fc' => $fp, 'diff' => $fp === null ? null : round($f['profit'] - $fp, 2), 'opDiff' => $op === null ? null : round($f['profit'] - $op, 2)];
             foreach ($f as $k => $v) {
                 $projects[$key]['sum'][$k] = round($projects[$key]['sum'][$k] + $v, 2);
                 $total[$k] = round($total[$k] + $v, 2);
             }
-            // the forecast's totals cover the Trades that have one; their fact beside it, for a fair difference
-            if ($fp !== null) {
-                foreach ([&$projects[$key]['sum'], &$total] as &$t) {
-                    $t['fc'] = round(($t['fc'] ?? 0) + $fp, 2);
-                    $t['fcFact'] = round(($t['fcFact'] ?? 0) + $f['profit'], 2);
-                    $t['fcCount'] = ($t['fcCount'] ?? 0) + 1;
-                }
-                unset($t);
+            // each view's totals cover the Trades it has a figure for; their fact beside it, for a fair difference
+            foreach (['fc' => $fp, 'op' => $op] as $v => $value) {
+                $add($projects[$key]['sum'], $v, $value, $f['profit']);
+                $add($total, $v, $value, $f['profit']);
             }
         }
+        $finish = function (array $sum): array {
+            $sum['margin'] = self::margin($sum);
+            foreach (['fc' => 'diff', 'op' => 'opDiff'] as $v => $d) {
+                $sum += [$v => null, $v.'Fact' => null, $v.'Count' => 0];
+                $sum[$d] = $sum[$v] === null ? null : round($sum[$v.'Fact'] - $sum[$v], 2);
+            }
+
+            return $sum;
+        };
         foreach ($projects as &$p) {
             usort($p['trades'], fn ($a, $b) => strcmp($a['day'], $b['day']));
-            $p['sum']['margin'] = self::margin($p['sum']);
-            $p['sum'] += ['fc' => null, 'fcFact' => null, 'fcCount' => 0];
-            $p['sum']['diff'] = $p['sum']['fc'] === null ? null : round($p['sum']['fcFact'] - $p['sum']['fc'], 2);
+            $p['sum'] = $finish($p['sum']);
         }
         unset($p);
-        $total += ['fc' => null, 'fcFact' => null, 'fcCount' => 0];
-        $total['diff'] = $total['fc'] === null ? null : round($total['fcFact'] - $total['fc'], 2);
         uasort($projects, fn ($a, $b) => $b['sum']['profit'] <=> $a['sum']['profit']);
-        $total['margin'] = self::margin($total);
+        $openOp = array_values(array_filter(array_column($open, 'op'), fn ($v) => $v !== null));
 
-        return ['projects' => array_values($projects), 'open' => $open, 'total' => $total];
+        return ['projects' => array_values($projects), 'open' => $open, 'total' => $finish($total),
+            'openOp' => $openOp ? ['sum' => round(array_sum($openOp), 2), 'count' => count($openOp)] : null];
+    }
+
+    /** The Trade's profit on its operation day (see the class): null while the seller is unpaid or the sale has no rate. */
+    private function operation(\Illuminate\Support\Collection $rs): ?float
+    {
+        $sum = 0.0;
+        foreach ($rs as $r) {
+            if ($r['AC'] === null || $r['AA'] === null) {
+                return null;
+            }
+            $logistics = 0.0;
+            if ($r['I'] !== null && (float) $r['I'] != 0.0) {
+                $rate = match (true) {
+                    $r['logCur'] === null, $r['logCur'] === 'AZN' => 1.0,
+                    $r['logCur'] === $r['saleCur'] => $r['Z'],
+                    $r['logCur'] === $r['cur'] => $r['Y'],
+                    default => $r['X'] instanceof \DateTimeInterface ? app(CurrencyRates::class)->tryRate($r['logCur'], $r['X']->format('Y-m-d')) : null,
+                };
+                if ($rate === null) {
+                    return null;
+                }
+                $logistics = (float) $r['I'] * (float) $rate;
+            }
+            $sum += (float) $r['AC'] - (float) $r['AA'] - (float) ($r['AJ'] ?? 0) - (float) ($r['AL'] ?? 0) - (float) ($r['AM'] ?? 0) - $logistics;
+        }
+
+        return round($sum, 2);
     }
 
     private static function margin(array $f): ?float

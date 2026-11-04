@@ -7,6 +7,7 @@ use App\Models\BankTransaction;
 use App\Models\Category;
 use App\Models\Expense;
 use App\Models\LogisticsAct;
+use App\Models\PlAdjustment;
 use App\Support\Reports\CashflowReport;
 use App\Support\Reports\ProfitLossReport;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -81,15 +82,17 @@ class BookCommandTest extends TestCase
                 ['type' => 'accrual', 'date' => '2025-01-31', 'amount' => 1000, 'category' => 'ERTINS', 'description' => 'Kenar teskilatlarin xidmetleri'],
                 ['type' => 'accrual', 'date' => '2025-01-31', 'amount' => 816, 'category' => 'Əmək haqqı (hesablama)', 'description' => 'Əmək haqqı hesablanması'],
                 ['type' => 'act_date', 'act' => 'VAM25006583', 'date' => '2025-02-10'],
+                ['type' => 'pl_adjust', 'date' => '2025-01-31', 'line' => '219.3', 'amount' => -100, 'description' => '1C ilə üzləşdirmə'],
+                ['type' => 'pl_adjust', 'date' => '2025-01-31', 'line' => '221.13', 'amount' => 12.5, 'description' => '1C ilə üzləşdirmə'],
             ],
         ])));
         $args = ['company' => (string) $admin->company_id, 'payload' => $payload, '--tag' => 'MZ1C'];
 
         $this->artisan('glaust:book', $args + ['--dry' => true])->expectsOutputToContain('Akt VAM25006583: 2025-01-28 → 2025-02-10')
-            ->expectsOutputToContain('MZ sətri: Əmək haqqı: — → none')->expectsOutputToContain('Yoxlama: 0 xərc, 0 köçürmə, 0 daxilolma, 3 hesablama, 1 akt tarixi')->assertSuccessful();
+            ->expectsOutputToContain('MZ sətri: Əmək haqqı: — → none')->expectsOutputToContain('Yoxlama: 0 xərc, 0 köçürmə, 0 daxilolma, 3 hesablama, 1 akt tarixi, 2 MZ düzəlişi')->assertSuccessful();
         $this->assertSame('2025-01-28', $this->inTenant($admin, fn () => LogisticsAct::firstOrFail()->act_date->toDateString()), 'a dry run changes nothing');
-        $this->artisan('glaust:book', $args)->expectsOutputToContain('Yazıldı: 0 xərc, 0 köçürmə, 0 daxilolma, 3 hesablama, 1 akt tarixi; artıq var: 0.')->assertSuccessful();
-        $this->artisan('glaust:book', $args)->expectsOutputToContain('artıq var: 4.')->assertSuccessful();
+        $this->artisan('glaust:book', $args)->expectsOutputToContain('Yazıldı: 0 xərc, 0 köçürmə, 0 daxilolma, 3 hesablama, 1 akt tarixi, 2 MZ düzəlişi; artıq var: 0.')->assertSuccessful();
+        $this->artisan('glaust:book', $args)->expectsOutputToContain('artıq var: 6.')->assertSuccessful();
 
         $this->inTenant($admin, function () {
             $this->assertSame(3, Expense::where('status', 'accrued')->whereNull('bank_transaction_id')->count());
@@ -102,6 +105,11 @@ class BookCommandTest extends TestCase
             // an expense on the last day of the period counts (the day is stored with its time)
             $jan = (new ProfitLossReport)->build('2025-01', '2025-01');
             $this->assertSame([529.45, 816.0], [$jan['lines']['227.10']['total'], $jan['lines']['221.1.2']['total']]);
+            // MZ düzəlişləri: ± on their line, the minus on 219.3 lowers the income
+            $adj = fn ($code) => collect($jan['lines'][$code]['items']['2025-01'] ?? [])->filter(fn ($i) => str_starts_with($i['t'], 'MZ düzəlişi'))->pluck('v')->all();
+            $this->assertSame([-100.0], $adj('219.3'));
+            $this->assertSame([12.5], $adj('221.13'));
+            $this->assertEqualsWithDelta(collect($jan['lines']['219.3']['items']['2025-01'])->sum('v'), $jan['lines']['219.3']['total'], 0.05, 'the adjustment is in the total');
             // the cash flow: the 728 paid stays, the accruals are not money
             $cf = (new CashflowReport)->build('2025-01', '2025-02');
             $labels = collect($cf['payments'])->pluck('label');
@@ -109,6 +117,10 @@ class BookCommandTest extends TestCase
             $this->assertFalse($labels->contains('Amortizasiya') || $labels->contains('ERTINS') || $labels->contains('Əmək haqqı (hesablama)'));
         });
 
-        $this->artisan('glaust:book', ['company' => (string) $admin->company_id, '--tag' => 'MZ1C', '--undo' => true])->expectsOutputToContain('Geri alındı: 3 xərc')->assertSuccessful();
+        $this->artisan('glaust:book', ['company' => (string) $admin->company_id, '--tag' => 'MZ1C', '--undo' => true])->expectsOutputToContain('Geri alındı: 3 xərc')
+            ->expectsOutputToContain('2 MZ düzəlişi')->assertSuccessful();
+        $this->assertSame(0, $this->inTenant($admin, fn () => PlAdjustment::count()));
+        $bad = base64_encode(gzencode(json_encode(['ops' => [['type' => 'pl_adjust', 'date' => '2025-01-31', 'line' => '999', 'amount' => 1, 'description' => 'x']]])));
+        $this->artisan('glaust:book', ['company' => (string) $admin->company_id, 'payload' => $bad])->expectsOutputToContain('MZ sətri yoxdur: 999')->assertFailed();
     }
 }

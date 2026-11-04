@@ -19,6 +19,7 @@ use App\Services\SupplierPaymentService;
  *     227.10 Amortizasiya · 233.2 Əmlak vergisi — expenses by category (usually accruals: no money moves)
  *     232.1  AR hüdudlarından kənarda gəlirlərin əldə edilməsi ilə bağlı xərclər — the purchase (D × BJ) and the logistics
  *            (BO) of the same Trades at CBAR of the act date, + expenses put on 232.1
+ * «MZ düzəlişi» (PlAdjustment): ± AZN on any line by hand, for what the books (1C) hold and the recorded data cannot give.
  * An expense counts at its date whatever its status: paid, unpaid or an accrual («Hesablama» — the 1C accrual of a salary,
  * a depreciation; no money moves, so the cash flow leaves it out).
  *   Mənfəət (zərər) = gəlirlər − xərclər; MV 20 %.
@@ -141,6 +142,11 @@ class ProfitLossReport
             $azn = (float) ($e->amount_azn ?? $e->amount);
             $add(self::lineOf($e->category), $e->expense_date->format('Y-m-d'), $azn,
                 ['t' => ($e->category?->name ?? __('Xərc')).' · '.$e->description, 'c' => num((float) $e->amount).' '.$e->currency, 'u' => route('expenses.edit', $e)]);
+        }
+
+        // MZ düzəlişləri: the postings by hand, ± on their line
+        foreach (\App\Models\PlAdjustment::whereBetween('adjustment_date', [$from1, $end.' 23:59:59'])->get() as $a) {
+            $add(isset($lines[$a->line]) ? $a->line : null, $a->adjustment_date->format('Y-m-d'), (float) $a->amount, ['t' => __('MZ düzəlişi').' · '.$a->description, 'c' => null]);
         }
 
         // money in with an income category (e.g. a deposit's interest)

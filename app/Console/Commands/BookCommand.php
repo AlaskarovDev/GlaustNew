@@ -8,6 +8,8 @@ use App\Models\Category;
 use App\Models\Company;
 use App\Models\Expense;
 use App\Models\LogisticsAct;
+use App\Models\PlAdjustment;
+use App\Support\Reports\ProfitLossReport;
 use App\Services\BankLedger;
 use App\Services\ExpenseService;
 use App\Support\Tenancy\Tenant;
@@ -23,7 +25,8 @@ use Illuminate\Support\Facades\DB;
  *               {type: transfer, date, amount, from, to, description}
  *               {type: income, date, amount, account, category, description}
  *               {type: accrual, date, amount, category, description}   — an AZN expense «Hesablanıb»: MZ only, no money
- *               {type: act_date, act, date}]                           — moves a logistics act (by its number) to a day
+ *               {type: act_date, act, date}                            — moves a logistics act (by its number) to a day
+ *               {type: pl_adjust, date, line, amount, description}]    — «MZ düzəlişi»: ± AZN on an MZ line
  * Every record carries «<tag>:<hash of the op>» as its reference: a second run skips what is booked, --undo removes it all
  * (not the pl_lines and act dates: those print their old values to be set back).
  * payload = base64(gzip(json)).
@@ -49,9 +52,11 @@ class BookCommand extends Command
                 return DB::transaction(function () use ($ledger, $expenses, $tag) {
                     $e = Expense::where('reference', 'like', $tag.':%')->get();
                     $e->each(fn ($x) => $expenses->delete($x));
+                    $a = PlAdjustment::where('reference', 'like', $tag.':%')->get();
+                    $a->each->delete();
                     $t = BankTransaction::where('reference', 'like', $tag.':%')->get();
                     $t->each(fn ($x) => $x->exists && BankTransaction::whereKey($x->id)->exists() ? $ledger->delete($x) : null);
-                    $this->info("Geri alındı: {$e->count()} xərc, {$t->count()} bank hərəkəti.");
+                    $this->info("Geri alındı: {$e->count()} xərc, {$t->count()} bank hərəkəti".($a->count() ? ", {$a->count()} MZ düzəlişi" : '').'.');
 
                     return self::SUCCESS;
                 });
@@ -81,7 +86,7 @@ class BookCommand extends Command
                 }
                 $account = fn (string $name) => BankAccount::where('name', $name)->firstOrFail();
                 $category = fn (string $name, string $scope = 'expense') => Category::firstOrCreate(['scope' => $scope, 'name' => $name], ['color' => '#64748b']);
-                $done = ['expense' => 0, 'transfer' => 0, 'income' => 0, 'accrual' => 0, 'act_date' => 0, 'skipped' => 0];
+                $done = ['expense' => 0, 'transfer' => 0, 'income' => 0, 'accrual' => 0, 'act_date' => 0, 'pl_adjust' => 0, 'skipped' => 0];
                 foreach ($data['ops'] as $op) {
                     if ($op['type'] === 'act_date') {
                         $act = LogisticsAct::where('act_number', $op['act'])->firstOrFail();
@@ -96,8 +101,13 @@ class BookCommand extends Command
 
                         continue;
                     }
+                    if ($op['type'] === 'pl_adjust' && ! isset(ProfitLossReport::lines()[$op['line']])) {
+                        $this->error("MZ sətri yoxdur: {$op['line']}");
+
+                        return self::FAILURE;
+                    }
                     $ref = $tag.':'.substr(md5(json_encode($op)), 0, 16);
-                    if (Expense::where('reference', $ref)->exists() || BankTransaction::where('reference', $ref)->exists()) {
+                    if (Expense::where('reference', $ref)->exists() || BankTransaction::where('reference', $ref)->exists() || PlAdjustment::where('reference', $ref)->exists()) {
                         $done['skipped']++;
 
                         continue;
@@ -121,10 +131,13 @@ class BookCommand extends Command
                             'expense_date' => $op['date'], 'category_id' => $category($op['category'])->id, 'description' => mb_substr($op['description'], 0, 255),
                             'amount' => $op['amount'], 'currency' => 'AZN', 'status' => 'accrued', 'reference' => $ref,
                         ]),
+                        'pl_adjust' => PlAdjustment::create(['adjustment_date' => $op['date'], 'line' => $op['line'], 'amount' => round((float) $op['amount'], 2),
+                            'description' => mb_substr($op['description'], 0, 255), 'reference' => $ref, 'created_by' => auth()->id()]),
                     };
                     $done[$op['type']]++;
                 }
-                $more = ($done['accrual'] ? ", {$done['accrual']} hesablama" : '').($done['act_date'] ? ", {$done['act_date']} akt tarixi" : '');
+                $more = ($done['accrual'] ? ", {$done['accrual']} hesablama" : '').($done['act_date'] ? ", {$done['act_date']} akt tarixi" : '')
+                    .($done['pl_adjust'] ? ", {$done['pl_adjust']} MZ düzəlişi" : '');
                 $this->info(($this->option('dry') ? 'Yoxlama: ' : 'Yazıldı: ')."{$done['expense']} xərc, {$done['transfer']} köçürmə, {$done['income']} daxilolma{$more}; artıq var: {$done['skipped']}.");
 
                 return self::SUCCESS;

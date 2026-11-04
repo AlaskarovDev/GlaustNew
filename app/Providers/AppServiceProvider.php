@@ -55,6 +55,7 @@ class AppServiceProvider extends ServiceProvider
             'logistics_act' => \App\Models\LogisticsAct::class,
             'logistics_payment' => \App\Models\LogisticsPayment::class,
             'invoice_adjustment' => \App\Models\InvoiceAdjustment::class,
+            'pl_adjustment' => \App\Models\PlAdjustment::class,
         ]);
 
         Password::defaults(fn () => Password::min(8)->letters()->numbers());

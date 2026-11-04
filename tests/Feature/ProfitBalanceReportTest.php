@@ -63,7 +63,7 @@ class ProfitBalanceReportTest extends TestCase
         $this->get(route('analytics.show', ['profit', 'from' => '2025-01', 'to' => '2025-01', 'deal_id' => $deal->id]))->assertOk()->assertSee(num($l('217.2')));
         $this->get(route('analytics.show', ['cashflow', 'from' => '2024-12', 'to' => '2025-02', 'deal_id' => $deal->id]))->assertOk();
         $this->get(route('analytics.show', ['projects', 'from' => '2025-01', 'to' => '2025-01']))->assertOk()->assertSee('TR-1')
-            ->assertSee(num(round(9898036.68 * 0.016318, 2)));   // as the Təsisçi hesabatı: the sale at CBAR of the day the money came (AC), not of the act
+            ->assertSee(num(round(9898036.68 * 0.015962, 2)));   // as the Təsisçi hesabatı: the sale at CBAR of the day the rouble was sold (AC), not of the act
         $this->get(route('analytics.show', ['fx', 'from' => '2025-01', 'to' => '2025-02']))->assertOk();
         // the category page shows and keeps the line
         $this->get(route('expenses.categories'))->assertOk()->assertSee('221.1.2');

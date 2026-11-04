@@ -139,7 +139,7 @@ class ReportCheckCommand extends Command
             }
 
             $this->info('== EXPENSES by category and month (expense_date), AZN');
-            Expense::with('category:id,name')->whereBetween('expense_date', [$from.'-01', $end])->get()
+            Expense::with('category:id,name')->whereBetween('expense_date', [$from.'-01', $end.' 23:59:59'])->get()
                 ->groupBy(fn ($e) => ($e->category?->name ?? '—').' ['.$e->status.'/'.($e->payment_method ?? '-').']')
                 ->each(fn ($g, $k) => $this->line(str_pad(mb_substr($k, 0, 50), 52).json_encode($g->groupBy(fn ($e) => $e->expense_date->format('Y-m'))
                     ->map(fn ($m) => round($m->sum(fn ($e) => (float) ($e->amount_azn ?? $e->amount)), 2)))));

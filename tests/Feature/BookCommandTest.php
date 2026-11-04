@@ -99,6 +99,9 @@ class BookCommandTest extends TestCase
             $this->assertSame(529.45, $l('227.10', '2025-01'));
             $this->assertSame(1000.0, $l('232.1', '2025-01'), 'an expense on 232.1, the Trade has gone to February');
             $this->assertSame(816.0, $l('221.1.2', '2025-01'), 'the accrual, not the 728 paid');
+            // an expense on the last day of the period counts (the day is stored with its time)
+            $jan = (new ProfitLossReport)->build('2025-01', '2025-01');
+            $this->assertSame([529.45, 816.0], [$jan['lines']['227.10']['total'], $jan['lines']['221.1.2']['total']]);
             // the cash flow: the 728 paid stays, the accruals are not money
             $cf = (new CashflowReport)->build('2025-01', '2025-02');
             $labels = collect($cf['payments'])->pluck('label');

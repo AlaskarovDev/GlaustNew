@@ -101,7 +101,7 @@ class FounderReport
 
         if ($company) {
             // the running expenses of the company: not of a Trade, not kept out of the P&L, not a transfer fee of a Trade
-            foreach (Expense::with('category')->whereNull('deal_id')->whereBetween('expense_date', [$from, $to])->get() as $e) {
+            foreach (Expense::with('category')->whereNull('deal_id')->whereBetween('expense_date', [$from, $to.' 23:59:59'])->get() as $e) {
                 if ($e->category?->name === SupplierPaymentService::FEE_CATEGORY || ProfitLossReport::lineOf($e->category) === null) {
                     continue;
                 }

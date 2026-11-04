@@ -136,7 +136,8 @@ class ProfitLossReport
 
         // expenses, at their date, on their category's line
         $from1 = $from.'-01';
-        foreach (Expense::with('category')->whereBetween('expense_date', [$from1, $end])->get() as $e) {
+        // the day is stored with its time (00:00:00): «≤ the last day» needs the end of that day, or its expenses drop out
+        foreach (Expense::with('category')->whereBetween('expense_date', [$from1, $end.' 23:59:59'])->get() as $e) {
             $azn = (float) ($e->amount_azn ?? $e->amount);
             $add(self::lineOf($e->category), $e->expense_date->format('Y-m-d'), $azn,
                 ['t' => ($e->category?->name ?? __('Xərc')).' · '.$e->description, 'c' => num((float) $e->amount).' '.$e->currency, 'u' => route('expenses.edit', $e)]);

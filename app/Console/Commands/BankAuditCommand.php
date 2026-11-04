@@ -15,16 +15,26 @@ use Illuminate\Support\Facades\DB;
  * base64(gzip(json))) is stored as an audit of the account with its IBAN — the page shows it too — and what does not
  * match is printed, short: the bank lines the system lacks, the movements the bank never made, the dates and amounts that
  * differ. --replace drops the account's earlier audits of the same file first; --keep=0 drops this one after printing.
+ * Without a payload it reads the audits already uploaded on the page (the latest of each account) — no statement leaves the server.
  */
 class BankAuditCommand extends Command
 {
-    protected $signature = 'glaust:bank-audit {company : id} {payload} {--replace} {--keep=1} {--limit=60}';
+    protected $signature = 'glaust:bank-audit {company : id} {payload? : without it — the latest audit of every account, as uploaded on the page} {--replace} {--keep=1} {--limit=60}';
 
     protected $description = 'Bank çıxarışını sistemlə tutuşdurur (Bank → Audit) və uyğunsuzluqları çap edir';
 
     public function handle(): int
     {
         $company = Company::find($this->argument('company'));
+        if ($company && $this->argument('payload') === null) {
+            return app(Tenant::class)->runAs($company, function () {
+                $latest = BankAudit::with('account')->orderByDesc('id')->get()->unique('bank_account_id');
+                $latest->isEmpty() && $this->line('Audit yoxdur: çıxarışları Bank → Audit səhifəsində yükləyin.');
+                $latest->each(fn (BankAudit $a) => $this->report($a));
+
+                return self::SUCCESS;
+            });
+        }
         $json = @gzdecode((string) base64_decode((string) $this->argument('payload'), true));
         $s = $json === false ? null : json_decode($json, true);
         if (! $company || ! is_array($s['lines'] ?? null)) {
@@ -55,30 +65,36 @@ class BankAuditCommand extends Command
                 return $audit;
             });
 
-            $r = (new Reconciler($audit))->run();
-            $n = fn ($v) => number_format((float) $v, 2, '.', ' ');
-            $b = $r['balances'];
-            $this->info("#{$audit->id} {$account->bank_name} · {$account->name} {$account->currency}: ".json_encode($r['counts']));
-            $this->line('qalıq: açılış bank '.$n($b['opening']['bank']).' / sistem '.$n($b['opening']['system']).' · bağlanış bank '.$n($b['closing']['bank']).' / sistem '.$n($b['closing']['system'])
-                .($b['split'] ? ' · ilk fərq '.$b['split']['date'].' bank '.$n($b['split']['bank']).' / sistem '.$n($b['split']['system']) : ''));
-            $shown = 0;
-            foreach ($r['rows'] as $row) {
-                if (in_array($row['status'], Reconciler::MATCHED, true)) {
-                    continue;
-                }
-                if (++$shown > (int) $this->option('limit')) {
-                    $this->line('…');
-                    break;
-                }
-                $ls = implode(' + ', array_map(fn ($l) => $l['date'].' '.$n($l['amount']).' '.mb_substr(preg_replace('/\s+/', ' ', (string) $l['m']->description), 0, 48), $row['lines']));
-                $ts = implode(' + ', array_map(fn ($t) => '#'.$t['id'].' '.$t['date'].' '.$n($t['amount']).' '.mb_substr($r['sources'][$t['id']]['label'] ?? ($t['m']->purpose ?? $t['m']->kind), 0, 40), $row['txs']));
-                $this->line($row['status'].' | B: '.($ls ?: '—').' | S: '.($ts ?: '—'));
-            }
+            $this->report($audit);
             if (! (int) $this->option('keep')) {
                 $audit->delete();
             }
 
             return self::SUCCESS;
         });
+    }
+
+    private function report(BankAudit $audit): void
+    {
+        $account = $audit->account;
+        $r = (new Reconciler($audit))->run();
+        $n = fn ($v) => number_format((float) $v, 2, '.', ' ');
+        $b = $r['balances'];
+        $this->info("#{$audit->id} {$account->bank_name} · {$account->name} {$account->currency}: ".json_encode($r['counts']));
+        $this->line('qalıq: açılış bank '.$n($b['opening']['bank']).' / sistem '.$n($b['opening']['system']).' · bağlanış bank '.$n($b['closing']['bank']).' / sistem '.$n($b['closing']['system'])
+            .($b['split'] ? ' · ilk fərq '.$b['split']['date'].' bank '.$n($b['split']['bank']).' / sistem '.$n($b['split']['system']) : ''));
+        $shown = 0;
+        foreach ($r['rows'] as $row) {
+            if (in_array($row['status'], Reconciler::MATCHED, true)) {
+                continue;
+            }
+            if (++$shown > (int) $this->option('limit')) {
+                $this->line('…');
+                break;
+            }
+            $ls = implode(' + ', array_map(fn ($l) => $l['date'].' '.$n($l['amount']).' '.mb_substr(preg_replace('/\s+/', ' ', (string) $l['m']->description), 0, 48), $row['lines']));
+            $ts = implode(' + ', array_map(fn ($t) => '#'.$t['id'].' '.$t['date'].' '.$n($t['amount']).' '.mb_substr($r['sources'][$t['id']]['label'] ?? ($t['m']->purpose ?? $t['m']->kind), 0, 40), $row['txs']));
+            $this->line($row['status'].' | B: '.($ls ?: '—').' | S: '.($ts ?: '—'));
+        }
     }
 }

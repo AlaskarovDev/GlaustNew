@@ -28,6 +28,8 @@ class BankAuditCommandTest extends TestCase
         $args = ['company' => (string) $admin->company_id, 'payload' => base64_encode(gzencode(json_encode($s)))];
 
         $this->artisan('glaust:bank-audit', $args)->expectsOutputToContain('missing_sys | B: 2025-03-10 -25.00 Komissiya')->assertSuccessful();
+        // without a payload: the audits already uploaded (on the page), the latest of each account
+        $this->artisan('glaust:bank-audit', ['company' => (string) $admin->company_id])->expectsOutputToContain('missing_sys | B: 2025-03-10 -25.00 Komissiya')->assertSuccessful();
         $this->artisan('glaust:bank-audit', $args + ['--replace' => true, '--keep' => 0])->expectsOutputToContain('missing_bank | B: — | S: #')->assertSuccessful();
         $this->assertSame(0, $this->inTenant($admin, fn () => BankAudit::count()), '--replace dropped the first, --keep=0 the second');
         $this->artisan('glaust:bank-audit', ['company' => (string) $admin->company_id, 'payload' => base64_encode(gzencode(json_encode(['iban' => 'XX', 'currency' => 'AZN'] + $s)))])->assertFailed();

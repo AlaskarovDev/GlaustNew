@@ -117,8 +117,7 @@ class BookCommandTest extends TestCase
             $this->assertFalse($labels->contains('Amortizasiya') || $labels->contains('ERTINS') || $labels->contains('Əmək haqqı (hesablama)'));
         });
 
-        $this->artisan('glaust:book', ['company' => (string) $admin->company_id, '--tag' => 'MZ1C', '--undo' => true])->expectsOutputToContain('Geri alındı: 3 xərc')
-            ->expectsOutputToContain('2 MZ düzəlişi')->assertSuccessful();
+        $this->artisan('glaust:book', ['company' => (string) $admin->company_id, '--tag' => 'MZ1C', '--undo' => true])->expectsOutputToContain('Geri alındı: 3 xərc, 0 bank hərəkəti, 2 MZ düzəlişi.')->assertSuccessful();
         $this->assertSame(0, $this->inTenant($admin, fn () => PlAdjustment::count()));
         $bad = base64_encode(gzencode(json_encode(['ops' => [['type' => 'pl_adjust', 'date' => '2025-01-31', 'line' => '999', 'amount' => 1, 'description' => 'x']]])));
         $this->artisan('glaust:book', ['company' => (string) $admin->company_id, 'payload' => $bad])->expectsOutputToContain('MZ sətri yoxdur: 999')->assertFailed();

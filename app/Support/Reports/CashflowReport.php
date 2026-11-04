@@ -60,9 +60,16 @@ class CashflowReport
      *                             at CBAR of the last day the balance moved (the company's «Cash Flow» sheet); 'cbar' — at
      *                             CBAR of the month end itself (IAS 21, the balance sheet)
      */
-    public function __construct(private ?int $projectId = null, private string $valuation = 'cbar') {}
+    /** $projectId / $dealId — only that project's / Trade's money (no account balances: they belong to the whole company). */
+    public function __construct(private ?int $projectId = null, private string $valuation = 'cbar', private ?int $dealId = null) {}
 
     public const VALUATIONS = ['bank', 'cbar'];
+
+    /** The whole company: no project or Trade filter (the accounts and their revaluation count). */
+    private function whole(): bool
+    {
+        return $this->projectId === null && $this->dealId === null;
+    }
 
     /**
      * @return array{months: list<string>, income: list<array>, payments: list<array>, opening: array<string, float>, closing: array<string, float>,
@@ -102,7 +109,7 @@ class CashflowReport
 
         return ['months' => $months, 'before' => $before, 'income' => $rows($this->in), 'payments' => $rows($this->out), 'other' => $rows($this->other),
             'opening' => $open, 'closing' => $close, 'in' => $in, 'out' => $out, 'oth' => $oth, 'net' => $net, 'first' => $first, 'last' => $last,
-            'revalued' => $this->projectId === null, 'cash' => $this->projectId === null ? $this->cash($months) : null, 'revalWarn' => array_values(array_unique(array_column(array_filter($this->revalWarn, fn ($w) => $w[0] >= $from && $w[0] <= $to), 1)))];
+            'revalued' => $this->whole(), 'cash' => $this->whole() ? $this->cash($months) : null, 'revalWarn' => array_values(array_unique(array_column(array_filter($this->revalWarn, fn ($w) => $w[0] >= $from && $w[0] <= $to), 1)))];
     }
 
     /**
@@ -295,16 +302,22 @@ class CashflowReport
         }
         $this->collected = true;
         $p = $this->projectId;
-        $supplier = SupplierPayment::with('deal.supplier', 'deal:id,code,supplier_id,project_id')->when($p, fn ($q) => $q->whereHas('deal', fn ($d) => $d->where('project_id', $p)))->get();
-        $logistics = LogisticsPayment::with('act.counterparty', 'act.deal:id,code')->when($p, fn ($q) => $q->whereHas('act.deal', fn ($d) => $d->where('project_id', $p)))->get();
+        $dl = $this->dealId;
+        $supplier = SupplierPayment::with('deal.supplier', 'deal:id,code,supplier_id,project_id')->when($p, fn ($q) => $q->whereHas('deal', fn ($d) => $d->where('project_id', $p)))
+            ->when($dl, fn ($q) => $q->where('deal_id', $dl))->get();
+        $logistics = LogisticsPayment::with('act.counterparty', 'act.deal:id,code')->when($p, fn ($q) => $q->whereHas('act.deal', fn ($d) => $d->where('project_id', $p)))
+            ->when($dl, fn ($q) => $q->whereHas('act', fn ($a) => $a->where('deal_id', $dl)))->get();
         $handled = $supplier->pluck('transaction_id')->merge($logistics->pluck('transaction_id'))->filter()->all();
         $transferFees = $supplier->pluck('fee_expense_id')->merge($logistics->pluck('fee_expense_id'))->filter()->all();
-        $expenses = Expense::with('category', 'counterparty')->where('status', 'paid')->when($p, fn ($q) => $q->where('project_id', $p))->get();
+        // a filter's expenses: booked on it, and the fees of its payments
+        $expenses = Expense::with('category', 'counterparty')->where('status', 'paid')
+            ->when($dl, fn ($q) => $q->where(fn ($w) => $w->where('deal_id', $dl)->orWhereIn('id', $transferFees)))
+            ->when($p && ! $dl, fn ($q) => $q->where(fn ($w) => $w->where('project_id', $p)->orWhereIn('id', $transferFees)))->get();
         $expenseTx = $expenses->pluck('bank_transaction_id')->filter()->all();
         $party = fn ($c) => $c ? ['cp-'.$c->id, $c->name, route('counterparties.show', $c)] : null;
 
         // money in, at CBAR of the day
-        $txs = BankTransaction::with('counterparty', 'category')->where('kind', 'regular')->when($p, fn ($q) => $q->where('project_id', $p))->get();
+        $txs = BankTransaction::with('counterparty', 'category')->where('kind', 'regular')->when($p, fn ($q) => $q->where('project_id', $p))->when($dl, fn ($q) => $q->where('deal_id', $dl))->get();
         foreach ($txs->where('direction', 'in') as $t) {
             // by counterparty; money without one by its category (e.g. «Faiz gəlirləri»), else «Digər daxilolmalar»
             [$key, $label, $url] = $party($t->counterparty) ?? ($t->category ? ['in-cat-'.$t->category_id, $t->category->name, null] : ['in-other', __('Digər daxilolmalar'), null]);
@@ -365,12 +378,12 @@ class CashflowReport
                 ['t' => __('Bank məxarici').($t->purpose ? ' · '.$t->purpose : '').($t->reference ? ' · '.$t->reference : ''), 'c' => self::calc($t->amount, $t->currency, $t->cbar_rate)]);
         }
         // the currency on the bank, revalued — accounts belong to the whole company, so only without a project filter
-        if (! $p) {
+        if ($this->whole()) {
             $this->revalue();
         }
 
         // currency bought / sold: the bank against CBAR (+ loss, − gain)
-        foreach (CurrencyExchange::when($p, fn ($q) => $q->where('project_id', $p))->get() as $x) {
+        foreach (CurrencyExchange::when($p, fn ($q) => $q->where('project_id', $p))->when($dl, fn ($q) => $q->where('deal_id', $dl))->get() as $x) {
             $this->add($this->out, 'fx', __(self::FX), 'fx', $x->exchange_date, (float) $x->difference_azn, 9, null,
                 ['t' => ($x->direction === 'sell' ? __('Valyuta satışı') : __('Valyuta alışı')).' · '.num((float) $x->amount).' '.$x->currency.($x->reference ? ' · '.$x->reference : ''),
                     'c' => num((float) $x->amount).' '.$x->currency.' × '.($x->direction === 'sell'

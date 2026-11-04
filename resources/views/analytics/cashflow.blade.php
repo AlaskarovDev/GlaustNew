@@ -1,7 +1,7 @@
 <x-layouts.app :title="__('Cash flow')" wide>
     <x-page-header title="Cash flow" :icon="$icon" :subtitle="__('Aylar üzrə pul axını, AZN — daxilolmalar və ödənişlər kontragent üzrə, CBAR kursu ilə; komissiyalar və kurs fərqi ayrıca')">
         <x-slot:actions>
-            <a href="{{ route('analytics.show', array_filter(['report' => 'cashflow', 'from' => $from, 'to' => $to, 'project_id' => $projectId, 'valuation' => $valuation === 'bank' ? null : $valuation, 'format' => 'xlsx'])) }}" class="btn btn-secondary"><x-icon name="sheet" class="size-4 text-success"/> Excel</a>
+            <a href="{{ route('analytics.show', array_filter(['report' => 'cashflow', 'from' => $from, 'to' => $to, 'project_id' => $projectId, 'deal_id' => $dealId, 'valuation' => $valuation === 'bank' ? null : $valuation, 'format' => 'xlsx'])) }}" class="btn btn-secondary"><x-icon name="sheet" class="size-4 text-success"/> Excel</a>
         </x-slot:actions>
     </x-page-header>
 
@@ -24,7 +24,7 @@
         $openFirst = reset($data['opening']) ?: 0;
         $closeLast = end($data['closing']) ?: 0;
         $n = fn ($v) => abs($v) < 0.005 ? '—' : ($v < 0 ? '−' : '').num(abs($v));
-        $base = array_filter(['report' => 'cashflow', 'project_id' => $projectId, 'valuation' => $valuation === 'bank' ? null : $valuation]);
+        $base = array_filter(['report' => 'cashflow', 'project_id' => $projectId, 'deal_id' => $dealId, 'valuation' => $valuation === 'bank' ? null : $valuation]);
         $now = today();
         $quick = [
             __('Son 6 ay') => [$now->copy()->subMonthsNoOverflow(5)->format('Y-m'), $now->format('Y-m')],
@@ -110,6 +110,13 @@
             <select name="project_id" class="input">
                 <option value="">{{ __('Bütün şirkət') }}</option>
                 @foreach($projects as $p)<option value="{{ $p->id }}" @selected($projectId === $p->id)>{{ $p->code }} · {{ $p->name }}</option>@endforeach
+            </select>
+        </label>
+        <label class="min-w-[200px]">
+            <span class="field-label">Trade</span>
+            <select name="deal_id" class="input">
+                <option value="">{{ __('Bütün Trade-lər') }}</option>
+                @foreach($deals as $d)<option value="{{ $d->id }}" @selected($dealId === $d->id)>{{ $d->code }}{{ $d->title ? ' · '.\Illuminate\Support\Str::limit($d->title, 30) : '' }}</option>@endforeach
             </select>
         </label>
         <label class="min-w-[230px]">

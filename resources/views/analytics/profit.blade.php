@@ -1,7 +1,7 @@
 <x-layouts.app :title="__('Mənfəət və zərər')" wide>
     <x-page-header :title="__('Mənfəət və zərər')" :icon="$icon" :subtitle="__('Şirkətin MZ cədvəli kimi: gəlirlər və xərclər hesab nömrələri üzrə, aylar və dövr üzrə, AZN')">
         <x-slot:actions>
-            <a href="{{ route('analytics.show', ['report' => 'profit', 'from' => $from, 'to' => $to, 'format' => 'xlsx']) }}" class="btn btn-secondary"><x-icon name="sheet" class="size-4 text-success"/> Excel</a>
+            <a href="{{ route('analytics.show', array_filter(['report' => 'profit', 'from' => $from, 'to' => $to, 'project_id' => $projectId, 'deal_id' => $dealId, 'format' => 'xlsx'])) }}" class="btn btn-secondary"><x-icon name="sheet" class="size-4 text-success"/> Excel</a>
         </x-slot:actions>
     </x-page-header>
 
@@ -40,10 +40,18 @@
     <form method="GET" action="{{ route('analytics.show', 'profit') }}" class="card p-4 mb-6 flex flex-wrap items-end gap-3">
         <label><span class="field-label">{{ __('Ayından') }}</span><input type="month" name="from" value="{{ $from }}" class="input font-mono"></label>
         <label><span class="field-label">{{ __('Ayınadək') }}</span><input type="month" name="to" value="{{ $to }}" class="input font-mono"></label>
+        <label class="min-w-[220px]"><span class="field-label">{{ __('Layihə') }}</span>
+            <select name="project_id" class="input"><option value="">{{ __('Bütün şirkət') }}</option>
+                @foreach($projects as $p)<option value="{{ $p->id }}" @selected($projectId === $p->id)>{{ $p->code }} · {{ $p->name }}</option>@endforeach
+            </select></label>
+        <label class="min-w-[200px]"><span class="field-label">Trade</span>
+            <select name="deal_id" class="input"><option value="">{{ __('Bütün Trade-lər') }}</option>
+                @foreach($deals as $d)<option value="{{ $d->id }}" @selected($dealId === $d->id)>{{ $d->code }}{{ $d->title ? ' · '.\Illuminate\Support\Str::limit($d->title, 30) : '' }}</option>@endforeach
+            </select></label>
         <button class="btn btn-primary"><x-icon name="filter" class="size-4"/> {{ __('Göstər') }}</button>
         <div class="flex flex-wrap gap-1 lg:ml-auto">
             @foreach($quick as $ql => [$qf, $qt])
-                <a href="{{ route('analytics.show', ['profit', 'from' => $qf, 'to' => $qt]) }}" @class(['btn btn-sm', 'btn-ghost' => ! ($qf === $from && $qt === $to), 'bg-brand-soft text-brand-ink' => $qf === $from && $qt === $to])>{{ $ql }}</a>
+                <a href="{{ route('analytics.show', array_filter(['profit', 'from' => $qf, 'to' => $qt, 'project_id' => $projectId, 'deal_id' => $dealId])) }}" @class(['btn btn-sm', 'btn-ghost' => ! ($qf === $from && $qt === $to), 'bg-brand-soft text-brand-ink' => $qf === $from && $qt === $to])>{{ $ql }}</a>
             @endforeach
         </div>
     </form>

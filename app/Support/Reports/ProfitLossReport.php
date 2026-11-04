@@ -84,8 +84,13 @@ class ProfitLossReport
      * @return array{months: list<string>, lines: array<string, array{label: string, side: string, values: array<string, float>, total: float, items: array<string, list<array>>}>,
      *               in: array<string, float>, out: array<string, float>, result: array<string, float>, tax: array<string, float>, taxTotal: float}
      */
-    public function build(string $from, string $to): array
+    /** $projectId / $dealId — only that project's / Trade's figures: its Trades, its expenses and money, its exchange results (no company-wide MZ düzəlişi). */
+    public function build(string $from, string $to, ?int $projectId = null, ?int $dealId = null): array
     {
+        if ($dealId) {
+            $projectId = Deal::whereKey($dealId)->value('project_id') ?? $projectId;
+        }
+        $filtered = $projectId || $dealId;
         $months = [];
         for ($m = \Carbon\Carbon::createFromFormat('!Y-m', $from); $m->format('Y-m') <= $to; $m->addMonthNoOverflow()) {
             $months[] = $m->format('Y-m');
@@ -103,7 +108,11 @@ class ProfitLossReport
             $lines[$code]['items'][$m][] = $why + ['d' => azdate($day), 's' => $day, 'v' => round($azn, 2)];
         };
         $end = \Carbon\Carbon::createFromFormat('!Y-m', $to)->endOfMonth()->toDateString();
-        $deals = Deal::query()->get();
+        $deals = Deal::query()->when($projectId, fn ($q) => $q->where('project_id', $projectId))->when($dealId, fn ($q) => $q->whereKey($dealId))->get();
+        $dealUrl = $dealId ? route('deals.show', $dealId) : null;
+        // expenses and money in of the filter: the Trade's, or the project's (booked on it or on one of its Trades)
+        $scope = fn ($q) => $q->when($dealId, fn ($w) => $w->where('deal_id', $dealId))
+            ->when($projectId && ! $dealId, fn ($w) => $w->where(fn ($o) => $o->where('project_id', $projectId)->orWhereIn('deal_id', $deals->pluck('id'))));
 
         // the Trades: one pass per year — the act-date amounts and the 1C postings of the year (1 January → its end)
         for ($y = (int) substr($from, 0, 4); $y <= (int) substr($to, 0, 4); $y++) {
@@ -124,11 +133,14 @@ class ProfitLossReport
         }
 
         // the bank against CBAR — the cash flow's «Kurs fərqi» line
-        $cash = (new CashflowReport)->build($from, $to);
+        $cash = (new CashflowReport($projectId, 'cbar', $dealId))->build($from, $to);
         foreach ($cash['payments'] as $g) {
             if ($g['kind'] === 'fx') {
                 foreach ($g['details'] as $items) {
                     foreach ($items as $i) {
+                        if ($dealUrl && ($i['u'] ?? null) !== $dealUrl) {
+                            continue;
+                        }
                         $add('221.13', $i['s'], (float) $i['v'], ['t' => __('Kurs fərqi').' · '.$i['t'], 'c' => $i['c'], 'u' => $i['u'] ?? null]);
                     }
                 }
@@ -138,20 +150,20 @@ class ProfitLossReport
         // expenses, at their date, on their category's line
         $from1 = $from.'-01';
         // the day is stored with its time (00:00:00): «≤ the last day» needs the end of that day, or its expenses drop out
-        foreach (Expense::with('category')->whereBetween('expense_date', [$from1, $end.' 23:59:59'])->get() as $e) {
+        foreach (Expense::with('category')->whereBetween('expense_date', [$from1, $end.' 23:59:59'])->when($filtered, $scope)->get() as $e) {
             $azn = (float) ($e->amount_azn ?? $e->amount);
             $add(self::lineOf($e->category), $e->expense_date->format('Y-m-d'), $azn,
                 ['t' => ($e->category?->name ?? __('Xərc')).' · '.$e->description, 'c' => num((float) $e->amount).' '.$e->currency, 'u' => route('expenses.edit', $e)]);
         }
 
         // MZ düzəlişləri: the postings by hand, ± on their line
-        foreach (\App\Models\PlAdjustment::whereBetween('adjustment_date', [$from1, $end.' 23:59:59'])->get() as $a) {
+        foreach ($filtered ? [] : \App\Models\PlAdjustment::whereBetween('adjustment_date', [$from1, $end.' 23:59:59'])->get() as $a) {
             $add(isset($lines[$a->line]) ? $a->line : null, $a->adjustment_date->format('Y-m-d'), (float) $a->amount, ['t' => __('MZ düzəlişi').' · '.$a->description, 'c' => null]);
         }
 
         // money in with an income category (e.g. a deposit's interest)
         foreach (\App\Models\BankTransaction::with('category')->where('direction', 'in')->where('kind', 'regular')->whereNotNull('category_id')
-            ->whereBetween('transaction_date', [$from1, $end.' 23:59:59'])->get() as $t) {
+            ->whereBetween('transaction_date', [$from1, $end.' 23:59:59'])->when($filtered, $scope)->get() as $t) {
             $code = self::lineOf($t->category);
             if ($code && self::lines()[$code][1] === 'in') {
                 $add($code, $t->transaction_date->format('Y-m-d'), (float) $t->cbar_amount_azn, ['t' => $t->category->name.($t->purpose ? ' · '.$t->purpose : ''),

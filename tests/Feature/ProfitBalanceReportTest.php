@@ -17,7 +17,7 @@ class ProfitBalanceReportTest extends TestCase
 
     public function test_profit_and_loss_follows_the_mz_sheet(): void
     {
-        [$admin] = $this->row3();
+        [$admin, $deal] = $this->row3();
         $this->rates('2024-12-31', 1.7700, 0.016318);
         $this->rates('2025-01-31', 1.7659, 0.0175);
         $this->inTenant($admin, function () {
@@ -49,11 +49,21 @@ class ProfitBalanceReportTest extends TestCase
         $this->assertSame(round($d['result']['2025-01'] * 0.2, 2), $d['tax']['2025-01']);
         $this->assertSame(round(array_sum($d['result']) * 0.2, 2), $d['taxTotal'], 'the period\'s tax from its result');
         $this->assertNotEmpty($d['lines']['217.2']['items']['2025-01'], 'each figure carries what it is made of');
+        // a Trade / project filter: its sale and costs, not the company's own expenses
+        $f = $this->inTenant($admin, fn () => (new ProfitLossReport)->build('2025-01', '2025-01', null, $deal->id));
+        $this->assertSame($l('217.2'), $f['lines']['217.2']['values']['2025-01']);
+        $this->assertSame(0.0, $f['lines']['221.1.2']['total'], 'the salary is not the Trade\'s');
+        $none = $this->inTenant($admin, fn () => (new ProfitLossReport)->build('2025-01', '2025-01', 999999));
+        $this->assertSame(0.0, $none['lines']['217.2']['total']);
 
         $this->actingAs($admin);
         $this->get(route('analytics.show', ['profit', 'from' => '2025-01', 'to' => '2025-01']))->assertOk()
             ->assertSee('HESABAT DÖVRÜNDƏ MƏNFƏƏT (ZƏRƏR)')->assertSee('217.2')->assertSee('AR hüdudlarından kənarda əldə edilmiş gəlirlər')->assertSee(num($l('217.2')));
         $this->assertStringContainsString('spreadsheetml', $this->get(route('analytics.show', ['profit', 'from' => '2025-01', 'to' => '2025-01', 'format' => 'xlsx']))->headers->get('content-type'));
+        $this->get(route('analytics.show', ['profit', 'from' => '2025-01', 'to' => '2025-01', 'deal_id' => $deal->id]))->assertOk()->assertSee(num($l('217.2')));
+        $this->get(route('analytics.show', ['cashflow', 'from' => '2024-12', 'to' => '2025-02', 'deal_id' => $deal->id]))->assertOk();
+        $this->get(route('analytics.show', ['projects', 'from' => '2025-01', 'to' => '2025-01']))->assertOk()->assertSee('TR-1')->assertSee(num($l('217.2')));
+        $this->get(route('analytics.show', ['fx', 'from' => '2025-01', 'to' => '2025-02']))->assertOk();
         // the category page shows and keeps the line
         $this->get(route('expenses.categories'))->assertOk()->assertSee('221.1.2');
     }

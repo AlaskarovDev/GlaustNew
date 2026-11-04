@@ -15,11 +15,19 @@ use Illuminate\Support\Collection;
  */
 class FxResults
 {
-    /** @return array{rows: list<array>, currencies: array<string, array{gain: float, loss: float, net: float}>, net: float} */
-    public static function for(Collection $deals, ?int $projectId = null): array
+    /**
+     * $company — every currency exchange of the company, a Trade's or not (the «Kurs fərqləri» report); $from / $to (Y-m-d) — only the days between.
+     *
+     * @return array{rows: list<array>, currencies: array<string, array{gain: float, loss: float, net: float}>, net: float, months: array<string, float>}
+     */
+    public static function for(Collection $deals, ?int $projectId = null, bool $company = false, ?string $from = null, ?string $to = null): array
     {
         $rows = [];
-        $add = function ($date, string $kind, string $cur, string $text, float $azn, ?string $trade) use (&$rows) {
+        $add = function ($date, string $kind, string $cur, string $text, float $azn, ?string $trade) use (&$rows, $from, $to) {
+            $d = self::day($date);
+            if (($from && $d < $from) || ($to && $d > $to)) {
+                return;
+            }
             if (abs($azn) >= 0.005) {
                 $rows[] = ['date' => $date, 'kind' => $kind, 'cur' => $cur, 'text' => $text, 'azn' => round($azn, 2), 'trade' => $trade];
             }
@@ -27,8 +35,8 @@ class FxResults
 
         $deals = new \Illuminate\Database\Eloquent\Collection($deals->all());
         $deals->loadMissing(['payments', 'supplierPayments', 'logisticsActs.payments']);
-        $exchanges = CurrencyExchange::whereIn('deal_id', $deals->pluck('id'))
-            ->when($projectId, fn ($q) => $q->orWhere(fn ($w) => $w->where('project_id', $projectId)->whereNull('deal_id')))->with('deal:id,code')->get();
+        $exchanges = ($company ? CurrencyExchange::query() : CurrencyExchange::whereIn('deal_id', $deals->pluck('id'))
+            ->when($projectId, fn ($q) => $q->orWhere(fn ($w) => $w->where('project_id', $projectId)->whereNull('deal_id'))))->with('deal:id,code')->get();
         foreach ($exchanges as $x) {
             $buy = $x->direction === 'buy';
             $add($x->exchange_date, $buy ? __('Valyuta alışı') : __('Valyuta satışı'), $x->currency,
@@ -68,7 +76,13 @@ class FxResults
         }
         ksort($cur);
 
-        return ['rows' => $rows, 'currencies' => $cur, 'net' => round(array_sum(array_column($cur, 'net')), 2)];
+        $months = [];
+        foreach ($rows as $r) {
+            $m = substr(self::day($r['date']), 0, 7);
+            $months[$m] = round(($months[$m] ?? 0) + $r['azn'], 2);
+        }
+
+        return ['rows' => $rows, 'currencies' => $cur, 'net' => round(array_sum(array_column($cur, 'net')), 2), 'months' => $months];
     }
 
     private static function day($d): string

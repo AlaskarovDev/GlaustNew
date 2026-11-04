@@ -19,12 +19,14 @@ class AnalyticsMenuTest extends TestCase
         foreach (['Cashflow', 'Alış hesabatları', 'Layihə hesabatları', 'Kurs fərqləri', 'Mənfəət və zərər', 'Xərclər hesabatı', 'Yekun hesabat', 'Digər hesabatlar'] as $label) {
             $page->assertSee($label);
         }
-        foreach (array_diff(array_keys(config('glaust.analytics')), ['summary', 'cashflow', 'profit', 'balance', 'founders']) as $key) {
+        foreach (array_diff(array_keys(config('glaust.analytics')), ['summary', 'cashflow', 'profit', 'balance', 'founders', 'fx', 'projects']) as $key) {
             $this->get(route('analytics.show', $key))->assertOk()->assertSee('aktivləşəcək');
         }
         $this->get(route('analytics.show', 'summary'))->assertOk()->assertDontSee('aktivləşəcək')->assertSee('Hesablanacaq faktura yoxdur');   // live
         $this->get(route('analytics.show', 'profit'))->assertOk()->assertDontSee('aktivləşəcək')->assertSee('HESABAT DÖVRÜNDƏ MƏNFƏƏT (ZƏRƏR)');   // live, empty company
         $this->get(route('analytics.show', 'balance'))->assertOk()->assertDontSee('aktivləşəcək')->assertSee('AKTİVLƏR');
+        $this->get(route('analytics.show', 'fx'))->assertOk()->assertDontSee('aktivləşəcək')->assertSee('Məzənnə fərqi yoxdur');
+        $this->get(route('analytics.show', 'projects'))->assertOk()->assertDontSee('aktivləşəcək')->assertSee('Bu dövrdə aktı olan Trade yoxdur.');
         $this->get('/analytics/nope')->assertNotFound();
         $this->get(route('reports.index'))->assertOk();
 

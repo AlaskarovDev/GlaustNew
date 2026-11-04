@@ -38,6 +38,12 @@ class AnalyticsController extends Controller
         if ($report === 'balance') {
             return $this->balance($request, compact('report', 'title', 'icon', 'description', 'all'));
         }
+        if ($report === 'fx') {
+            return $this->fx($request, compact('report', 'title', 'icon', 'description', 'all'));
+        }
+        if ($report === 'projects') {
+            return $this->projects($request, compact('report', 'title', 'icon', 'description', 'all'));
+        }
 
         return view('analytics.show', compact('report', 'title', 'icon', 'description', 'contents', 'all'));
     }
@@ -46,9 +52,10 @@ class AnalyticsController extends Controller
     private function cashflow(Request $request, array $page): View|Response
     {
         $projectId = $request->integer('project_id') ?: null;
+        $dealId = $request->integer('deal_id') ?: null;
         // the currency on the bank at a month end: as the bank statement values it (default — the company's sheet) or at CBAR of the month end
         $valuation = in_array($request->query('valuation'), \App\Support\Reports\CashflowReport::VALUATIONS, true) ? $request->query('valuation') : 'bank';
-        $report = new \App\Support\Reports\CashflowReport($projectId, $valuation);
+        $report = new \App\Support\Reports\CashflowReport($projectId, $valuation, $dealId);
         [$first, $last] = $report->span();
         $valid = fn ($m) => is_string($m) && preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $m) ? $m : null;
         $now = today()->format('Y-m');
@@ -95,13 +102,14 @@ class AnalyticsController extends Controller
                 $cols[] = Column::make($label($m), fn ($r) => $r[$m] ?? null, 'money');
             }
             $cols[] = Column::make(__('Cəmi'), 'total', 'money');
-            $filters = array_filter([__('Dövr').': '.$label($from).' — '.$label($to), $projectId ? __('Layihə').': '.Project::find($projectId)?->name : null]);
+            $filters = array_filter([__('Dövr').': '.$label($from).' — '.$label($to), $projectId ? __('Layihə').': '.Project::find($projectId)?->name : null,
+                $dealId ? 'Trade: '.\App\Models\Deal::whereKey($dealId)->value('code') : null]);
 
             return app(SpreadsheetExporter::class)->download('Cash flow', $cols, $rows, 'cash-flow-'.$from.'-'.$to.'.xlsx', array_values($filters));
         }
 
-        return view('analytics.cashflow', $page + ['data' => $data, 'from' => $from, 'to' => $to, 'projectId' => $projectId, 'label' => $label, 'valuation' => $valuation,
-            'projects' => Project::whereHas('deals')->orderByDesc('start_date')->orderByDesc('id')->get(['id', 'code', 'name'])]);
+        return view('analytics.cashflow', $page + ['data' => $data, 'from' => $from, 'to' => $to, 'projectId' => $projectId, 'dealId' => $dealId, 'label' => $label, 'valuation' => $valuation,
+            'projects' => Project::whereHas('deals')->orderByDesc('start_date')->orderByDesc('id')->get(['id', 'code', 'name']), 'deals' => self::dealList($projectId)]);
     }
 
     /** The last month already over (Y-m) and a valid «Y-m» from the query or the default. */
@@ -144,7 +152,9 @@ class AnalyticsController extends Controller
         if (\Carbon\Carbon::createFromFormat('!Y-m', $from)->diffInMonths(\Carbon\Carbon::createFromFormat('!Y-m', $to)) > 23) {
             $from = \Carbon\Carbon::createFromFormat('!Y-m', $to)->subMonthsNoOverflow(23)->format('Y-m');
         }
-        $data = (new \App\Support\Reports\ProfitLossReport)->build($from, $to);
+        $projectId = $request->integer('project_id') ?: null;
+        $dealId = $request->integer('deal_id') ?: null;
+        $data = (new \App\Support\Reports\ProfitLossReport)->build($from, $to, $projectId, $dealId);
         $label = fn ($m) => \Carbon\Carbon::createFromFormat('!Y-m', $m)->locale(app()->getLocale())->isoFormat('MMM YY');
 
         if ($request->query('format') === 'xlsx') {
@@ -171,10 +181,76 @@ class AnalyticsController extends Controller
             }
             $cols[] = Column::make(__('Cəmi'), 'total', 'money');
 
-            return app(SpreadsheetExporter::class)->download(__('Mənfəət və zərər'), $cols, $rows, 'mz-'.$from.'-'.$to.'.xlsx', [__('Dövr').': '.$label($from).' — '.$label($to)]);
+            return app(SpreadsheetExporter::class)->download(__('Mənfəət və zərər'), $cols, $rows, 'mz-'.$from.'-'.$to.'.xlsx', array_values(array_filter([__('Dövr').': '.$label($from).' — '.$label($to),
+                $projectId ? __('Layihə').': '.Project::find($projectId)?->name : null, $dealId ? 'Trade: '.\App\Models\Deal::whereKey($dealId)->value('code') : null])));
         }
 
-        return view('analytics.profit', $page + ['data' => $data, 'from' => $from, 'to' => $to, 'label' => $label]);
+        return view('analytics.profit', $page + ['data' => $data, 'from' => $from, 'to' => $to, 'label' => $label, 'projectId' => $projectId, 'dealId' => $dealId,
+            'projects' => Project::whereHas('deals')->orderByDesc('start_date')->orderByDesc('id')->get(['id', 'code', 'name']), 'deals' => self::dealList($projectId)]);
+    }
+
+    /** The Trades a report can be filtered by (of the project, when one is chosen), newest first. */
+    private static function dealList(?int $projectId): \Illuminate\Support\Collection
+    {
+        return \App\Models\Deal::when($projectId, fn ($q) => $q->where('project_id', $projectId))->orderByDesc('deal_date')->orderByDesc('id')->get(['id', 'code', 'title', 'project_id']);
+    }
+
+    /** Layihə hesabatları: each project's Trades of the period (by the act) — sale, costs, profit, margin, the money in and out. */
+    private function projects(Request $request, array $page): View|Response
+    {
+        $to = self::month($request, 'to', today()->format('Y-m'));
+        $from = self::month($request, 'from', substr($to, 0, 4).'-01');
+        if ($from > $to) {
+            [$from, $to] = [$to, $from];
+        }
+        $projectId = $request->integer('project_id') ?: null;
+        $data = (new \App\Support\Reports\ProjectReport)->build($from.'-01', \Carbon\Carbon::createFromFormat('!Y-m', $to)->endOfMonth()->toDateString(), $projectId);
+        $label = fn ($m) => \Carbon\Carbon::createFromFormat('!Y-m', $m)->locale(app()->getLocale())->isoFormat('MMM YY');
+
+        if ($request->query('format') === 'xlsx') {
+            $rows = [];
+            foreach ($data['projects'] as $p) {
+                foreach ($p['trades'] as $t) {
+                    $rows[] = ['project' => $p['name']] + $t;
+                }
+                $rows[] = ['project' => $p['name'], 'code' => __('Cəmi')] + $p['sum'];
+            }
+            $rows[] = ['project' => __('Bütün layihələr'), 'code' => __('Cəmi')] + $data['total'];
+            $m = fn ($k) => fn ($r) => $r[$k] ?? null;
+            $cols = [Column::make(__('Layihə'), 'project', 'text', 24), Column::make('Trade', $m('code'), 'text', 16), Column::make(__('Akt tarixi'), fn ($r) => isset($r['day']) ? azdate($r['day']) : '', 'text', 12),
+                Column::make(__('Satış'), $m('revenue'), 'money'), Column::make(__('Alış'), $m('purchase'), 'money'), Column::make(__('Logistika'), $m('logistics'), 'money'),
+                Column::make(__('Komissiya'), $m('fees'), 'money'), Column::make(__('Kurs fərqi'), $m('fx'), 'money'), Column::make(__('Mənfəət'), $m('profit'), 'money'),
+                Column::make(__('Marja, %'), $m('margin'), 'money')];
+
+            return app(SpreadsheetExporter::class)->download(__('Layihə hesabatları'), $cols, $rows, 'layihe-'.$from.'-'.$to.'.xlsx', [__('Dövr').': '.$label($from).' — '.$label($to)]);
+        }
+
+        return view('analytics.projects', $page + ['data' => $data, 'from' => $from, 'to' => $to, 'label' => $label, 'projectId' => $projectId,
+            'projectList' => \App\Models\Project::orderBy('name')->get(['id', 'code', 'name'])]);
+    }
+
+    /** Kurs fərqləri: wherever money moved at a bank rate other than CBAR — every exchange, payment and fee of the company, by month. */
+    private function fx(Request $request, array $page): View|Response
+    {
+        $last = today()->format('Y-m');
+        $to = self::month($request, 'to', $last);
+        $from = self::month($request, 'from', substr($to, 0, 4).'-01');
+        if ($from > $to) {
+            [$from, $to] = [$to, $from];
+        }
+        $end = \Carbon\Carbon::createFromFormat('!Y-m', $to)->endOfMonth()->toDateString();
+        $fx = \App\Support\FxResults::for(\App\Models\Deal::query()->get(), null, true, $from.'-01', $end);
+        $label = fn ($m) => \Carbon\Carbon::createFromFormat('!Y-m', $m)->locale(app()->getLocale())->isoFormat('MMM YY');
+
+        if ($request->query('format') === 'xlsx') {
+            $cols = [Column::make(__('Tarix'), fn ($r) => azdate($r['date']), 'text', 12), Column::make(__('Əməliyyat'), 'kind', 'text', 22), Column::make('Trade', fn ($r) => $r['trade'] ?? '', 'text', 16),
+                Column::make(__('Valyuta'), 'cur', 'text', 8), Column::make(__('Təsvir'), 'text', 'text', 60), Column::make(__('Fərq (AZN)'), 'azn', 'money')];
+
+            return app(SpreadsheetExporter::class)->download(__('Kurs fərqləri'), $cols, $fx['rows'], 'kurs-ferqleri-'.$from.'-'.$to.'.xlsx',
+                [__('Dövr').': '.$label($from).' — '.$label($to).' · '.__('Xalis nəticə').': '.num($fx['net'])]);
+        }
+
+        return view('analytics.fx', $page + ['fx' => $fx, 'from' => $from, 'to' => $to, 'label' => $label]);
     }
 
     /** Balans (the company's «BALANS» sheet) at a month end. */

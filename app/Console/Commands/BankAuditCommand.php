@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\DB;
  */
 class BankAuditCommand extends Command
 {
-    protected $signature = 'glaust:bank-audit {company : id} {payload? : without it — the latest audit of every account, as uploaded on the page} {--replace} {--keep=1} {--limit=60}';
+    protected $signature = 'glaust:bank-audit {company : id} {payload? : without it — the latest audit of every account, as uploaded on the page} {--replace} {--keep=1} {--limit=60} {--skip=0} {--account= : the currency or IBAN of the audits to read} {--status= : only these statuses, comma separated}';
 
     protected $description = 'Bank çıxarışını sistemlə tutuşdurur (Bank → Audit) və uyğunsuzluqları çap edir';
 
@@ -28,7 +28,9 @@ class BankAuditCommand extends Command
         $company = Company::find($this->argument('company'));
         if ($company && $this->argument('payload') === null) {
             return app(Tenant::class)->runAs($company, function () {
-                $latest = BankAudit::with('account')->orderByDesc('id')->get()->unique('bank_account_id');
+                $want = (string) $this->option('account');
+                $latest = BankAudit::with('account')->orderByDesc('id')->get()->unique('bank_account_id')
+                    ->filter(fn (BankAudit $a) => $want === '' || $a->currency === $want || $a->iban === $want);
                 $latest->isEmpty() && $this->line('Audit yoxdur: çıxarışları Bank → Audit səhifəsində yükləyin.');
                 $latest->each(fn (BankAudit $a) => $this->report($a));
 
@@ -84,15 +86,17 @@ class BankAuditCommand extends Command
         $this->line('qalıq: açılış bank '.$n($b['opening']['bank']).' / sistem '.$n($b['opening']['system']).' · bağlanış bank '.$n($b['closing']['bank']).' / sistem '.$n($b['closing']['system'])
             .($b['split'] ? ' · ilk fərq '.$b['split']['date'].' bank '.$n($b['split']['bank']).' / sistem '.$n($b['split']['system']) : ''));
         $shown = 0;
+        $statuses = array_filter(explode(',', (string) $this->option('status')));
+        $skip = (int) $this->option('skip');
         foreach ($r['rows'] as $row) {
-            if (in_array($row['status'], Reconciler::MATCHED, true)) {
+            if (in_array($row['status'], Reconciler::MATCHED, true) || ($statuses && ! in_array($row['status'], $statuses, true)) || $skip-- > 0) {
                 continue;
             }
             if (++$shown > (int) $this->option('limit')) {
                 $this->line('…');
                 break;
             }
-            $ls = implode(' + ', array_map(fn ($l) => $l['date'].' '.$n($l['amount']).' '.mb_substr(preg_replace('/\s+/', ' ', (string) $l['m']->description), 0, 48), $row['lines']));
+            $ls = implode(' + ', array_map(fn ($l) => $l['date'].' '.$n($l['amount']).' '.mb_substr(preg_replace('/\s+/', ' ', (string) $l['m']->description), 0, 44), $row['lines']));
             $ts = implode(' + ', array_map(fn ($t) => '#'.$t['id'].' '.$t['date'].' '.$n($t['amount']).' '.mb_substr($r['sources'][$t['id']]['label'] ?? ($t['m']->purpose ?? $t['m']->kind), 0, 40), $row['txs']));
             $this->line($row['status'].' | B: '.($ls ?: '—').' | S: '.($ts ?: '—'));
         }

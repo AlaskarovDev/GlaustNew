@@ -16,8 +16,11 @@ use App\Services\SupplierPaymentService;
  *   XƏRCLƏR
  *     221.1.2 Əmək haqqı · 221.2 Sosial sığorta · 230.2 Sığorta haqları · 232 digər — expenses by category, at their date
  *     221.13 Bank xidməti — «Kurs fərqi» of the cash flow (the bank against CBAR) + bank fee expenses
+ *     227.10 Amortizasiya · 233.2 Əmlak vergisi — expenses by category (usually accruals: no money moves)
  *     232.1  AR hüdudlarından kənarda gəlirlərin əldə edilməsi ilə bağlı xərclər — the purchase (D × BJ) and the logistics
- *            (BO) of the same Trades at CBAR of the act date
+ *            (BO) of the same Trades at CBAR of the act date, + expenses put on 232.1
+ * An expense counts at its date whatever its status: paid, unpaid or an accrual («Hesablama» — the 1C accrual of a salary,
+ * a depreciation; no money moves, so the cash flow leaves it out).
  *   Mənfəət (zərər) = gəlirlər − xərclər; MV 20 %.
  * A category goes to a line by its «MZ sətri» (categories.pl_line) or, when unset, by its name; «none» keeps it out
  * (a profit tax paid ahead, a fixed asset bought — not an expense of the period).
@@ -35,16 +38,18 @@ class ProfitLossReport
             '221.1.2' => [__('Əmək haqqı və ona bərabər tutulan ödəmələr'), 'out'],
             '221.2' => [__('Sosial sığorta haqları'), 'out'],
             '221.13' => [__('Bank xidməti üzrə xərclər'), 'out'],
+            '227.10' => [__('Amortizasiya'), 'out'],
             '230.2' => [__('Ödənilmiş sığorta haqları'), 'out'],
             '232' => [__('Digər xərclər'), 'out'],
             '232.1' => [__('AR hüdudlarından kənarda gəlirlərin əldə edilməsi ilə bağlı xərclər'), 'out'],
+            '233.2' => [__('Əmlak vergisi'), 'out'],
         ];
     }
 
-    /** The expense lines a category can be put on. */
+    /** The expense lines a category can be put on (232.1 too: a cost of the foreign sales outside the Trades, e.g. a carrier's services). */
     public static function expenseLines(): array
     {
-        return array_filter(self::lines(), fn ($l, $code) => $l[1] === 'out' && $code !== '232.1', ARRAY_FILTER_USE_BOTH);
+        return array_filter(self::lines(), fn ($l) => $l[1] === 'out');
     }
 
     /** «MZ sətri» of a category that stays out of the report. */
@@ -63,6 +68,8 @@ class ProfitLossReport
 
         return match (true) {
             str_contains($name, 'mənfəət vergisi') => null,   // the profit tax is not an expense of the period
+            str_contains($name, 'amortizasiya') => '227.10',
+            str_contains($name, 'əmlak vergisi') => '233.2',
             $c?->scope === 'income' => str_contains($name, 'faiz') ? '212' : null,
             $c?->name === SupplierPaymentService::FEE_CATEGORY, str_contains($name, 'bank') && str_contains($name, 'komis') => '221.13',
             str_contains($name, 'əmək haqq'), str_contains($name, 'maaş') => '221.1.2',

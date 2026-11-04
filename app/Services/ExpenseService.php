@@ -33,7 +33,7 @@ class ExpenseService
             'amount' => round((float) $data['amount'], 2), 'currency' => $data['currency'],
             'cbar_rate' => $rate, 'amount_azn' => $rate === null ? null : round((float) $data['amount'] * $rate, 2),
             'counterparty_id' => $data['counterparty_id'] ?? null, 'project_id' => $data['project_id'] ?? null, 'deal_id' => $data['deal_id'] ?? null,
-            'status' => $data['status'], 'due_date' => $paid ? null : ($data['due_date'] ?? null),
+            'status' => $data['status'], 'due_date' => $data['status'] === 'unpaid' ? ($data['due_date'] ?? null) : null,
             'payment_method' => $paid ? $data['payment_method'] : null, 'paid_at' => $paid ? $data['paid_at'] : null,
             'bank_account_id' => $account?->id, 'reference' => $data['reference'] ?? null, 'notes' => $data['notes'] ?? null,
         ];

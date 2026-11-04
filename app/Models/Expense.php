@@ -14,7 +14,8 @@ class Expense extends Model
 {
     use Auditable, BelongsToCompany, HasAttachments, SoftDeletes;
 
-    public const STATUSES = ['paid' => ['Ödənilib', 'green'], 'unpaid' => ['Ödənilməyib', 'amber']];
+    /** «accrued» — a 1C accrual (a salary, a depreciation, a service invoiced): an expense of the period, no money moves. */
+    public const STATUSES = ['paid' => ['Ödənilib', 'green'], 'unpaid' => ['Ödənilməyib', 'amber'], 'accrued' => ['Hesablanıb', 'slate']];
 
     public const METHODS = ['cash' => 'Nağd', 'bank' => 'Hesabdan köçürmə'];
 
@@ -65,9 +66,15 @@ class Expense extends Model
         return $this->status === 'paid';
     }
 
+    /** Still to be paid: an accrual is not. */
+    public function isPayable(): bool
+    {
+        return $this->status === 'unpaid';
+    }
+
     public function isOverdue(): bool
     {
-        return ! $this->isPaid() && $this->due_date && $this->due_date->lt(today());
+        return $this->isPayable() && $this->due_date && $this->due_date->lt(today());
     }
 
     public function auditLabel(): string

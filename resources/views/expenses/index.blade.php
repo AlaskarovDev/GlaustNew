@@ -62,7 +62,7 @@
                                     <td data-label="Status">
                                         @php [$sl, $st] = \App\Models\Expense::STATUSES[$e->status]; @endphp
                                         <span class="badge badge-{{ $e->isOverdue() ? 'rose' : $st }}">{{ $e->isOverdue() ? 'Gecikir' : $sl }}</span>
-                                        @if(! $e->isPaid() && $e->due_date)<div class="text-[11px] text-muted mt-0.5">son: {{ azdate($e->due_date) }}</div>@endif
+                                        @if($e->isPayable() && $e->due_date)<div class="text-[11px] text-muted mt-0.5">son: {{ azdate($e->due_date) }}</div>@endif
                                     </td>
                                     <td data-label="{{ __('Ödəniş') }}" class="text-xs">
                                         @if($e->isPaid())
@@ -73,7 +73,7 @@
                                     </td>
                                     <td class="text-right whitespace-nowrap">
                                         @can('expenses.update')
-                                            @unless($e->isPaid())<a href="{{ route('expenses.edit', [$e, 'pay' => 1]) }}" class="btn btn-secondary btn-sm">{{ __('Ödə') }}</a>@endunless
+                                            @if($e->isPayable())<a href="{{ route('expenses.edit', [$e, 'pay' => 1]) }}" class="btn btn-secondary btn-sm">{{ __('Ödə') }}</a>@endif
                                             <a href="{{ route('expenses.edit', $e) }}" class="btn btn-ghost btn-icon btn-sm" aria-label="{{ __('Redaktə') }}"><x-icon name="pencil" class="size-4"/></a>
                                         @endcan
                                         @can('expenses.delete')

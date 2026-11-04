@@ -63,7 +63,9 @@
                 <div class="segmented" role="radiogroup" aria-label="{{ __('Ödəniş statusu') }}">
                     <label :class="status === 'paid' && 'is-on'"><input type="radio" value="paid" x-model="status" class="sr-only"> {{ __('Ödənilib') }}</label>
                     <label :class="status === 'unpaid' && 'is-on'"><input type="radio" value="unpaid" x-model="status" class="sr-only"> {{ __('Ödənilməyib') }}</label>
+                    <label :class="status === 'accrued' && 'is-on'"><input type="radio" value="accrued" x-model="status" class="sr-only"> {{ __('Hesablanıb') }}</label>
                 </div>
+                <p x-show="status === 'accrued'" x-cloak class="text-[11px] text-muted">{{ __('Pul hərəkəti yoxdur (amortizasiya, əmək haqqının hesablanması): yalnız Mənfəət və zərərə düşür, Cash Flow-a düşmür.') }}</p>
 
                 <div x-show="status === 'unpaid'" x-cloak>
                     <x-field :label="__('Son ödəniş tarixi')" name="due_date"><input type="date" name="due_date" value="{{ $v('due_date') }}" :disabled="status !== 'unpaid'" class="input"></x-field>

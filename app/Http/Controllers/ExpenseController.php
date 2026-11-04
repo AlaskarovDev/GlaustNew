@@ -114,7 +114,7 @@ class ExpenseController extends Controller
     public function edit(Request $request, Expense $expense): View
     {
         $this->authorize('expenses.update');
-        if ($request->boolean('pay') && ! $expense->isPaid()) {
+        if ($request->boolean('pay') && $expense->isPayable()) {
             $expense->status = 'paid';
             $expense->payment_method = 'bank';
             $expense->paid_at = today();

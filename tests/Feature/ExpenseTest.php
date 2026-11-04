@@ -103,4 +103,18 @@ class ExpenseTest extends TestCase
         $employee = $this->makeUser($admin->company, 'employee', 'isci@test.az');
         $this->actingAs($employee)->get(route('expenses.index'))->assertForbidden();
     }
+
+    public function test_accrual_moves_no_money_and_is_not_a_debt(): void
+    {
+        [$admin] = $this->world();
+        $this->post(route('expenses.store'), $this->base(['status' => 'accrued', 'due_date' => today()->addWeek()->toDateString()]))->assertSessionHasNoErrors();
+        $e = $this->inTenant($admin, fn () => Expense::firstOrFail());
+        $this->assertSame('accrued', $e->status);
+        $this->assertNull($e->due_date, 'an accrual has no payment term');
+        $this->assertFalse($e->isPayable());
+        $this->assertSame(0, $this->inTenant($admin, fn () => BankTransaction::count()));
+        $this->get(route('expenses.index', ['from' => today()->subMonth()->toDateString(), 'to' => today()->toDateString()]))->assertOk()
+            ->assertSee('Hesablanıb')->assertDontSee('>Ödə<', false);
+        $this->get(route('expenses.edit', $e))->assertOk()->assertSee('Hesablanıb');
+    }
 }

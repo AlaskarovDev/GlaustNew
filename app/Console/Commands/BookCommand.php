@@ -7,6 +7,7 @@ use App\Models\BankTransaction;
 use App\Models\Category;
 use App\Models\Company;
 use App\Models\Expense;
+use App\Models\LogisticsAct;
 use App\Services\BankLedger;
 use App\Services\ExpenseService;
 use App\Support\Tenancy\Tenant;
@@ -17,10 +18,14 @@ use Illuminate\Support\Facades\DB;
  * Books a list of operations (from a bank statement / the company's workbook) through the real services:
  *   accounts   [{name, bank_name, currency}]           — created when missing
  *   categories {name: [scope, pl_line]}                 — created when missing (an existing one keeps its settings)
+ *   pl_lines   {name: pl_line}                          — sets the «MZ sətri» of existing expense categories (prints the old one)
  *   ops        [{type: expense, date, amount, category, description, account}
  *               {type: transfer, date, amount, from, to, description}
- *               {type: income, date, amount, account, category, description}]
- * Every record carries «<tag>:<hash of the op>» as its reference: a second run skips what is booked, --undo removes it all.
+ *               {type: income, date, amount, account, category, description}
+ *               {type: accrual, date, amount, category, description}   — an AZN expense «Hesablanıb»: MZ only, no money
+ *               {type: act_date, act, date}]                           — moves a logistics act (by its number) to a day
+ * Every record carries «<tag>:<hash of the op>» as its reference: a second run skips what is booked, --undo removes it all
+ * (not the pl_lines and act dates: those print their old values to be set back).
  * payload = base64(gzip(json)).
  */
 class BookCommand extends Command
@@ -67,10 +72,30 @@ class BookCommand extends Command
                 foreach ($this->option('dry') ? [] : $data['categories'] ?? [] as $name => [$scope, $line]) {
                     Category::firstOrCreate(['scope' => $scope, 'name' => $name], ['color' => '#64748b', 'pl_line' => $line]);
                 }
+                foreach ($data['pl_lines'] ?? [] as $name => $line) {
+                    $c = Category::where('scope', 'expense')->where('name', $name)->firstOrFail();
+                    if ($c->pl_line !== $line) {
+                        $this->line("MZ sətri: {$name}: ".($c->pl_line ?? '—')." → {$line}");
+                        $this->option('dry') || $c->update(['pl_line' => $line]);
+                    }
+                }
                 $account = fn (string $name) => BankAccount::where('name', $name)->firstOrFail();
                 $category = fn (string $name, string $scope = 'expense') => Category::firstOrCreate(['scope' => $scope, 'name' => $name], ['color' => '#64748b']);
-                $done = ['expense' => 0, 'transfer' => 0, 'income' => 0, 'skipped' => 0];
+                $done = ['expense' => 0, 'transfer' => 0, 'income' => 0, 'accrual' => 0, 'act_date' => 0, 'skipped' => 0];
                 foreach ($data['ops'] as $op) {
+                    if ($op['type'] === 'act_date') {
+                        $act = LogisticsAct::where('act_number', $op['act'])->firstOrFail();
+                        if ($act->act_date?->toDateString() === $op['date']) {
+                            $done['skipped']++;
+
+                            continue;
+                        }
+                        $this->line("Akt {$op['act']}: ".($act->act_date?->toDateString() ?? '—')." → {$op['date']}");
+                        $this->option('dry') || $act->update(['act_date' => $op['date']]);
+                        $done['act_date']++;
+
+                        continue;
+                    }
                     $ref = $tag.':'.substr(md5(json_encode($op)), 0, 16);
                     if (Expense::where('reference', $ref)->exists() || BankTransaction::where('reference', $ref)->exists()) {
                         $done['skipped']++;
@@ -92,10 +117,15 @@ class BookCommand extends Command
                             ['purpose' => mb_substr($op['description'], 0, 255), 'reference' => $ref]),
                         'income' => $ledger->record($account($op['account']), ['direction' => 'in', 'transaction_date' => $op['date'], 'amount' => $op['amount'],
                             'purpose' => mb_substr($op['description'], 0, 255), 'reference' => $ref, 'category_id' => $category($op['category'], 'income')->id]),
+                        'accrual' => $expenses->save(new Expense, [
+                            'expense_date' => $op['date'], 'category_id' => $category($op['category'])->id, 'description' => mb_substr($op['description'], 0, 255),
+                            'amount' => $op['amount'], 'currency' => 'AZN', 'status' => 'accrued', 'reference' => $ref,
+                        ]),
                     };
                     $done[$op['type']]++;
                 }
-                $this->info(($this->option('dry') ? 'Yoxlama: ' : 'Yazıldı: ')."{$done['expense']} xərc, {$done['transfer']} köçürmə, {$done['income']} daxilolma; artıq var: {$done['skipped']}.");
+                $more = ($done['accrual'] ? ", {$done['accrual']} hesablama" : '').($done['act_date'] ? ", {$done['act_date']} akt tarixi" : '');
+                $this->info(($this->option('dry') ? 'Yoxlama: ' : 'Yazıldı: ')."{$done['expense']} xərc, {$done['transfer']} köçürmə, {$done['income']} daxilolma{$more}; artıq var: {$done['skipped']}.");
 
                 return self::SUCCESS;
             });

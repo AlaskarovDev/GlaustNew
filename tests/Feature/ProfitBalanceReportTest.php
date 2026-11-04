@@ -65,6 +65,13 @@ class ProfitBalanceReportTest extends TestCase
         $this->get(route('analytics.show', ['projects', 'from' => '2025-01', 'to' => '2025-01']))->assertOk()->assertSee('TR-1')
             ->assertSee(num(round(9898036.68 * 0.015962, 2)));   // as the Təsisçi hesabatı: the sale at CBAR of the day the rouble was sold (AC), not of the act
         $this->get(route('analytics.show', ['fx', 'from' => '2025-01', 'to' => '2025-02']))->assertOk();
+        // «Proqnozla göstər»: the profit at the invoice's forecast rates beside the fact, and the difference
+        $pr = $this->inTenant($admin, fn () => (new \App\Support\Reports\ProjectReport)->build('2025-01-01', '2025-01-31', null, true));
+        $tr = $pr['projects'][0]['trades'][0];
+        $this->assertNotNull($tr['fc'], 'the invoice has a forecast (1.79 / 0.0165)');
+        $this->assertSame(round($tr['profit'] - $tr['fc'], 2), $tr['diff']);
+        $this->assertSame($tr['diff'], $pr['total']['diff']);
+        $this->get(route('analytics.show', ['projects', 'from' => '2025-01', 'to' => '2025-01', 'forecast' => 1]))->assertOk()->assertSee('Proqnoz mənfəət')->assertSee('Proqnozu gizlət');
         // the category page shows and keeps the line
         $this->get(route('expenses.categories'))->assertOk()->assertSee('221.1.2');
     }

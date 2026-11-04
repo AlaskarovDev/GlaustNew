@@ -204,7 +204,8 @@ class AnalyticsController extends Controller
             [$from, $to] = [$to, $from];
         }
         $projectId = $request->integer('project_id') ?: null;
-        $data = (new \App\Support\Reports\ProjectReport)->build($from.'-01', \Carbon\Carbon::createFromFormat('!Y-m', $to)->endOfMonth()->toDateString(), $projectId);
+        $forecast = $request->boolean('forecast');
+        $data = (new \App\Support\Reports\ProjectReport)->build($from.'-01', \Carbon\Carbon::createFromFormat('!Y-m', $to)->endOfMonth()->toDateString(), $projectId, $forecast);
         $label = fn ($m) => \Carbon\Carbon::createFromFormat('!Y-m', $m)->locale(app()->getLocale())->isoFormat('MMM YY');
 
         if ($request->query('format') === 'xlsx') {
@@ -221,11 +222,14 @@ class AnalyticsController extends Controller
                 Column::make(__('Satış'), $m('revenue'), 'money'), Column::make(__('Alış'), $m('purchase'), 'money'), Column::make(__('Logistika'), $m('logistics'), 'money'),
                 Column::make(__('Komissiya'), $m('fees'), 'money'), Column::make(__('Kurs fərqi'), $m('fx'), 'money'), Column::make(__('Mənfəət'), $m('profit'), 'money'),
                 Column::make(__('Marja, %'), $m('margin'), 'money')];
+            if ($forecast) {
+                array_push($cols, Column::make(__('Proqnoz mənfəət'), $m('fc'), 'money'), Column::make(__('Fərq (fakt − proqnoz)'), $m('diff'), 'money'));
+            }
 
             return app(SpreadsheetExporter::class)->download(__('Layihə hesabatları'), $cols, $rows, 'layihe-'.$from.'-'.$to.'.xlsx', [__('Dövr').': '.$label($from).' — '.$label($to)]);
         }
 
-        return view('analytics.projects', $page + ['data' => $data, 'from' => $from, 'to' => $to, 'label' => $label, 'projectId' => $projectId,
+        return view('analytics.projects', $page + ['data' => $data, 'from' => $from, 'to' => $to, 'label' => $label, 'projectId' => $projectId, 'forecast' => $forecast,
             'projectList' => \App\Models\Project::orderBy('name')->get(['id', 'code', 'name'])]);
     }
 

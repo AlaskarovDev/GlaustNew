@@ -34,6 +34,9 @@ use Illuminate\Support\Facades\DB;
  *                                                                        replaced fees move to the new ones (by «ref»: the transferred total)
  *   {type: expense, date, account, amount, category, pl_line?, description}  — an expense paid from the account
  *   {type: act, act}                                                   — prints a logistics act's payments
+ *   {type: sync_fees}                                                  — every seller / logistics payment's own fee fields (what the
+ *                                                                        Trade reports read: AJ, BB) from the fee expense it points to,
+ *                                                                        shared among its payments by their amounts
  * --dry prints what would be done and rolls everything back.
  */
 class BankFixCommand extends Command
@@ -194,6 +197,10 @@ class BankFixCommand extends Command
                 $this->line("xərc {$op['date']} {$cat->name}: {$n($e->amount)} {$e->currency} = {$n($e->amount_azn)} AZN");
                 break;
 
+            case 'sync_fees':
+                $this->syncFees();
+                break;
+
             case 'act':
                 $act = LogisticsAct::with('payments.transaction', 'deal')->where('act_number', $op['act'])->firstOrFail();
                 $this->line("akt {$act->act_number} ({$act->deal?->code}) {$n($act->amount)} {$act->currency}: ".$act->payments->map(fn ($p) => '#'.$p->transaction_id.' '.$p->payment_date->toDateString()
@@ -203,6 +210,44 @@ class BankFixCommand extends Command
             default:
                 throw new \RuntimeException("naməlum əməliyyat: {$op['type']}");
         }
+    }
+
+    private function syncFees(): void
+    {
+        $rates = app(\App\Services\Cbar\CurrencyRates::class);
+        $n = fn ($v) => number_format((float) $v, 2, '.', ' ');
+        $before = $after = 0.0;
+        $changed = 0;
+        $ids = SupplierPayment::whereNotNull('fee_expense_id')->pluck('fee_expense_id')->merge(LogisticsPayment::whereNotNull('fee_expense_id')->pluck('fee_expense_id'))->unique();
+        foreach (Expense::whereKey($ids)->get() as $e) {
+            $pays = SupplierPayment::where('fee_expense_id', $e->id)->get()->concat(LogisticsPayment::where('fee_expense_id', $e->id)->get())->values();
+            $w = $pays->map(fn ($p) => (float) $p->amount * (float) $p->cbar_rate)->all();
+            $W = array_sum($w) ?: 1;
+            $leftAzn = (float) $e->amount_azn;
+            $leftAcc = (float) $e->amount;
+            foreach ($pays as $i => $p) {
+                $last = $i === $pays->count() - 1;
+                $azn = $last ? round($leftAzn, 2) : round((float) $e->amount_azn * $w[$i] / $W, 2);
+                $acc = $last ? round($leftAcc, 2) : round((float) $e->amount * $w[$i] / $W, 2);
+                $leftAzn -= $azn;
+                $leftAcc -= $acc;
+                $r = (float) $p->cbar_rate;
+                $fee = $e->currency === $p->currency ? $acc : round($azn / $r, 2);
+                $logistics = $p instanceof LogisticsPayment;
+                $before += $logistics ? (float) $p->fee_azn : (float) $p->fee_amount * $r;
+                $after += $azn;
+                $p->fill(['fee_amount' => $fee, 'fee_account_id' => $e->bank_account_id, 'fee_account_currency' => $e->currency, 'fee_account_amount' => $acc,
+                    'fee_bank_rate' => $fee ? $acc / $fee : null, 'fee_difference_azn' => round($azn - $fee * $r, 2)]);
+                if ($logistics) {
+                    $p->fill(['fee_azn' => $azn, 'fee_eur' => round($azn / $rates->rate('EUR', $p->payment_date->toDateString()), 2), 'fee_included' => false]);
+                }
+                if ($p->isDirty()) {
+                    $p->save();
+                    $changed++;
+                }
+            }
+        }
+        $this->line("ödənişlərin komissiyası: {$changed} ödəniş yeniləndi · cəmi {$n($before)} → {$n($after)} AZN");
     }
 
     /** The payments whose own amounts add up to $total (within 1), the fewest first; null when none do. */

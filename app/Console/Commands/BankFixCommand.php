@@ -29,7 +29,7 @@ use Illuminate\Support\Facades\DB;
  *                                                                        keeping its accounts, Trade and project
  *   {type: date, tx, date}                                             — a movement (and what it belongs to) to the bank's day
  *   {type: pay_amount, tx, amount}                                     — a seller / logistics payment in its own currency: the bank's amount
- *   {type: fees, replace: [tx], new: [{date, account, amount, description, ref?, category?}]}
+ *   {type: fees, replace: [tx], fee_of?: [payment tx], new: [{date, account, amount, description, ref?, category?}]}
  *                                                                      — fee expenses booked as the bank charged them; the payments of the
  *                                                                        replaced fees move to the new ones (by «ref»: the transferred total)
  *   {type: expense, date, account, amount, category, pl_line?, description}  — an expense paid from the account
@@ -149,8 +149,15 @@ class BankFixCommand extends Command
                 // the payments behind the fees replaced
                 $olds = collect($op['replace'] ?? [])->map(fn ($id) => Expense::where('bank_transaction_id', (int) $id)->firstOrFail());
                 $pays = collect();
+                // or by the payments themselves (their fee, if any, is replaced)
+                foreach ($op['fee_of'] ?? [] as $id) {
+                    $p = SupplierPayment::where('transaction_id', (int) $id)->first() ?? LogisticsPayment::where('transaction_id', (int) $id)->firstOrFail();
+                    $p->fee_expense_id && ! $olds->contains('id', $p->fee_expense_id) && $olds->push(Expense::findOrFail($p->fee_expense_id));
+                    $pays->push($p);
+                }
                 foreach ($olds as $e) {
-                    $pays = $pays->merge(SupplierPayment::where('fee_expense_id', $e->id)->get())->merge(LogisticsPayment::where('fee_expense_id', $e->id)->get());
+                    $pays = $pays->merge(SupplierPayment::where('fee_expense_id', $e->id)->get())->merge(LogisticsPayment::where('fee_expense_id', $e->id)->get())
+                        ->unique(fn ($p) => $p::class.$p->id);
                 }
                 $left = $pays->values()->all();
                 $made = [];

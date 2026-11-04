@@ -148,7 +148,7 @@ class AnalyticsController extends Controller
         $label = fn ($m) => \Carbon\Carbon::createFromFormat('!Y-m', $m)->locale(app()->getLocale())->isoFormat('MMM YY');
 
         if ($request->query('format') === 'xlsx') {
-            $line = fn ($code, $name, $values) => ['code' => $code, 'name' => $name] + $values + ['total' => round(array_sum($values), 2)];
+            $line = fn ($code, $name, $values, $total = null) => ['code' => $code, 'name' => $name] + $values + ['total' => $total ?? round(array_sum($values), 2)];
             $rows = [['name' => __('GƏLİRLƏR')]];
             foreach ($data['lines'] as $code => $l) {
                 if ($l['side'] === 'in') {
@@ -164,7 +164,7 @@ class AnalyticsController extends Controller
             }
             $rows[] = $line('', __('CƏMİ'), $data['out']);
             $rows[] = $line('', __('HESABAT DÖVRÜNDƏ MƏNFƏƏT (ZƏRƏR)'), $data['result']);
-            $rows[] = $line('', __('MV 20%'), $data['tax']);
+            $rows[] = $line('', __('MV 20%'), $data['tax'], $data['taxTotal']);
             $cols = [Column::make(__('Hesab №-si'), 'code', 'text', 10), Column::make(__('Gəlir-Xərc maddələri'), 'name', 'text', 60)];
             foreach ($data['months'] as $m) {
                 $cols[] = Column::make($label($m), fn ($r) => $r[$m] ?? null, 'money');

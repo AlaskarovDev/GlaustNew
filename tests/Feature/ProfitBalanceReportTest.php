@@ -47,6 +47,7 @@ class ProfitBalanceReportTest extends TestCase
         $this->assertSame(round($l('217.2') + $l('214') + $l('219.3'), 2), $d['in']['2025-01']);
         $this->assertSame(round($d['in']['2025-01'] - $d['out']['2025-01'], 2), $d['result']['2025-01']);
         $this->assertSame(round($d['result']['2025-01'] * 0.2, 2), $d['tax']['2025-01']);
+        $this->assertSame(round(array_sum($d['result']) * 0.2, 2), $d['taxTotal'], 'the period\'s tax from its result');
         $this->assertNotEmpty($d['lines']['217.2']['items']['2025-01'], 'each figure carries what it is made of');
 
         $this->actingAs($admin);

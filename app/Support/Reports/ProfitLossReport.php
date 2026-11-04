@@ -82,7 +82,7 @@ class ProfitLossReport
 
     /**
      * @return array{months: list<string>, lines: array<string, array{label: string, side: string, values: array<string, float>, total: float, items: array<string, list<array>>}>,
-     *               in: array<string, float>, out: array<string, float>, result: array<string, float>, tax: array<string, float>}
+     *               in: array<string, float>, out: array<string, float>, result: array<string, float>, tax: array<string, float>, taxTotal: float}
      */
     public function build(string $from, string $to): array
     {
@@ -171,6 +171,9 @@ class ProfitLossReport
             $l['total'] = round(array_sum($l['values']), 2);
         }
 
-        return ['months' => $months, 'lines' => $lines, 'in' => $in, 'out' => $out, 'result' => $result, 'tax' => $tax];
+        // the period's tax from the period's result (as the MZ sheet does), not the sum of the months' rounded taxes
+        $taxTotal = round(round(array_sum($result), 2) * 0.2, 2);
+
+        return ['months' => $months, 'lines' => $lines, 'in' => $in, 'out' => $out, 'result' => $result, 'tax' => $tax, 'taxTotal' => $taxTotal];
     }
 }

@@ -52,7 +52,7 @@
         <div class="card p-5" style="--i:0"><div class="text-xs text-muted">{{ __('Gəlirlər') }}</div><div class="mt-1 text-2xl font-semibold font-mono tabular-nums">{{ money($sum($data['in'])) }}</div><div class="text-[11px] text-faint">{{ $period }}</div></div>
         <div class="card p-5" style="--i:1"><div class="text-xs text-muted">{{ __('Xərclər') }}</div><div class="mt-1 text-2xl font-semibold font-mono tabular-nums">{{ money($sum($data['out'])) }}</div><div class="text-[11px] text-faint">{{ $period }}</div></div>
         <div class="card p-5" style="--i:2"><div class="text-xs text-muted">{{ __('Mənfəət (zərər)') }}</div><div @class(['mt-1 text-2xl font-semibold font-mono tabular-nums', 'text-success' => $result > 0, 'text-danger' => $result < 0])>{{ money($result) }}</div><div class="text-[11px] text-faint">{{ __('gəlirlər − xərclər') }}</div></div>
-        <div class="card p-5" style="--i:3"><div class="text-xs text-muted">{{ __('MV 20%') }}</div><div class="mt-1 text-2xl font-semibold font-mono tabular-nums">{{ money($sum($data['tax'])) }}</div><div class="text-[11px] text-faint">{{ __('mənfəət × 20%') }}</div></div>
+        <div class="card p-5" style="--i:3"><div class="text-xs text-muted">{{ __('MV 20%') }}</div><div class="mt-1 text-2xl font-semibold font-mono tabular-nums">{{ money($data['taxTotal']) }}</div><div class="text-[11px] text-faint">{{ __('mənfəət × 20%') }}</div></div>
     </div>
 
     <section class="card overflow-hidden" x-data="{ open: null, why: @js($why), show(k) { if (this.why[k]) this.open = k; } }">
@@ -101,7 +101,7 @@
                         <td class="sticky left-0 z-10 bg-surface px-3 py-2"></td>
                         <td class="px-4 py-2 text-muted">{{ __('MV 20%') }}</td>
                         @foreach($months as $m)<td class="px-4 py-2 text-right font-mono tabular-nums text-muted">{{ $n($data['tax'][$m]) }}</td>@endforeach
-                        <td class="px-4 py-2 text-right font-mono tabular-nums text-muted">{{ $n($sum($data['tax'])) }}</td>
+                        <td class="px-4 py-2 text-right font-mono tabular-nums text-muted">{{ $n($data['taxTotal']) }}</td>
                     </tr>
                 </tbody>
             </table>

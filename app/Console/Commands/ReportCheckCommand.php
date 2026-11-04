@@ -55,7 +55,7 @@ class ReportCheckCommand extends Command
                     $this->line(str_pad($code, 9).str_pad(mb_substr($l['label'], 0, 40), 42).implode(' ', array_map(fn ($v) => str_pad($n($v), 14, ' ', STR_PAD_LEFT), $l['values'])).'  Σ '.$n($l['total']));
                 }
                 foreach (['in', 'out', 'result', 'tax'] as $k) {
-                    $this->line(str_pad('= '.$k, 51).implode(' ', array_map(fn ($v) => str_pad($n($v), 14, ' ', STR_PAD_LEFT), $pl[$k])).'  Σ '.$n(array_sum($pl[$k])));
+                    $this->line(str_pad('= '.$k, 51).implode(' ', array_map(fn ($v) => str_pad($n($v), 14, ' ', STR_PAD_LEFT), $pl[$k])).'  Σ '.$n($k === 'tax' ? $pl['taxTotal'] : array_sum($pl[$k])));
                 }
             }
             if ($want('balance')) {

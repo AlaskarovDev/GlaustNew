@@ -43,6 +43,9 @@ class FounderReportTest extends TestCase
         $this->assertSame(['221.1.2 · Əmək haqqı və ona bərabər tutulan ödəmələr' => 728.0], $d['overheads']);
         $this->assertEqualsWithDelta($d['revenue'] - $d['expenses'], $d['profit'], 0.01);
         $this->assertEqualsWithDelta($d['profit'], $d['months']['2025-01']['profit'], 0.01);
+        // after the taxes, as the MZ: MV 20 %, the net, the 5 % dividend, what is left
+        $this->assertSame([$mz['taxTotal'], $mz['netTotal'], $mz['dividendTotal'], $mz['retainedTotal']], [$d['taxes']['mv'], $d['taxes']['net'], $d['taxes']['dividend'], $d['taxes']['retained']]);
+        $this->assertSame($mz['retained']['2025-01'], $d['taxes']['months']['2025-01']['retained']);
         // the Trade list: the Yekun hesabat's «XALİS MƏNFƏƏT» (BT)
         $bt = $this->inTenant($admin, fn () => app(TradeReport::class)->rows(\App\Models\Deal::all())[0]['BT']);
         $this->assertEqualsWithDelta($bt, $d['trades'][0]['profit'], 0.01);
@@ -62,7 +65,7 @@ class FounderReportTest extends TestCase
 
         $this->actingAs($admin);
         $this->get(route('analytics.show', ['founders', 'from' => '2025-01-01', 'to' => '2025-01-31']))->assertOk()
-            ->assertSee('Təsisçi hesabatı')->assertSee('Xalis mənfəət')->assertSee('Ən gəlirli Trade-lər')->assertSee($deal->code)->assertSee('Şirkətin cari xərcləri');
+            ->assertSee('Təsisçi hesabatı')->assertSee('Xalis mənfəət')->assertSee('Tam xalis mənfəət')->assertSee('Vergiləri detallı göstər')->assertSee('Ən gəlirli Trade-lər')->assertSee($deal->code)->assertSee('Şirkətin cari xərcləri');
         $this->get(route('analytics.show', ['founders', 'from' => '2030-01-01', 'to' => '2030-01-31']))->assertOk()->assertSee('Bu dövrdə bağlanmış Trade yoxdur');
         $this->get(route('analytics.show', ['founders', 'from' => 'bad', 'project_id' => $deal->project_id]))->assertOk();
     }

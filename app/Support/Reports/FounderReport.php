@@ -154,6 +154,10 @@ class FounderReport
             'months' => array_map(fn ($m) => array_map(fn ($v) => round($v, 2), $m), $months),
             'trades' => $trades, 'tradeCount' => count($trades), 'projects' => $projects,
             'overheads' => array_map(fn ($v) => round($v, 2), $overheads), 'incomplete' => $incomplete,
+            // after the taxes, as the MZ goes on: MV 20 %, the net profit, the 5 % dividend, what is left — the period and its months
+            'taxes' => ['profit' => $profit, 'mv' => $pl['taxTotal'], 'net' => $pl['netTotal'], 'dividend' => $pl['dividendTotal'], 'retained' => $pl['retainedTotal'],
+                'months' => array_combine($pl['months'], array_map(fn ($m) => ['profit' => $pl['result'][$m], 'mv' => $pl['tax'][$m], 'net' => $pl['net'][$m],
+                    'dividend' => $pl['dividend'][$m], 'retained' => $pl['retained'][$m]], $pl['months']))],
         ];
     }
 }

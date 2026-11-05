@@ -38,7 +38,7 @@
         // the profit on a scale of its own — next to the turnover it would be a flat line
         $profitChart = [
             'type' => 'area', 'height' => 290, 'money' => true, 'colors' => ['#0f9d8a'],
-            'series' => [['name' => __('Xalis mənfəət'), 'data' => array_values(array_column($d['months'], 'profit'))]],
+            'series' => [['name' => __('Mənfəət'), 'data' => array_values(array_column($d['months'], 'profit'))]],
             'categories' => $labels, 'legend' => false,
         ];
         $partLabels = ['purchase' => __('Alış (satıcı)'), 'logistics' => __('Logistika'), 'fees' => __('Bank komissiyaları'), 'fx' => __('Bank kurs fərqləri'), 'overhead' => __('Şirkətin cari xərcləri')];
@@ -104,7 +104,7 @@
         <div class="absolute right-10 -top-10 size-40 rounded-full bg-white/5" aria-hidden="true"></div>
         <div class="relative flex flex-col sm:flex-row sm:items-center gap-6">
             <div class="flex-1 min-w-0">
-                <div class="text-[12px] uppercase tracking-[.18em] text-white/70">{{ __('Xalis mənfəət') }}</div>
+                <div class="text-[12px] uppercase tracking-[.18em] text-white/70">{{ __('Mənfəət (vergidən əvvəl)') }}</div>
                 <div class="mt-2 font-mono font-semibold tracking-tight tabular-nums text-[2.15rem] leading-none sm:text-5xl">
                     <span x-data x-countup="{{ $d['profit'] }}" data-decimals="2" data-suffix=" ₼">{{ money($d['profit']) }}</span>
                 </div>
@@ -133,6 +133,53 @@
             <div class="min-w-0"><div class="text-[11px] text-white/60">{{ __('Gəlir') }}</div><div class="font-mono text-sm sm:text-lg font-semibold tabular-nums truncate">{!! $amount($d['revenue']) !!}</div></div>
             <div class="min-w-0"><div class="text-[11px] text-white/60">{{ __('Xərclər') }}</div><div class="font-mono text-sm sm:text-lg font-semibold tabular-nums truncate">{!! $amount($d['expenses']) !!}</div></div>
             <div><div class="text-[11px] text-white/60">{{ __('Bağlanmış Trade') }}</div><div class="font-mono text-sm sm:text-lg font-semibold tabular-nums">{{ $d['tradeCount'] }}</div></div>
+        </div>
+    </section>
+
+    {{-- after the taxes: where the profit goes, step by step; by month on request --}}
+    @php $tx = $d['taxes']; @endphp
+    <section class="card mb-5 overflow-hidden" x-data="{ taxes: false }">
+        <div class="p-4 sm:p-5 flex flex-wrap items-center gap-x-5 gap-y-3">
+            @foreach([
+                [__('Mənfəət'), $tx['profit'], '', 'text-ink'],
+                [__('MV 20%'), $tx['mv'], '−', 'text-danger'],
+                [__('Xalis mənfəət'), $tx['net'], '=', 'text-ink'],
+                [__('Dividend 5%'), $tx['dividend'], '−', 'text-danger'],
+            ] as [$tl, $tv, $op, $tone])
+                <div class="flex items-center gap-3">
+                    @if($op)<span class="text-xl text-faint font-light">{{ $op }}</span>@endif
+                    <div><div class="text-[11px] text-muted">{{ $tl }}</div><div class="font-mono text-base sm:text-lg font-semibold tabular-nums {{ $tone }}">{{ money($tv) }}</div></div>
+                </div>
+            @endforeach
+            <div class="flex items-center gap-3">
+                <span class="text-xl text-faint font-light">=</span>
+                <div class="rounded-xl bg-brand-soft px-3 py-2"><div class="text-[11px] text-brand-ink">{{ __('Tam xalis mənfəət') }}</div>
+                    <div @class(['font-mono text-lg sm:text-xl font-semibold tabular-nums', 'text-success' => $tx['retained'] > 0, 'text-danger' => $tx['retained'] < 0])>{{ money($tx['retained']) }}</div></div>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm lg:ml-auto" @click="taxes = !taxes" :aria-expanded="taxes">
+                <x-icon name="list" class="size-4"/> <span x-text="taxes ? @js(__('Detalları gizlət')) : @js(__('Vergiləri detallı göstər'))">{{ __('Vergiləri detallı göstər') }}</span>
+            </button>
+        </div>
+        <div x-show="taxes" x-cloak class="border-t border-line">
+            <p class="px-5 pt-4 text-xs text-muted">{{ __('Mənfəət «Mənfəət və zərər» hesabatındandır (gəlirlər − xərclər). MV 20% — mənfəətdən; xalis mənfəət = mənfəət − MV; dividend 5% — xalis mənfəətdən; tam xalis mənfəət = xalis mənfəət − dividend.') }}</p>
+            <div class="overflow-x-auto">
+                <table class="table-g text-sm">
+                    <thead><tr><th>{{ __('Ay') }}</th><th class="!text-right">{{ __('Mənfəət') }}</th><th class="!text-right">{{ __('MV 20%') }}</th><th class="!text-right">{{ __('Xalis mənfəət') }}</th><th class="!text-right">{{ __('Dividend 5%') }}</th><th class="!text-right">{{ __('Tam xalis mənfəət') }}</th></tr></thead>
+                    <tbody>
+                    @foreach($tx['months'] as $m => $r)
+                        <tr>
+                            <td class="whitespace-nowrap">{{ \Carbon\Carbon::createFromFormat('!Y-m', $m)->locale($loc)->isoFormat('MMMM YYYY') }}</td>
+                            <td class="num">{{ money($r['profit']) }}</td><td class="num text-danger">{{ money($r['mv']) }}</td><td class="num">{{ money($r['net']) }}</td>
+                            <td class="num text-danger">{{ money($r['dividend']) }}</td><td class="num font-semibold">{{ money($r['retained']) }}</td>
+                        </tr>
+                    @endforeach
+                    <tr class="font-semibold bg-surface-2">
+                        <td>{{ __('Cəmi') }}</td><td class="num">{{ money($tx['profit']) }}</td><td class="num text-danger">{{ money($tx['mv']) }}</td><td class="num">{{ money($tx['net']) }}</td>
+                        <td class="num text-danger">{{ money($tx['dividend']) }}</td><td class="num">{{ money($tx['retained']) }}</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </section>
 
@@ -175,7 +222,7 @@
         </section>
         <section class="card p-4 sm:p-5 lg:col-span-2 min-w-0">
             <div class="flex flex-wrap items-baseline justify-between gap-2">
-                <h2 class="text-base font-semibold">{{ __('Xalis mənfəət aylar üzrə') }}</h2>
+                <h2 class="text-base font-semibold">{{ __('Mənfəət aylar üzrə (vergidən əvvəl)') }}</h2>
                 @php $best = collect($d['months'])->sortByDesc('profit')->keys()->first(); @endphp
                 @if($best && $d['months'][$best]['profit'] > 0)<span class="text-xs text-muted">{{ __('ən yaxşı ay') }}: <span class="font-medium text-ink">{{ \Carbon\Carbon::createFromFormat('!Y-m', $best)->locale($loc)->isoFormat('MMMM') }}</span></span>@endif
             </div>

@@ -81,6 +81,11 @@ class ProfitBalanceReportTest extends TestCase
         $this->assertNotNull($tr['fc'], 'the invoice has a forecast (1.79 / 0.0165)');
         $this->assertSame(round($tr['profit'] - $tr['fc'], 2), $tr['diff']);
         $this->assertSame($tr['diff'], $pr['total']['diff']);
+        // the forecast opens line by line beside the fact: each column adds up to its profit
+        $fw = $tr['fcWhy'];
+        $this->assertSame('Proqnoz', $fw['a']);
+        $this->assertEqualsWithDelta($tr['fc'], array_sum(array_column($fw['rows'], 'v')), 0.02);
+        $this->assertEqualsWithDelta($tr['profit'], array_sum(array_column($fw['rows'], 'f')), 0.02);
         $this->get(route('analytics.show', ['projects', 'from' => '2025-01', 'to' => '2025-01', 'forecast' => 1]))->assertOk()->assertSee('Proqnoz mənfəət')->assertSee('Proqnozu gizlət');
         // «Əməliyyat tarixinə»: the profit on the seller's payment day, before the act — AC − AA − AJ − AL − AM − the logistics forecast
         $op = $this->inTenant($admin, fn () => (new \App\Support\Reports\ProjectReport)->build('2025-01-01', '2025-01-31', null, false, true));

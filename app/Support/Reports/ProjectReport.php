@@ -29,10 +29,11 @@ class ProjectReport
             ->when($projectId, fn ($q) => $q->where('project_id', $projectId))->get();
         $rows = $deals->isEmpty() ? [] : app(TradeReport::class)->rows($deals);
         // the forecast view of the same Trades: its profit (BE) per Trade, null when an invoice has no forecast
-        $fc = [];
+        $fc = $fcRows = [];
         if ($forecast && $rows) {
             foreach (collect(app(TradeReport::class)->rows($deals, null, null, true))->groupBy(fn ($r) => $r['deal']->id) as $id => $frs) {
                 $fc[$id] = $frs->contains(fn ($r) => ! $r['forecast'] || $r['BT'] === null) ? null : round((float) $frs->sum('BT'), 2);
+                $fcRows[$id] = $frs;
             }
         }
         $zero = ['revenue' => 0.0, 'purchase' => 0.0, 'logistics' => 0.0, 'fees' => 0.0, 'fx' => 0.0, 'profit' => 0.0];
@@ -65,10 +66,11 @@ class ProjectReport
                 'sold' => (float) $rs->sum('H'), 'saleCur' => $saleCur, 'received' => (float) $deal->payments->where('currency', $saleCur)->sum('amount'),
                 'bought' => (float) $rs->sum('D'), 'cur' => $cur, 'paid' => (float) $deal->supplierPayments->sum('amount'), 'op' => $op,
                 // what the operation-day figure is made of (the page opens it on a click)
-                'opWhy' => $operation ? ['h' => 'Trade '.$deal->code.' · '.__('Əməliyyat tarixinə və fakt'),
+                'opWhy' => $operation ? ['h' => 'Trade '.$deal->code.' · '.__('Əməliyyat tarixinə və fakt'), 'a' => __('Əməliyyat tarixinə'),
                     's' => __('əməliyyat').': '.($rs->max(fn ($r) => $r['X'] instanceof \DateTimeInterface ? $r['X']->format('Y-m-d') : null) ? azdate($rs->max(fn ($r) => $r['X'] instanceof \DateTimeInterface ? $r['X']->format('Y-m-d') : null)) : '—')
                         .' · '.__('akt').': '.($day ? azdate($day) : __('hələ yoxdur')),
                     'rows' => $opRows, 'v' => $op, 'f' => $done ? round((float) $rs->sum(fn ($r) => (float) ($r['BT'] ?? 0)) - ($netFx ? $fxAmt : 0), 2) : null] : null,
+                'fcWhy' => $forecast ? $this->forecastWhy($deal->code, $fcRows[$deal->id] ?? collect(), $rs, $done, $netFx ? $fxAmt : 0.0) : null,
                 'fxWhy' => ['kind' => 'fx', 'h' => 'Trade '.$deal->code.' · '.__('Bank kurs fərqi necə yarandı'), 's' => __('bankın kursu ilə CBAR arasındakı fərq'), 'rows' => $fxRows, 'v' => -$fxAmt]];
             if (! $done) {
                 $open[] = $trade + ['project' => $deal->project?->name ?? __('Layihəsiz')];
@@ -176,6 +178,53 @@ class ProjectReport
         }
 
         return [$missing ? null : round($sum, 2), $rows];
+    }
+
+    /**
+     * The forecast profit line by line beside the fact (the page opens it on a click): every rate the invoice's forecast
+     * (N for its currency, O for the sale's, the logistics' own) against the real ones; amounts and fees the same.
+     */
+    private function forecastWhy(string $code, \Illuminate\Support\Collection $frs, \Illuminate\Support\Collection $rs, bool $done, float $fx): array
+    {
+        $facts = $rs->keyBy(fn ($r) => $r['invoice']->id);
+        $rows = [];
+        $ok = $frs->isNotEmpty();
+        foreach ($frs as $q) {
+            $r = $facts->get($q['invoice']->id);
+            $acted = $done && $r !== null;
+            $inv = __('satıcı fakturası').' '.$q['seller_no'];
+            if (! $q['forecast']) {
+                $rows[] = ['t' => $inv, 'c' => __('fakturada proqnoz kursu yoxdur'), 'cf' => null, 'v' => null, 'f' => null];
+                $ok = false;
+
+                continue;
+            }
+            $f = fn (string $k) => $acted && $r[$k] !== null ? round((float) $r[$k], 2) : null;
+            $neg = fn (?float $v) => $v === null ? null : -$v;
+            $rate = fn ($v) => $v === null ? '—' : rate_fmt((float) $v);
+            $rows[] = ['t' => __('Satış').' · '.($q['buyer_no'] ? __('alıcı fakturası').' '.$q['buyer_no'] : $inv),
+                'c' => num((float) $q['H']).' '.$q['saleCur'].' × '.$rate($q['Z']).' ('.__('proqnoz').')', 'v' => $q['AC'] === null ? null : round((float) $q['AC'], 2),
+                'cf' => $acted ? num((float) $r['H']).' '.$r['saleCur'].' × '.$rate($r['Z']).' CBAR' : null, 'f' => $f('AC')];
+            $rows[] = ['t' => __('Alış').' · '.$inv, 'c' => num((float) $q['D']).' '.$q['cur'].' × '.$rate($q['Y']).' ('.__('proqnoz').')', 'v' => $q['AA'] === null ? null : -round((float) $q['AA'], 2),
+                'cf' => $acted ? num((float) $r['D']).' '.$r['cur'].' × '.$rate($r['Y']).' CBAR' : null, 'f' => $neg($f('AA'))];
+            if (abs((float) ($q['AJ'] ?? 0)) >= 0.005 || abs((float) ($r['AJ'] ?? 0)) >= 0.005) {
+                $rows[] = ['t' => __('Köçürmə komissiyası'), 'c' => num((float) $q['J']).' '.$q['cur'].' × '.$rate($q['Y']).' ('.__('proqnoz').')', 'v' => -round((float) ($q['AJ'] ?? 0), 2),
+                    'cf' => $acted ? num((float) $r['J']).' '.$r['cur'].' × '.$rate($r['Y']).' CBAR' : null, 'f' => $neg($f('AJ'))];
+            }
+            $rows[] = ['t' => __('Logistika'), 'c' => $q['AX'] !== null ? num((float) $q['AX']).' '.$q['axCur'].' × '.$rate($q['BA']).' ('.__('proqnoz').')' : __('logistika ödənişi yoxdur'),
+                'v' => -round((float) ($q['BC'] ?? 0), 2), 'cf' => $acted ? ($r['AX'] !== null ? num((float) $r['AX']).' '.$r['axCur'].' × '.$rate($r['BA']).' ('.__('ödəniş günü').')' : __('logistika ödənişi yoxdur')) : null,
+                'f' => $neg($f('BC'))];
+            if (abs((float) ($q['BB'] ?? 0)) >= 0.005 || abs((float) ($r['BB'] ?? 0)) >= 0.005) {
+                $rows[] = ['t' => __('Logistika komissiyası'), 'c' => __('bankın tutduğu'), 'v' => -round((float) ($q['BB'] ?? 0), 2), 'cf' => $acted ? __('bankın tutduğu') : null, 'f' => $neg($f('BB'))];
+            }
+        }
+        if ($fx != 0.0) {
+            $rows[] = ['t' => __('Bank kurs fərqi'), 'c' => __('real — rubl satışı / avro alışı'), 'cf' => $done ? __('eyni') : null, 'v' => -$fx, 'f' => $done ? -$fx : null];
+        }
+        $v = $ok && ! $frs->contains(fn ($q) => $q['BT'] === null) ? round((float) $frs->sum('BT') - $fx, 2) : null;
+
+        return ['h' => 'Trade '.$code.' · '.__('Proqnoz və fakt'), 's' => __('proqnoz: fakturadakı bank proqnozu kursları ilə; fakt: real kurslar ilə'), 'a' => __('Proqnoz'),
+            'rows' => $rows, 'v' => $v, 'f' => $done ? round((float) $rs->sum(fn ($r) => (float) ($r['BT'] ?? 0)) - $fx, 2) : null];
     }
 
     /**

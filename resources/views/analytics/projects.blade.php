@@ -23,6 +23,9 @@
                 $why['op|'.$tr['code']] = $tr['opWhy'];
             }
             $why['fx|'.$tr['code']] = $tr['fxWhy'];
+            if ($tr['fcWhy'] ?? null) {
+                $why['fc|'.$tr['code']] = $tr['fcWhy'];
+            }
         }
         $tip = fn (string $key) => 'role="button" tabindex="0" @click="show(\''.$key.'\')" @keydown.enter="show(\''.$key.'\')"';
         $click = 'cursor-pointer hover:underline decoration-dotted underline-offset-4';
@@ -113,7 +116,7 @@
                             <td data-label="{{ __('Mənfəət') }}" @class(['num font-semibold', 'text-success' => $tr['profit'] > 0, 'text-danger' => $tr['profit'] < 0])>{{ $n($tr['profit']) }}</td>
                             <td data-label="{{ __('Marja') }}" class="num">{{ $pct($tr['margin']) }}</td>
                             @if($forecast)
-                                <td data-label="{{ __('Proqnoz mənfəət') }}" class="num text-saffron">{{ $tr['fc'] === null ? __('proqnoz yoxdur') : $n($tr['fc']) }}</td>
+                                <td data-label="{{ __('Proqnoz mənfəət') }}" class="num text-saffron {{ $click }}" {!! $tip('fc|'.$tr['code']) !!} title="{{ __('Necə hesablandı — toxunun') }}">{{ $tr['fc'] === null ? __('proqnoz yoxdur') : $n($tr['fc']) }}</td>
                                 <td data-label="{{ __('Fərq') }}" @class(['num font-semibold', 'text-success' => ($tr['diff'] ?? 0) > 0, 'text-danger' => ($tr['diff'] ?? 0) < 0])>{{ $tr['diff'] === null ? '—' : ($tr['diff'] > 0 ? '+' : '').$n($tr['diff']) }}</td>
                             @endif
                             @if($operation)
@@ -206,7 +209,7 @@
                     <div class="flex-1 flex flex-col min-h-0">
                     <div class="overflow-auto flex-1">
                         <table class="table-g text-[13px]">
-                            <thead><tr><th>{{ __('Mənbə') }}</th><th class="!text-right">{{ __('Əməliyyat tarixinə') }}</th><th class="!text-right">{{ __('Fakt (aktdan sonra)') }}</th><th class="!text-right">{{ __('Fərq') }}</th></tr></thead>
+                            <thead><tr><th>{{ __('Mənbə') }}</th><th class="!text-right" x-text="why[open].a"></th><th class="!text-right">{{ __('Fakt (aktdan sonra)') }}</th><th class="!text-right">{{ __('Fərq') }}</th></tr></thead>
                             <tbody>
                                 <template x-for="(r, i) in why[open].rows" :key="i">
                                     <tr>
@@ -220,9 +223,9 @@
                         </table>
                     </div>
                     <footer class="grid sm:grid-cols-3 gap-2 px-5 py-3 border-t border-line bg-surface-2 text-sm">
-                        <div>{{ __('Əməliyyat tarixinə') }}: <span class="font-mono font-semibold" x-text="sign(why[open].v)"></span></div>
+                        <div><span x-text="why[open].a"></span>: <span class="font-mono font-semibold" x-text="sign(why[open].v)"></span></div>
                         <div>{{ __('Fakt') }}: <span class="font-mono font-semibold" x-text="sign(why[open].f)"></span></div>
-                        <div class="sm:text-right">{{ __('Fərq (fakt − əməliyyat tarixinə)') }}: <span class="font-mono font-semibold" :class="(diff(why[open].f, why[open].v) ?? 0) < 0 ? 'text-danger' : 'text-success'" x-text="diff(why[open].f, why[open].v) === null ? '—' : sign(diff(why[open].f, why[open].v))"></span></div>
+                        <div class="sm:text-right">{{ __('Fərq (fakt − ') }}<span x-text="why[open].a.toLowerCase()"></span>): <span class="font-mono font-semibold" :class="(diff(why[open].f, why[open].v) ?? 0) < 0 ? 'text-danger' : 'text-success'" x-text="diff(why[open].f, why[open].v) === null ? '—' : sign(diff(why[open].f, why[open].v))"></span></div>
                     </footer>
                     </div>
                     </template>

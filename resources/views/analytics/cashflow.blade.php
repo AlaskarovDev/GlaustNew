@@ -5,13 +5,7 @@
         </x-slot:actions>
     </x-page-header>
 
-    <nav class="flex gap-2 overflow-x-auto pb-1 mb-6" aria-label="{{ __('Hesabatlar') }}">
-        @foreach($all as $key => [$navLabel, $ico])
-            <a href="{{ route('analytics.show', $key) }}" @class(['badge !h-9 !px-3.5 !text-[13px] gap-1.5 shrink-0', 'badge-teal' => $key === $report, 'badge-slate hover:!text-ink' => $key !== $report]) @if($key === $report) aria-current="page" @endif>
-                <x-icon :name="$ico" class="size-4"/> {{ __($navLabel) }}
-            </a>
-        @endforeach
-    </nav>
+    @include('analytics._bar')
 
     @php
         $months = $data['months'];
@@ -103,8 +97,6 @@
     @endphp
 
     <form method="GET" action="{{ route('analytics.show', 'cashflow') }}" class="card p-4 mb-6 flex flex-wrap items-end gap-3">
-        <label><span class="field-label">{{ __('Ayından') }}</span><input type="month" name="from" value="{{ $from }}" class="input font-mono"></label>
-        <label><span class="field-label">{{ __('Ayınadək') }}</span><input type="month" name="to" value="{{ $to }}" class="input font-mono"></label>
         <label class="min-w-[240px] flex-1">
             <span class="field-label">{{ __('Layihə') }}</span>
             <select name="project_id" class="input">
@@ -127,11 +119,6 @@
             </select>
         </label>
         <button class="btn btn-primary"><x-icon name="filter" class="size-4"/> {{ __('Göstər') }}</button>
-        <div class="flex flex-wrap gap-1 w-full lg:w-auto lg:ml-auto">
-            @foreach($quick as $ql => [$qf, $qt])
-                <a href="{{ route('analytics.show', $base + ['from' => $qf, 'to' => $qt]) }}" @class(['btn btn-sm', 'btn-ghost' => ! ($qf === $from && $qt === $to), 'bg-brand-soft text-brand-ink' => $qf === $from && $qt === $to])>{{ $ql }}</a>
-            @endforeach
-        </div>
     </form>
 
     <div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6 stagger">

@@ -13,13 +13,7 @@
         </x-slot:actions>
     </x-page-header>
 
-    <nav class="flex gap-2 overflow-x-auto pb-1 mb-6" aria-label="{{ __('Hesabatlar') }}">
-        @foreach($all as $key => [$label, $ico])
-            <a href="{{ route('analytics.show', $key) }}" @class(['badge !h-9 !px-3.5 !text-[13px] gap-1.5 shrink-0', 'badge-teal' => $key === $report, 'badge-slate hover:!text-ink' => $key !== $report]) @if($key === $report) aria-current="page" @endif>
-                <x-icon :name="$ico" class="size-4"/> {{ __($label) }}
-            </a>
-        @endforeach
-    </nav>
+    @include('analytics._bar')
 
     @php
         $tone = [

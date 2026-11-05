@@ -22,6 +22,7 @@ class AnalyticsController extends Controller
         $all = config('glaust.analytics');
         abort_unless(isset($all[$report]), 404);
         [$title, $icon, $description, $contents] = $all[$report];
+        $this->sharedPeriod($request, $report);
 
         if ($report === 'summary') {
             return $this->summary($request, compact('report', 'title', 'icon', 'description', 'all'));
@@ -46,6 +47,36 @@ class AnalyticsController extends Controller
         }
 
         return view('analytics.show', compact('report', 'title', 'icon', 'description', 'contents', 'all'));
+    }
+
+    /**
+     * One period for every report (the bar above them): a period chosen on any report (from / to, a month or a day) is kept
+     * in the session and handed to each report in its own form — months, the days of the Təsisçi hesabatı, the month end
+     * of the Balans. Until one is chosen each report keeps its own default.
+     */
+    private function sharedPeriod(Request $request, string $report): void
+    {
+        $m = fn ($v) => is_string($v) && preg_match('/^(\d{4}-(0[1-9]|1[0-2]))(-\d{2})?$/', $v, $x) ? $x[1] : null;
+        $from = $m($request->query('from'));
+        $to = $m($request->query('to'));
+        if ($report === 'balance') {
+            $to = $m($request->query('month')) ?? $to;
+        }
+        $saved = session('analytics.period');
+        if (! $from && ! $to && ! $saved) {
+            return;
+        }
+        $to ??= $saved['to'] ?? today()->format('Y-m');
+        $from ??= $saved['from'] ?? substr($to, 0, 4).'-01';
+        if ($from > $to) {
+            [$from, $to] = [$to, $from];
+        }
+        session(['analytics.period' => ['from' => $from, 'to' => $to]]);
+        $request->query->add(match ($report) {
+            'founders' => ['from' => $from.'-01', 'to' => \Carbon\Carbon::createFromFormat('!Y-m', $to)->endOfMonth()->toDateString()],
+            'balance' => ['month' => $to],
+            default => ['from' => $from, 'to' => $to],
+        });
     }
 
     /** Cash flow by month (AZN): money in per counterparty, money out per counterparty / expense, fees and exchange results. */
@@ -325,10 +356,18 @@ class AnalyticsController extends Controller
         $oneC = $asOf;
         // «Proqnoz üzrə bax»: the same report as if every forecast had come true; the real totals beside it
         $forecast = $request->boolean('forecast');
-        $rows = $report->rows($deals, $asOf, $oneC, $forecast);
-        $actualTotals = $forecast ? TradeReport::totals($report->rows($deals, $asOf, $oneC)) : null;
+        // the shared period: the Trades acted in it (an unfinished one — by its seller invoice's day)
+        $period = session('analytics.period');
+        [$pFrom, $pTo] = $period ? [$period['from'].'-01', \Carbon\Carbon::createFromFormat('!Y-m', $period['to'])->endOfMonth()->toDateString()] : [null, null];
+        $inPeriod = fn (array $rs) => $pFrom === null ? $rs : array_values(array_filter($rs, function ($r) use ($pFrom, $pTo) {
+            $day = ! $r['provisional'] && $r['BI'] instanceof \DateTimeInterface ? $r['BI']->format('Y-m-d') : $r['seller_date']?->format('Y-m-d');
+
+            return $day !== null && $day >= $pFrom && $day <= $pTo;
+        }));
+        $rows = $inPeriod($report->rows($deals, $asOf, $oneC, $forecast));
+        $actualTotals = $forecast ? TradeReport::totals($inPeriod($report->rows($deals, $asOf, $oneC))) : null;
         // the «Proqnoz mənfəət» card: the profit of the forecast view (forecast rates, real logistics and fees)
-        $forecastProfit = ($forecast ? TradeReport::totals($rows) : TradeReport::totals($report->rows($deals, $asOf, $oneC, true)))['AQ'] ?? null;
+        $forecastProfit = ($forecast ? TradeReport::totals($rows) : TradeReport::totals($inPeriod($report->rows($deals, $asOf, $oneC, true))))['AQ'] ?? null;
         $columns = TradeReport::columns();
         $groups = TradeReport::groups();
         if (! $oneC) {

@@ -65,13 +65,7 @@
 
     <x-page-header :title="__('Təsisçi hesabatı')" :icon="$icon" :subtitle="$scope.' · '.$period"/>
 
-    <nav class="flex gap-2 overflow-x-auto pb-1 mb-5 -mx-1 px-1 no-scrollbar" aria-label="{{ __('Hesabatlar') }}">
-        @foreach($all as $key => [$navLabel, $ico])
-            <a href="{{ route('analytics.show', $key) }}" @class(['badge !h-9 !px-3.5 !text-[13px] gap-1.5 shrink-0', 'badge-teal' => $key === $report, 'badge-slate hover:!text-ink' => $key !== $report]) @if($key === $report) aria-current="page" @endif>
-                <x-icon :name="$ico" class="size-4"/> {{ __($navLabel) }}
-            </a>
-        @endforeach
-    </nav>
+    @include('analytics._bar')
 
     {{-- the filter: one tap on a phone, open on a wide screen --}}
     <form method="GET" action="{{ route('analytics.show', 'founders') }}" class="card mb-5"
@@ -85,9 +79,7 @@
             <x-icon name="filter" class="size-5 text-brand shrink-0"/>
         </button>
         <div class="px-4 pb-4 lg:pt-4 space-y-3" :class="open ? 'block' : 'hidden lg:block'">
-            <div class="grid grid-cols-2 lg:grid-cols-[repeat(4,minmax(0,1fr))_auto] gap-3 items-end">
-                <label><span class="field-label">{{ __('Tarixdən') }}</span><input type="date" name="from" value="{{ $d['from'] }}" class="input"></label>
-                <label><span class="field-label">{{ __('Tarixədək') }}</span><input type="date" name="to" value="{{ $d['to'] }}" class="input"></label>
+            <div class="grid grid-cols-2 lg:grid-cols-[repeat(2,minmax(0,1fr))_auto] gap-3 items-end">
                 <label class="col-span-2 lg:col-span-1"><span class="field-label">{{ __('Layihə') }}</span>
                     <select name="project_id" class="input" x-model="project" @change="deal = ''">
                         <option value="">{{ __('Bütün layihələr') }}</option>
@@ -101,9 +93,6 @@
                 <button class="btn btn-primary col-span-2 lg:col-span-1 justify-center"><x-icon name="filter" class="size-4"/> {{ __('Göstər') }}</button>
             </div>
             <div class="flex gap-1.5 overflow-x-auto no-scrollbar -mx-1 px-1">
-                @foreach($quick as $ql => $range)
-                    <a href="{{ route('analytics.show', ['founders'] + $range + $keep) }}" @class(['btn btn-sm shrink-0 rounded-full', 'bg-brand-soft text-brand-ink' => $range['from'] === $d['from'] && $range['to'] === $d['to'], 'btn-ghost border border-line' => ! ($range['from'] === $d['from'] && $range['to'] === $d['to'])])>{{ $ql }}</a>
-                @endforeach
                 @if($projectId || $dealId)<a href="{{ route('analytics.show', ['founders', 'from' => $d['from'], 'to' => $d['to']]) }}" class="btn btn-sm btn-ghost shrink-0 text-danger">{{ __('Filtri təmizlə') }}</a>@endif
             </div>
         </div>

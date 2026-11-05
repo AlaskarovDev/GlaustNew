@@ -5,13 +5,7 @@
         </x-slot:actions>
     </x-page-header>
 
-    <nav class="flex gap-2 overflow-x-auto pb-1 mb-6" aria-label="{{ __('Hesabatlar') }}">
-        @foreach($all as $key => [$navLabel, $ico])
-            <a href="{{ route('analytics.show', $key) }}" @class(['badge !h-9 !px-3.5 !text-[13px] gap-1.5 shrink-0', 'badge-teal' => $key === $report, 'badge-slate hover:!text-ink' => $key !== $report]) @if($key === $report) aria-current="page" @endif>
-                <x-icon :name="$ico" class="size-4"/> {{ __($navLabel) }}
-            </a>
-        @endforeach
-    </nav>
+    @include('analytics._bar')
 
     @php
         $now = today();
@@ -25,8 +19,6 @@
     @endphp
 
     <form method="GET" action="{{ route('analytics.show', 'projects') }}" class="card p-4 mb-6 flex flex-wrap items-end gap-3">
-        <label><span class="field-label">{{ __('Ayından') }}</span><input type="month" name="from" value="{{ $from }}" class="input font-mono"></label>
-        <label><span class="field-label">{{ __('Ayınadək') }}</span><input type="month" name="to" value="{{ $to }}" class="input font-mono"></label>
         <label><span class="field-label">{{ __('Layihə') }}</span>
             <select name="project_id" class="input"><option value="">{{ __('Bütün layihələr') }}</option>
                 @foreach($projectList as $pr)<option value="{{ $pr->id }}" @selected($projectId === $pr->id)>{{ $pr->code }} · {{ $pr->name }}</option>@endforeach
@@ -38,19 +30,14 @@
            @class(['btn', 'btn-secondary' => ! $forecast, 'bg-saffron-soft text-saffron' => $forecast]) title="{{ __('Fakturalarda yazılmış bank proqnozu (RUB çevirməsinin proqnoz EUR / RUB kursu) ilə mənfəət, faktla yanaşı') }}">
             <x-icon name="chart" class="size-4"/> {{ $forecast ? __('Proqnozu gizlət') : __('Proqnozla göstər') }}</a>
         <a href="{{ route('analytics.show', array_filter(['projects', 'from' => $from, 'to' => $to, 'project_id' => $projectId, 'forecast' => $forecast ?: null, 'op' => $operation ? null : 1])) }}"
-           @class(['btn', 'btn-secondary' => ! $operation, 'bg-brand-soft text-brand-ink' => $operation]) title="{{ __('Akt gəlməmişdən, satıcıya ödəniş günü: satış və alış həmin günün CBAR kursu ilə, komissiya və bankın kurs fərqi, logistika — fakturadakı logistika proqnozu həmin günün kursu ilə') }}">
+           @class(['btn', 'btn-secondary' => ! $operation, 'bg-brand-soft text-brand-ink' => $operation]) title="{{ __('Akt gəlməmişdən, satıcıya ödəniş günü: satış və alış həmin günün CBAR kursu ilə, komissiya, logistika — fakturadakı logistika proqnozu həmin günün kursu ilə') }}">
             <x-icon name="calendar" class="size-4"/> {{ $operation ? __('Əməliyyat tarixini gizlət') : __('Əməliyyat tarixinə göstər') }}</a>
-        <div class="flex flex-wrap gap-1 lg:ml-auto">
-            @foreach($quick as $ql => [$qf, $qt])
-                <a href="{{ route('analytics.show', ['projects', 'from' => $qf, 'to' => $qt, 'project_id' => $projectId, 'forecast' => $forecast ?: null, 'op' => $operation ?: null]) }}" @class(['btn btn-sm', 'btn-ghost' => ! ($qf === $from && $qt === $to), 'bg-brand-soft text-brand-ink' => $qf === $from && $qt === $to])>{{ $ql }}</a>
-            @endforeach
-        </div>
     </form>
 
     <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div class="card p-5"><div class="text-xs text-muted">{{ __('Satış') }}</div><div class="mt-1 text-2xl font-semibold font-mono tabular-nums">{{ money($t['revenue']) }}</div><div class="text-[11px] text-faint">{{ $label($from) }} — {{ $label($to) }}</div></div>
-        <div class="card p-5"><div class="text-xs text-muted">{{ __('Xərclər') }}</div><div class="mt-1 text-2xl font-semibold font-mono tabular-nums">{{ money($t['revenue'] - $t['profit']) }}</div><div class="text-[11px] text-faint">{{ __('alış, logistika, komissiya, kurs fərqi') }}</div></div>
-        <div class="card p-5"><div class="text-xs text-muted">{{ __('Mənfəət') }}</div><div @class(['mt-1 text-2xl font-semibold font-mono tabular-nums', 'text-success' => $t['profit'] > 0, 'text-danger' => $t['profit'] < 0])>{{ money($t['profit']) }}</div><div class="text-[11px] text-faint">{{ __('Trade-lər üzrə') }}</div></div>
+        <div class="card p-5"><div class="text-xs text-muted">{{ __('Xərclər') }}</div><div class="mt-1 text-2xl font-semibold font-mono tabular-nums">{{ money($t['revenue'] - $t['profit']) }}</div><div class="text-[11px] text-faint">{{ __('alış, logistika, komissiya') }}</div></div>
+        <div class="card p-5"><div class="text-xs text-muted">{{ __('Mənfəət') }}</div><div @class(['mt-1 text-2xl font-semibold font-mono tabular-nums', 'text-success' => $t['profit'] > 0, 'text-danger' => $t['profit'] < 0])>{{ money($t['profit']) }}</div><div class="text-[11px] text-faint">{{ __('Yekun hesabatın XALİS MƏNFƏƏTİ') }}</div></div>
         <div class="card p-5"><div class="text-xs text-muted">{{ __('Marja') }}</div><div class="mt-1 text-2xl font-semibold font-mono tabular-nums">{{ $pct($t['margin']) }}</div><div class="text-[11px] text-faint">{{ __('mənfəət ÷ satış') }}</div></div>
     </div>
     @if($forecast)
@@ -91,7 +78,7 @@
                     <thead><tr>
                         <th>Trade</th><th class="w-24">{{ __('Akt tarixi') }}</th>
                         <th class="!text-right">{{ __('Satış') }}</th><th class="!text-right">{{ __('Alış') }}</th><th class="!text-right">{{ __('Logistika') }}</th>
-                        <th class="!text-right">{{ __('Komissiya') }}</th><th class="!text-right">{{ __('Kurs fərqi') }}</th><th class="!text-right">{{ __('Mənfəət') }}</th><th class="!text-right">{{ __('Marja') }}</th>
+                        <th class="!text-right">{{ __('Komissiya') }}</th><th class="!text-right" title="{{ __('Bankın rubl/avro konvertasiyasında CBAR-dan fərqi: mənfəətdən çıxılmır, MZ-də bank xərci (221.13)') }}">{{ __('Bank kurs fərqi') }}</th><th class="!text-right">{{ __('Mənfəət') }}</th><th class="!text-right">{{ __('Marja') }}</th>
                         @if($forecast)<th class="!text-right">{{ __('Proqnoz mənfəət') }}</th><th class="!text-right">{{ __('Fərq') }}</th>@endif
                         @if($operation)<th class="!text-right">{{ __('Əməliyyat tarixinə') }}</th><th class="!text-right">{{ __('Fərq') }}</th>@endif
                         <th class="!text-right">{{ __('Alıcıdan daxil olub') }}</th><th class="!text-right">{{ __('Satıcıya ödənilib') }}</th>

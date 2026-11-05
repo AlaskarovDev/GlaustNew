@@ -9,6 +9,8 @@ use App\Services\SupplierPaymentService;
 
 /**
  * Təsisçi hesabatı — revenue, expenses and net profit at a glance, for a period, a project or a Trade.
+ *   The headline (revenue, expenses, profit, the months, the cost structure) is the «Mənfəət və zərər» of the same months
+ *   and filter — one profit in every report; the Trades and projects are listed by the Yekun hesabat's «XALİS MƏNFƏƏT» (BT).
  *   A Trade counts in the period of its act (the goods handed over): revenue = the sale at CBAR of the payment day (AC);
  *   expenses = the purchase (AA), the logistics (BC), the fees (AJ + BB) and the bank's rates against CBAR (AL + AM) —
  *   the Trade's profit is the Yekun hesabat's «Gəlir — kurs fərqləri ilə» (BE).
@@ -19,8 +21,14 @@ use App\Services\SupplierPaymentService;
  */
 class FounderReport
 {
+    private ?int $projectId = null;
+
+    private ?int $dealId = null;
+
     public function build(string $from, string $to, ?int $projectId = null, ?int $dealId = null): array
     {
+        $this->projectId = $projectId;
+        $this->dealId = $dealId;
         $deals = Deal::with(['project:id,code,name', 'supplier:id,name', 'counterparty:id,name'])
             ->when($projectId, fn ($q) => $q->where('project_id', $projectId))
             ->when($dealId, fn ($q) => $q->whereKey($dealId))->get();
@@ -68,14 +76,14 @@ class FounderReport
             if (! $day || $day < $from || $day > $to) {
                 continue;
             }
-            if ($r['AC'] === null || $r['BE'] === null) {
+            if ($r['AC'] === null || $r['BT'] === null) {
                 $incomplete++;
 
                 continue;
             }
             $rev = (float) $r['AC'];
             $p = ['purchase' => (float) $r['AA'], 'logistics' => (float) ($r['BC'] ?? 0), 'fees' => (float) ($r['AJ'] ?? 0) + (float) ($r['BB'] ?? 0), 'fx' => (float) ($r['AL'] ?? 0) + (float) ($r['AM'] ?? 0)];
-            $profit = (float) $r['BE'];
+            $profit = (float) $r['BT'];   // the Yekun hesabat's «XALİS MƏNFƏƏT»
             $revenue += $rev;
             foreach ($p as $k => $v) {
                 $parts[$k] += $v;
@@ -99,39 +107,39 @@ class FounderReport
             $projects[$key]['trades'][$id] = true;
         }
 
-        if ($company) {
-            // the running expenses of the company: not of a Trade, not kept out of the P&L, not a transfer fee of a Trade
-            foreach (Expense::with('category')->whereNull('deal_id')->whereBetween('expense_date', [$from, $to.' 23:59:59'])->get() as $e) {
-                if ($e->category?->name === SupplierPaymentService::FEE_CATEGORY || ProfitLossReport::lineOf($e->category) === null) {
-                    continue;
-                }
-                $azn = (float) ($e->amount_azn ?? $e->amount);
-                $name = $e->category?->name ?? __('Digər xərclər');
-                $overheads[$name] = ($overheads[$name] ?? 0) + $azn;
-                $parts['overhead'] += $azn;
-                $m = $e->expense_date->format('Y-m');
-                if (isset($months[$m])) {
-                    $months[$m]['expenses'] += $azn;
-                    $months[$m]['profit'] -= $azn;
-                }
+        // the headline is the MZ of the same months and filter — the same profit as «Mənfəət və zərər»
+        $pl = (new ProfitLossReport)->build(substr($from, 0, 7), substr($to, 0, 7), $this->projectId, $this->dealId);
+        $line = fn (string $code, string $m) => (float) ($pl['lines'][$code]['values'][$m] ?? 0);
+        $parts = ['purchase' => 0.0, 'logistics' => 0.0, 'fees' => 0.0, 'fx' => 0.0, 'overhead' => 0.0];
+        $overheads = [];
+        $revenue = $other = 0.0;
+        foreach ($pl['months'] as $m) {
+            $fx = -($line('214', $m) + $line('219.3', $m));   // the net exchange result, a loss as an expense
+            $months[$m] = ['revenue' => $line('217.2', $m) + $line('212', $m), 'expenses' => $pl['out'][$m] + $fx, 'profit' => $pl['result'][$m]];
+            $revenue += $line('217.2', $m);
+            $other += $line('212', $m);
+            $parts['fx'] += $fx;
+            $parts['fees'] += $line('221.13', $m);
+        }
+        foreach ($pl['lines'] as $code => $l) {
+            if ($l['side'] !== 'out' || $code === '221.13') {
+                continue;
             }
-            // other income: money in with an income category on the P&L (e.g. a deposit's interest)
-            foreach (BankTransaction::with('category')->where('direction', 'in')->where('kind', 'regular')->whereNotNull('category_id')
-                ->whereBetween('transaction_date', [$from, $to.' 23:59:59'])->get() as $t) {
-                if (ProfitLossReport::lineOf($t->category) !== null) {
-                    $v = (float) $t->cbar_amount_azn;
-                    $other += $v;
-                    $m = $t->transaction_date->format('Y-m');
-                    if (isset($months[$m])) {
-                        $months[$m]['revenue'] += $v;
-                        $months[$m]['profit'] += $v;
-                    }
-                }
+            if ($code === '232.1') {
+                $buy = collect(array_merge([], ...array_values($l['items'])))->filter(fn ($i) => str_ends_with($i['t'], ' · '.__('alış')))->sum('v');
+                $parts['purchase'] += $buy;
+                $parts['logistics'] += $l['total'] - $buy;
+
+                continue;
+            }
+            $parts['overhead'] += $l['total'];
+            if (abs($l['total']) >= 0.005) {
+                $overheads[$code.' · '.$l['label']] = $l['total'];
             }
         }
-
-        $expenses = array_sum($parts);
         $income = $revenue + $other;
+        $profit = round(array_sum($pl['result']), 2);
+        $expenses = $income - $profit;
         arsort($overheads);
         $trades = array_values($trades);
         usort($trades, fn ($a, $b) => $b['profit'] <=> $a['profit']);
@@ -140,8 +148,8 @@ class FounderReport
 
         return [
             'revenue' => round($income, 2), 'tradeRevenue' => round($revenue, 2), 'otherIncome' => round($other, 2),
-            'expenses' => round($expenses, 2), 'profit' => round($income - $expenses, 2),
-            'margin' => $income > 0 ? round(($income - $expenses) / $income * 100, 1) : null,
+            'expenses' => round($expenses, 2), 'profit' => $profit,
+            'margin' => $income > 0 ? round($profit / $income * 100, 1) : null,
             'parts' => array_map(fn ($v) => round($v, 2), $parts),
             'months' => array_map(fn ($m) => array_map(fn ($v) => round($v, 2), $m), $months),
             'trades' => $trades, 'tradeCount' => count($trades), 'projects' => $projects,

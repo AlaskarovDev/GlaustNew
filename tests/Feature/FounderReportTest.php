@@ -7,10 +7,12 @@ use App\Models\Category;
 use App\Models\Expense;
 use App\Services\BankLedger;
 use App\Support\Reports\FounderReport;
+use App\Support\Reports\ProfitLossReport;
+use App\Support\Reports\TradeReport;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/** Təsisçi hesabatı: a Trade counts in the month of its act; the company's running costs only for the whole company. */
+/** Təsisçi hesabatı: the headline is the MZ of the period (and filter); the Trades listed by their «XALİS MƏNFƏƏT». */
 class FounderReportTest extends TestCase
 {
     use Concerns\AtfRow3, RefreshDatabase;
@@ -28,21 +30,28 @@ class FounderReportTest extends TestCase
             app(BankLedger::class)->record(BankAccount::where('currency', 'AZN')->first(), ['direction' => 'in', 'transaction_date' => '2025-01-31', 'amount' => 977.77, 'category_id' => $interest->id, 'purpose' => 'Faiz']);
         });
 
+        $this->rates('2024-12-31', 1.7700, 0.016318);
+        $this->rates('2025-01-31', 1.7659, 0.0175);
         $d = $this->inTenant($admin, fn () => (new FounderReport)->build('2025-01-01', '2025-01-31'));
-        // the Trade: act 28.01 — sale at the payment day's CBAR, profit = the Yekun hesabat's BE
-        $this->assertEqualsWithDelta(9898036.68 * 0.015962, $d['tradeRevenue'], 0.01);
+        $mz = $this->inTenant($admin, fn () => (new ProfitLossReport)->build('2025-01', '2025-01'));
+        // the headline is the MZ of the period: its profit, its sales, its lines
+        $this->assertSame(round(array_sum($mz['result']), 2), $d['profit'], 'the same profit as «Mənfəət və zərər»');
+        $this->assertSame($mz['lines']['217.2']['total'], $d['tradeRevenue']);
         $this->assertSame(1, $d['tradeCount']);
-        $this->assertEqualsWithDelta(8823.4263 - 728 + 977.77, $d['profit'], 0.01, 'the Trade, less the salary, plus the interest — the profit tax is not an expense');
         $this->assertSame(977.77, $d['otherIncome']);
-        $this->assertSame(728.0, $d['parts']['overhead']);
-        $this->assertSame(['Əmək haqqı' => 728.0], $d['overheads']);
+        $this->assertSame(728.0, $d['parts']['overhead'], 'the profit tax is not an expense');
+        $this->assertSame(['221.1.2 · Əmək haqqı və ona bərabər tutulan ödəmələr' => 728.0], $d['overheads']);
         $this->assertEqualsWithDelta($d['revenue'] - $d['expenses'], $d['profit'], 0.01);
         $this->assertEqualsWithDelta($d['profit'], $d['months']['2025-01']['profit'], 0.01);
-        $this->assertSame(0.0, $d['previous']['profit'], 'December: nothing closed');
+        // the Trade list: the Yekun hesabat's «XALİS MƏNFƏƏT» (BT)
+        $bt = $this->inTenant($admin, fn () => app(TradeReport::class)->rows(\App\Models\Deal::all())[0]['BT']);
+        $this->assertEqualsWithDelta($bt, $d['trades'][0]['profit'], 0.01);
 
-        // a project / Trade: the Trade alone, no running costs
+        // a project / Trade: its own MZ, no running costs
         $p = $this->inTenant($admin, fn () => (new FounderReport)->build('2025-01-01', '2025-01-31', $deal->project_id));
-        $this->assertEqualsWithDelta(8823.4263, $p['profit'], 0.01, 'the Yekun hesabat BE of the Trade');
+        $pmz = $this->inTenant($admin, fn () => (new ProfitLossReport)->build('2025-01', '2025-01', $deal->project_id));
+        $this->assertSame(round(array_sum($pmz['result']), 2), $p['profit']);
+        $this->assertSame(0.0, $p['parts']['overhead']);
         $this->assertFalse($p['company']);
         $t = $this->inTenant($admin, fn () => (new FounderReport)->build('2025-01-01', '2025-01-31', null, $deal->id));
         $this->assertSame([1, $deal->code], [$t['tradeCount'], $t['trades'][0]['code']]);

@@ -27,6 +27,13 @@ class AnalyticsMenuTest extends TestCase
         $this->get(route('analytics.show', 'balance'))->assertOk()->assertDontSee('aktivləşəcək')->assertSee('AKTİVLƏR');
         $this->get(route('analytics.show', 'fx'))->assertOk()->assertDontSee('aktivləşəcək')->assertSee('Məzənnə fərqi yoxdur');
         $this->get(route('analytics.show', 'projects'))->assertOk()->assertDontSee('aktivləşəcək')->assertSee('Bu dövrdə aktı olan Trade yoxdur.');
+        // one period for every report: chosen on one, the others follow it in their own form
+        $this->get(route('analytics.show', ['profit', 'from' => '2025-03', 'to' => '2025-05']))->assertOk()->assertSee('bütün hesabatlara tətbiq olunur');
+        $this->assertSame(['from' => '2025-03', 'to' => '2025-05'], session('analytics.period'));
+        $this->get(route('analytics.show', 'founders'))->assertOk()->assertSee('01.03.2025')->assertSee('31.05.2025');
+        $this->get(route('analytics.show', 'balance'))->assertOk()->assertSee('31.05.2025');
+        $this->get(route('analytics.show', ['cashflow', 'from' => '2025-06']))->assertOk();
+        $this->assertSame(['from' => '2025-05', 'to' => '2025-06'], session('analytics.period'), 'a half given keeps the other half, the order fixed');
         $this->get('/analytics/nope')->assertNotFound();
         $this->get(route('reports.index'))->assertOk();
 

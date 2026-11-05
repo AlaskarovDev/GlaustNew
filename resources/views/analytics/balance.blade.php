@@ -5,13 +5,7 @@
         </x-slot:actions>
     </x-page-header>
 
-    <nav class="flex gap-2 overflow-x-auto pb-1 mb-6" aria-label="{{ __('Hesabatlar') }}">
-        @foreach($all as $key => [$navLabel, $ico])
-            <a href="{{ route('analytics.show', $key) }}" @class(['badge !h-9 !px-3.5 !text-[13px] gap-1.5 shrink-0', 'badge-teal' => $key === $report, 'badge-slate hover:!text-ink' => $key !== $report]) @if($key === $report) aria-current="page" @endif>
-                <x-icon :name="$ico" class="size-4"/> {{ __($navLabel) }}
-            </a>
-        @endforeach
-    </nav>
+    @include('analytics._bar')
 
     @php
         $why = [];
@@ -23,11 +17,7 @@
         $tip = fn (string $key) => 'role="button" tabindex="0" @click="show(\''.$key.'\')" @keydown.enter="show(\''.$key.'\')"';
     @endphp
 
-    <form method="GET" action="{{ route('analytics.show', 'balance') }}" class="card p-4 mb-6 flex flex-wrap items-end gap-3">
-        <label><span class="field-label">{{ __('Ay sonuna') }}</span><input type="month" name="month" value="{{ $month }}" max="{{ $last }}" class="input font-mono"></label>
-        <button class="btn btn-primary"><x-icon name="filter" class="size-4"/> {{ __('Göstər') }}</button>
-        <span class="text-[11px] text-muted">{{ __('Valyuta qalıqları, avanslar və borclar :v1 tarixinin CBAR kursu ilə.', ['v1' => azdate($data['date'])]) }}</span>
-    </form>
+    <p class="text-[11px] text-muted -mt-3 mb-5">{{ __('Valyuta qalıqları, avanslar və borclar :v1 tarixinin CBAR kursu ilə.', ['v1' => azdate($data['date'])]) }}</p>
 
     <div class="grid lg:grid-cols-2 gap-6 items-start" x-data="{ open: null, why: @js($why), show(k) { if (this.why[k]) this.open = k; } }">
         @foreach(['a' => [__('AKTİVLƏR'), $data['assets'], $data['assetsTotal']], 'l' => [__('PASSİVLƏR'), $data['liabilities'], $data['liabilitiesTotal']]] as $side => [$heading, $ls, $total])

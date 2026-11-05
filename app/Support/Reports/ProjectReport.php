@@ -158,7 +158,7 @@ class ProjectReport
                     $c = num((float) $r['I']).' '.($r['logCur'] ?? 'AZN').' × '.rate_fmt((float) $rate).' CBAR ('.__('proqnoz').')';
                 }
             }
-            $cf = $r['AX'] !== null ? num((float) $r['AX']).' '.$r['axCur'].' × '.rate_fmt((float) $r['BA']).' '.__('bank').' ('.__('ödənilib').')' : __('logistika ödənişi yoxdur');
+            $cf = $r['AX'] !== null ? num((float) $r['AX']).' '.$r['axCur'].' × '.rate_fmt((float) $r['BA']).' ('.__('ödəniş günü, ödənilib').')' : __('logistika ödənişi yoxdur');
             $rows[] = ['t' => __('Logistika'), 'c' => $c, 'cf' => $acted ? $cf : null, 'v' => -round($logistics, 2), 'f' => ($f = $fact($r['BC'])) === null ? null : -$f];
             if ($acted && abs((float) $r['BB']) >= 0.005) {
                 $rows[] = ['t' => __('Logistika komissiyası'), 'c' => __('proqnozda yoxdur'), 'cf' => __('bankın tutduğu'), 'v' => 0.0, 'f' => -round((float) $r['BB'], 2)];

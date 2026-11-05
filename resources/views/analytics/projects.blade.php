@@ -16,6 +16,15 @@
         $n = fn ($v) => abs((float) $v) < 0.005 ? '—' : ((float) $v < 0 ? '−' : '').num(abs((float) $v));
         $pct = fn ($v) => $v === null ? '—' : num($v, 1).'%';
         $t = $data['total'];
+        // what each operation-day figure is made of: opened on a click
+        $why = [];
+        foreach (array_merge(array_merge([], ...array_column($data['projects'], 'trades')), $data['open']) as $tr) {
+            if ($tr['opWhy'] ?? null) {
+                $why['op|'.$tr['code']] = $tr['opWhy'];
+            }
+        }
+        $tip = fn (string $key) => 'role="button" tabindex="0" @click="show(\''.$key.'\')" @keydown.enter="show(\''.$key.'\')"';
+        $click = 'cursor-pointer hover:underline decoration-dotted underline-offset-4';
     @endphp
 
     <form method="GET" action="{{ route('analytics.show', 'projects') }}" class="card p-4 mb-6 flex flex-wrap items-end gap-3">
@@ -63,6 +72,9 @@
         </div>
     @endif
 
+    <div x-data="{ open: null, why: @js($why), show(k) { if (this.why[k]) this.open = k; },
+                   sign(v) { return v === null || v === undefined ? '—' : (v < 0 ? '−' : (v > 0 ? '+' : '')) + glaustFmt.fmt(Math.abs(v), 2); },
+                   diff(f, v) { return f === null || f === undefined || v === null || v === undefined ? null : Math.round((f - v) * 100) / 100; } }">
     @forelse($data['projects'] as $p)
         <section class="card overflow-hidden mb-6">
             <header class="px-5 py-4 border-b border-line flex flex-wrap items-center justify-between gap-3">
@@ -100,7 +112,7 @@
                                 <td data-label="{{ __('Fərq') }}" @class(['num font-semibold', 'text-success' => ($tr['diff'] ?? 0) > 0, 'text-danger' => ($tr['diff'] ?? 0) < 0])>{{ $tr['diff'] === null ? '—' : ($tr['diff'] > 0 ? '+' : '').$n($tr['diff']) }}</td>
                             @endif
                             @if($operation)
-                                <td data-label="{{ __('Əməliyyat tarixinə') }}" class="num text-brand-ink">{{ $tr['op'] === null ? '—' : $n($tr['op']) }}@if($tr['opDay'])<div class="text-[11px] text-faint">{{ azdate($tr['opDay']) }}</div>@endif</td>
+                                <td data-label="{{ __('Əməliyyat tarixinə') }}" class="num text-brand-ink {{ $click }}" {!! $tip('op|'.$tr['code']) !!} title="{{ __('Necə hesablandı — toxunun') }}">{{ $tr['op'] === null ? '—' : $n($tr['op']) }}@if($tr['opDay'])<div class="text-[11px] text-faint">{{ azdate($tr['opDay']) }}</div>@endif</td>
                                 <td data-label="{{ __('Fərq') }}" @class(['num font-semibold', 'text-success' => ($tr['opDiff'] ?? 0) > 0, 'text-danger' => ($tr['opDiff'] ?? 0) < 0])>{{ $tr['opDiff'] === null ? '—' : ($tr['opDiff'] > 0 ? '+' : '').$n($tr['opDiff']) }}</td>
                             @endif
                             <td data-label="{{ __('Alıcıdan daxil olub') }}" class="num text-xs">{{ money($tr['received'], $tr['saleCur'] ?? 'AZN') }}<div class="text-faint">/ {{ money($tr['sold'], $tr['saleCur'] ?? 'AZN') }}</div></td>
@@ -143,7 +155,7 @@
                         <tr>
                             <td data-label="Trade"><a href="{{ $tr['url'] }}" class="font-mono text-xs text-brand-ink hover:underline">{{ $tr['code'] }}</a><div class="text-[11px] text-muted">{{ $tr['title'] }}</div></td>
                             <td data-label="{{ __('Layihə') }}">{{ $tr['project'] }}</td>
-                            @if($operation)<td data-label="{{ __('Əməliyyat tarixinə mənfəət') }}" class="num text-brand-ink">{{ $tr['op'] === null ? '—' : $n($tr['op']) }}@if($tr['opDay'])<div class="text-[11px] text-faint">{{ azdate($tr['opDay']) }}</div>@endif</td>@endif
+                            @if($operation)<td data-label="{{ __('Əməliyyat tarixinə mənfəət') }}" class="num text-brand-ink {{ $click }}" {!! $tip('op|'.$tr['code']) !!} title="{{ __('Necə hesablandı — toxunun') }}">{{ $tr['op'] === null ? '—' : $n($tr['op']) }}@if($tr['opDay'])<div class="text-[11px] text-faint">{{ azdate($tr['opDay']) }}</div>@endif</td>@endif
                             <td data-label="{{ __('Alıcıdan daxil olub') }}" class="num text-xs">{{ money($tr['received'], $tr['saleCur'] ?? 'AZN') }}<div class="text-faint">/ {{ money($tr['sold'], $tr['saleCur'] ?? 'AZN') }}</div></td>
                             <td data-label="{{ __('Satıcıya ödənilib') }}" class="num text-xs">{{ money($tr['paid'], $tr['cur'] ?? 'AZN') }}<div class="text-faint">/ {{ money($tr['bought'], $tr['cur'] ?? 'AZN') }}</div></td>
                         </tr>
@@ -153,4 +165,40 @@
             </div>
         </section>
     @endif
+        {{-- the figure's make-up --}}
+        <div x-cloak x-show="open" class="fixed inset-0 z-[75] grid place-items-center p-4" role="dialog" aria-modal="true" @keydown.escape.window="open = null">
+            <div class="absolute inset-0 bg-night/50 backdrop-blur-sm" @click="open = null"></div>
+            <template x-if="open">
+                <div class="relative card w-full max-w-4xl max-h-[88vh] flex flex-col overflow-hidden">
+                    <header class="flex items-start justify-between gap-4 px-5 py-4 border-b border-line">
+                        <div class="min-w-0">
+                            <div class="text-[11px] uppercase tracking-wider text-muted" x-text="why[open].s"></div>
+                            <h3 class="text-lg font-semibold" x-text="why[open].h"></h3>
+                        </div>
+                        <button type="button" class="btn btn-ghost btn-icon" @click="open = null" aria-label="{{ __('Bağla') }}"><x-icon name="x" class="size-5"/></button>
+                    </header>
+                    <div class="overflow-auto flex-1">
+                        <table class="table-g text-[13px]">
+                            <thead><tr><th>{{ __('Mənbə') }}</th><th class="!text-right">{{ __('Əməliyyat tarixinə') }}</th><th class="!text-right">{{ __('Fakt (aktdan sonra)') }}</th><th class="!text-right">{{ __('Fərq') }}</th></tr></thead>
+                            <tbody>
+                                <template x-for="(r, i) in why[open].rows" :key="i">
+                                    <tr>
+                                        <td class="font-medium" x-text="r.t"></td>
+                                        <td class="text-right"><div class="font-mono font-semibold whitespace-nowrap" :class="(r.v ?? 0) < 0 ? 'text-danger' : ''" x-text="sign(r.v)"></div><div class="font-mono text-[11px] text-muted" x-text="r.c || ''"></div></td>
+                                        <td class="text-right"><div class="font-mono font-semibold whitespace-nowrap" :class="(r.f ?? 0) < 0 ? 'text-danger' : ''" x-text="sign(r.f)"></div><div class="font-mono text-[11px] text-muted" x-text="r.cf || ''"></div></td>
+                                        <td class="num font-semibold whitespace-nowrap" :class="diff(r.f, r.v) > 0.004 ? 'text-success' : (diff(r.f, r.v) < -0.004 ? 'text-danger' : 'text-faint')" x-text="diff(r.f, r.v) === null ? '—' : (Math.abs(diff(r.f, r.v)) < 0.005 ? '0' : sign(diff(r.f, r.v)))"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                    <footer class="grid sm:grid-cols-3 gap-2 px-5 py-3 border-t border-line bg-surface-2 text-sm">
+                        <div>{{ __('Əməliyyat tarixinə') }}: <span class="font-mono font-semibold" x-text="sign(why[open].v)"></span></div>
+                        <div>{{ __('Fakt') }}: <span class="font-mono font-semibold" x-text="sign(why[open].f)"></span></div>
+                        <div class="sm:text-right">{{ __('Fərq (fakt − əməliyyat tarixinə)') }}: <span class="font-mono font-semibold" :class="(diff(why[open].f, why[open].v) ?? 0) < 0 ? 'text-danger' : 'text-success'" x-text="diff(why[open].f, why[open].v) === null ? '—' : sign(diff(why[open].f, why[open].v))"></span></div>
+                    </footer>
+                </div>
+            </template>
+        </div>
+    </div>
 </x-layouts.app>

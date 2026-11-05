@@ -50,12 +50,17 @@ class ProjectReport
             $day = $done ? $rs->max(fn ($r) => $r['BI']->format('Y-m-d')) : null;
             $saleCur = $rs->first()['saleCur'];
             $cur = $rs->first()['cur'];
-            $op = $operation ? $this->operation($rs) : null;
+            [$op, $opRows] = $operation ? $this->operation($rs) : [null, []];
             $trade = ['code' => $deal->code, 'url' => route('deals.show', $deal), 'title' => ($deal->supplier?->name ?? '—').' → '.($deal->counterparty?->name ?? '—'),
                 'invoices' => $rs->pluck('seller_no')->filter()->implode(', '), 'day' => $day,
                 'opDay' => $rs->max(fn ($r) => $r['X'] instanceof \DateTimeInterface ? $r['X']->format('Y-m-d') : null),
                 'sold' => (float) $rs->sum('H'), 'saleCur' => $saleCur, 'received' => (float) $deal->payments->where('currency', $saleCur)->sum('amount'),
-                'bought' => (float) $rs->sum('D'), 'cur' => $cur, 'paid' => (float) $deal->supplierPayments->sum('amount'), 'op' => $op];
+                'bought' => (float) $rs->sum('D'), 'cur' => $cur, 'paid' => (float) $deal->supplierPayments->sum('amount'), 'op' => $op,
+                // what the operation-day figure is made of (the page opens it on a click)
+                'opWhy' => $operation ? ['h' => 'Trade '.$deal->code.' · '.__('Əməliyyat tarixinə və fakt'),
+                    's' => __('əməliyyat').': '.($rs->max(fn ($r) => $r['X'] instanceof \DateTimeInterface ? $r['X']->format('Y-m-d') : null) ? azdate($rs->max(fn ($r) => $r['X'] instanceof \DateTimeInterface ? $r['X']->format('Y-m-d') : null)) : '—')
+                        .' · '.__('akt').': '.($day ? azdate($day) : __('hələ yoxdur')),
+                    'rows' => $opRows, 'v' => $op, 'f' => $done ? round((float) $rs->sum(fn ($r) => (float) ($r['BT'] ?? 0)), 2) : null] : null];
             if (! $done) {
                 $open[] = $trade + ['project' => $deal->project?->name ?? __('Layihəsiz')];
 
@@ -105,15 +110,39 @@ class ProjectReport
             'openOp' => $openOp ? ['sum' => round(array_sum($openOp), 2), 'count' => count($openOp)] : null];
     }
 
-    /** The Trade's profit on its operation day (see the class): null while the seller is unpaid or the sale has no rate. */
-    private function operation(\Illuminate\Support\Collection $rs): ?float
+    /**
+     * The Trade's profit on its operation day (see the class) and, line by line, what it is made of beside the fact after
+     * the act (BT) and the difference: [value, rows]. The sale, the purchase and the transfer fee are the same in both
+     * (CBAR of the seller's payment day); the logistics differ — the invoice's forecast against what was paid, and its fee.
+     * The value is null while the seller is unpaid or a rate is missing (the rows say what).
+     *
+     * @return array{0: ?float, 1: list<array{t: string, c: ?string, cf: ?string, v: ?float, f: ?float}>}
+     */
+    private function operation(\Illuminate\Support\Collection $rs): array
     {
         $sum = 0.0;
+        $rows = [];
+        $missing = false;
         foreach ($rs as $r) {
+            $inv = __('satıcı fakturası').' '.$r['seller_no'];
+            $acted = ! $r['provisional'] && $r['BI'] instanceof \DateTimeInterface;
+            $fact = fn ($v) => $acted && $v !== null ? round((float) $v, 2) : null;
             if ($r['AC'] === null || $r['AA'] === null) {
-                return null;
+                $rows[] = ['t' => $inv, 'c' => $r['AA'] === null ? __('satıcıya hələ ödənilməyib') : __('satışın kursu yoxdur'), 'cf' => null, 'v' => null, 'f' => null];
+                $missing = true;
+
+                continue;
             }
+            $same = fn (string $t, float $v, string $c) => ['t' => $t, 'c' => $c, 'cf' => $acted ? __('eyni') : null, 'v' => $v, 'f' => $acted ? $v : null];
+            $rows[] = $same(__('Satış').' · '.($r['buyer_no'] ? __('alıcı fakturası').' '.$r['buyer_no'] : $inv), round((float) $r['AC'], 2),
+                num((float) $r['H']).' '.$r['saleCur'].' × '.rate_fmt((float) $r['Z']).' CBAR');
+            $rows[] = $same(__('Alış').' · '.$inv, -round((float) $r['AA'], 2), num((float) $r['D']).' '.$r['cur'].' × '.rate_fmt((float) $r['Y']).' CBAR');
+            if (abs((float) ($r['AJ'] ?? 0)) >= 0.005) {
+                $rows[] = $same(__('Köçürmə komissiyası'), -round((float) $r['AJ'], 2), num((float) $r['J']).' '.$r['cur'].' × '.rate_fmt((float) $r['Y']).' CBAR');
+            }
+            // the logistics: the forecast on the operation day against what was paid
             $logistics = 0.0;
+            $c = __('fakturada logistika proqnozu yoxdur');
             if ($r['I'] !== null && (float) $r['I'] != 0.0) {
                 $rate = match (true) {
                     $r['logCur'] === null, $r['logCur'] === 'AZN' => 1.0,
@@ -122,14 +151,22 @@ class ProjectReport
                     default => $r['X'] instanceof \DateTimeInterface ? app(CurrencyRates::class)->tryRate($r['logCur'], $r['X']->format('Y-m-d')) : null,
                 };
                 if ($rate === null) {
-                    return null;
+                    $missing = true;
+                    $c = num((float) $r['I']).' '.$r['logCur'].' — '.__('kurs yoxdur');
+                } else {
+                    $logistics = (float) $r['I'] * (float) $rate;
+                    $c = num((float) $r['I']).' '.($r['logCur'] ?? 'AZN').' × '.rate_fmt((float) $rate).' CBAR ('.__('proqnoz').')';
                 }
-                $logistics = (float) $r['I'] * (float) $rate;
+            }
+            $cf = $r['AX'] !== null ? num((float) $r['AX']).' '.$r['axCur'].' × '.rate_fmt((float) $r['BA']).' '.__('bank').' ('.__('ödənilib').')' : __('logistika ödənişi yoxdur');
+            $rows[] = ['t' => __('Logistika'), 'c' => $c, 'cf' => $acted ? $cf : null, 'v' => -round($logistics, 2), 'f' => ($f = $fact($r['BC'])) === null ? null : -$f];
+            if ($acted && abs((float) $r['BB']) >= 0.005) {
+                $rows[] = ['t' => __('Logistika komissiyası'), 'c' => __('proqnozda yoxdur'), 'cf' => __('bankın tutduğu'), 'v' => 0.0, 'f' => -round((float) $r['BB'], 2)];
             }
             $sum += (float) $r['AC'] - (float) $r['AA'] - (float) ($r['AJ'] ?? 0) - $logistics;
         }
 
-        return round($sum, 2);
+        return [$missing ? null : round($sum, 2), $rows];
     }
 
     private static function margin(array $f): ?float

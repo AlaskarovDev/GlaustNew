@@ -89,6 +89,11 @@ class ProfitBalanceReportTest extends TestCase
         $this->assertSame('2025-01-07', $ot['opDay']);
         $this->assertSame(round($ot['profit'] - $ot['op'], 2), $ot['opDiff']);
         $this->assertNull($ot['fc'], 'the forecast is not asked for');
+        // its make-up, line by line beside the fact: the lines add up to each, the fact is the Trade's XALİS MƏNFƏƏT
+        $rows = $ot['opWhy']['rows'];
+        $this->assertEqualsWithDelta($ot['op'], array_sum(array_column($rows, 'v')), 0.02);
+        $this->assertEqualsWithDelta($ot['profit'], array_sum(array_column($rows, 'f')), 0.02);
+        $this->assertSame($ot['profit'], $ot['opWhy']['f']);
         $this->get(route('analytics.show', ['projects', 'from' => '2025-01', 'to' => '2025-01', 'op' => 1, 'forecast' => 1]))->assertOk()
             ->assertSee('Əməliyyat tarixinə mənfəət')->assertSee('Əməliyyat tarixini gizlət')->assertSee('Proqnozu gizlət');
         // the category page shows and keeps the line

@@ -37,6 +37,14 @@
                         <a href="{{ route('expenses.categories') }}" class="text-[11px] text-brand-ink hover:underline">{{ __('+ Kateqoriya əlavə et') }}</a>
                     </x-field>
                 </div>
+                <x-field :label="__('MZ sətri')" name="pl_line">
+                    <select name="pl_line" class="input @error('pl_line') is-invalid @enderror">
+                        <option value="">{{ __('— Kateqoriyaya görə —') }}</option>
+                        @foreach(\App\Support\Reports\ProfitLossReport::expenseFormLines() as $code => $plLabel)<option value="{{ $code }}" @selected($v('pl_line') === $code)>{{ $plLabel }}</option>@endforeach
+                        <option value="none" @selected($v('pl_line') === 'none')>— {{ __('MZ-yə daxil deyil') }}</option>
+                    </select>
+                    <span class="block text-[11px] text-muted mt-1">{{ __('Mənfəət və zərər hesabatında bu xərcin düşəcəyi sətir; boş — kateqoriyanın sətri') }}</span>
+                </x-field>
                 <x-field :label="__('Təsvir')" name="description" required><input name="description" value="{{ $v('description') }}" maxlength="255" placeholder="{{ __('Məs: Ofis icarəsi, oktyabr') }}" class="input @error('description') is-invalid @enderror" required></x-field>
                 <div class="grid sm:grid-cols-[1fr_140px] gap-4">
                     <x-field :label="__('Məbləğ')" name="amount" required><input name="amount" x-model="amount" inputmode="decimal" class="input font-mono text-right @error('amount') is-invalid @enderror" required></x-field>

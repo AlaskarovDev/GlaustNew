@@ -201,6 +201,7 @@ class ExpenseController extends Controller
         return $request->validate([
             'expense_date' => ['required', 'date'],
             'category_id' => ['nullable', 'integer', Rule::exists('categories', 'id')->where('company_id', tenant()->id)->where('scope', 'expense')],
+            'pl_line' => ['nullable', Rule::in([...array_keys(\App\Support\Reports\ProfitLossReport::expenseLines()), \App\Support\Reports\ProfitLossReport::NONE])],
             'description' => ['required', 'string', 'max:255'],
             'amount' => ['required', 'numeric', 'gt:0', 'max:999999999999'],
             'currency' => ['required', Rule::in(config('glaust.currencies'))],

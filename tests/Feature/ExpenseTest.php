@@ -117,4 +117,16 @@ class ExpenseTest extends TestCase
             ->assertSee('Hesablanıb')->assertDontSee('>Ödə<', false);
         $this->get(route('expenses.edit', $e))->assertOk()->assertSee('Hesablanıb');
     }
+
+    public function test_an_expense_of_its_own_mz_line(): void
+    {
+        [$admin] = $this->world();
+        $this->get(route('expenses.create'))->assertOk()->assertSee('MZ sətri')->assertSee('232.1.003');
+        $this->post(route('expenses.store'), $this->base(['status' => 'accrued', 'amount' => '500', 'pl_line' => '232.1']))->assertSessionHasNoErrors();
+        $this->post(route('expenses.store'), $this->base(['status' => 'accrued', 'pl_line' => '999']))->assertSessionHasErrors('pl_line');
+        $m = today()->subDays(3)->format('Y-m');
+        $pl = $this->inTenant($admin, fn () => (new \App\Support\Reports\ProfitLossReport)->build($m, $m));
+        $this->assertSame(500.0, $pl['lines']['232.1']['total']);
+        $this->assertSame(500.0, $pl['subs']['232.1']['232.1.003']['total'], 'on 232.1 — its «Digər» sub-line');
+    }
 }

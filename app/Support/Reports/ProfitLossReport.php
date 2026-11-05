@@ -56,6 +56,27 @@ class ProfitLossReport
     /** The founders' dividend: this share of the net profit (after the 20 % tax), as the MZ sheet takes it. */
     public const DIVIDEND = 0.05;
 
+    /** The lines an expense of its own can be put on, as the form lists them: 232.1 is its «Digər» sub-line (232.1.003). */
+    public static function expenseFormLines(): array
+    {
+        $out = [];
+        foreach (self::expenseLines() as $code => [$label]) {
+            $out[$code] = $code === '232.1' ? '232.1.003 · '.__('Digər').' — '.$label : $code.' · '.$label;
+        }
+
+        return $out;
+    }
+
+    /** An expense's line: its own «MZ sətri», else its category's. */
+    public static function lineOfExpense(Expense $e): ?string
+    {
+        return match (true) {
+            $e->pl_line === self::NONE => null,
+            $e->pl_line !== null && isset(self::lines()[$e->pl_line]) => $e->pl_line,
+            default => self::lineOf($e->category),
+        };
+    }
+
     /** «MZ sətri» of a category that stays out of the report. */
     public const NONE = 'none';
 
@@ -155,7 +176,7 @@ class ProfitLossReport
         // the day is stored with its time (00:00:00): «≤ the last day» needs the end of that day, or its expenses drop out
         foreach (Expense::with('category')->whereBetween('expense_date', [$from1, $end.' 23:59:59'])->when($filtered, $scope)->get() as $e) {
             $azn = (float) ($e->amount_azn ?? $e->amount);
-            $add(self::lineOf($e->category), $e->expense_date->format('Y-m-d'), $azn,
+            $add(self::lineOfExpense($e), $e->expense_date->format('Y-m-d'), $azn,
                 ['t' => ($e->category?->name ?? __('Xərc')).' · '.$e->description, 'c' => num((float) $e->amount).' '.$e->currency, 'u' => route('expenses.edit', $e)]);
         }
 

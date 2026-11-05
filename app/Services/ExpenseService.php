@@ -29,7 +29,7 @@ class ExpenseService
 
         $rate = $this->rates->tryRate($data['currency'], $data['expense_date']);
         $values = [
-            'expense_date' => $data['expense_date'], 'category_id' => $data['category_id'] ?? null, 'description' => $data['description'],
+            'expense_date' => $data['expense_date'], 'category_id' => $data['category_id'] ?? null, 'pl_line' => $data['pl_line'] ?? null, 'description' => $data['description'],
             'amount' => round((float) $data['amount'], 2), 'currency' => $data['currency'],
             'cbar_rate' => $rate, 'amount_azn' => $rate === null ? null : round((float) $data['amount'] * $rate, 2),
             'counterparty_id' => $data['counterparty_id'] ?? null, 'project_id' => $data['project_id'] ?? null, 'deal_id' => $data['deal_id'] ?? null,

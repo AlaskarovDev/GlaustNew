@@ -38,6 +38,12 @@ class ProfitBalanceReportTest extends TestCase
         // the sale and its cost at CBAR of the act day (28.01), as the sheet's «test» page sums them
         $this->assertSame(round(9898036.68 * 0.017487, 2), $l('217.2'));
         $this->assertEqualsWithDelta(73644.80 * 1.7739 + 979732.68 * 0.017487, $l('232.1'), 0.02, 'purchase + logistics at the act day');
+        // 232.1 split: the purchase, the logistics, the rest — adding up to the line
+        $sub = fn ($c) => $d['subs']['232.1'][$c]['values']['2025-01'];
+        $this->assertEqualsWithDelta(73644.80 * 1.7739, $sub('232.1.001'), 0.02);
+        $this->assertEqualsWithDelta(979732.68 * 0.017487, $sub('232.1.002'), 0.02);
+        $this->assertSame(0.0, $sub('232.1.003'));
+        $this->assertSame($l('232.1'), round($sub('232.1.001') + $sub('232.1.002') + $sub('232.1.003'), 2));
         // expenses on their lines
         $this->assertSame([728.0, 208.0, 32.0, 1600.0], [$l('221.1.2'), $l('221.2'), $l('230.2'), $l('232')]);
         $this->assertSame(round(613.68 + 915.48 + 30 + 5, 2), $l('221.13'), 'Kurs fərqi + the bank fee + the category put on 221.13');
@@ -62,7 +68,7 @@ class ProfitBalanceReportTest extends TestCase
 
         $this->actingAs($admin);
         $this->get(route('analytics.show', ['profit', 'from' => '2025-01', 'to' => '2025-01']))->assertOk()
-            ->assertSee('HESABAT DÖVRÜNDƏ MƏNFƏƏT (ZƏRƏR)')->assertSee('Dividend 5%')->assertSee('Tam xalis mənfəət')->assertSee('217.2')->assertSee('AR hüdudlarından kənarda əldə edilmiş gəlirlər')->assertSee(num($l('217.2')));
+            ->assertSee('HESABAT DÖVRÜNDƏ MƏNFƏƏT (ZƏRƏR)')->assertSee('Dividend 5%')->assertSee('Tam xalis mənfəət')->assertSee('232.1.002')->assertSee('217.2')->assertSee('AR hüdudlarından kənarda əldə edilmiş gəlirlər')->assertSee(num($l('217.2')));
         $this->assertStringContainsString('spreadsheetml', $this->get(route('analytics.show', ['profit', 'from' => '2025-01', 'to' => '2025-01', 'format' => 'xlsx']))->headers->get('content-type'));
         $this->get(route('analytics.show', ['profit', 'from' => '2025-01', 'to' => '2025-01', 'deal_id' => $deal->id]))->assertOk()->assertSee(num($l('217.2')));
         $this->get(route('analytics.show', ['cashflow', 'from' => '2024-12', 'to' => '2025-02', 'deal_id' => $deal->id]))->assertOk();

@@ -26,6 +26,14 @@
             }
             $why["{$code}|all"] = ['h' => $code.' · '.$l['label'], 's' => $period, 'rows' => collect(array_merge([], ...array_values($l['items'])))->sortBy('s')->values()->all(), 'v' => $l['total']];
         }
+        foreach ($data['subs'] as $parent => $subLines) {
+            foreach ($subLines as $code => $l) {
+                foreach ($months as $m) {
+                    $why["{$code}|{$m}"] = ['h' => $code.' · '.$l['label'], 's' => $label($m), 'rows' => collect($l['items'][$m] ?? [])->sortBy('s')->values()->all(), 'v' => $l['values'][$m]];
+                }
+                $why["{$code}|all"] = ['h' => $code.' · '.$l['label'], 's' => $period, 'rows' => collect(array_merge([], ...array_values($l['items'])))->sortBy('s')->values()->all(), 'v' => $l['total']];
+            }
+        }
         $tip = fn (string $key) => 'role="button" tabindex="0" @click="show(\''.$key.'\')" @keydown.enter="show(\''.$key.'\')"';
         $click = 'cursor-pointer hover:underline decoration-dotted underline-offset-4';
         $result = $sum($data['result']);
@@ -82,6 +90,20 @@
                                 <td @class(['px-4 py-2 text-right font-mono tabular-nums font-semibold border-b border-line bg-surface-2/60', 'text-danger' => $l['total'] < -0.005, $click => abs($l['total']) >= 0.005])
                                     @if(abs($l['total']) >= 0.005) {!! $tip("$code|all") !!} @endif>{{ $n($l['total']) }}</td>
                             </tr>
+                            {{-- its sub-lines (232.1: purchase, logistics, other): they add up to the line above --}}
+                            @foreach($data['subs'][$code] ?? [] as $subCode => $sl)
+                                <tr class="group text-ink-2">
+                                    <td class="sticky left-0 z-10 bg-surface group-hover:bg-surface-2 pl-6 pr-3 py-1.5 border-b border-line/60 font-mono text-[11px] text-faint">{{ $subCode }}</td>
+                                    <td class="pl-8 pr-4 py-1.5 border-b border-line/60 group-hover:bg-surface-2 text-[12px]">↳ {{ $sl['label'] }}</td>
+                                    @foreach($months as $m)
+                                        @php $v = $sl['values'][$m]; @endphp
+                                        <td @class(['px-4 py-1.5 text-right font-mono tabular-nums text-[12px] border-b border-line/60 group-hover:bg-surface-2', 'text-faint' => abs($v) < 0.005, 'text-danger' => $v < -0.005, $click => abs($v) >= 0.005])
+                                            @if(abs($v) >= 0.005) {!! $tip("$subCode|$m") !!} @endif>{{ $n($v) }}</td>
+                                    @endforeach
+                                    <td @class(['px-4 py-1.5 text-right font-mono tabular-nums text-[12px] border-b border-line/60 bg-surface-2/40', $click => abs($sl['total']) >= 0.005])
+                                        @if(abs($sl['total']) >= 0.005) {!! $tip("$subCode|all") !!} @endif>{{ $n($sl['total']) }}</td>
+                                </tr>
+                            @endforeach
                         @endforeach
                         <tr class="{{ $bg }} font-semibold">
                             <td class="sticky left-0 z-10 {{ $bg }} px-3 py-2.5"></td>

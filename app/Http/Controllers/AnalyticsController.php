@@ -201,6 +201,9 @@ class AnalyticsController extends Controller
             foreach ($data['lines'] as $code => $l) {
                 if ($l['side'] === 'out') {
                     $rows[] = $line($code, $l['label'], $l['values']);
+                    foreach ($data['subs'][$code] ?? [] as $subCode => $sl) {
+                        $rows[] = $line($subCode, '   '.$sl['label'], $sl['values']);
+                    }
                 }
             }
             $rows[] = $line('', __('CƏMİ'), $data['out']);

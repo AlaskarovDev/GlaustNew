@@ -196,10 +196,34 @@ class ProfitLossReport
             $retained[$m] = round($net[$m] - $dividend[$m], 2);
         }
         $netTotal = round(round(array_sum($result), 2) - $taxTotal, 2);
+
+        // 232.1 by what it is made of: the purchase, the logistics, the rest (expenses put on 232.1, MZ düzəlişləri);
+        // the sub-lines add up to the line (a rounding qəpik goes to the purchase)
+        $kinds = ['232.1.001' => [__('Alış (satıcıdan)'), ' · '.__('alış')], '232.1.002' => [__('Logistika'), ' · '.__('logistika')], '232.1.003' => [__('Digər'), null]];
+        $subs = [];
+        foreach ($kinds as $code => [$label]) {
+            $subs[$code] = ['label' => $label, 'values' => array_fill_keys($months, 0.0), 'items' => [], 'total' => 0.0];
+        }
+        foreach ($lines['232.1']['items'] as $m => $items) {
+            foreach ($items as $i) {
+                $code = str_ends_with($i['t'], $kinds['232.1.001'][1]) ? '232.1.001' : (str_ends_with($i['t'], $kinds['232.1.002'][1]) ? '232.1.002' : '232.1.003');
+                $subs[$code]['values'][$m] += $i['v'];
+                $subs[$code]['items'][$m][] = $i;
+            }
+        }
+        foreach ($months as $m) {
+            $rest = round($lines['232.1']['values'][$m] - array_sum(array_map(fn ($s) => $s['values'][$m], $subs)), 2);
+            $subs['232.1.001']['values'][$m] += $rest;
+        }
+        foreach ($subs as &$s) {
+            $s['values'] = array_map(fn ($v) => round($v, 2), $s['values']);
+            $s['total'] = round(array_sum($s['values']), 2);
+        }
+        unset($s);
         $dividendTotal = round($netTotal * self::DIVIDEND, 2);
 
         return ['months' => $months, 'lines' => $lines, 'in' => $in, 'out' => $out, 'result' => $result, 'tax' => $tax, 'taxTotal' => $taxTotal,
-            'net' => $net, 'netTotal' => $netTotal, 'dividend' => $dividend, 'dividendTotal' => $dividendTotal,
+            'subs' => ['232.1' => $subs], 'net' => $net, 'netTotal' => $netTotal, 'dividend' => $dividend, 'dividendTotal' => $dividendTotal,
             'retained' => $retained, 'retainedTotal' => round($netTotal - $dividendTotal, 2)];
     }
 }

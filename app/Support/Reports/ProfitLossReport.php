@@ -53,6 +53,9 @@ class ProfitLossReport
         return array_filter(self::lines(), fn ($l) => $l[1] === 'out');
     }
 
+    /** The founders' dividend: this share of the net profit (after the 20 % tax), as the MZ sheet takes it. */
+    public const DIVIDEND = 0.05;
+
     /** «MZ sətri» of a category that stays out of the report. */
     public const NONE = 'none';
 
@@ -185,7 +188,18 @@ class ProfitLossReport
 
         // the period's tax from the period's result (as the MZ sheet does), not the sum of the months' rounded taxes
         $taxTotal = round(round(array_sum($result), 2) * 0.2, 2);
+        // as the MZ sheet goes on: the net profit after the tax, the founders' dividend of 5 % of it, what is left
+        $net = $dividend = $retained = [];
+        foreach ($months as $m) {
+            $net[$m] = round($result[$m] - $tax[$m], 2);
+            $dividend[$m] = round($net[$m] * self::DIVIDEND, 2);
+            $retained[$m] = round($net[$m] - $dividend[$m], 2);
+        }
+        $netTotal = round(round(array_sum($result), 2) - $taxTotal, 2);
+        $dividendTotal = round($netTotal * self::DIVIDEND, 2);
 
-        return ['months' => $months, 'lines' => $lines, 'in' => $in, 'out' => $out, 'result' => $result, 'tax' => $tax, 'taxTotal' => $taxTotal];
+        return ['months' => $months, 'lines' => $lines, 'in' => $in, 'out' => $out, 'result' => $result, 'tax' => $tax, 'taxTotal' => $taxTotal,
+            'net' => $net, 'netTotal' => $netTotal, 'dividend' => $dividend, 'dividendTotal' => $dividendTotal,
+            'retained' => $retained, 'retainedTotal' => round($netTotal - $dividendTotal, 2)];
     }
 }

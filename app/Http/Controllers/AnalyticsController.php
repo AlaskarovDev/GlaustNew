@@ -206,6 +206,9 @@ class AnalyticsController extends Controller
             $rows[] = $line('', __('CƏMİ'), $data['out']);
             $rows[] = $line('', __('HESABAT DÖVRÜNDƏ MƏNFƏƏT (ZƏRƏR)'), $data['result']);
             $rows[] = $line('', __('MV 20%'), $data['tax'], $data['taxTotal']);
+            $rows[] = $line('', __('Xalis mənfəət'), $data['net'], $data['netTotal']);
+            $rows[] = $line('', __('Dividend 5%'), $data['dividend'], $data['dividendTotal']);
+            $rows[] = $line('', __('Tam xalis mənfəət'), $data['retained'], $data['retainedTotal']);
             $cols = [Column::make(__('Hesab №-si'), 'code', 'text', 10), Column::make(__('Gəlir-Xərc maddələri'), 'name', 'text', 60)];
             foreach ($data['months'] as $m) {
                 $cols[] = Column::make($label($m), fn ($r) => $r[$m] ?? null, 'money');

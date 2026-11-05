@@ -48,6 +48,10 @@ class ProfitBalanceReportTest extends TestCase
         $this->assertSame(round($d['in']['2025-01'] - $d['out']['2025-01'], 2), $d['result']['2025-01']);
         $this->assertSame(round($d['result']['2025-01'] * 0.2, 2), $d['tax']['2025-01']);
         $this->assertSame(round(array_sum($d['result']) * 0.2, 2), $d['taxTotal'], 'the period\'s tax from its result');
+        // the sheet goes on: net = profit − MV 20 %, dividend 5 % of it, what is left
+        $this->assertSame(round(array_sum($d['result']) - $d['taxTotal'], 2), $d['netTotal']);
+        $this->assertSame(round($d['netTotal'] * 0.05, 2), $d['dividendTotal']);
+        $this->assertSame(round($d['netTotal'] - $d['dividendTotal'], 2), $d['retainedTotal']);
         $this->assertNotEmpty($d['lines']['217.2']['items']['2025-01'], 'each figure carries what it is made of');
         // a Trade / project filter: its sale and costs, not the company's own expenses
         $f = $this->inTenant($admin, fn () => (new ProfitLossReport)->build('2025-01', '2025-01', null, $deal->id));
@@ -58,7 +62,7 @@ class ProfitBalanceReportTest extends TestCase
 
         $this->actingAs($admin);
         $this->get(route('analytics.show', ['profit', 'from' => '2025-01', 'to' => '2025-01']))->assertOk()
-            ->assertSee('HESABAT DÖVRÜNDƏ MƏNFƏƏT (ZƏRƏR)')->assertSee('217.2')->assertSee('AR hüdudlarından kənarda əldə edilmiş gəlirlər')->assertSee(num($l('217.2')));
+            ->assertSee('HESABAT DÖVRÜNDƏ MƏNFƏƏT (ZƏRƏR)')->assertSee('Dividend 5%')->assertSee('Tam xalis mənfəət')->assertSee('217.2')->assertSee('AR hüdudlarından kənarda əldə edilmiş gəlirlər')->assertSee(num($l('217.2')));
         $this->assertStringContainsString('spreadsheetml', $this->get(route('analytics.show', ['profit', 'from' => '2025-01', 'to' => '2025-01', 'format' => 'xlsx']))->headers->get('content-type'));
         $this->get(route('analytics.show', ['profit', 'from' => '2025-01', 'to' => '2025-01', 'deal_id' => $deal->id]))->assertOk()->assertSee(num($l('217.2')));
         $this->get(route('analytics.show', ['cashflow', 'from' => '2024-12', 'to' => '2025-02', 'deal_id' => $deal->id]))->assertOk();

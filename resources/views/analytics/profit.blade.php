@@ -49,6 +49,11 @@
         <div class="card p-5" style="--i:2"><div class="text-xs text-muted">{{ __('Mənfəət (zərər)') }}</div><div @class(['mt-1 text-2xl font-semibold font-mono tabular-nums', 'text-success' => $result > 0, 'text-danger' => $result < 0])>{{ money($result) }}</div><div class="text-[11px] text-faint">{{ __('gəlirlər − xərclər') }}</div></div>
         <div class="card p-5" style="--i:3"><div class="text-xs text-muted">{{ __('MV 20%') }}</div><div class="mt-1 text-2xl font-semibold font-mono tabular-nums">{{ money($data['taxTotal']) }}</div><div class="text-[11px] text-faint">{{ __('mənfəət × 20%') }}</div></div>
     </div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 stagger">
+        <div class="card p-5" style="--i:4"><div class="text-xs text-muted">{{ __('Xalis mənfəət') }}</div><div @class(['mt-1 text-2xl font-semibold font-mono tabular-nums', 'text-success' => $data['netTotal'] > 0, 'text-danger' => $data['netTotal'] < 0])>{{ money($data['netTotal']) }}</div><div class="text-[11px] text-faint">{{ __('mənfəət − MV 20%') }}</div></div>
+        <div class="card p-5" style="--i:5"><div class="text-xs text-muted">{{ __('Dividend 5%') }}</div><div class="mt-1 text-2xl font-semibold font-mono tabular-nums">{{ money($data['dividendTotal']) }}</div><div class="text-[11px] text-faint">{{ __('xalis mənfəət × 5%') }}</div></div>
+        <div class="card p-5 border-brand/40" style="--i:6"><div class="text-xs text-muted">{{ __('Tam xalis mənfəət') }}</div><div @class(['mt-1 text-2xl font-semibold font-mono tabular-nums', 'text-success' => $data['retainedTotal'] > 0, 'text-danger' => $data['retainedTotal'] < 0])>{{ money($data['retainedTotal']) }}</div><div class="text-[11px] text-faint">{{ __('xalis mənfəət − dividend') }}</div></div>
+    </div>
 
     <section class="card overflow-hidden" x-data="{ open: null, why: @js($why), show(k) { if (this.why[k]) this.open = k; } }">
         <div class="overflow-auto max-h-[80vh]">
@@ -98,6 +103,14 @@
                         @foreach($months as $m)<td class="px-4 py-2 text-right font-mono tabular-nums text-muted">{{ $n($data['tax'][$m]) }}</td>@endforeach
                         <td class="px-4 py-2 text-right font-mono tabular-nums text-muted">{{ $n($data['taxTotal']) }}</td>
                     </tr>
+                    @foreach([[__('Xalis mənfəət'), 'net', 'netTotal', 'font-semibold'], [__('Dividend 5%'), 'dividend', 'dividendTotal', 'text-muted'], [__('Tam xalis mənfəət'), 'retained', 'retainedTotal', 'font-semibold']] as [$rowLabel, $key, $totalKey, $cls])
+                        <tr>
+                            <td class="sticky left-0 z-10 bg-surface px-3 py-2"></td>
+                            <td class="px-4 py-2 {{ $cls }}">{{ $rowLabel }}</td>
+                            @foreach($months as $m)<td class="px-4 py-2 text-right font-mono tabular-nums {{ $cls }}">{{ $n($data[$key][$m]) }}</td>@endforeach
+                            <td class="px-4 py-2 text-right font-mono tabular-nums {{ $cls }}">{{ $n($data[$totalKey]) }}</td>
+                        </tr>
+                    @endforeach
                 </tbody>
             </table>
         </div>

@@ -94,6 +94,14 @@ class ProfitBalanceReportTest extends TestCase
         $this->assertEqualsWithDelta($ot['op'], array_sum(array_column($rows, 'v')), 0.02);
         $this->assertEqualsWithDelta($ot['profit'], array_sum(array_column($rows, 'f')), 0.02);
         $this->assertSame($ot['profit'], $ot['opWhy']['f']);
+        // «Kurs fərqi çıxılmaqla»: the bank's exchange result taken off the fact and the operation day alike; how it arose, line by line
+        $nx = $this->inTenant($admin, fn () => (new \App\Support\Reports\ProjectReport)->build('2025-01-01', '2025-01-31', null, false, true, true));
+        $nt = $nx['projects'][0]['trades'][0];
+        $this->assertEqualsWithDelta($ot['profit'] - $ot['fx'], $nt['profit'], 0.01);
+        $this->assertEqualsWithDelta($ot['op'] - $ot['fx'], $nt['op'], 0.01);
+        $this->assertSame($ot['opDiff'], $nt['opDiff'], 'the same taken off both: the difference stays');
+        $this->assertEqualsWithDelta(-$ot['fx'], array_sum(array_column($ot['fxWhy']['rows'], 'v')), 0.02);
+        $this->get(route('analytics.show', ['projects', 'from' => '2025-01', 'to' => '2025-01', 'op' => 1, 'fx' => 1]))->assertOk()->assertSee('Kurs fərqi çıxılmadan göstər')->assertSee('kurs fərqi çıxılmaqla');
         $this->get(route('analytics.show', ['projects', 'from' => '2025-01', 'to' => '2025-01', 'op' => 1, 'forecast' => 1]))->assertOk()
             ->assertSee('Əməliyyat tarixinə mənfəət')->assertSee('Əməliyyat tarixini gizlət')->assertSee('Proqnozu gizlət');
         // the category page shows and keeps the line

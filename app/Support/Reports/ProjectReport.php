@@ -12,6 +12,8 @@ use App\Services\Cbar\CurrencyRates;
  *   (AL + AM) are shown beside it, not taken off — the MZ books them as a bank expense (221.13), not as the Trade's;
  *   the money: received from the buyer (in the sale currency) and paid to the seller (in the purchase currency).
  * Trades without an act yet are «açıq»: shown with their money only.
+ * $netFx — «Kurs fərqi çıxılmaqla»: the Trade's bank exchange result (AL + AM, the bank's rates against CBAR when the
+ * rouble is sold and the euro bought) taken off every profit — the fact, the forecast, the operation day alike.
  * Beside the fact, on request, and the difference (fact − it); null — not computable for the Trade:
  *   fc — «Proqnozla»: every rate the forecast of the invoice (the RUB conversion's forecast EUR / RUB — TradeReport's
  *        «Proqnoz üzrə bax»: real amounts, dates and fees);
@@ -21,7 +23,7 @@ use App\Services\Cbar\CurrencyRates;
 class ProjectReport
 {
     /** @return array{projects: list<array>, open: list<array>, total: array} */
-    public function build(string $from, string $to, ?int $projectId = null, bool $forecast = false, bool $operation = false): array
+    public function build(string $from, string $to, ?int $projectId = null, bool $forecast = false, bool $operation = false, bool $netFx = false): array
     {
         $deals = Deal::with(['project:id,code,name', 'supplier:id,name', 'counterparty:id,name', 'payments', 'supplierPayments'])
             ->when($projectId, fn ($q) => $q->where('project_id', $projectId))->get();
@@ -51,6 +53,12 @@ class ProjectReport
             $saleCur = $rs->first()['saleCur'];
             $cur = $rs->first()['cur'];
             [$op, $opRows] = $operation ? $this->operation($rs) : [null, []];
+            // the bank's exchange result of the Trade, line by line (opened on a click), and — asked — taken off every profit
+            [$fxAmt, $fxRows] = $this->exchange($rs);
+            if ($netFx) {
+                $op = $op === null ? null : round($op - $fxAmt, 2);
+                $opRows[] = ['t' => __('Bank kurs fərqi'), 'c' => __('rubl satışı / avro alışı, bank − CBAR'), 'cf' => $done ? __('eyni') : null, 'v' => -$fxAmt, 'f' => $done ? -$fxAmt : null];
+            }
             $trade = ['code' => $deal->code, 'url' => route('deals.show', $deal), 'title' => ($deal->supplier?->name ?? '—').' → '.($deal->counterparty?->name ?? '—'),
                 'invoices' => $rs->pluck('seller_no')->filter()->implode(', '), 'day' => $day,
                 'opDay' => $rs->max(fn ($r) => $r['X'] instanceof \DateTimeInterface ? $r['X']->format('Y-m-d') : null),
@@ -60,7 +68,8 @@ class ProjectReport
                 'opWhy' => $operation ? ['h' => 'Trade '.$deal->code.' · '.__('Əməliyyat tarixinə və fakt'),
                     's' => __('əməliyyat').': '.($rs->max(fn ($r) => $r['X'] instanceof \DateTimeInterface ? $r['X']->format('Y-m-d') : null) ? azdate($rs->max(fn ($r) => $r['X'] instanceof \DateTimeInterface ? $r['X']->format('Y-m-d') : null)) : '—')
                         .' · '.__('akt').': '.($day ? azdate($day) : __('hələ yoxdur')),
-                    'rows' => $opRows, 'v' => $op, 'f' => $done ? round((float) $rs->sum(fn ($r) => (float) ($r['BT'] ?? 0)), 2) : null] : null];
+                    'rows' => $opRows, 'v' => $op, 'f' => $done ? round((float) $rs->sum(fn ($r) => (float) ($r['BT'] ?? 0)) - ($netFx ? $fxAmt : 0), 2) : null] : null,
+                'fxWhy' => ['kind' => 'fx', 'h' => 'Trade '.$deal->code.' · '.__('Bank kurs fərqi necə yarandı'), 's' => __('bankın kursu ilə CBAR arasındakı fərq'), 'rows' => $fxRows, 'v' => -$fxAmt]];
             if (! $done) {
                 $open[] = $trade + ['project' => $deal->project?->name ?? __('Layihəsiz')];
 
@@ -71,12 +80,12 @@ class ProjectReport
             }
             $f = ['revenue' => (float) $rs->sum('AC'), 'purchase' => (float) $rs->sum('AA'), 'logistics' => (float) $rs->sum(fn ($r) => (float) ($r['BC'] ?? 0)),
                 'fees' => (float) $rs->sum(fn ($r) => (float) ($r['AJ'] ?? 0) + (float) ($r['BB'] ?? 0)), 'fx' => (float) $rs->sum(fn ($r) => (float) ($r['AL'] ?? 0) + (float) ($r['AM'] ?? 0)),
-                'profit' => (float) $rs->sum(fn ($r) => (float) ($r['BT'] ?? 0))];
+                'profit' => (float) $rs->sum(fn ($r) => (float) ($r['BT'] ?? 0)) - ($netFx ? $fxAmt : 0)];
             $f = array_map(fn ($v) => round($v, 2), $f);
             $key = $deal->project?->id ?? 0;
             $projects[$key] ??= ['name' => $deal->project?->name ?? __('Layihəsiz'), 'code' => $deal->project?->code, 'url' => $deal->project ? route('projects.show', $deal->project) : null,
                 'trades' => [], 'sum' => $zero];
-            $fp = $fc[$deal->id] ?? null;
+            $fp = isset($fc[$deal->id]) ? round($fc[$deal->id] - ($netFx ? $fxAmt : 0), 2) : null;
             $projects[$key]['trades'][] = $trade + $f + ['margin' => self::margin($f),
                 'fc' => $fp, 'diff' => $fp === null ? null : round($f['profit'] - $fp, 2), 'opDiff' => $op === null ? null : round($f['profit'] - $op, 2)];
             foreach ($f as $k => $v) {
@@ -167,6 +176,39 @@ class ProjectReport
         }
 
         return [$missing ? null : round($sum, 2), $rows];
+    }
+
+    /**
+     * The Trade's bank exchange result and how it arose: [AZN, rows]. The roubles from the buyer are sold to the bank below
+     * CBAR (AL = sold RUB × (CBAR − the bank's rate)), the euros for the seller bought above CBAR (AM = bought EUR × (the
+     * bank's rate − CBAR)) — both a cost, as the sale and the purchase are counted at CBAR.
+     *
+     * @return array{0: float, 1: list<array{t: string, c: ?string, v: float}>}
+     */
+    private function exchange(\Illuminate\Support\Collection $rs): array
+    {
+        $rows = [];
+        $sum = 0.0;
+        foreach ($rs as $r) {
+            $inv = __('satıcı fakturası').' '.$r['seller_no'];
+            if ($r['AO'] !== null && (float) $r['AO'] != 0.0) {
+                $v = (float) ($r['AL'] ?? 0);
+                $rows[] = ['t' => __('Rubl satışı (alıcının pulu)').' · '.$inv, 'c' => $r['AL'] === null ? __('kurs yoxdur')
+                    : num((float) $r['AO']).' '.$r['saleCur'].' × ('.rate_fmt((float) $r['Z']).' CBAR − '.rate_fmt((float) $r['AG']).' '.__('bank').')', 'v' => -round($v, 2)];
+                $sum += $v;
+            }
+            if ($r['AP'] !== null && (float) $r['AP'] != 0.0) {
+                $v = (float) ($r['AM'] ?? 0);
+                $rows[] = ['t' => __('Avro alışı (satıcıya)').' · '.$inv, 'c' => $r['AM'] === null ? __('kurs yoxdur')
+                    : num((float) $r['AP']).' '.$r['cur'].' × ('.rate_fmt((float) $r['AF']).' '.__('bank').' − '.rate_fmt((float) $r['Y']).' CBAR)', 'v' => -round($v, 2)];
+                $sum += $v;
+            }
+        }
+        if (! $rows) {
+            $rows[] = ['t' => __('Bu Trade üçün valyuta alış-satışı yazılmayıb'), 'c' => null, 'v' => 0.0];
+        }
+
+        return [round($sum, 2), $rows];
     }
 
     private static function margin(array $f): ?float

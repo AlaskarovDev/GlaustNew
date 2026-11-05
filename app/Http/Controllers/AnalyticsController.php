@@ -243,7 +243,8 @@ class AnalyticsController extends Controller
         $projectId = $request->integer('project_id') ?: null;
         $forecast = $request->boolean('forecast');
         $operation = $request->boolean('op');
-        $data = (new \App\Support\Reports\ProjectReport)->build($from.'-01', \Carbon\Carbon::createFromFormat('!Y-m', $to)->endOfMonth()->toDateString(), $projectId, $forecast, $operation);
+        $netFx = $request->boolean('fx');
+        $data = (new \App\Support\Reports\ProjectReport)->build($from.'-01', \Carbon\Carbon::createFromFormat('!Y-m', $to)->endOfMonth()->toDateString(), $projectId, $forecast, $operation, $netFx);
         $label = fn ($m) => \Carbon\Carbon::createFromFormat('!Y-m', $m)->locale(app()->getLocale())->isoFormat('MMM YY');
 
         if ($request->query('format') === 'xlsx') {
@@ -267,10 +268,11 @@ class AnalyticsController extends Controller
                 array_push($cols, Column::make(__('Əməliyyat tarixinə mənfəət'), $m('op'), 'money'), Column::make(__('Fərq (fakt − əməliyyat tarixinə)'), $m('opDiff'), 'money'));
             }
 
-            return app(SpreadsheetExporter::class)->download(__('Layihə hesabatları'), $cols, $rows, 'layihe-'.$from.'-'.$to.'.xlsx', [__('Dövr').': '.$label($from).' — '.$label($to)]);
+            return app(SpreadsheetExporter::class)->download(__('Layihə hesabatları'), $cols, $rows, 'layihe-'.$from.'-'.$to.'.xlsx',
+                array_values(array_filter([__('Dövr').': '.$label($from).' — '.$label($to), $netFx ? __('Mənfəət bank kurs fərqi çıxılmaqla') : null])));
         }
 
-        return view('analytics.projects', $page + ['data' => $data, 'from' => $from, 'to' => $to, 'label' => $label, 'projectId' => $projectId, 'forecast' => $forecast, 'operation' => $operation,
+        return view('analytics.projects', $page + ['data' => $data, 'from' => $from, 'to' => $to, 'label' => $label, 'projectId' => $projectId, 'forecast' => $forecast, 'operation' => $operation, 'netFx' => $netFx,
             'projectList' => \App\Models\Project::orderBy('name')->get(['id', 'code', 'name'])]);
     }
 

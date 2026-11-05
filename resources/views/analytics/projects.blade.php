@@ -1,7 +1,7 @@
 <x-layouts.app :title="$title" wide>
     <x-page-header :title="$title" :icon="$icon" :subtitle="$description">
         <x-slot:actions>
-            <a href="{{ route('analytics.show', ['report' => 'projects', 'from' => $from, 'to' => $to, 'project_id' => $projectId, 'forecast' => $forecast ?: null, 'op' => $operation ?: null, 'format' => 'xlsx']) }}" class="btn btn-secondary"><x-icon name="sheet" class="size-4 text-success"/> Excel</a>
+            <a href="{{ route('analytics.show', ['report' => 'projects', 'from' => $from, 'to' => $to, 'project_id' => $projectId, 'forecast' => $forecast ?: null, 'op' => $operation ?: null, 'fx' => $netFx ?: null, 'format' => 'xlsx']) }}" class="btn btn-secondary"><x-icon name="sheet" class="size-4 text-success"/> Excel</a>
         </x-slot:actions>
     </x-page-header>
 
@@ -22,6 +22,7 @@
             if ($tr['opWhy'] ?? null) {
                 $why['op|'.$tr['code']] = $tr['opWhy'];
             }
+            $why['fx|'.$tr['code']] = $tr['fxWhy'];
         }
         $tip = fn (string $key) => 'role="button" tabindex="0" @click="show(\''.$key.'\')" @keydown.enter="show(\''.$key.'\')"';
         $click = 'cursor-pointer hover:underline decoration-dotted underline-offset-4';
@@ -34,19 +35,23 @@
             </select></label>
         @if($forecast)<input type="hidden" name="forecast" value="1">@endif
         @if($operation)<input type="hidden" name="op" value="1">@endif
+        @if($netFx)<input type="hidden" name="fx" value="1">@endif
         <button class="btn btn-primary"><x-icon name="filter" class="size-4"/> {{ __('Göstər') }}</button>
-        <a href="{{ route('analytics.show', array_filter(['projects', 'from' => $from, 'to' => $to, 'project_id' => $projectId, 'forecast' => $forecast ? null : 1, 'op' => $operation ?: null])) }}"
+        <a href="{{ route('analytics.show', array_filter(['projects', 'from' => $from, 'to' => $to, 'project_id' => $projectId, 'forecast' => $forecast ? null : 1, 'op' => $operation ?: null, 'fx' => $netFx ?: null])) }}"
            @class(['btn', 'btn-secondary' => ! $forecast, 'bg-saffron-soft text-saffron' => $forecast]) title="{{ __('Fakturalarda yazılmış bank proqnozu (RUB çevirməsinin proqnoz EUR / RUB kursu) ilə mənfəət, faktla yanaşı') }}">
             <x-icon name="chart" class="size-4"/> {{ $forecast ? __('Proqnozu gizlət') : __('Proqnozla göstər') }}</a>
-        <a href="{{ route('analytics.show', array_filter(['projects', 'from' => $from, 'to' => $to, 'project_id' => $projectId, 'forecast' => $forecast ?: null, 'op' => $operation ? null : 1])) }}"
+        <a href="{{ route('analytics.show', array_filter(['projects', 'from' => $from, 'to' => $to, 'project_id' => $projectId, 'forecast' => $forecast ?: null, 'op' => $operation ? null : 1, 'fx' => $netFx ?: null])) }}"
            @class(['btn', 'btn-secondary' => ! $operation, 'bg-brand-soft text-brand-ink' => $operation]) title="{{ __('Akt gəlməmişdən, satıcıya ödəniş günü: satış və alış həmin günün CBAR kursu ilə, komissiya, logistika — fakturadakı logistika proqnozu həmin günün kursu ilə') }}">
             <x-icon name="calendar" class="size-4"/> {{ $operation ? __('Əməliyyat tarixini gizlət') : __('Əməliyyat tarixinə göstər') }}</a>
+        <a href="{{ route('analytics.show', array_filter(['projects', 'from' => $from, 'to' => $to, 'project_id' => $projectId, 'forecast' => $forecast ?: null, 'op' => $operation ?: null, 'fx' => $netFx ? null : 1])) }}"
+           @class(['btn', 'btn-secondary' => ! $netFx, 'bg-danger-soft text-danger' => $netFx]) title="{{ __('Bankın rubl satışı və avro alışında CBAR-dan fərqi (itki) fakt, proqnoz və əməliyyat tarixi mənfəətlərinin hamısından çıxılır') }}">
+            <x-icon name="transfer" class="size-4"/> {{ $netFx ? __('Kurs fərqi çıxılmadan göstər') : __('Kurs fərqi çıxılmaqla göstər') }}</a>
     </form>
 
     <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div class="card p-5"><div class="text-xs text-muted">{{ __('Satış') }}</div><div class="mt-1 text-2xl font-semibold font-mono tabular-nums">{{ money($t['revenue']) }}</div><div class="text-[11px] text-faint">{{ $label($from) }} — {{ $label($to) }}</div></div>
         <div class="card p-5"><div class="text-xs text-muted">{{ __('Xərclər') }}</div><div class="mt-1 text-2xl font-semibold font-mono tabular-nums">{{ money($t['revenue'] - $t['profit']) }}</div><div class="text-[11px] text-faint">{{ __('alış, logistika, komissiya') }}</div></div>
-        <div class="card p-5"><div class="text-xs text-muted">{{ __('Mənfəət') }}</div><div @class(['mt-1 text-2xl font-semibold font-mono tabular-nums', 'text-success' => $t['profit'] > 0, 'text-danger' => $t['profit'] < 0])>{{ money($t['profit']) }}</div><div class="text-[11px] text-faint">{{ __('Yekun hesabatın XALİS MƏNFƏƏTİ') }}</div></div>
+        <div class="card p-5"><div class="text-xs text-muted">{{ __('Mənfəət') }}@if($netFx) <span class="text-danger">· {{ __('kurs fərqi çıxılmaqla') }}</span>@endif</div><div @class(['mt-1 text-2xl font-semibold font-mono tabular-nums', 'text-success' => $t['profit'] > 0, 'text-danger' => $t['profit'] < 0])>{{ money($t['profit']) }}</div><div class="text-[11px] text-faint">{{ __('Yekun hesabatın XALİS MƏNFƏƏTİ') }}</div></div>
         <div class="card p-5"><div class="text-xs text-muted">{{ __('Marja') }}</div><div class="mt-1 text-2xl font-semibold font-mono tabular-nums">{{ $pct($t['margin']) }}</div><div class="text-[11px] text-faint">{{ __('mənfəət ÷ satış') }}</div></div>
     </div>
     @if($forecast)
@@ -104,7 +109,7 @@
                             <td data-label="{{ __('Alış') }}" class="num">{{ $n($tr['purchase']) }}</td>
                             <td data-label="{{ __('Logistika') }}" class="num">{{ $n($tr['logistics']) }}</td>
                             <td data-label="{{ __('Komissiya') }}" class="num">{{ $n($tr['fees']) }}</td>
-                            <td data-label="{{ __('Kurs fərqi') }}" class="num">{{ $n($tr['fx']) }}</td>
+                            <td data-label="{{ __('Kurs fərqi') }}" class="num {{ $click }}" {!! $tip('fx|'.$tr['code']) !!} title="{{ __('Necə yarandı — toxunun') }}">{{ $n($tr['fx']) }}</td>
                             <td data-label="{{ __('Mənfəət') }}" @class(['num font-semibold', 'text-success' => $tr['profit'] > 0, 'text-danger' => $tr['profit'] < 0])>{{ $n($tr['profit']) }}</td>
                             <td data-label="{{ __('Marja') }}" class="num">{{ $pct($tr['margin']) }}</td>
                             @if($forecast)
@@ -177,6 +182,28 @@
                         </div>
                         <button type="button" class="btn btn-ghost btn-icon" @click="open = null" aria-label="{{ __('Bağla') }}"><x-icon name="x" class="size-5"/></button>
                     </header>
+                    <template x-if="why[open].kind === 'fx'">
+                        <div class="overflow-auto flex-1">
+                            <div class="px-5 py-4 text-[13px] text-ink-2 leading-relaxed bg-surface-2 border-b border-line space-y-1.5">
+                                <p>{{ __('Mənfəətdə satış və alış CBAR kursu ilə hesablanır. Bank isə valyutanı öz kursu ilə dəyişir — aradakı fərq «bank kurs fərqi»dir:') }}</p>
+                                <p>• <b>{{ __('Rubl satışı') }}</b> — {{ __('alıcının ödədiyi rubl bankda CBAR-dan ucuz satılır: itki = satılan rubl × (CBAR − bankın kursu).') }}</p>
+                                <p>• <b>{{ __('Avro alışı') }}</b> — {{ __('satıcıya ödəmək üçün avro bankda CBAR-dan baha alınır: itki = alınan avro × (bankın kursu − CBAR).') }}</p>
+                                <p class="text-muted">{{ __('«Mənfəət və zərər»də bu fərq Trade-ə yox, 221.13 «Bank xidməti üzrə xərclər»ə yazılır.') }}</p>
+                            </div>
+                            <table class="table-g text-[13px]">
+                                <thead><tr><th>{{ __('Əməliyyat') }}</th><th>{{ __('Hesablama') }}</th><th class="!text-right">AZN</th></tr></thead>
+                                <tbody>
+                                    <template x-for="(r, i) in why[open].rows" :key="i">
+                                        <tr><td class="font-medium" x-text="r.t"></td><td class="font-mono text-[12px] text-muted" x-text="r.c || ''"></td>
+                                            <td class="num font-semibold whitespace-nowrap" :class="r.v < 0 ? 'text-danger' : ''" x-text="sign(r.v)"></td></tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                            <div class="px-5 py-3 border-t border-line bg-surface-2 text-sm text-right font-semibold">{{ __('Bank kurs fərqi') }}: <span class="font-mono" x-text="sign(why[open].v)"></span></div>
+                        </div>
+                    </template>
+                    <template x-if="why[open].kind !== 'fx'">
+                    <div class="flex-1 flex flex-col min-h-0">
                     <div class="overflow-auto flex-1">
                         <table class="table-g text-[13px]">
                             <thead><tr><th>{{ __('Mənbə') }}</th><th class="!text-right">{{ __('Əməliyyat tarixinə') }}</th><th class="!text-right">{{ __('Fakt (aktdan sonra)') }}</th><th class="!text-right">{{ __('Fərq') }}</th></tr></thead>
@@ -197,6 +224,8 @@
                         <div>{{ __('Fakt') }}: <span class="font-mono font-semibold" x-text="sign(why[open].f)"></span></div>
                         <div class="sm:text-right">{{ __('Fərq (fakt − əməliyyat tarixinə)') }}: <span class="font-mono font-semibold" :class="(diff(why[open].f, why[open].v) ?? 0) < 0 ? 'text-danger' : 'text-success'" x-text="diff(why[open].f, why[open].v) === null ? '—' : sign(diff(why[open].f, why[open].v))"></span></div>
                     </footer>
+                    </div>
+                    </template>
                 </div>
             </template>
         </div>

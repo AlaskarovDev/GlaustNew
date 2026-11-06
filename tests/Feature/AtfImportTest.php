@@ -375,5 +375,24 @@ class AtfImportTest extends TestCase
             $act = LogisticsAct::where('deal_id', $deal->id)->with('payments')->sole();
             $this->assertSame([$carrier->id, null, 1.5], [$act->counterparty_id, $act->act_date, (float) $act->payments->sole()->fee_account_amount]);
         });
+
+        // glaust:deal-move: both Trades into a new project, with everything booked on them; the money stays where it is
+        $before = $this->inTenant($admin, fn () => [BankAccount::find($eur->id)->balance(), BankAccount::find($azn->id)->balance()]);
+        $move = ['company' => (string) $admin->company_id, '--deals' => '01/EXP,04/EXP', '--project' => 'ATF 2026'];
+        $this->artisan('glaust:deal-move', $move + ['--dry' => true])->expectsOutputToContain('Layihə yaradıldı')->expectsOutputToContain('Yoxlama: heç nə dəyişmədi.')->assertSuccessful();
+        $this->assertSame(0, $this->inTenant($admin, fn () => Project::where('name', 'ATF 2026')->count()), 'a dry run creates nothing');
+        $this->artisan('glaust:deal-move', $move)->expectsOutputToContain('«ZENIT 2026» → «ATF 2026»')->assertSuccessful();
+        $this->artisan('glaust:deal-move', $move)->expectsOutputToContain('artıq «ATF 2026» layihəsindədir')->assertSuccessful();
+        $this->artisan('glaust:deal-move', ['--deals' => 'yoxdur'] + $move)->assertFailed();
+        $this->inTenant($admin, function () use ($zenit, $axios, $eur, $azn, $before) {
+            $p = Project::where('name', 'ATF 2026')->firstOrFail();
+            $this->assertSame([$axios->id, $zenit->id, 'active'], [$p->counterparty_id, $p->supplier_id, $p->status]);
+            $this->assertSame(2, Deal::where('project_id', $p->id)->count());
+            foreach ([Invoice::class, BankTransaction::class, CurrencyExchange::class, Expense::class] as $model) {
+                $this->assertSame(0, $model::whereNotNull('deal_id')->where('project_id', '!=', $p->id)->count(), $model.' moved with its Trade');
+            }
+            $this->assertSame($before, [BankAccount::find($eur->id)->balance(), BankAccount::find($azn->id)->balance()]);
+            $this->assertSame(2, count(app(TradeReport::class)->rows(Deal::where('project_id', $p->id)->get())));
+        });
     }
 }

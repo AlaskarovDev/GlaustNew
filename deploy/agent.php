@@ -14,7 +14,7 @@
 
 const TOKEN_HASH = '__TOKEN_HASH__';
 const ARTISAN_ALLOWED = ['glaust:demo', 'glaust:purge-demo', 'glaust:setup-company', 'glaust:cbar-backfill', 'glaust:cbar-fetch', 'glaust:reminders', 'glaust:digest',
-    'glaust:sweep-sessions', 'glaust:report-check', 'glaust:cbar-store', 'glaust:book', 'glaust:atf-complete', 'glaust:atf-import', 'glaust:bank-audit', 'glaust:bank-fix', 'migrate:status', 'about', 'db:seed', 'schedule:list', 'queue:work'];
+    'glaust:sweep-sessions', 'glaust:report-check', 'glaust:cbar-store', 'glaust:book', 'glaust:atf-complete', 'glaust:atf-import', 'glaust:deal-move', 'glaust:bank-audit', 'glaust:bank-fix', 'migrate:status', 'about', 'db:seed', 'schedule:list', 'queue:work'];
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');

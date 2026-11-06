@@ -16,6 +16,7 @@ class ReportCheckCommandTest extends TestCase
         $this->artisan('glaust:report-check')->assertSuccessful();
         $this->artisan('glaust:report-check', ['company' => (string) $admin->company_id, '--from' => '2024-12', '--to' => '2025-02'])
             ->expectsOutputToContain('CASH FLOW')->expectsOutputToContain('916161494')->assertSuccessful();
+        $this->artisan('glaust:report-check', ['company' => (string) $admin->company_id, '--only' => 'tx'])->expectsOutputToContain('== TX')->assertSuccessful();
         $this->artisan('glaust:report-check', ['company' => 'yoxdur-belə'])->assertFailed();
     }
 }

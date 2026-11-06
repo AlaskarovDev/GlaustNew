@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\BankAccount;
+use App\Models\BankTransaction;
 use App\Models\Company;
 use App\Models\CurrencyExchange;
 use App\Models\Deal;
@@ -21,7 +22,7 @@ use Illuminate\Console\Command;
  */
 class ReportCheckCommand extends Command
 {
-    protected $signature = 'glaust:report-check {company? : id or a part of the name} {--from=2024-12} {--to=2025-02} {--only= : cash|items|trades|expenses|mz|balance} {--label= : with --only=items: the cash flow line(s) whose name contains it} {--valuation=bank}';
+    protected $signature = 'glaust:report-check {company? : id or a part of the name} {--from=2024-12} {--to=2025-02} {--only= : cash|items|trades|expenses|mz|balance|tx} {--label= : with --only=items: the cash flow line(s) whose name contains it; with --only=tx: the account(s) whose name contains it} {--valuation=bank}';
 
     protected $description = 'Hesabatların rəqəmlərini çap edir (yalnız oxuyur)';
 
@@ -67,6 +68,22 @@ class ReportCheckCommand extends Command
                     }
                 }
                 $this->line('assets '.$n($b['assetsTotal']).' · liabilities '.$n($b['liabilitiesTotal']).' · gap '.$n($b['gap']));
+            }
+            if ($this->option('only') === 'tx') {
+                // every bank movement of the account(s) in the period, with its id and what it belongs to — to set it beside a statement.
+                // Movements booked by glaust:book (reference «<tag>:…») are left out: they came from the statements themselves.
+                $needle = mb_strtolower((string) $this->option('label'));
+                foreach (BankAccount::orderBy('id')->get()->filter(fn ($a) => $needle === '' || str_contains(mb_strtolower($a->name), $needle)) as $a) {
+                    $this->info("== TX #{$a->id} {$a->name} {$a->currency} {$from} … {$to}");
+                    $txs = BankTransaction::with('deal:id,code')->where('bank_account_id', $a->id)->whereBetween('transaction_date', [$from.'-01', $end.' 23:59:59'])
+                        ->where(fn ($q) => $q->whereNull('reference')->orWhere('reference', 'not like', '%:%'))->orderBy('transaction_date')->orderBy('id')->get();
+                    foreach ($txs as $t) {
+                        $this->line($t->id.' '.$t->transaction_date->format('m-d').' '.($t->direction === 'in' ? '+' : '-').number_format((float) $t->amount, 2, '.', '')
+                            .' '.substr($t->kind, 0, 4).' '.($t->deal?->code ? substr($t->deal->code, -4) : '-').' '.mb_substr((string) $t->purpose, 0, 38));
+                    }
+                }
+
+                return;
             }
             if ($this->option('only') === 'items') {
                 // every movement behind the cash flow lines whose name contains --label

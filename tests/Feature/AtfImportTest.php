@@ -332,4 +332,48 @@ class AtfImportTest extends TestCase
             $this->assertSame(2, \App\Models\LogisticsAct::count());
         });
     }
+
+    /** glaust:atf-import: a new row as a Trade with the setup of an imported one (--like); a dry run leaves nothing, never twice. */
+    public function test_import_command_takes_the_setup_of_an_imported_trade(): void
+    {
+        $this->fakeCbar();
+        $admin = $this->makeCompany();
+        [$zenit, $axios, $carrier, $eur, $rub, $azn] = $this->inTenant($admin, fn () => [
+            Counterparty::create(['type' => 'supplier', 'entity_type' => 'legal', 'name' => 'ZENIT', 'country' => 'Makedoniya']),
+            Counterparty::create(['type' => 'customer', 'entity_type' => 'legal', 'name' => 'Axios LLC', 'country' => 'Russia']),
+            Counterparty::create(['type' => 'logistics', 'entity_type' => 'legal', 'name' => 'ORIENTLOG', 'country' => 'Russia']),
+            BankAccount::create(['name' => 'EURO', 'bank_name' => 'Turan', 'currency' => 'EUR', 'is_active' => true]),
+            BankAccount::create(['name' => 'RUBL', 'bank_name' => 'Turan', 'currency' => 'RUB', 'is_active' => true]),
+            BankAccount::create(['name' => 'AZN', 'bank_name' => 'Turan', 'currency' => 'AZN', 'is_active' => true]),
+        ]);
+        $this->actingAs($admin);
+        $row = fn ($no) => ['B' => $no, 'C' => '04.02.2025', 'D' => 1000, 'H' => 120000, 'I' => 300, 'N' => 1.99, 'O' => 0.0192, 'T' => '10.02.2025', 'X' => '10.02.2025',
+            'AF' => 1.759, 'AG' => 0.0174, 'AO' => 100000, 'AP' => 1000, 'AX' => 20000, 'AY' => '10.02.2025', 'BA' => 0.0197, 'BB' => 1.5, 'BF' => 'KIK-1', 'BG' => '10.02.2025'];
+        $res = $this->post(route('imports.atf.store'), ['file' => $this->workbook([$row('01/EXP')]), 'project_name' => 'ZENIT 2026', 'supplier_id' => $zenit->id,
+            'buyer_id' => $axios->id, 'logistics_id' => $carrier->id, 'eur_account' => $eur->id, 'rub_account' => $rub->id, 'azn_account' => $azn->id]);
+        $this->postJson(route('imports.atf.row', [basename($res->headers->get('Location')), 0]))->assertJsonPath('ok', true);
+
+        $payload = base64_encode(gzencode(json_encode(['rows' => \App\Imports\Atf\AtfSheet::parse($this->workbook([$row('01/EXP'), $row('04/EXP')])->getRealPath())['rows']])));
+        $args = ['company' => (string) $admin->company_id, 'payload' => $payload, '--like' => '01/EXP'];
+        $this->artisan('glaust:atf-import', $args + ['--dry' => true])->expectsOutputToContain('01/EXP: artıq var')
+            ->expectsOutputToContain('04/EXP: Trade')->expectsOutputToContain('Yoxlama: heç nə yazılmadı.')->assertSuccessful();
+        $this->assertSame(1, $this->inTenant($admin, fn () => Deal::count()), 'a dry run imports nothing');
+        $this->artisan('glaust:atf-import', $args)->expectsOutputToContain('04/EXP: Trade')->assertSuccessful();
+        $this->artisan('glaust:atf-import', $args)->expectsOutputToContain('04/EXP: artıq var')->assertSuccessful();
+        $this->artisan('glaust:atf-import', ['--like' => 'yoxdur'] + $args)->assertFailed();
+
+        $this->inTenant($admin, function () use ($zenit, $axios, $carrier, $eur, $rub, $azn) {
+            $first = Invoice::where('number', '01/EXP')->firstOrFail()->deal;
+            $inv = Invoice::where('number', '04/EXP')->firstOrFail();
+            $deal = $inv->deal;
+            $this->assertSame([$first->project_id, $zenit->id, $axios->id], [$deal->project_id, $deal->supplier_id, $deal->counterparty_id]);
+            $this->assertSame(['1.99000000', '0.01920000', '300.00'], [$inv->fx_base_azn, $inv->fx_target_azn, $inv->logistics_amount]);
+            $this->assertSame($eur->id, SupplierPayment::where('deal_id', $deal->id)->sole()->bank_account_id);
+            $this->assertSame($rub->id, BankTransaction::where('deal_id', $deal->id)->where('direction', 'in')->where('kind', 'regular')->sole()->bank_account_id);
+            $this->assertSame([$azn->id, $eur->id], [CurrencyExchange::where('deal_id', $deal->id)->where('direction', 'buy')->sole()->from_account_id,
+                CurrencyExchange::where('deal_id', $deal->id)->where('direction', 'buy')->sole()->to_account_id]);
+            $act = LogisticsAct::where('deal_id', $deal->id)->with('payments')->sole();
+            $this->assertSame([$carrier->id, null, 1.5], [$act->counterparty_id, $act->act_date, (float) $act->payments->sole()->fee_account_amount]);
+        });
+    }
 }

@@ -95,6 +95,11 @@ class AtfImportTest extends TestCase
         $this->postJson(route('imports.atf.row', [$token, 1]))->assertJsonPath('ok', true);
         $this->postJson(route('imports.atf.row', [$token, 2]))->assertJsonPath('ok', false);
         $this->postJson(route('imports.atf.row', [$token, 0]))->assertJsonPath('skipped', true);   // never twice
+        // the whole sheet again into another project: a Trade imported elsewhere is not imported again
+        $again = $this->post(route('imports.atf.store'), $setup + ['file' => $this->workbook([['A' => 54, 'B' => '02/EXP/2026', 'C' => '19.06.2026', 'D' => 68114, 'H' => 7250948.08]]),
+            'project_name' => 'ATF 2026']);
+        $this->postJson(route('imports.atf.row', [basename($again->headers->get('Location')), 0]))->assertJsonPath('skipped', true);
+        $this->assertSame(2, $this->inTenant($admin, fn () => Deal::count()));
 
         $this->inTenant($admin, function () use ($eur, $azn) {
             $project = Project::where('name', 'ATF 2025–2026')->firstOrFail();

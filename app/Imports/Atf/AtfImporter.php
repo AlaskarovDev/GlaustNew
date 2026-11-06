@@ -73,10 +73,15 @@ class AtfImporter
         ], [$part], $row['logistics_date']);
     }
 
-    /** The Trade already imported for this seller invoice in the project, if any. */
+    /**
+     * The Trade already imported for this seller invoice: in the project, else in any other — the sheet keeps every year's
+     * rows, so uploading it into a new project must not import the old Trades a second time.
+     */
     public static function existing(int $projectId, string $sellerNo): ?Invoice
     {
-        return Invoice::where('project_id', $projectId)->where('type', 'supplier')->where('number', $sellerNo)->first();
+        $q = Invoice::where('type', 'supplier')->where('number', $sellerNo);
+
+        return (clone $q)->where('project_id', $projectId)->first() ?? $q->first();
     }
 
     /**

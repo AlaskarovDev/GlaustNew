@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\DB;
  *   accounts   [{name, bank_name, currency}]           — created when missing
  *   categories {name: [scope, pl_line]}                 — created when missing (an existing one keeps its settings)
  *   pl_lines   {name: pl_line}                          — sets the «MZ sətri» of existing expense categories (prints the old one)
- *   ops        [{type: expense, date, amount, category, description, account}
+ *   ops        [{type: expense, date, amount, category, description, account, pl_line?}  — pl_line: this expense's «MZ sətri» (else the category's)
  *               {type: transfer, date, amount, from, to, description}
  *               {type: income, date, amount, account, category, description}
  *               {type: accrual, date, amount, category, description}   — an AZN expense «Hesablanıb»: MZ only, no money
@@ -120,7 +120,7 @@ class BookCommand extends Command
                     match ($op['type']) {
                         'expense' => $expenses->save(new Expense, [
                             'expense_date' => $op['date'], 'category_id' => $category($op['category'])->id, 'description' => mb_substr($op['description'], 0, 255),
-                            'amount' => $op['amount'], 'currency' => $account($op['account'])->currency, 'status' => 'paid', 'payment_method' => 'bank',
+                            'amount' => $op['amount'], 'currency' => $account($op['account'])->currency, 'status' => 'paid', 'payment_method' => 'bank', 'pl_line' => $op['pl_line'] ?? null,
                             'paid_at' => $op['date'], 'bank_account_id' => $account($op['account'])->id, 'reference' => $ref,
                         ]),
                         'transfer' => $ledger->transfer($account($op['from']), $account($op['to']), $op['date'], $op['amount'], $op['amount'],

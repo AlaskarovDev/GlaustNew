@@ -34,4 +34,12 @@ DirectoryIndex index.php
     <FilesMatch "\.(css|js|woff2?|svg|png|ico)$">
         Header set Cache-Control "public, max-age=31536000, immutable"
     </FilesMatch>
+    # PWA: the service worker and the manifest are checked for updates on every visit
+    <FilesMatch "^(sw\.js|manifest\.webmanifest|offline\.html)$">
+        Header set Cache-Control "no-cache"
+    </FilesMatch>
+</IfModule>
+
+<IfModule mod_mime.c>
+    AddType application/manifest+json .webmanifest
 </IfModule>

@@ -150,10 +150,15 @@ function publishPublic(array $paths, string $root): void
 {
     copy($paths['app'].'/deploy/index.php', $root.'/index.php');
     copy($paths['app'].'/deploy/root.htaccess', $root.'/.htaccess');
-    foreach (['favicon.svg', 'favicon.ico', 'robots.txt'] as $f) {
+    // the PWA's files sit at the site root too: the service worker's scope is its folder
+    foreach (['favicon.svg', 'favicon.ico', 'robots.txt', 'manifest.webmanifest', 'sw.js', 'offline.html'] as $f) {
         if (is_file($paths['app'].'/public/'.$f)) {
             copy($paths['app'].'/public/'.$f, $root.'/'.$f);
         }
+    }
+    if (is_dir($paths['app'].'/public/icons')) {
+        rrmdir($root.'/icons');
+        copydir($paths['app'].'/public/icons', $root.'/icons');
     }
     rrmdir($root.'/build_prev');
     if (is_dir($root.'/build')) {

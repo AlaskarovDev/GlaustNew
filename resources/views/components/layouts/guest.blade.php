@@ -8,6 +8,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ? $title.' · ' : '' }}TradeFlow</title>
     <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
+    @include('partials.pwa-head')
     <script nonce="{{ Vite::cspNonce() }}">
         (() => {
             let mode = 'system';

@@ -6,6 +6,25 @@ window.Alpine = Alpine;
 Alpine.plugin(collapse);
 Alpine.plugin(focus);
 
+/*
+ * Installable app (PWA): the service worker from the manifest link's data-sw, and the browser's install offer kept for
+ * the header's «Yüklə» button — it comes early, before Alpine starts.
+ */
+const manifestLink = document.querySelector('link[rel="manifest"][data-sw]');
+if (manifestLink && 'serviceWorker' in navigator && window.isSecureContext) {
+    window.addEventListener('load', () => navigator.serviceWorker.register(manifestLink.dataset.sw).catch(() => {}));
+}
+window.__pwaPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    window.__pwaPrompt = e;
+    window.dispatchEvent(new CustomEvent('glaust:pwa'));
+});
+window.addEventListener('appinstalled', () => {
+    window.__pwaPrompt = null;
+    window.dispatchEvent(new CustomEvent('glaust:pwa'));
+});
+
 /** UI text from the layout's window.__i18n (Azerbaijani text is the key). */
 const t = (s) => (window.__i18n && window.__i18n[s]) || s;
 const csrf = () => document.querySelector('meta[name="csrf-token"]')?.content ?? '';
@@ -614,6 +633,42 @@ Alpine.data('repeater', (rows, blank) => ({
 }));
 
 document.addEventListener('alpine:init', () => {});
+/**
+ * «Yüklə»: installs the app. Chrome / Edge / Android offer their own dialog; Safari (iPhone, iPad, Mac) has none,
+ * so the steps are shown instead. Hidden once the app runs installed.
+ */
+Alpine.data('pwaInstall', () => ({
+    help: false,
+    installed: false,
+    canPrompt: false,
+    platform: 'other',
+    init() {
+        const ua = navigator.userAgent;
+        const ios = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        const safari = /Safari/.test(ua) && !/Chrome|Chromium|CriOS|Edg|OPR|Firefox|FxiOS/.test(ua);
+        this.platform = ios ? 'ios' : (safari && /Macintosh/.test(ua) ? 'mac-safari' : (/Android/.test(ua) ? 'android' : 'desktop'));
+        const sync = () => {
+            this.installed = window.matchMedia('(display-mode: standalone)').matches || window.matchMedia('(display-mode: window-controls-overlay)').matches
+                || window.navigator.standalone === true;
+            this.canPrompt = !!window.__pwaPrompt;
+        };
+        sync();
+        window.addEventListener('glaust:pwa', sync);
+        window.matchMedia('(display-mode: standalone)').addEventListener?.('change', sync);
+    },
+    async install() {
+        const offer = window.__pwaPrompt;
+        if (!offer) {
+            window.dispatchEvent(new CustomEvent('glaust:pwa-help'));   // the steps, in the page-level dialog
+            return;
+        }
+        offer.prompt();
+        try { await offer.userChoice; } catch { /* dismissed */ }
+        window.__pwaPrompt = null;
+        this.canPrompt = false;
+    },
+}));
+
 Alpine.start();
 
 // Flash messages rendered by the server.

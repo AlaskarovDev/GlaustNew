@@ -18,6 +18,7 @@
     <meta name="robots" content="noindex, nofollow">
     <title>{{ $title ? $title.' · ' : '' }}TradeFlow</title>
     <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
+    @include('partials.pwa-head')
     <script nonce="{{ Vite::cspNonce() }}">
         (() => {
             let mode = @json($theme);
@@ -191,6 +192,15 @@
             <button type="button" @click="$dispatch('glaust:palette')" class="btn btn-ghost btn-icon sm:hidden" aria-label="{{ __('Axtar') }}">
                 <x-icon name="search" class="size-5"/>
             </button>
+
+            {{-- Install the app (PWA) --}}
+            <div x-data="pwaInstall" x-show="!installed" x-cloak>
+                <button type="button" @click="install()" class="flex items-center gap-1.5 h-9 px-2.5 rounded-[10px] text-sm font-medium text-brand-ink bg-brand-soft hover:brightness-95 transition"
+                        title="{{ __('TradeFlow-u kompüterə və ya telefona tətbiq kimi yüklə') }}" aria-label="{{ __('Tətbiqi yüklə') }}">
+                    <x-icon name="download" class="size-[18px]"/>
+                    <span class="hidden lg:inline">{{ __('Yüklə') }}</span>
+                </button>
+            </div>
 
             {{-- Today: tasks + reminders --}}
             <div x-data="myDay" class="relative flex items-center gap-1" @keydown.escape.window="open = false" @click.outside="open = false">
@@ -371,6 +381,36 @@
 </div>
 
 {{-- Keyboard shortcuts help --}}
+{{-- How to install where the browser has no install dialog (Safari on iPhone / iPad / Mac, or the offer not given yet) --}}
+<div x-data="pwaInstall" @glaust:pwa-help.window="help = true" x-cloak x-show="help" class="fixed inset-0 z-[70] grid place-items-center p-4" role="dialog" aria-modal="true" aria-label="{{ __('Tətbiqi yüklə') }}">
+    <div x-show="help" x-transition.opacity class="absolute inset-0 bg-night/50 backdrop-blur-sm" @click="help = false"></div>
+    <div x-show="help" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+         class="relative w-full max-w-md card !shadow-[var(--shadow-pop)] p-6" x-trap.noscroll="help" @keydown.escape.window="help = false">
+        <div class="flex items-start justify-between gap-3 mb-4">
+            <div class="flex items-center gap-3">
+                <img src="{{ asset('icons/icon-192.png') }}" alt="" class="size-11 rounded-xl">
+                <div>
+                    <h2 class="text-lg font-semibold">{{ __('Tətbiqi yüklə') }}</h2>
+                    <p class="text-xs text-muted">{{ __('TradeFlow ayrıca pəncərədə, ana ekrandan açılacaq') }}</p>
+                </div>
+            </div>
+            <button type="button" class="btn btn-ghost btn-icon" @click="help = false" aria-label="{{ __('Bağla') }}"><x-icon name="x" class="size-5"/></button>
+        </div>
+        <ol class="space-y-2.5 text-sm text-ink-2 list-decimal pl-5">
+            <li x-show="platform === 'ios'">{{ __('Safari-də aşağıdakı «Paylaş» düyməsinə toxunun (kvadrat və yuxarı ox).') }}</li>
+            <li x-show="platform === 'ios'">{{ __('«Ana ekrana əlavə et» (Add to Home Screen) seçin.') }}</li>
+            <li x-show="platform === 'ios'">{{ __('«Əlavə et» düyməsinə toxunun — TradeFlow ikonu ana ekranda görünəcək.') }}</li>
+            <li x-show="platform === 'mac-safari'">{{ __('Safari menyusunda «Fayl» (File) açın.') }}</li>
+            <li x-show="platform === 'mac-safari'">{{ __('«Dock-a əlavə et» (Add to Dock) seçin və təsdiqləyin.') }}</li>
+            <li x-show="platform === 'android'">{{ __('Chrome-da sağ yuxarıdakı ⋮ menyusunu açın.') }}</li>
+            <li x-show="platform === 'android'">{{ __('«Tətbiqi quraşdır» və ya «Ana ekrana əlavə et» seçin.') }}</li>
+            <li x-show="platform === 'desktop'">{{ __('Chrome və ya Edge-də ünvan sətrinin sağındakı quraşdırma ikonuna basın.') }}</li>
+            <li x-show="platform === 'desktop'">{{ __('Görünmürsə: brauzer menyusu → «Yayımla, saxla və paylaş» → «Səhifəni tətbiq kimi quraşdır».') }}</li>
+        </ol>
+        <p class="mt-4 text-xs text-muted">{{ __('Quraşdırılmış tətbiq həmin hesabla işləyir; məlumatlar həmişə serverdən gəlir.') }}</p>
+    </div>
+</div>
+
 <div x-data="shortcuts" @glaust:shortcuts.window="help = true" x-cloak x-show="help" class="fixed inset-0 z-[70] grid place-items-center p-4" role="dialog" aria-modal="true" aria-label="{{ __('Klaviatura qısa yolları') }}">
     <div x-show="help" x-transition.opacity class="absolute inset-0 bg-night/50 backdrop-blur-sm" @click="help = false"></div>
     <div x-show="help" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"

@@ -156,9 +156,11 @@ function publishPublic(array $paths, string $root): void
             copy($paths['app'].'/public/'.$f, $root.'/'.$f);
         }
     }
-    if (is_dir($paths['app'].'/public/icons')) {
-        rrmdir($root.'/icons');
-        copydir($paths['app'].'/public/icons', $root.'/icons');
+    foreach (['icons', 'widgets'] as $dir) {   // the PWA icons; the «Birja» widgets' own isolated pages
+        if (is_dir($paths['app'].'/public/'.$dir)) {
+            rrmdir($root.'/'.$dir);
+            copydir($paths['app'].'/public/'.$dir, $root.'/'.$dir);
+        }
     }
     rrmdir($root.'/build_prev');
     if (is_dir($root.'/build')) {

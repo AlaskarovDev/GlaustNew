@@ -2,10 +2,11 @@
     <x-page-header :title="__('Birja')" icon="trending-up"
                    subtitle="{{ __('Valyutaların ABŞ dollarına nisbətən kursları — birja və ya mərkəzi bank seçin') }}"/>
 
+    @php $active = $widget ?? $source->key(); $days ??= 30; @endphp
     {{-- the markets and banks --}}
     <div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-3 mb-6" role="list" aria-label="{{ __('Mənbələr') }}">
         @foreach($sources as $s)
-            @php $on = $s->key() === $source->key(); @endphp
+            @php $on = $s->key() === $active; @endphp
             <a role="listitem" href="{{ route('exchanges.index', ['source' => $s->key(), 'days' => $days]) }}" @if($on) aria-current="true" @endif
                @class(['card p-4 flex items-start gap-3 transition-colors', 'border-brand ring-2 ring-brand/20' => $on, 'hover:border-line-strong' => ! $on])>
                 <span @class(['grid place-items-center size-10 rounded-xl shrink-0', 'bg-brand-soft text-brand' => $s->kind() === 'birja', 'bg-surface-2 text-ink-2' => $s->kind() !== 'birja'])>
@@ -21,15 +22,61 @@
                 @if($on)<x-icon name="check-circle" class="size-5 text-brand ml-auto shrink-0"/>@endif
             </a>
         @endforeach
+        @foreach($widgets as $k => $w)
+            @php $on = $k === $active; @endphp
+            <a role="listitem" href="{{ route('exchanges.index', ['source' => $k]) }}" @if($on) aria-current="true" @endif
+               @class(['card p-4 flex items-start gap-3 transition-colors', 'border-brand ring-2 ring-brand/20' => $on, 'hover:border-line-strong' => ! $on])>
+                <span class="grid place-items-center size-10 rounded-xl shrink-0 bg-saffron-soft text-saffron"><x-icon name="globe" class="size-5"/></span>
+                <span class="min-w-0">
+                    <span class="flex items-center gap-2"><span class="font-semibold text-ink truncate">{{ $w['name'] }}</span><span class="badge badge-amber !text-[10px]">{{ __('Vidjet') }}</span></span>
+                    <span class="block text-xs text-muted">{{ $w['country'] }}</span>
+                </span>
+                @if($on)<x-icon name="check-circle" class="size-5 text-brand ml-auto shrink-0"/>@endif
+            </a>
+        @endforeach
     </div>
 
-    @if($error)
+    @if($widget)
+        {{-- a site's own free widget, as it comes, in a sandboxed frame: its script reaches nothing of the app --}}
+        <section class="card p-5 lg:p-6">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                <h2 class="text-base font-semibold flex items-center gap-2"><x-icon name="globe" class="size-5 text-brand"/> {{ $widgets[$widget]['name'] }}</h2>
+                <a href="{{ $widgets[$widget]['site'] }}" target="_blank" rel="noopener" class="text-sm text-brand-ink underline">{{ parse_url($widgets[$widget]['site'], PHP_URL_HOST) }}</a>
+            </div>
+            @if($widget === 'profinance')
+                <iframe src="{{ asset('widgets/profinance.html') }}" title="ProFinance.ru" class="w-full h-[520px] rounded-xl border border-line bg-white" loading="lazy"
+                        sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                <p class="mt-3 text-xs text-muted">{{ __('ProFinance.ru-nun pulsuz informerləri: Forex kotirovkaları və Rusiya Mərkəzi Bankının kursları. Rəqəmlər onların serverindən gəlir, sistemdəki hesablamalara düşmür.') }}</p>
+            @elseif($investingSrc)
+                <iframe src="{{ $investingSrc }}" title="Investing.com" class="w-full h-[560px] rounded-xl border border-line bg-white" loading="lazy"
+                        sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                <p class="mt-3 text-xs text-muted">{{ __('Investing.com-un vidjeti, onların şərtləri ilə. Rəqəmlər onların serverindən gəlir, sistemdəki hesablamalara düşmür.') }}</p>
+            @else
+                <x-empty icon="globe" :title="__('Investing.com vidjeti hələ qoşulmayıb')"
+                         :text="__('Investing.com vidjet kodunu yalnız öz saytında, şərtləri qəbul edildikdən sonra verir.')"/>
+                <ol class="mt-2 mx-auto max-w-xl list-decimal pl-5 space-y-1.5 text-sm text-ink-2">
+                    <li>{!! __('<a href=":v1" target="_blank" rel="noopener" class="text-brand-ink underline">Investing.com Webmaster Tools</a> səhifəsini açın.', ['v1' => e($widgets['investing']['site'])]) !!}</li>
+                    <li>{{ __('Valyuta cütlərini seçin, şərtləri qəbul edin və «Generate HTML Code» basın.') }}</li>
+                    <li>{{ __('Alınan kodu aşağıya yapışdırıb yadda saxlayın.') }}</li>
+                </ol>
+            @endif
+            @if($widget === 'investing' && auth()->user()->isCompanyAdmin())
+                <form method="POST" action="{{ route('exchanges.investing') }}" class="mt-5 max-w-xl mx-auto space-y-2">@csrf
+                    <label class="block"><span class="field-label">{{ __('Investing.com vidjet kodu') }}</span>
+                        <textarea name="code" rows="3" class="input w-full font-mono text-xs" placeholder="<iframe src=&quot;https://ssltools.investing.com/…&quot; …></iframe>">{{ $investingSrc }}</textarea></label>
+                    <div class="flex gap-2 justify-end"><button class="btn btn-primary btn-sm"><x-icon name="check" class="size-4"/> {{ __('Yadda saxla') }}</button></div>
+                </form>
+            @endif
+        </section>
+    @endif
+
+    @if(! $widget && $error)
         <div class="card border-saffron/40 bg-saffron-soft/60 p-4 mb-6 flex gap-3 text-sm" role="alert">
             <x-icon name="alert" class="size-5 text-saffron shrink-0"/><div>{{ $error }}</div>
         </div>
     @endif
 
-    @if($rates)
+    @if(! $widget && $rates)
         {{-- today: the chosen currency large, with the change from the day before; the main ones beside it --}}
         @php
             $big = fn ($v) => rate_fmt(round($v, $v >= 100 ? 2 : 4));

@@ -59,4 +59,33 @@ class ExchangeRateTest extends TestCase
         $this->fakeMarkets(moexDown: true);
         $this->actingAs($this->makeCompany())->get(route('exchanges.index', ['source' => 'moex']))->assertOk()->assertSee('hazırda cavab vermir');
     }
+
+    /** ProFinance.ru and Investing.com have no open data: their free widgets, each alone in a sandboxed frame. */
+    public function test_widgets_of_profinance_and_investing(): void
+    {
+        $this->fakeMarkets();
+        $admin = $this->makeCompany();
+        $this->actingAs($admin);
+
+        $this->get(route('exchanges.index', ['source' => 'profinance']))->assertOk()->assertSee('ProFinance.ru')->assertSee('Investing.com')
+            ->assertSee('widgets/profinance.html', false)->assertSee('sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"', false);
+        $page = (string) file_get_contents(public_path('widgets/profinance.html'));
+        $this->assertStringContainsString('informers.profinance.ru/v1/forex/js/forex.min.js', $page);
+        $this->assertStringContainsString("default-src 'none'", $page, 'the widget page has its own narrow policy');
+        $this->assertStringContainsString('PFForex.widget', (string) file_get_contents(public_path('widgets/profinance.js')));
+
+        // Investing.com: not connected yet — the steps; only an investing.com iframe is kept
+        $this->get(route('exchanges.index', ['source' => 'investing']))->assertOk()->assertSee('Investing.com vidjeti hələ qoşulmayıb')->assertSee('Generate HTML Code');
+        $this->post(route('exchanges.investing'), ['code' => '<iframe src="https://evil.example/x"></iframe>'])->assertSessionHas('error');
+        $this->post(route('exchanges.investing'), ['code' => '<iframe frameborder="0" scrolling="auto" height="400" width="650" allowtransparency="true" src="https://ssltools.investing.com/currency-cross-rates/?pairs=1,2,2186&amp;header-text-color=%23FFFFFF"></iframe>'])
+            ->assertSessionHas('success');
+        $src = 'https://ssltools.investing.com/currency-cross-rates/?pairs=1,2,2186&header-text-color=%23FFFFFF';
+        $this->assertSame($src, $admin->company->fresh()->setting('widgets.investing'));
+        $res = $this->get(route('exchanges.index', ['source' => 'investing']))->assertOk()->assertSee(e($src), false);
+        $this->assertStringContainsString('frame-src \'self\' https://*.investing.com', (string) $res->headers->get('Content-Security-Policy'));
+
+        // only an admin sets it
+        $clerk = $this->makeUser($admin->company, 'accountant', 'acc@test.az');
+        $this->actingAs($clerk)->post(route('exchanges.investing'), ['code' => ''])->assertForbidden();
+    }
 }

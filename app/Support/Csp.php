@@ -23,6 +23,7 @@ class Csp
             "img-src 'self' data: blob:",
             "font-src 'self' data:",
             "connect-src 'self'",
+            "frame-src 'self' https://*.investing.com",   // «Birja»: Investing.com's own widget, in a sandboxed frame
             "object-src 'none'",
             "form-action 'self'",
             "base-uri 'self'",

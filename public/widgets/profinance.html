@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- ProFinance.ru's free informers, alone in a sandboxed frame of the «Birja» page: their script reaches nothing of the app -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://informers.profinance.ru 'unsafe-eval'; style-src https://informers.profinance.ru 'unsafe-inline'; connect-src https://informers.profinance.ru; img-src https: data:; font-src https: data:; base-uri 'none'; form-action 'none'">
+    <title>ProFinance.ru</title>
+    <style>
+        body { margin: 0; padding: 8px; font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: #fff; color: #333; }
+        .pf { margin-bottom: 18px; }
+        .pf h3 { margin: 0 0 6px; font-size: 13px; font-weight: 600; color: #5b6475; text-transform: uppercase; letter-spacing: .04em; }
+    </style>
+    <script async defer src="https://informers.profinance.ru/v1/forex/js/forex.min.js?4"></script>
+    <script async defer src="https://informers.profinance.ru/v1/cbrf/js/cbrf.min.js?4"></script>
+    <script defer src="profinance.js"></script>
+</head>
+<body>
+<!--  ProFinance.ru - Forex start -->
+<div class="pf"><h3>Forex</h3><div id="forex-tradeflow"></div></div>
+<!--  ProFinance.ru - Курсы ЦБ РФ start -->
+<div class="pf"><h3>Курсы ЦБ РФ</h3><div id="cbrf-tradeflow"></div></div>
+</body>
+</html>

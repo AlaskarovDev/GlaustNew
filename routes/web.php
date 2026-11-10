@@ -117,6 +117,7 @@ Route::middleware(['auth', 'tenant'])->group(function () {
 
     Route::get('/currency', [CurrencyController::class, 'index'])->middleware('can:currency.view')->name('currency.index');
     Route::get('/exchanges', [\App\Http\Controllers\ExchangeRateController::class, 'index'])->middleware('can:currency.view')->name('exchanges.index');
+    Route::post('/exchanges/investing', [\App\Http\Controllers\ExchangeRateController::class, 'investing'])->middleware('can:currency.view')->name('exchanges.investing');
     Route::middleware('can:currency.import')->prefix('currency/import')->name('currency.import.')->group(function () {
         Route::get('/', [\App\Http\Controllers\CurrencyImportController::class, 'index'])->name('index');
         Route::get('/template', [\App\Http\Controllers\CurrencyImportController::class, 'template'])->name('template');

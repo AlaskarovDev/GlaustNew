@@ -124,7 +124,7 @@ class BalanceReport
         }
 
         // the 1C accounts the data cannot make (68 the budget, 75, 85 …): the latest figure given on or before the day
-        $given = \App\Models\BalanceEntry::where('entry_date', '<=', $date)->orderBy('entry_date')->orderBy('id')->get()->groupBy('line')->map->last();
+        $given = \App\Models\BalanceEntry::where('entry_date', '<=', $date.' 23:59:59')->orderBy('entry_date')->orderBy('id')->get()->groupBy('line')->map->last();
         foreach ($given->sortKeys() as $code => $e) {
             $liab[$code] ??= $line(__(\App\Models\BalanceEntry::LINES[$code] ?? $code));
             $liab[$code]['value'] += (float) $e->amount;

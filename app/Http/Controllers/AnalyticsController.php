@@ -247,6 +247,47 @@ class AnalyticsController extends Controller
         $data = (new \App\Support\Reports\ProjectReport)->build($from.'-01', \Carbon\Carbon::createFromFormat('!Y-m', $to)->endOfMonth()->toDateString(), $projectId, $forecast, $operation, $netFx);
         $label = fn ($m) => \Carbon\Carbon::createFromFormat('!Y-m', $m)->locale(app()->getLocale())->isoFormat('MMM YY');
 
+        // «Proqnoz üzrə Excel»: every Trade's forecast line by line — what was sold and bought, in which currency, at which
+        // forecast rate and at which real one — as the Trade's «Proqnoz və fakt» window, for the whole report
+        if ($request->query('format') === 'xlsx-forecast') {
+            $data = $forecast ? $data : (new \App\Support\Reports\ProjectReport)->build($from.'-01', \Carbon\Carbon::createFromFormat('!Y-m', $to)->endOfMonth()->toDateString(), $projectId, true, $operation, $netFx);
+            $rows = [];
+            $sum = fn (array $a, array $b) => ['v' => round(($a['v'] ?? 0) + ($b['v'] ?? 0), 2), 'f' => round(($a['f'] ?? 0) + ($b['f'] ?? 0), 2)];
+            $all = ['v' => 0, 'f' => 0];
+            foreach ($data['projects'] as $p) {
+                $proj = ['v' => 0, 'f' => 0];
+                foreach ($p['trades'] as $t) {
+                    $w = $t['fcWhy'] ?? null;
+                    if (! $w) {
+                        continue;
+                    }
+                    foreach ($w['rows'] as $r) {
+                        $x = $r['x'] ?? [];
+                        $rows[] = ['project' => $p['name'], 'code' => $t['code'], 'day' => $t['day'] ?? null, 'item' => $r['t'], 'n' => $x['n'] ?? null, 'cur' => $x['cur'] ?? null,
+                            'rq' => $x['rq'] ?? null, 'v' => $r['v'], 'rf' => $x['rf'] ?? null, 'f' => $r['f'],
+                            'd' => $r['v'] !== null && $r['f'] !== null ? round($r['f'] - $r['v'], 2) : null, 'note' => ($x ? null : trim($r['c'].($r['cf'] ? ' · '.__('fakt').': '.$r['cf'] : '')))];
+                    }
+                    $rows[] = ['project' => $p['name'], 'code' => $t['code'], 'item' => __('Mənfəət').' · Trade '.$t['code'], 'v' => $w['v'], 'f' => $w['f'],
+                        'd' => $w['v'] !== null && $w['f'] !== null ? round($w['f'] - $w['v'], 2) : null, 'bold' => true];
+                    $proj = $sum($proj, $w);
+                }
+                $rows[] = ['project' => $p['name'], 'item' => __('Layihə üzrə cəmi'), 'v' => $proj['v'], 'f' => $proj['f'], 'd' => round($proj['f'] - $proj['v'], 2), 'bold' => true];
+                $all = $sum($all, $proj);
+            }
+            $rows[] = ['project' => __('Bütün layihələr'), 'item' => __('Cəmi'), 'v' => $all['v'], 'f' => $all['f'], 'd' => round($all['f'] - $all['v'], 2), 'bold' => true];
+            $m = fn ($k) => fn ($r) => $r[$k] ?? null;
+            $cols = [Column::make(__('Layihə'), 'project', 'text', 22), Column::make('Trade', $m('code'), 'text', 15),
+                Column::make(__('Akt tarixi'), fn ($r) => isset($r['day']) ? azdate($r['day']) : '', 'text', 11), Column::make(__('Maddə'), $m('item'), 'text', 34),
+                Column::make(__('Məbləğ'), $m('n'), 'money'), Column::make(__('Valyuta'), $m('cur'), 'text', 8),
+                Column::make(__('Proqnoz kursu'), $m('rq'), 'rate'), Column::make(__('Proqnoz, AZN'), $m('v'), 'money'),
+                Column::make(__('Fakt kursu'), $m('rf'), 'rate'), Column::make(__('Fakt, AZN'), $m('f'), 'money'),
+                Column::make(__('Fərq (fakt − proqnoz)'), $m('d'), 'money'), Column::make(__('Qeyd'), $m('note'), 'text', 30)];
+
+            return app(SpreadsheetExporter::class)->download(__('Proqnoz və fakt'), $cols, $rows, 'proqnoz-'.$from.'-'.$to.'.xlsx',
+                array_values(array_filter([__('Dövr').': '.$label($from).' — '.$label($to), __('Proqnoz: fakturadakı bank proqnozu kursları ilə; fakt: real kurslar ilə (CBAR; logistika — ödəniş günü)'),
+                    $netFx ? __('Mənfəət bank kurs fərqi çıxılmaqla') : null])));
+        }
+
         if ($request->query('format') === 'xlsx') {
             $rows = [];
             foreach ($data['projects'] as $p) {

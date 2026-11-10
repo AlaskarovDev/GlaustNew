@@ -86,7 +86,19 @@ class ProfitBalanceReportTest extends TestCase
         $this->assertSame('Proqnoz', $fw['a']);
         $this->assertEqualsWithDelta($tr['fc'], array_sum(array_column($fw['rows'], 'v')), 0.02);
         $this->assertEqualsWithDelta($tr['profit'], array_sum(array_column($fw['rows'], 'f')), 0.02);
-        $this->get(route('analytics.show', ['projects', 'from' => '2025-01', 'to' => '2025-01', 'forecast' => 1]))->assertOk()->assertSee('Proqnoz mənfəət')->assertSee('Proqnozu gizlət');
+        $this->get(route('analytics.show', ['projects', 'from' => '2025-01', 'to' => '2025-01', 'forecast' => 1]))->assertOk()->assertSee('Proqnoz mənfəət')->assertSee('Proqnozu gizlət')
+            ->assertSee('Proqnoz üzrə Excel');
+        // «Proqnoz üzrə Excel»: the same window for every Trade — amount, currency, forecast rate, the real one
+        $sale = collect($fw['rows'])->firstWhere('kind', 'sale');
+        $this->assertSame([9898036.68, 'RUB', 0.0165], [$sale['x']['n'], $sale['x']['cur'], $sale['x']['rq']]);
+        $xlsx = $this->get(route('analytics.show', ['projects', 'from' => '2025-01', 'to' => '2025-01', 'format' => 'xlsx-forecast']));
+        $xlsx->assertOk();
+        $path = tempnam(sys_get_temp_dir(), 'fc').'.xlsx';
+        file_put_contents($path, $xlsx->streamedContent());
+        $sheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($path)->getActiveSheet()->toArray(null, true, false, false);
+        $line = collect($sheet)->first(fn ($r) => str_starts_with((string) ($r[3] ?? ''), 'Satış'));
+        $this->assertSame([9898036.68, 'RUB', 0.0165, round($sale['v'], 2)], [(float) $line[4], $line[5], (float) $line[6], (float) $line[7]]);
+        $this->assertNotNull(collect($sheet)->first(fn ($r) => str_starts_with((string) ($r[3] ?? ''), 'Mənfəət · Trade')), 'each Trade closes with its profit');
         // «Əməliyyat tarixinə»: the profit on the seller's payment day, before the act — AC − AA − AJ − AL − AM − the logistics forecast
         $op = $this->inTenant($admin, fn () => (new \App\Support\Reports\ProjectReport)->build('2025-01-01', '2025-01-31', null, false, true));
         $ot = $op['projects'][0]['trades'][0];

@@ -2,6 +2,8 @@
     <x-page-header :title="$title" :icon="$icon" :subtitle="$description">
         <x-slot:actions>
             <a href="{{ route('analytics.show', ['report' => 'projects', 'from' => $from, 'to' => $to, 'project_id' => $projectId, 'forecast' => $forecast ?: null, 'op' => $operation ?: null, 'fx' => $netFx ?: null, 'format' => 'xlsx']) }}" class="btn btn-secondary"><x-icon name="sheet" class="size-4 text-success"/> Excel</a>
+            <a href="{{ route('analytics.show', ['report' => 'projects', 'from' => $from, 'to' => $to, 'project_id' => $projectId, 'forecast' => 1, 'op' => $operation ?: null, 'fx' => $netFx ?: null, 'format' => 'xlsx-forecast']) }}" class="btn btn-secondary"
+               title="{{ __('Hər Trade-in proqnozu sətir-sətir: məbləğ, valyuta, proqnoz kursu və real kurs, fərq') }}"><x-icon name="sheet" class="size-4 text-saffron"/> {{ __('Proqnoz üzrə Excel') }}</a>
         </x-slot:actions>
     </x-page-header>
 

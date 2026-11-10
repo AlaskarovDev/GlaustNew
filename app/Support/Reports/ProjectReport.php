@@ -202,24 +202,26 @@ class ProjectReport
             $f = fn (string $k) => $acted && $r[$k] !== null ? round((float) $r[$k], 2) : null;
             $neg = fn (?float $v) => $v === null ? null : -$v;
             $rate = fn ($v) => $v === null ? '—' : rate_fmt((float) $v);
+            // the same figures apart, for the Excel: the amount and its currency, the forecast rate and the real one
+            $x = fn ($n, $cur, $rq, $rf) => ['n' => $n === null ? null : (float) $n, 'cur' => $cur, 'rq' => $rq === null ? null : (float) $rq, 'rf' => $acted && $rf !== null ? (float) $rf : null];
             $rows[] = ['t' => __('Satış').' · '.($q['buyer_no'] ? __('alıcı fakturası').' '.$q['buyer_no'] : $inv),
                 'c' => num((float) $q['H']).' '.$q['saleCur'].' × '.$rate($q['Z']).' ('.__('proqnoz').')', 'v' => $q['AC'] === null ? null : round((float) $q['AC'], 2),
-                'cf' => $acted ? num((float) $r['H']).' '.$r['saleCur'].' × '.$rate($r['Z']).' CBAR' : null, 'f' => $f('AC')];
+                'cf' => $acted ? num((float) $r['H']).' '.$r['saleCur'].' × '.$rate($r['Z']).' CBAR' : null, 'f' => $f('AC'), 'x' => $x($q['H'], $q['saleCur'], $q['Z'], $r['Z'] ?? null), 'kind' => 'sale'];
             $rows[] = ['t' => __('Alış').' · '.$inv, 'c' => num((float) $q['D']).' '.$q['cur'].' × '.$rate($q['Y']).' ('.__('proqnoz').')', 'v' => $q['AA'] === null ? null : -round((float) $q['AA'], 2),
-                'cf' => $acted ? num((float) $r['D']).' '.$r['cur'].' × '.$rate($r['Y']).' CBAR' : null, 'f' => $neg($f('AA'))];
+                'cf' => $acted ? num((float) $r['D']).' '.$r['cur'].' × '.$rate($r['Y']).' CBAR' : null, 'f' => $neg($f('AA')), 'x' => $x($q['D'], $q['cur'], $q['Y'], $r['Y'] ?? null), 'kind' => 'purchase'];
             if (abs((float) ($q['AJ'] ?? 0)) >= 0.005 || abs((float) ($r['AJ'] ?? 0)) >= 0.005) {
                 $rows[] = ['t' => __('Köçürmə komissiyası'), 'c' => num((float) $q['J']).' '.$q['cur'].' × '.$rate($q['Y']).' ('.__('proqnoz').')', 'v' => -round((float) ($q['AJ'] ?? 0), 2),
-                    'cf' => $acted ? num((float) $r['J']).' '.$r['cur'].' × '.$rate($r['Y']).' CBAR' : null, 'f' => $neg($f('AJ'))];
+                    'cf' => $acted ? num((float) $r['J']).' '.$r['cur'].' × '.$rate($r['Y']).' CBAR' : null, 'f' => $neg($f('AJ')), 'x' => $x($q['J'], $q['cur'], $q['Y'], $r['Y'] ?? null), 'kind' => 'fee'];
             }
             $rows[] = ['t' => __('Logistika'), 'c' => $q['AX'] !== null ? num((float) $q['AX']).' '.$q['axCur'].' × '.$rate($q['BA']).' ('.__('proqnoz').')' : __('logistika ödənişi yoxdur'),
                 'v' => -round((float) ($q['BC'] ?? 0), 2), 'cf' => $acted ? ($r['AX'] !== null ? num((float) $r['AX']).' '.$r['axCur'].' × '.$rate($r['BA']).' ('.__('ödəniş günü').')' : __('logistika ödənişi yoxdur')) : null,
-                'f' => $neg($f('BC'))];
+                'f' => $neg($f('BC')), 'x' => $x($q['AX'], $q['axCur'] ?? null, $q['BA'], $r['BA'] ?? null), 'kind' => 'logistics'];
             if (abs((float) ($q['BB'] ?? 0)) >= 0.005 || abs((float) ($r['BB'] ?? 0)) >= 0.005) {
-                $rows[] = ['t' => __('Logistika komissiyası'), 'c' => __('bankın tutduğu'), 'v' => -round((float) ($q['BB'] ?? 0), 2), 'cf' => $acted ? __('bankın tutduğu') : null, 'f' => $neg($f('BB'))];
+                $rows[] = ['t' => __('Logistika komissiyası'), 'c' => __('bankın tutduğu'), 'v' => -round((float) ($q['BB'] ?? 0), 2), 'cf' => $acted ? __('bankın tutduğu') : null, 'f' => $neg($f('BB')), 'kind' => 'logistics_fee'];
             }
         }
         if ($fx != 0.0) {
-            $rows[] = ['t' => __('Bank kurs fərqi'), 'c' => __('real — rubl satışı / avro alışı'), 'cf' => $done ? __('eyni') : null, 'v' => -$fx, 'f' => $done ? -$fx : null];
+            $rows[] = ['t' => __('Bank kurs fərqi'), 'c' => __('real — rubl satışı / avro alışı'), 'cf' => $done ? __('eyni') : null, 'v' => -$fx, 'f' => $done ? -$fx : null, 'kind' => 'fx'];
         }
         $v = $ok && ! $frs->contains(fn ($q) => $q['BT'] === null) ? round((float) $frs->sum('BT') - $fx, 2) : null;
 

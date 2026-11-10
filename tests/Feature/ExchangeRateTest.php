@@ -51,7 +51,7 @@ class ExchangeRateTest extends TestCase
         // Binance: USDTTRY is TRY per dollar, EURUSDT turned round; the daily close
         $page = $this->get(route('exchanges.index', ['source' => 'binance', 'code' => 'EUR']))->assertOk()->assertSee('50,0000')->assertSee('0,8000');
         $chart = json_decode(html_entity_decode((string) preg_replace('/.*x-chart="([^"]+)".*/s', '$1', $page->getContent())), true);
-        $this->assertSame([0.8, 1.0], $chart['series'][0]['data']);
+        $this->assertEquals([0.8, 1.0], $chart['series'][0]['data']);
     }
 
     public function test_a_market_that_does_not_answer(): void

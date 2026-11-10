@@ -21,6 +21,8 @@ use Illuminate\Support\Facades\DB;
  *   accounts   [{name, bank_name, currency}]           — created when missing
  *   categories {name: [scope, pl_line]}                 — created when missing (an existing one keeps its settings)
  *   pl_lines   {name: pl_line}                          — sets the «MZ sətri» of existing expense categories (prints the old one)
+ *   counterparties {category: counterparty}            — ties the expenses of a category to a supplier (created when missing): its
+ *                                                        «Hesablanıb» services against its payments make the balance's 60
  *   ops        [{type: expense, date, amount, category, description, account, pl_line?}  — pl_line: this expense's «MZ sətri» (else the category's)
  *               {type: transfer, date, amount, from, to, description}
  *               {type: income, date, amount, account, category, description}
@@ -82,6 +84,15 @@ class BookCommand extends Command
                     if ($c->pl_line !== $line) {
                         $this->line("MZ sətri: {$name}: ".($c->pl_line ?? '—')." → {$line}");
                         $this->option('dry') || $c->update(['pl_line' => $line]);
+                    }
+                }
+                foreach ($data['counterparties'] ?? [] as $cat => $party) {
+                    $c = Category::where('scope', 'expense')->where('name', $cat)->firstOrFail();
+                    $n = Expense::where('category_id', $c->id)->count();
+                    $this->line("Kontragent: {$cat} → {$party} ({$n} xərc)");
+                    if (! $this->option('dry')) {
+                        $cp = \App\Models\Counterparty::firstOrCreate(['name' => $party], ['type' => 'supplier', 'entity_type' => 'legal']);
+                        Expense::where('category_id', $c->id)->update(['counterparty_id' => $cp->id]);
                     }
                 }
                 $account = fn (string $name) => BankAccount::where('name', $name)->firstOrFail();

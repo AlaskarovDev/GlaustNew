@@ -73,7 +73,7 @@ class ProfitLossReport
     public static function lineOfExpense(Expense $e): ?string
     {
         return match (true) {
-            $e->pl_line === self::NONE => null,
+            $e->pl_line === self::NONE, $e->pl_line === self::ASSET => null,
             $e->pl_line !== null && isset(self::lines()[$e->pl_line]) => $e->pl_line,
             default => self::lineOf($e->category),
         };
@@ -82,10 +82,13 @@ class ProfitLossReport
     /** «MZ sətri» of a category that stays out of the report. */
     public const NONE = 'none';
 
+    /** «MZ sətri» of a fixed asset bought (a computer): out of MZ, on the balance (01, net of VAT), worn by the amortisation (227.10). */
+    public const ASSET = 'asset';
+
     /** A category's line: its own choice, else by its name; null — not in the report. */
     public static function lineOf(?\App\Models\Category $c): ?string
     {
-        if ($c?->pl_line === self::NONE) {
+        if ($c?->pl_line === self::NONE || $c?->pl_line === self::ASSET) {
             return null;
         }
         if ($c?->pl_line && isset(self::lines()[$c->pl_line])) {

@@ -122,6 +122,29 @@ class BookCommandTest extends TestCase
 
         $this->artisan('glaust:book', ['company' => (string) $admin->company_id, '--tag' => 'MZ1C', '--undo' => true])->expectsOutputToContain('Geri alındı: 3 xərc, 0 bank hərəkəti, 2 MZ düzəlişi.')->assertSuccessful();
         $this->assertSame(0, $this->inTenant($admin, fn () => PlAdjustment::count()));
+        // a supplier's service booked as owed, paid in part: the balance's 60 has the rest; a computer on 1 net of VAT, worn by its amortisation
+        $this->inTenant($admin, fn () => BankAccount::create(['name' => 'AZN Hesabı', 'bank_name' => 'Turan Bank', 'currency' => 'AZN', 'opening_balance' => 100000, 'is_active' => true]));
+        $svc = base64_encode(gzencode(json_encode([
+            'categories' => ['ERTINS (hesablama)' => ['expense', '232.1'], 'ERTINS (ödəniş)' => ['expense', 'none'], 'Kompüter' => ['expense', 'asset'], 'Amortizasiya' => ['expense', '227.10']],
+            'ops' => [
+                ['type' => 'accrual', 'date' => '2025-01-20', 'amount' => 1000, 'category' => 'ERTINS (hesablama)', 'description' => 'xidmət'],
+                ['type' => 'expense', 'date' => '2025-01-25', 'amount' => 600, 'category' => 'ERTINS (ödəniş)', 'description' => 'ödəniş', 'account' => 'AZN Hesabı'],
+                ['type' => 'expense', 'date' => '2025-01-26', 'amount' => 2499, 'category' => 'Kompüter', 'description' => 'kompüter (ƏDV daxil)', 'account' => 'AZN Hesabı'],
+                ['type' => 'accrual', 'date' => '2025-01-31', 'amount' => 529.45, 'category' => 'Amortizasiya', 'description' => '25 %'],
+            ]])));
+        $this->artisan('glaust:book', ['company' => (string) $admin->company_id, 'payload' => $svc, '--tag' => 'SVC'])->assertSuccessful();
+        $ties = base64_encode(gzencode(json_encode(['counterparties' => ['ERTINS (hesablama)' => 'ERTINS', 'ERTINS (ödəniş)' => 'ERTINS'], 'ops' => []])));
+        $this->artisan('glaust:book', ['company' => (string) $admin->company_id, 'payload' => $ties, '--dry' => true])->expectsOutputToContain('Kontragent: ERTINS (ödəniş) → ERTINS (1 xərc)')->assertSuccessful();
+        $this->artisan('glaust:book', ['company' => (string) $admin->company_id, 'payload' => $ties])->assertSuccessful();
+        $this->inTenant($admin, function () {
+            $b = app(\App\Support\Reports\BalanceReport::class)->build('2025-01-31');
+            $this->assertContains('ERTINS · hesablanmış xidmət, ödənilməyib', array_column($b['liabilities']['60']['items'], 't'));
+            $this->assertSame(400.0, collect($b['liabilities']['60']['items'])->firstWhere('t', 'ERTINS · hesablanmış xidmət, ödənilməyib')['v']);
+            $this->assertSame([round(2499 / 1.18, 2), -529.45], [$b['assets']['1']['value'], $b['assets']['2']['value']]);
+            $pl = (new ProfitLossReport)->build('2025-01', '2025-01');
+            $this->assertFalse(collect($pl['lines'])->flatMap(fn ($l) => collect($l['items'])->flatten(1))->contains(fn ($i) => str_contains($i['t'] ?? '', 'Kompüter')), 'the computer is no expense of MZ');
+        });
+
         $bad = base64_encode(gzencode(json_encode(['ops' => [['type' => 'pl_adjust', 'date' => '2025-01-31', 'line' => '999', 'amount' => 1, 'description' => 'x']]])));
         $this->artisan('glaust:book', ['company' => (string) $admin->company_id, 'payload' => $bad])->expectsOutputToContain('MZ sətri yoxdur: 999')->assertFailed();
     }

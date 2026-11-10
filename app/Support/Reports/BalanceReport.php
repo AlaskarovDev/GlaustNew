@@ -9,10 +9,12 @@ use App\Services\Cbar\CurrencyRates;
 
 /**
  * Balans (the company's «BALANS» sheet) at a day, in AZN — from recorded data:
- *   AKTİVLƏR   50 Kassa (the cash desk) · 51 Hesablaşma hesabı (AZN accounts) · 52 Valyuta hesabı (currency accounts at CBAR of the day)
+ *   AKTİVLƏR   1 / 2 Əsas vəsaitlər — bought (net of VAT) / their wear (the amortisation booked)
+ *              50 Kassa (the cash desk) · 51 Hesablaşma hesabı (AZN accounts) · 52 Valyuta hesabı (currency accounts at CBAR of the day)
  *              61 Verilmiş avanslar — paid to a seller (or logistics) for what has not come yet (no act / invoice by the day)
  *              62 Alıcılarla hesablaşmalar — sold (act done), not yet received
- *   PASSİVLƏR  60 Malsatanlarla hesablaşmalar — bought (act done) or logistics invoiced, not yet paid
+ *   PASSİVLƏR  60 Malsatanlarla hesablaşmalar — bought (act done) or logistics acted, not yet paid; a supplier's service
+ *                 booked as «Hesablanıb» (with its counterparty) less what was paid it
  *              64 Alınmış avanslar — received from a buyer before the act
  *              80 Mənfəət və zərər — the year's result to the day (ProfitLossReport)
  *              88 Bölüşdürülməmiş mənfəət — the results of the years before, after their profit tax, less the dividends paid
@@ -29,7 +31,7 @@ class BalanceReport
     {
         $rate = fn (string $cur) => $cur === 'AZN' ? 1.0 : $this->rates->tryRate($cur, $date);
         $line = fn (string $label) => ['label' => $label, 'value' => 0.0, 'items' => []];
-        $assets = ['50' => $line(__('Kassa')), '51' => $line(__('Hesablaşma hesabı')), '52' => $line(__('Valyuta hesabı')), '61' => $line(__('Verilmiş avanslar üzrə hesablaşmalar')),
+        $assets = ['1' => $line(__('Əsas vəsaitlər')), '2' => $line(__('Əsas vəsaitlərin köhnəlməsi')), '50' => $line(__('Kassa')), '51' => $line(__('Hesablaşma hesabı')), '52' => $line(__('Valyuta hesabı')), '61' => $line(__('Verilmiş avanslar üzrə hesablaşmalar')),
             '62' => $line(__('Alıcılar və sifarişçilərlə hesablaşmalar'))];
         $liab = ['60' => $line(__('Malsatan və podratçılarla hesablaşmalar')), '64' => $line(__('Alınmış avanslar üzrə hesablaşmalar')),
             '80' => $line(__('Mənfəət və zərər')), '88' => $line(__('Bölüşdürülməmiş mənfəət (ödənilməmiş zərər)'))];
@@ -94,6 +96,30 @@ class BalanceReport
                 $left = round($billed - $paidAct, 2);
                 $left > 0 ? $put($liab, '60', $left, $act->currency, $tag.' · '.__('logistikaya borc'), $url) : $put($assets, '61', -$left, $act->currency, $tag.' · '.__('logistikaya avans'), $url);
             }
+        }
+
+        // 1 / 2: the fixed assets bought (categories «Əsas vəsait»), net of the 18 % VAT, and their wear — the amortisation booked (227.10)
+        $upTo = fn ($q) => $q->where(fn ($w) => $w->where('expense_date', '<=', $date.' 23:59:59'));
+        foreach (\App\Models\Expense::with('category')->whereHas('category', fn ($q) => $q->where('pl_line', ProfitLossReport::ASSET))->where('status', '!=', 'accrued')->tap($upTo)->get() as $e) {
+            $gross = (float) ($e->amount_azn ?? $e->amount);
+            $put($assets, '1', round($gross / 1.18, 2), 'AZN', $e->category->name.' · '.azdate($e->expense_date).' · '.__('ƏDV xaric').' ('.num($gross).' / 1,18)');
+        }
+        foreach (\App\Models\Expense::with('category')->whereHas('category', fn ($q) => $q->where('pl_line', '227.10')->orWhere('name', 'like', '%mortizasiya%'))->tap($upTo)->get() as $e) {
+            $put($assets, '2', -(float) ($e->amount_azn ?? $e->amount), 'AZN', $e->category->name.' · '.azdate($e->expense_date).($e->description ? ' · '.$e->description : ''));
+        }
+
+        // 60 / 61 beyond the Trades: a supplier's service booked as «Hesablanıb» against what has been paid it (by counterparty)
+        $byParty = \App\Models\Expense::with('counterparty')->whereNotNull('counterparty_id')->whereNull('deal_id')->tap($upTo)->get()->groupBy('counterparty_id');
+        foreach ($byParty as $items) {
+            if (! $items->contains('status', 'accrued')) {
+                continue;   // only what was booked as owed first
+            }
+            $owed = $items->where('status', 'accrued')->sum(fn ($e) => (float) ($e->amount_azn ?? $e->amount));
+            $paid = $items->where('status', 'paid')->filter(fn ($e) => ($e->paid_at ?? $e->expense_date)->toDateString() <= $date)->sum(fn ($e) => (float) ($e->amount_azn ?? $e->amount));
+            $left = round($owed - $paid, 2);
+            $who = $items->first()->counterparty?->name ?? '—';
+            $left > 0 ? $put($liab, '60', $left, 'AZN', $who.' · '.__('hesablanmış xidmət, ödənilməyib'))
+                : $put($assets, '61', -$left, 'AZN', $who.' · '.__('xidmətə artıq ödəniş'));
         }
 
         // the result: this year to the day, and the years before

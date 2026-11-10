@@ -34,6 +34,7 @@
                                         <option value="">{{ __('MZ: adına görə') }}</option>
                                         @foreach($plLines as $code => [$plLabel])<option value="{{ $code }}" @selected($c->pl_line === $code)>{{ $code }} · {{ $plLabel }}</option>@endforeach
                                         <option value="none" @selected($c->pl_line === 'none')>— {{ __('MZ-yə daxil deyil') }}</option>
+                                        <option value="asset" @selected($c->pl_line === 'asset')>— {{ __('Əsas vəsait (balansda, ƏDV xaric)') }}</option>
                                     </select>
                                     <button class="btn btn-primary btn-sm">{{ __('Saxla') }}</button>
                                     <button type="button" class="btn btn-ghost btn-sm" @click="edit = false">{{ __('Ləğv') }}</button>
@@ -56,6 +57,7 @@
                         <option value="">{{ __('MZ: adına görə') }}</option>
                         @foreach(\App\Support\Reports\ProfitLossReport::expenseLines() as $code => [$plLabel])<option value="{{ $code }}" @selected(old('pl_line') === $code)>{{ $code }} · {{ $plLabel }}</option>@endforeach
                         <option value="none" @selected(old('pl_line') === 'none')>— {{ __('MZ-yə daxil deyil') }}</option>
+                        <option value="asset" @selected(old('pl_line') === 'asset')>— {{ __('Əsas vəsait (balansda, ƏDV xaric)') }}</option>
                     </select>
                 </x-field>
                 <button class="btn btn-primary w-full"><x-icon name="plus" class="size-4"/> {{ __('Əlavə et') }}</button>

@@ -23,7 +23,12 @@
         @foreach(['a' => [__('AKTİVLƏR'), $data['assets'], $data['assetsTotal']], 'l' => [__('PASSİVLƏR'), $data['liabilities'], $data['liabilitiesTotal']]] as $side => [$heading, $ls, $total])
             <section class="card overflow-hidden">
                 <table class="table-g text-[13px]">
-                    <thead><tr class="!bg-[#9a4a0c]"><th class="!text-white w-20">{{ __('Hesab №-si') }}</th><th class="!text-white">{{ $heading }}</th><th class="!text-right !text-white">{{ azdate($data['date']) }}</th></tr></thead>
+                    <thead><tr>
+                        {{-- the sheet's brown header: on the cells, the table style colours them itself --}}
+                        <th class="!bg-[#9a4a0c] !text-white !font-semibold w-20">{{ __('Hesab №-si') }}</th>
+                        <th class="!bg-[#9a4a0c] !text-white !font-bold !text-[13px] tracking-wide">{{ $heading }}</th>
+                        <th class="!bg-[#9a4a0c] !text-white !font-semibold !text-right whitespace-nowrap">{{ azdate($data['date']) }}</th>
+                    </tr></thead>
                     <tbody>
                         @foreach($ls as $code => $l)
                             <tr>
@@ -34,7 +39,7 @@
                             </tr>
                         @endforeach
                     </tbody>
-                    <tfoot><tr class="bg-[#9a4a0c]/10 font-bold"><td></td><td>{{ __('Cəmi') }}</td><td class="num">{{ money($total) }}</td></tr></tfoot>
+                    <tfoot><tr><td class="!bg-[#9a4a0c]/10"></td><td class="!bg-[#9a4a0c]/10 font-bold">{{ __('Cəmi') }}</td><td class="!bg-[#9a4a0c]/10 num font-bold whitespace-nowrap">{{ money($total) }}</td></tr></tfoot>
                 </table>
             </section>
         @endforeach

@@ -33,7 +33,7 @@ abstract class RateSource
 
     protected function http(): PendingRequest
     {
-        return Http::timeout(15)->retry(1, 300, throw: false)->withHeaders(['User-Agent' => 'TradeFlow/1.0 (+rates)'])->acceptJson();
+        return Http::connectTimeout(6)->timeout(12)->retry(1, 300, throw: false)->withHeaders(['User-Agent' => 'TradeFlow/1.0 (+rates)'])->acceptJson();
     }
 
     protected function from(int $days): \Carbon\CarbonImmutable

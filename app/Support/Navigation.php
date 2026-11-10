@@ -12,6 +12,7 @@ class Navigation
         $sections = [
             ['label' => null, 'items' => [
                 ['label' => __('İdarə paneli'), 'route' => 'dashboard', 'active' => 'dashboard', 'icon' => 'dashboard', 'can' => 'dashboard.view'],
+                ['label' => __('Birja'), 'route' => 'exchanges.index', 'active' => 'exchanges.*', 'icon' => 'trending-up', 'can' => 'currency.view'],
                 ['label' => __('Mənim işlərim'), 'route' => 'my-work', 'active' => 'my-work', 'icon' => 'calendar-check', 'can' => null],
             ]],
             ['label' => __('İş'), 'items' => [
@@ -27,7 +28,6 @@ class Navigation
                 ['label' => __('Bank əməliyyatları'), 'route' => 'bank.transactions.index', 'active' => 'bank.transactions.*', 'icon' => 'bank', 'can' => 'bank.view'],
                 ['label' => __('Bank hesabları auditi'), 'route' => 'bank.audits.index', 'active' => 'bank.audits.*', 'icon' => 'list-checks', 'can' => 'bank.view'],
                 ['label' => __('Valyuta məzənnələri'), 'route' => 'currency.index', 'active' => 'currency.index', 'icon' => 'coins', 'can' => 'currency.view'],
-                ['label' => __('Birja'), 'route' => 'exchanges.index', 'active' => 'exchanges.*', 'icon' => 'trending-up', 'can' => 'currency.view'],
                 ['label' => __('CBAR kursları importu'), 'route' => 'currency.import.index', 'active' => 'currency.import.*', 'icon' => 'upload', 'can' => 'currency.import'],
                 ['label' => __('Məzənnə fərqi'), 'route' => 'fx-difference.index', 'active' => 'fx-difference.*', 'icon' => 'scale', 'can' => 'currency.view'],
             ]],

@@ -43,7 +43,7 @@ class ExchangeRateTest extends TestCase
         // MOEX: the evening fixing, crossed to the dollar — 1 USD = 83.16 RUB, 1 USD = 83.16 / 92.4 EUR
         $page = $this->get(route('exchanges.index', ['source' => 'moex', 'code' => 'EUR', 'days' => 90]))->assertOk()
             ->assertSee('Moskva Birjası (MOEX)')->assertSee('Binance')->assertSee('Avropa Mərkəzi Bankı (ECB)')
-            ->assertSee(route('exchanges.index'), false)->assertSee('83,16')->assertSee(rate_fmt(round(83.16 / 92.4, 4)))->assertSee('1 USD neçə EUR edir');
+            ->assertSee(route('exchanges.index'), false)->assertSee('83,16')->assertSee(rate_fmt(round(83.16 / 92.4, 4)))->assertSee('1 USD neçə EUR edir')->assertSee('Bugünkü kurs')->assertSee('06.11 tarixinə görə');
         $chart = json_decode(html_entity_decode((string) preg_replace('/.*x-chart="([^"]+)".*/s', '$1', $page->getContent())), true);
         $this->assertSame([round(80 / 88, 6), round(82 / 92, 6)], $chart['series'][0]['data'], 'USD/EUR per day = USD/RUB ÷ EUR/RUB');
         $this->assertSame(['05.11', '06.11'], $chart['categories']);

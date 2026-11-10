@@ -26,9 +26,15 @@ class Exchanges
     /** @return array{date: ?string, rates: array<string, float>, error: ?string} */
     public static function latest(RateSource $s): array
     {
+        $down = "exchanges:{$s->key()}:down";
         try {
+            if (Cache::has($down)) {
+                throw new \RuntimeException('down');   // it did not answer a moment ago: do not keep the page waiting
+            }
+
             return Cache::remember("exchanges:{$s->key()}:latest", now()->addMinutes($s->key() === 'binance' ? 2 : 15), fn () => $s->latest()) + ['error' => null];
         } catch (\Throwable $e) {
+            $e->getMessage() === 'down' || Cache::put($down, true, now()->addMinutes(10));
             Log::warning("Birja {$s->key()}: ".$e->getMessage());
 
             return ['date' => null, 'rates' => [], 'error' => __(':v1 hazırda cavab vermir. Bir azdan yenidən cəhd edin və ya başqa mənbə seçin.', ['v1' => $s->name()])];

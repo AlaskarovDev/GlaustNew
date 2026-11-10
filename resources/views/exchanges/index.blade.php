@@ -30,6 +30,44 @@
     @endif
 
     @if($rates)
+        {{-- today: the chosen currency large, with the change from the day before; the main ones beside it --}}
+        @php
+            $big = fn ($v) => rate_fmt(round($v, $v >= 100 ? 2 : 4));
+            $up = $change && $change['abs'] > 0.0000005; $down = $change && $change['abs'] < -0.0000005;
+        @endphp
+        <section class="card p-5 lg:p-6 mb-6" aria-label="{{ __('Bugünkü kurs') }}">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                <h2 class="text-base font-semibold flex items-center gap-2"><x-icon name="calendar" class="size-5 text-brand"/> {{ __('Bugünkü kurs') }}</h2>
+                <span class="text-sm text-muted">{{ $source->name() }} · <span class="font-mono">{{ $date ? \Carbon\Carbon::parse($date)->format('d.m.Y') : '—' }}</span></span>
+            </div>
+            <div class="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] gap-4">
+                <div class="rounded-2xl bg-brand-soft/60 border border-brand/20 p-5">
+                    <div class="text-sm text-brand-ink font-medium">1 USD =</div>
+                    <div class="mt-1 flex items-baseline gap-2 flex-wrap">
+                        <span class="text-4xl sm:text-5xl font-bold font-mono tabular-nums text-ink">{{ $big($rates[$code]) }}</span>
+                        <span class="text-xl font-semibold text-ink-2">{{ $code }}</span>
+                    </div>
+                    <div class="mt-2 text-sm text-ink-2 font-mono">1 {{ $code }} = {{ rate_fmt(round(1 / $rates[$code], 1 / $rates[$code] < 0.01 ? 6 : 4)) }} USD</div>
+                    @if($change)
+                        <div @class(['mt-3 inline-flex items-center gap-1.5 rounded-lg px-2.5 h-8 text-sm font-semibold font-mono', 'bg-success/10 text-success' => $up, 'bg-danger/10 text-danger' => $down, 'bg-surface-2 text-faint' => ! $up && ! $down])>
+                            {{ $up ? '▲ +' : ($down ? '▼ −' : '• ') }}{{ rate_fmt(round(abs($change['abs']), 4)) }} ({{ $up ? '+' : ($down ? '−' : '') }}{{ num(abs($change['pct'])) }}%)
+                            <span class="font-sans font-normal text-xs text-muted">{{ __(':v1 tarixinə görə', ['v1' => \Carbon\Carbon::parse($change['day'])->format('d.m')]) }}</span>
+                        </div>
+                    @endif
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    @foreach($tiles as $c => $v)
+                        <a href="{{ route('exchanges.index', ['source' => $source->key(), 'code' => $c, 'days' => $days]) }}"
+                           @class(['rounded-xl border p-3.5 transition-colors', 'border-brand bg-brand-soft/40' => $c === $code, 'border-line hover:border-line-strong bg-surface' => $c !== $code])>
+                            <div class="text-xs font-semibold text-muted">USD / {{ $c }}</div>
+                            <div class="mt-1 text-xl font-bold font-mono tabular-nums text-ink">{{ $big($v) }}</div>
+                            <div class="text-[11px] text-faint font-mono">1 {{ $c }} = {{ rate_fmt(round(1 / $v, 1 / $v < 0.01 ? 6 : 4)) }} $</div>
+                        </a>
+                    @endforeach
+                </div>
+            </div>
+        </section>
+
         <div class="grid xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] gap-6 items-start">
             {{-- Chart --}}
             <section class="card p-5 lg:p-6 xl:sticky xl:top-24 order-last xl:order-first">

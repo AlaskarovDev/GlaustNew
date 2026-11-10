@@ -148,7 +148,7 @@ class BookCommandTest extends TestCase
             \App\Models\BalanceEntry::create(['entry_date' => '2025-02-28', 'line' => '68', 'amount' => -333.84, 'description' => '1C, 28.02']);
             $b = app(\App\Support\Reports\BalanceReport::class)->build('2025-01-31');
             $this->assertSame(-21779.38, $b['liabilities']['68']['value']);
-            $this->assertSame(['60', '64', '68', '80', '88'], array_keys($b['liabilities']), 'in the sheet\'s order');
+            $this->assertSame(['60', '64', '68', '80', '88'], array_map('strval', array_keys($b['liabilities'])), 'in the sheet\'s order');
             $this->assertSame(-100.0, app(\App\Support\Reports\BalanceReport::class)->build('2025-01-20')['liabilities']['68']['value']);
             $this->assertFalse(collect($pl['lines'])->flatMap(fn ($l) => collect($l['items'])->flatten(1))->contains(fn ($i) => str_contains($i['t'] ?? '', 'Kompüter')), 'the computer is no expense of MZ');
         });

@@ -17,6 +17,7 @@ use App\Services\Cbar\CurrencyRates;
  *                 booked as «Hesablanıb» (with its counterparty) less what was paid it
  *              64 Alınmış avanslar — received from a buyer before the act
  *              80 Mənfəət və zərər — the year's result to the day (ProfitLossReport)
+ *              68, 75, 85 … — the 1C figures given (Balans qalığı), the latest on or before the day
  *              88 Bölüşdürülməmiş mənfəət — the results of the years before, after their profit tax, less the dividends paid
  *                 (expense categories named «…dividend…»: the dividend and the tax withheld on it)
  * Every currency amount at CBAR of the day (the sheet's «Açıq hesab 61.2 / 64.2»: amount × the month-end rate).
@@ -120,6 +121,17 @@ class BalanceReport
             $who = $items->first()->counterparty?->name ?? '—';
             $left > 0 ? $put($liab, '60', $left, 'AZN', $who.' · '.__('hesablanmış xidmət, ödənilməyib'))
                 : $put($assets, '61', -$left, 'AZN', $who.' · '.__('xidmətə artıq ödəniş'));
+        }
+
+        // the 1C accounts the data cannot make (68 the budget, 75, 85 …): the latest figure given on or before the day
+        $given = \App\Models\BalanceEntry::where('entry_date', '<=', $date)->orderBy('entry_date')->orderBy('id')->get()->groupBy('line')->map->last();
+        foreach ($given->sortKeys() as $code => $e) {
+            $liab[$code] ??= $line(__(\App\Models\BalanceEntry::LINES[$code] ?? $code));
+            $liab[$code]['value'] += (float) $e->amount;
+            $liab[$code]['items'][] = ['t' => __('1C üzrə qalıq').' · '.azdate($e->entry_date).' · '.$e->description, 'c' => null, 'v' => round((float) $e->amount, 2), 'u' => null];
+        }
+        if ($given->isNotEmpty()) {   // in the sheet's order: 60, 64, 68 …, 80, 85, 88
+            uksort($liab, fn ($a, $b) => (float) $a <=> (float) $b);
         }
 
         // the result: this year to the day, and the years before

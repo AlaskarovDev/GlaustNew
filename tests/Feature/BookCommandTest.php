@@ -142,6 +142,14 @@ class BookCommandTest extends TestCase
             $this->assertSame(400.0, collect($b['liabilities']['60']['items'])->firstWhere('t', 'ERTINS · hesablanmış xidmət, ödənilməyib')['v']);
             $this->assertSame([round(2499 / 1.18, 2), -529.45], [$b['assets']['1']['value'], $b['assets']['2']['value']]);
             $pl = (new ProfitLossReport)->build('2025-01', '2025-01');
+            // a 1C figure for a line the data cannot make: the latest given on or before the day
+            \App\Models\BalanceEntry::create(['entry_date' => '2025-01-15', 'line' => '68', 'amount' => -100, 'description' => 'x']);
+            \App\Models\BalanceEntry::create(['entry_date' => '2025-01-31', 'line' => '68', 'amount' => -21779.38, 'description' => '1C, 31.01']);
+            \App\Models\BalanceEntry::create(['entry_date' => '2025-02-28', 'line' => '68', 'amount' => -333.84, 'description' => '1C, 28.02']);
+            $b = app(\App\Support\Reports\BalanceReport::class)->build('2025-01-31');
+            $this->assertSame(-21779.38, $b['liabilities']['68']['value']);
+            $this->assertSame(['60', '64', '68', '80', '88'], array_keys($b['liabilities']), 'in the sheet\'s order');
+            $this->assertSame(-100.0, app(\App\Support\Reports\BalanceReport::class)->build('2025-01-20')['liabilities']['68']['value']);
             $this->assertFalse(collect($pl['lines'])->flatMap(fn ($l) => collect($l['items'])->flatten(1))->contains(fn ($i) => str_contains($i['t'] ?? '', 'Kompüter')), 'the computer is no expense of MZ');
         });
 

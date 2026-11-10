@@ -292,7 +292,7 @@ class LogisticsActTest extends TestCase
             ->assertSessionHasErrors(['logistics_invoice_number', 'logistics_invoice_date']);
     }
 
-    /** Two logistics companies share the planned logistics: what the first does not cover stays open. */
+    /** Two logistics companies share the planned logistics: the tab shows what is not invoiced yet, but a real invoice ends the estimate as a debt. */
     public function test_logistics_split_between_two_companies(): void
     {
         [$admin, $inv, $deal, $carrier, $rub, $eur] = $this->world();
@@ -306,7 +306,7 @@ class LogisticsActTest extends TestCase
         $this->post(route('deals.logistics-acts.store', $deal), ['counterparty_id' => $second->id, 'invoice_id' => $inv->id, 'logistics_invoice_number' => 'R-1',
             'logistics_invoice_date' => $day, 'amount' => '4000', 'currency' => 'EUR', 'payment_plan' => 'invoice', 'parts' => $pay('4000')])->assertSessionHasNoErrors();
         $ob = $this->inTenant($admin, fn () => DealObligations::for(Deal::find($deal->id)));
-        $this->assertSame(['EUR' => 6200.0], $ob['logistics']['due'], 'the rest stays open');
+        $this->assertSame([], $ob['logistics']['due'], 'a real invoice (paid) replaces the estimate: no debt left from it');
         $this->get(route('deals.show', [$deal, 'tab' => 'logistics']))->assertOk()->assertSee('Qalır')->assertSee(money(6200, 'EUR'));
 
         // the second company carries the rest

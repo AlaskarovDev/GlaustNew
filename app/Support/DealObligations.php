@@ -46,9 +46,9 @@ class DealObligations
         $sellerDue = self::minus($invoiced, $paidSeller);
         $sellerOverpaid = $invoiced ? self::minus($paidSeller, $invoiced) : [];   // paid more than its invoices → it owes us
 
-        // Logistics: from the moment the buyer's proforma is ready, in the entered currency. Logistics
-        // companies' invoices (one or several) replace the estimate as far as they cover it; what they
-        // do not cover yet stays as an estimate (e.g. 6 500 planned, 2 750 invoiced by one company → 3 750 left).
+        // Logistics: from the moment the buyer's proforma is ready, in the entered currency. The estimate is an
+        // obligation only until the real one comes: once a logistics company has invoiced the seller invoice's
+        // logistics, the estimate is gone — what is owed is the real invoices' unpaid part.
         $proformaFor = $deal->salesDocuments->where('kind', 'proforma')->pluck('source_invoice_id')->merge($manual->pluck('id'))->all();
         $acts = $deal->logisticsActs;
         // delivered: a completed Trade, or all its logistics acted — nothing more to supply or to be supplied, and the
@@ -57,7 +57,7 @@ class DealObligations
         $logistics = [];
         foreach ($delivered ? collect() : $supplierInvoices->filter(fn ($i) => $i->hasLogistics() && in_array($i->id, $proformaFor, true)) as $inv) {
             $cov = \App\Support\Invoices\LogisticsCoverage::for($inv, $acts);
-            if ($cov['left'] > 0.01) {
+            if ($cov['count'] === 0 && $cov['left'] > 0.01) {   // no real invoice yet: the estimate stands
                 $logistics[] = ['invoice' => $inv->number.($cov['count'] ? ' · '.__('qalan') : ''), 'amount' => $cov['left'], 'currency' => $inv->logistics_currency, 'mode' => $inv->logistics_mode];
             }
         }

@@ -124,6 +124,11 @@ class AtfImportTest extends TestCase
             $late = Invoice::where('number', '02/EXP/2026')->firstOrFail()->deal;
             $this->assertSame('2026-07-01', SupplierPayment::where('deal_id', $late->id)->firstOrFail()->payment_date->toDateString());
             $this->assertNull(LogisticsAct::where('deal_id', $late->id)->firstOrFail()->act_date);
+            // the balance: no act yet — the buyer's money an advance received (64), the carrier's an advance paid (61)
+            $bal = app(\App\Support\Reports\BalanceReport::class)->build('2026-07-31');
+            $this->assertContains('Trade '.$late->code.' · logistikaya avans', array_column($bal['assets']['61']['items'], 't'));
+            $this->assertContains('Trade '.$late->code.' · alıcıdan avans', array_column($bal['liabilities']['64']['items'], 't'));
+            $this->assertNotContains('Trade '.$late->code.' · logistikaya borc', array_column($bal['liabilities']['60']['items'], 't'));
             // no act, no sale in MZ — the logistics invoice's day does not stand in for the act
             $pl = (new \App\Support\Reports\ProfitLossReport)->build('2026-06', '2026-07');
             $this->assertSame([0.0, 0.0], [$pl['lines']['217.2']['total'], $pl['lines']['232.1']['total']]);

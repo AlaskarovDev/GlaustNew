@@ -9,13 +9,14 @@ use App\Services\Cbar\CurrencyRates;
 
 /**
  * Balans (the company's «BALANS» sheet) at a day, in AZN — from recorded data:
- *   AKTİVLƏR   51 Hesablaşma hesabı (AZN accounts) · 52 Valyuta hesabı (currency accounts at CBAR of the day)
+ *   AKTİVLƏR   50 Kassa (the cash desk) · 51 Hesablaşma hesabı (AZN accounts) · 52 Valyuta hesabı (currency accounts at CBAR of the day)
  *              61 Verilmiş avanslar — paid to a seller (or logistics) for what has not come yet (no act / invoice by the day)
  *              62 Alıcılarla hesablaşmalar — sold (act done), not yet received
  *   PASSİVLƏR  60 Malsatanlarla hesablaşmalar — bought (act done) or logistics invoiced, not yet paid
  *              64 Alınmış avanslar — received from a buyer before the act
  *              80 Mənfəət və zərər — the year's result to the day (ProfitLossReport)
- *              88 Bölüşdürülməmiş mənfəət — the results of the years before
+ *              88 Bölüşdürülməmiş mənfəət — the results of the years before, after their profit tax, less the dividends paid
+ *                 (expense categories named «…dividend…»: the dividend and the tax withheld on it)
  * Every currency amount at CBAR of the day (the sheet's «Açıq hesab 61.2 / 64.2»: amount × the month-end rate).
  * «Fərq» = assets − the rest: the capital and whatever money moved outside the books.
  */
@@ -28,7 +29,7 @@ class BalanceReport
     {
         $rate = fn (string $cur) => $cur === 'AZN' ? 1.0 : $this->rates->tryRate($cur, $date);
         $line = fn (string $label) => ['label' => $label, 'value' => 0.0, 'items' => []];
-        $assets = ['51' => $line(__('Hesablaşma hesabı')), '52' => $line(__('Valyuta hesabı')), '61' => $line(__('Verilmiş avanslar üzrə hesablaşmalar')),
+        $assets = ['50' => $line(__('Kassa')), '51' => $line(__('Hesablaşma hesabı')), '52' => $line(__('Valyuta hesabı')), '61' => $line(__('Verilmiş avanslar üzrə hesablaşmalar')),
             '62' => $line(__('Alıcılar və sifarişçilərlə hesablaşmalar'))];
         $liab = ['60' => $line(__('Malsatan və podratçılarla hesablaşmalar')), '64' => $line(__('Alınmış avanslar üzrə hesablaşmalar')),
             '80' => $line(__('Mənfəət və zərər')), '88' => $line(__('Bölüşdürülməmiş mənfəət (ödənilməmiş zərər)'))];
@@ -47,7 +48,8 @@ class BalanceReport
             $moves = (float) BankTransaction::where('bank_account_id', $a->id)->where('transaction_date', '<=', $date.' 23:59:59')
                 ->selectRaw("COALESCE(SUM(CASE WHEN direction = 'in' THEN amount ELSE -amount END), 0) as s")->value('s');
             $bal = ($a->opening_date === null || $a->opening_date->toDateString() <= $date ? (float) $a->opening_balance : 0.0) + $moves;
-            $put($assets, $a->currency === 'AZN' ? '51' : '52', round($bal, 2), $a->currency, $a->bank_name.' · '.$a->name);
+            $cash = mb_stripos($a->bank_name.' '.$a->name, 'kassa') !== false;   // the cash desk is a line of its own (50)
+            $put($assets, $cash ? '50' : ($a->currency === 'AZN' ? '51' : '52'), round($bal, 2), $a->currency, $a->bank_name.' · '.$a->name);
         }
 
         // the Trades: what was paid and received by the day against what has come (the act) by it
@@ -85,9 +87,9 @@ class BalanceReport
                 $put($liab, '64', $got, $saleCur, $tag.' · '.__('alıcıdan avans'), $url);
             }
 
-            // logistics: each act against its invoice day
+            // logistics: each act against its act's day — paid before the act, the money is an advance to the carrier (61), as 1C has it
             foreach ($deal->logisticsActs as $act) {
-                $billed = ($act->docDate()?->toDateString() ?? '9999') <= $date ? (float) $act->amount : 0.0;
+                $billed = ($act->act_date?->toDateString() ?? '9999') <= $date ? (float) $act->amount : 0.0;
                 $paidAct = (float) $act->payments->filter(fn ($p) => $p->payment_date->toDateString() <= $date)->sum('act_amount');
                 $left = round($billed - $paidAct, 2);
                 $left > 0 ? $put($liab, '60', $left, $act->currency, $tag.' · '.__('logistikaya borc'), $url) : $put($assets, '61', -$left, $act->currency, $tag.' · '.__('logistikaya avans'), $url);
@@ -101,10 +103,23 @@ class BalanceReport
         $liab['80']['value'] = round(array_sum($now['result']), 2);
         $liab['80']['items'][] = ['t' => __('Mənfəət və zərər').': 01.01.'.$year.' — '.azdate($date), 'c' => null, 'v' => $liab['80']['value'], 'u' => route('analytics.show', ['profit', 'from' => "{$year}-01", 'to' => substr($date, 0, 7)])];
         $firstYear = (int) substr((string) (Deal::min('deal_date') ?? $date), 0, 4);
+        // 88: the years before, after their profit tax, less what has been paid out of them (the dividend and its tax)
         for ($y = min($firstYear, $year); $y < $year; $y++) {
-            $v = round(array_sum($pl->build("{$y}-01", "{$y}-12")['result']), 2);
+            $past = $pl->build("{$y}-01", "{$y}-12");
+            $v = round(array_sum($past['result']), 2);
             $liab['88']['value'] += $v;
             $liab['88']['items'][] = ['t' => __('Mənfəət və zərər').' '.$y, 'c' => null, 'v' => $v, 'u' => route('analytics.show', ['profit', 'from' => "{$y}-01", 'to' => "{$y}-12"])];
+            if (abs((float) $past['taxTotal']) >= 0.005) {
+                $liab['88']['value'] -= (float) $past['taxTotal'];
+                $liab['88']['items'][] = ['t' => __('Mənfəət vergisi').' '.$y.' (20 %)', 'c' => null, 'v' => -round((float) $past['taxTotal'], 2), 'u' => null];
+            }
+        }
+        $paidOut = \App\Models\Expense::with('category')->whereHas('category', fn ($q) => $q->where('name', 'like', '%ividend%'))
+            ->where('status', 'paid')->where(fn ($q) => $q->where('paid_at', '<=', $date.' 23:59:59')->orWhere(fn ($w) => $w->whereNull('paid_at')->where('expense_date', '<=', $date.' 23:59:59')))->get();
+        foreach ($paidOut as $e) {
+            $v = round((float) ($e->amount_azn ?? $e->amount), 2);
+            $liab['88']['value'] -= $v;
+            $liab['88']['items'][] = ['t' => $e->category->name.' · '.azdate($e->paid_at ?? $e->expense_date), 'c' => $e->description, 'v' => -$v, 'u' => null];
         }
 
         foreach ([&$assets, &$liab] as &$side) {

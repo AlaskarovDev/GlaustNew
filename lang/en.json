@@ -1903,6 +1903,7 @@
     "Seçilmiş hesaba əməliyyatlar. Təkrar sətirlər (eyni tarix, məbləğ, təyinat) atlanır. Məzənnə hər sətrin tarixinə görə CBAR-dan götürülür.": "Transactions for the selected account. Duplicate rows (same date, amount, purpose) are skipped. The rate is taken from CBAR for each row's date.",
     "Seçilmiş kontragent sistemdə tapılmadı.": "The selected counterparty was not found in the system.",
     "Seçilmiş kontragentin növü bu müqavilə növünə uyğun deyil.": "The selected counterparty's type does not match this contract type.",
+    "Seçilmiş şirkət": "Selected company",
     "Seçilməyib.": "Not selected.",
     "Seçilən Trade bu layihəyə aid deyil.": "The chosen Trade does not belong to this project.",
     "Seçilən ayın (seçilməyibsə — son bitmiş ayın) son gününün CBAR kursu ilə": "At the CBAR rate of the last day of the chosen month (or of the last finished month)",

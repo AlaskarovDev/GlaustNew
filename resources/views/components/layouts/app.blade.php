@@ -48,13 +48,27 @@
             </span>
             <span class="leading-tight min-w-0" :class="collapsed && 'lg:hidden'">
                 <span class="block text-[15px] font-semibold text-white tracking-tight">{{ __('TradeFlow') }}</span>
-                <span class="block text-[11px] text-slate-500 truncate">{{ $company->name }}</span>
             </span>
         </a>
         <button type="button" class="ml-auto lg:hidden text-slate-400 hover:text-white" @click="nav = false" aria-label="{{ __('Menyunu bağla') }}">
             <x-icon name="x" class="size-5"/>
         </button>
     </div>
+
+    {{-- The company being worked in, large; a click opens the header's company list --}}
+    @php
+        $initials = collect(preg_split('/\s+/u', trim(preg_replace('/["«»“”]|\b(MMC|MƏHDUD|MƏSULİYYƏTLİ|CƏMİYYƏTİ|LLC|ASC)\b/u', '', $company->name))))
+            ->filter()->take(2)->map(fn ($w) => mb_strtoupper(mb_substr($w, 0, 1)))->implode('') ?: 'Ş';
+    @endphp
+    <button type="button" @click="$dispatch('glaust:companies')" class="mx-3 mt-3 shrink-0 flex items-center gap-3 rounded-xl border border-night-line bg-white/[.04] hover:bg-white/[.07] transition-colors text-left"
+            :class="collapsed ? 'lg:justify-center lg:p-2 p-3' : 'p-3'" title="{{ __('Şirkəti seç') }}" aria-label="{{ __('Seçilmiş şirkət') }}: {{ $company->name }}">
+        <span class="grid place-items-center size-10 shrink-0 rounded-lg bg-teal-500/15 text-teal-300 text-sm font-bold tracking-wide">{{ $initials }}</span>
+        <span class="min-w-0" :class="collapsed && 'lg:hidden'">
+            <span class="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">{{ __('Seçilmiş şirkət') }}</span>
+            <span class="block text-[17px] leading-snug font-bold text-white break-words line-clamp-2">{{ $company->name }}</span>
+        </span>
+        <x-icon name="chevron-down" class="size-4 text-slate-500 ml-auto shrink-0" ::class="collapsed && 'lg:hidden'"/>
+    </button>
 
     <nav class="nav-scroll flex-1 overflow-y-auto overscroll-contain px-3 py-4 space-y-5" x-init="$nextTick(() => setTimeout(() => $el.querySelector('.nav-sublink[aria-current=page], .nav-link[aria-current=page]')?.scrollIntoView({ block: 'nearest' }), 250))">
         @foreach($sidebar as $section)
@@ -198,7 +212,8 @@
                 $myCompanies = $user->companies()->get(['companies.id', 'companies.name', 'companies.subscription_status']);
                 $canOpenCompany = $user->isCompanyAdmin() || $user->is_super_admin;
             @endphp
-            <div x-data="{ open: false, adding: false }" class="relative" @keydown.escape.window="open = false" @click.outside="open = false; adding = false">
+            <div x-data="{ open: false, adding: false }" class="relative" @keydown.escape.window="open = false" @click.outside="open = false; adding = false"
+                 @glaust:companies.window="nav = false; $nextTick(() => open = true)">
                 <button type="button" @click="open = !open" class="flex items-center gap-1.5 h-9 pl-2.5 pr-2 rounded-[10px] border border-line bg-surface text-sm font-medium text-ink hover:border-line-strong transition-colors max-w-[46vw] sm:max-w-[220px]"
                         :aria-expanded="open" aria-label="{{ __('Şirkəti seç') }}" title="{{ __('Şirkəti seç') }}">
                     <x-icon name="building" class="size-4 text-brand shrink-0"/>

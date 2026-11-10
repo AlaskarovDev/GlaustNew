@@ -1903,6 +1903,7 @@
     "Seçilmiş hesaba əməliyyatlar. Təkrar sətirlər (eyni tarix, məbləğ, təyinat) atlanır. Məzənnə hər sətrin tarixinə görə CBAR-dan götürülür.": "Операции по выбранному счёту. Повторяющиеся строки (та же дата, сумма, назначение) пропускаются. Курс берётся из CBAR на дату каждой строки.",
     "Seçilmiş kontragent sistemdə tapılmadı.": "Выбранный контрагент не найден в системе.",
     "Seçilmiş kontragentin növü bu müqavilə növünə uyğun deyil.": "Тип выбранного контрагента не соответствует этому типу договора.",
+    "Seçilmiş şirkət": "Выбранная компания",
     "Seçilməyib.": "Не выбрано.",
     "Seçilən Trade bu layihəyə aid deyil.": "Выбранный трейд не относится к этому проекту.",
     "Seçilən ayın (seçilməyibsə — son bitmiş ayın) son gününün CBAR kursu ilə": "По курсу ЦБА на последний день выбранного месяца (если не выбран — последнего завершённого)",

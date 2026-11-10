@@ -32,7 +32,7 @@ class CompanySwitchTest extends TestCase
         $this->assertSame($b->id, $admin->role->company_id);
         $this->assertSame([$a->plan_id, $a->subscription_status], [$b->plan_id, $b->subscription_status], 'the same subscription');
         $this->get(route('projects.index'))->assertOk()->assertDontSee('ATF gizli layihəsi');
-        $this->get(route('dashboard'))->assertOk()->assertSee('İkinci Firma MMC')->assertSee('ATF OIL GROUP');
+        $this->get(route('dashboard'))->assertOk()->assertSee('İkinci Firma MMC')->assertSee('ATF OIL GROUP')->assertSee('Seçilmiş şirkət')->assertSee('İF');
 
         // still a user of the first company while working in the second
         $this->assertContains($admin->id, $this->inTenant($clerk, fn () => User::forTenant()->pluck('id')->all()));

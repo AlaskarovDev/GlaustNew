@@ -55,20 +55,55 @@
         </button>
     </div>
 
-    {{-- The company being worked in, large; a click opens the header's company list --}}
+    {{-- The company being worked in, large; a click opens the company choice right here, under it --}}
     @php
+        $myCompanies = $user->companies()->get(['companies.id', 'companies.name', 'companies.subscription_status']);
+        $canOpenCompany = $user->isCompanyAdmin() || $user->is_super_admin;
         $initials = collect(preg_split('/\s+/u', trim(preg_replace('/["«»“”]|\b(MMC|MƏHDUD|MƏSULİYYƏTLİ|CƏMİYYƏTİ|LLC|ASC)\b/u', '', $company->name))))
             ->filter()->take(2)->map(fn ($w) => mb_strtoupper(mb_substr($w, 0, 1)))->implode('') ?: 'Ş';
     @endphp
-    <button type="button" @click="$dispatch('glaust:companies')" class="mx-3 mt-3 shrink-0 flex items-center gap-3 rounded-xl border border-night-line bg-white/[.04] hover:bg-white/[.07] transition-colors text-left"
-            :class="collapsed ? 'lg:justify-center lg:p-2 p-3' : 'p-3'" title="{{ __('Şirkəti seç') }}" aria-label="{{ __('Seçilmiş şirkət') }}: {{ $company->name }}">
+    <div x-data="{ open: false, adding: false }" class="mx-3 mt-3 shrink-0" @keydown.escape.window="open = false">
+    <button type="button" @click="collapsed = false; open = !open" class="w-full flex items-center gap-3 rounded-xl border border-night-line bg-white/[.04] hover:bg-white/[.07] transition-colors text-left"
+            :class="collapsed ? 'lg:justify-center lg:p-2 p-3' : 'p-3'" :aria-expanded="open" title="{{ __('Şirkəti seç') }}" aria-label="{{ __('Seçilmiş şirkət') }}: {{ $company->name }}">
         <span class="grid place-items-center size-10 shrink-0 rounded-lg bg-teal-500/15 text-teal-300 text-sm font-bold tracking-wide">{{ $initials }}</span>
         <span class="min-w-0" :class="collapsed && 'lg:hidden'">
             <span class="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">{{ __('Seçilmiş şirkət') }}</span>
             <span class="block text-[17px] leading-snug font-bold text-white break-words line-clamp-2">{{ $company->name }}</span>
         </span>
-        <x-icon name="chevron-down" class="size-4 text-slate-500 ml-auto shrink-0" ::class="collapsed && 'lg:hidden'"/>
+        <x-icon name="chevron-down" class="size-4 text-slate-500 ml-auto shrink-0 transition-transform" ::class="[collapsed && 'lg:hidden', open && 'rotate-180']"/>
     </button>
+    <div x-show="open && !collapsed" x-collapse x-cloak class="mt-1.5 rounded-xl border border-night-line bg-white/[.03] p-1.5">
+        @foreach($myCompanies as $c)
+            @if($c->id === $company->id)
+                <div class="flex items-center gap-2.5 px-3 h-10 rounded-lg bg-teal-500/15 text-teal-200 text-sm font-medium" aria-current="true">
+                    <x-icon name="building" class="size-4 shrink-0"/><span class="truncate">{{ $c->name }}</span><x-icon name="check" class="size-4 ml-auto shrink-0"/>
+                </div>
+            @else
+                <form method="POST" action="{{ route('company.switch', $c) }}">@csrf
+                    <button class="w-full flex items-center gap-2.5 px-3 h-10 rounded-lg text-sm text-slate-300 hover:bg-white/[.06] hover:text-white text-left">
+                        <x-icon name="building" class="size-4 text-slate-500 shrink-0"/><span class="truncate">{{ $c->name }}</span>
+                        <x-icon name="arrow-right" class="size-4 ml-auto text-slate-500 shrink-0"/>
+                    </button>
+                </form>
+            @endif
+        @endforeach
+        @if($canOpenCompany)
+            <button type="button" x-show="!adding" @click="adding = true; $nextTick(() => $refs.sideCompany.focus())" class="w-full flex items-center gap-2.5 px-3 h-9 rounded-lg text-sm text-teal-300 hover:bg-white/[.06]">
+                <x-icon name="plus" class="size-4"/> {{ __('Yeni şirkət') }}
+            </button>
+            <form x-show="adding" x-cloak method="POST" action="{{ route('company.store') }}" class="p-2 space-y-2">@csrf
+                <input x-ref="sideCompany" name="name" required maxlength="190" placeholder="{{ __('Şirkətin adı') }}" aria-label="{{ __('Şirkətin adı') }}"
+                       class="w-full h-9 px-3 rounded-lg bg-white/[.06] border border-night-line text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-teal-400">
+                <input name="voen" maxlength="20" placeholder="{{ __('VÖEN') }}" aria-label="{{ __('VÖEN') }}"
+                       class="w-full h-9 px-3 rounded-lg bg-white/[.06] border border-night-line text-sm text-white font-mono placeholder:text-slate-500 focus:outline-none focus:border-teal-400">
+                <div class="flex gap-2 justify-end">
+                    <button type="button" class="h-8 px-3 rounded-lg text-xs text-slate-400 hover:text-white" @click="adding = false">{{ __('Ləğv et') }}</button>
+                    <button class="h-8 px-3 rounded-lg text-xs font-semibold bg-teal-500 text-night hover:bg-teal-400">{{ __('Yarat') }}</button>
+                </div>
+            </form>
+        @endif
+    </div>
+    </div>
 
     <nav class="nav-scroll flex-1 overflow-y-auto overscroll-contain px-3 py-4 space-y-5" x-init="$nextTick(() => setTimeout(() => $el.querySelector('.nav-sublink[aria-current=page], .nav-link[aria-current=page]')?.scrollIntoView({ block: 'nearest' }), 250))">
         @foreach($sidebar as $section)
@@ -208,12 +243,7 @@
             </button>
 
             {{-- Firma seçimi: the companies the user works in; each has its own data and panel --}}
-            @php
-                $myCompanies = $user->companies()->get(['companies.id', 'companies.name', 'companies.subscription_status']);
-                $canOpenCompany = $user->isCompanyAdmin() || $user->is_super_admin;
-            @endphp
-            <div x-data="{ open: false, adding: false }" class="relative" @keydown.escape.window="open = false" @click.outside="open = false; adding = false"
-                 @glaust:companies.window="nav = false; $nextTick(() => open = true)">
+            <div x-data="{ open: false, adding: false }" class="relative" @keydown.escape.window="open = false" @click.outside="open = false; adding = false">
                 <button type="button" @click="open = !open" class="flex items-center gap-1.5 h-9 pl-2.5 pr-2 rounded-[10px] border border-line bg-surface text-sm font-medium text-ink hover:border-line-strong transition-colors max-w-[46vw] sm:max-w-[220px]"
                         :aria-expanded="open" aria-label="{{ __('Şirkəti seç') }}" title="{{ __('Şirkəti seç') }}">
                     <x-icon name="building" class="size-4 text-brand shrink-0"/>

@@ -360,7 +360,9 @@ class TradeReport
         $r['BF'] = $act?->logistics_invoice_number;
         $r['BG'] = $act?->logistics_invoice_date;
         $r['BH'] = $act?->act_number;
-        $r['BI'] = $BI = $act ? ($act->act_date ?? $act->docDate()) : null;
+        // the act's own date only: a logistics invoice without an act does not finish the Trade (1C recognises the sale at
+        // the act; until then the buyer's money is an advance received, 64)
+        $r['BI'] = $BI = $act?->act_date;
         $actReal = $BI;   // the 1C method works with the real act, never a month end standing in for it
         $r['provisional'] = false;
         if ($this->asOf && (! $act?->act_date || $act->act_date->format('Y-m-d') > $this->asOf)) {

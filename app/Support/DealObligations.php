@@ -11,7 +11,7 @@ use App\Models\Deal;
  *   seller     — we owe it its invoices' total minus what we paid; it owes us goods worth what we paid;
  *   logistics  — once the buyer's proforma exists we owe the logistics cost, in the currency it was entered.
  * Goods obligations close when the goods have gone: the Trade is completed, or every logistics act carries its act date
- * (the delivery). Money still owed shows either way.
+ * (the delivery); so does what is left of the logistics estimate. Money still owed (a carrier's unpaid invoice too) shows either way.
  */
 class DealObligations
 {
@@ -51,8 +51,11 @@ class DealObligations
         // do not cover yet stays as an estimate (e.g. 6 500 planned, 2 750 invoiced by one company → 3 750 left).
         $proformaFor = $deal->salesDocuments->where('kind', 'proforma')->pluck('source_invoice_id')->merge($manual->pluck('id'))->all();
         $acts = $deal->logisticsActs;
+        // delivered: a completed Trade, or all its logistics acted — nothing more to supply or to be supplied, and the
+        // logistics estimate has done its job (the carriers' real invoices stand for it, even when they came cheaper)
+        $delivered = $deal->status === 'completed' || ($acts->isNotEmpty() && $acts->every(fn ($a) => $a->act_date !== null));
         $logistics = [];
-        foreach ($supplierInvoices->filter(fn ($i) => $i->hasLogistics() && in_array($i->id, $proformaFor, true)) as $inv) {
+        foreach ($delivered ? collect() : $supplierInvoices->filter(fn ($i) => $i->hasLogistics() && in_array($i->id, $proformaFor, true)) as $inv) {
             $cov = \App\Support\Invoices\LogisticsCoverage::for($inv, $acts);
             if ($cov['left'] > 0.01) {
                 $logistics[] = ['invoice' => $inv->number.($cov['count'] ? ' · '.__('qalan') : ''), 'amount' => $cov['left'], 'currency' => $inv->logistics_currency, 'mode' => $inv->logistics_mode];
@@ -67,9 +70,6 @@ class DealObligations
         foreach ($logistics as $l) {
             $logisticsDue[$l['currency']] = round(($logisticsDue[$l['currency']] ?? 0) + $l['amount'], 2);
         }
-
-        // delivered: a completed Trade, or all its logistics acted — nothing more to supply or to be supplied
-        $delivered = $deal->status === 'completed' || ($acts->isNotEmpty() && $acts->every(fn ($a) => $a->act_date !== null));
 
         return [
             'delivered' => $delivered,

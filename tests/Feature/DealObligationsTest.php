@@ -68,6 +68,7 @@ class DealObligationsTest extends TestCase
         $this->inTenant($admin, fn () => Deal::find($deal->id)->update(['status' => 'completed']));
         $o = $ob();
         $this->assertSame([[], [], true], [$o['buyer']['goods'], $o['seller']['goods'], $o['delivered']]);
+        $this->assertSame([], $o['logistics']['due'], 'the logistics estimate is no debt once the Trade is done');
         $this->assertSame(['RUB' => 14800178.0], $o['receivable']);
         $this->get(route('obligations.index'))->assertOk()->assertDontSee(money(5000000, 'RUB'))->assertSee(money(14800178, 'RUB'));
         $this->get(route('deals.show', $deal))->assertOk()->assertSee('Məhsul göndərilib — öhdəlik bağlanıb')->assertDontSee('dəyərində məhsul göndərməliyik');

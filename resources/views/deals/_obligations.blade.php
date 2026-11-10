@@ -37,7 +37,7 @@
             @if($ob['buyer']['billed'])<div class="h-1.5 rounded-full bg-surface-2 overflow-hidden" title="{{ __('Ödənilib') }}"><div class="h-full bg-success rounded-full" style="width: {{ $pct($ob['buyer']['received'], $ob['buyer']['billed']) }}%"></div></div>@endif
             <div class="ob-goods {{ $ob['buyer']['goods'] ? 'is-open' : '' }}">
                 <x-icon name="package" class="size-4 shrink-0"/>
-                <span>@if($ob['buyer']['goods']){{ __('Bizim öhdəliyimiz:') }} <b class="font-mono">{!! $amounts($ob['buyer']['goods']) !!}</b> {{ __('dəyərində məhsul göndərməliyik') }} @else {{ __('Ödəniş gəlməyib — məhsul öhdəliyimiz yoxdur') }} @endif</span>
+                <span>@if($ob['buyer']['goods']){{ __('Bizim öhdəliyimiz:') }} <b class="font-mono">{!! $amounts($ob['buyer']['goods']) !!}</b> {{ __('dəyərində məhsul göndərməliyik') }} @elseif($ob['delivered']) {{ __('Məhsul göndərilib — öhdəlik bağlanıb') }} @else {{ __('Ödəniş gəlməyib — məhsul öhdəliyimiz yoxdur') }} @endif</span>
             </div>
         </article>
 
@@ -55,7 +55,7 @@
             @if($ob['seller']['invoiced'])<div class="h-1.5 rounded-full bg-surface-2 overflow-hidden" title="{{ __('Ödənilib') }}"><div class="h-full bg-saffron rounded-full" style="width: {{ $pct($ob['seller']['paid'], $ob['seller']['invoiced']) }}%"></div></div>@endif
             <div class="ob-goods {{ $ob['seller']['goods'] ? 'is-open' : '' }}">
                 <x-icon name="package" class="size-4 shrink-0"/>
-                <span>@if($ob['seller']['goods']){{ __('Onun öhdəliyi: bizə') }} <b class="font-mono">{!! $amounts($ob['seller']['goods']) !!}</b> {{ __('dəyərində məhsul təhvil verməlidir') }} @else {{ __('Satıcıya ödəniş edilməyib') }} @endif</span>
+                <span>@if($ob['seller']['goods']){{ __('Onun öhdəliyi: bizə') }} <b class="font-mono">{!! $amounts($ob['seller']['goods']) !!}</b> {{ __('dəyərində məhsul təhvil verməlidir') }} @elseif($ob['delivered']) {{ __('Məhsul təhvil verilib — öhdəlik bağlanıb') }} @else {{ __('Satıcıya ödəniş edilməyib') }} @endif</span>
             </div>
         </article>
 

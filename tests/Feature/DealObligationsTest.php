@@ -63,6 +63,14 @@ class DealObligationsTest extends TestCase
             ->assertSee(money(102122, 'EUR'))->assertSee(money(14800178, 'RUB'))->assertSee(money(5000000, 'RUB'))
             ->assertSee($project->name)->assertSee('#deal-'.$deal->id, false);
         $this->get(route('projects.show', [$project, 'tab' => 'deals']))->assertOk()->assertSee('id="deal-'.$deal->id.'"', false);
+
+        // a completed Trade owes no goods either way — only the money still owed stays
+        $this->inTenant($admin, fn () => Deal::find($deal->id)->update(['status' => 'completed']));
+        $o = $ob();
+        $this->assertSame([[], [], true], [$o['buyer']['goods'], $o['seller']['goods'], $o['delivered']]);
+        $this->assertSame(['RUB' => 14800178.0], $o['receivable']);
+        $this->get(route('obligations.index'))->assertOk()->assertDontSee(money(5000000, 'RUB'))->assertSee(money(14800178, 'RUB'));
+        $this->get(route('deals.show', $deal))->assertOk()->assertSee('Məhsul göndərilib — öhdəlik bağlanıb')->assertDontSee('dəyərində məhsul göndərməliyik');
     }
 
     /** The commercial invoice is the final bill: a buyer who paid the proforma is owed the difference; overpaying the seller is a claim on it. */

@@ -10,7 +10,8 @@ use App\Models\Deal;
  *   buyer      — owes us the proforma total minus what it paid; we owe it goods worth what it paid;
  *   seller     — we owe it its invoices' total minus what we paid; it owes us goods worth what we paid;
  *   logistics  — once the buyer's proforma exists we owe the logistics cost, in the currency it was entered.
- * Goods obligations stay open until delivery is recorded (logistics act, next stage).
+ * Goods obligations close when the goods have gone: the Trade is completed, or every logistics act carries its act date
+ * (the delivery). Money still owed shows either way.
  */
 class DealObligations
 {
@@ -67,11 +68,15 @@ class DealObligations
             $logisticsDue[$l['currency']] = round(($logisticsDue[$l['currency']] ?? 0) + $l['amount'], 2);
         }
 
+        // delivered: a completed Trade, or all its logistics acted — nothing more to supply or to be supplied
+        $delivered = $deal->status === 'completed' || ($acts->isNotEmpty() && $acts->every(fn ($a) => $a->act_date !== null));
+
         return [
+            'delivered' => $delivered,
             'buyer' => ['name' => $deal->counterparty?->name, 'billed' => $billed, 'final' => $billedDocs->contains('kind', 'commercial'), 'received' => $received, 'due' => $buyerDue,
-                'overpaid' => $buyerOverpaid, 'goods' => self::minus($received, $buyerOverpaid)],
+                'overpaid' => $buyerOverpaid, 'goods' => $delivered ? [] : self::minus($received, $buyerOverpaid)],
             'seller' => ['name' => $deal->supplier?->name, 'invoiced' => $invoiced, 'paid' => $paidSeller, 'due' => $sellerDue,
-                'overpaid' => $sellerOverpaid, 'goods' => self::minus($paidSeller, $sellerOverpaid)],
+                'overpaid' => $sellerOverpaid, 'goods' => $delivered ? [] : self::minus($paidSeller, $sellerOverpaid)],
             'logistics' => ['items' => $logistics, 'due' => $logisticsDue, 'forecast' => collect($logistics)->contains('mode', 'forecast'),
                 'company' => $acts->map(fn ($a) => $a->counterparty?->name)->filter()->unique()->implode(', ') ?: null, 'paid' => $acts->groupBy('currency')->map(fn ($g) => round($g->sum(fn ($a) => $a->paid()), 2))->filter()->all()],
             'payable' => self::plus(self::plus($sellerDue, $logisticsDue), $buyerOverpaid),

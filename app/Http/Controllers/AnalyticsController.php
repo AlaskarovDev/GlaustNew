@@ -251,6 +251,215 @@ class AnalyticsController extends Controller
         // forecast rate and at which real one — as the Trade's «Proqnoz və fakt» window, for the whole report
         if ($request->query('format') === 'xlsx-forecast') {
             $data = $forecast ? $data : (new \App\Support\Reports\ProjectReport)->build($from.'-01', \Carbon\Carbon::createFromFormat('!Y-m', $to)->endOfMonth()->toDateString(), $projectId, true, $operation, $netFx);
+            // one row a Trade, as the report's Excel, the amounts at the forecast: each in its own currency, its forecast rate and the AZN
+            $part = function (array $rows, string $kind): array {
+                $rs = array_values(array_filter($rows, fn ($r) => ($r['kind'] ?? null) === $kind));
+                $n = array_sum(array_map(fn ($r) => (float) ($r['x']['n'] ?? 0), $rs));
+                $v = array_sum(array_map(fn ($r) => abs((float) ($r['v'] ?? 0)), $rs));
+                $rates = array_unique(array_filter(array_map(fn ($r) => $r['x']['rq'] ?? null, $rs)));
+
+                return ['n' => $rs && $n ? round($n, 2) : null, 'cur' => $rs[0]['x']['cur'] ?? null, 'rate' => count($rates) === 1 ? reset($rates) : ($n ? $v / $n : null), 'azn' => $rs ? round($v, 2) : null];
+            };
+            $rows = [];
+            $tot = fn () => ['sale' => 0, 'purchase' => 0, 'logistics' => 0, 'fee' => 0, 'lfee' => 0, 'fx' => 0, 'fc' => 0, 'profit' => 0];
+            $all = $tot();
+            foreach ($data['projects'] as $p) {
+                $proj = $tot();
+                foreach ($p['trades'] as $t) {
+                    $w = $t['fcWhy'] ?? null;
+                    if (! $w) {
+                        continue;
+                    }
+                    [$s, $pu, $lo, $fe, $lf] = [$part($w['rows'], 'sale'), $part($w['rows'], 'purchase'), $part($w['rows'], 'logistics'), $part($w['rows'], 'fee'), $part($w['rows'], 'logistics_fee')];
+                    $fx = abs((float) collect($w['rows'])->where('kind', 'fx')->sum('v'));
+                    $row = ['project' => $p['name'], 'name' => $t['name'], 'code' => $t['code'], 'fdate' => $w['date'], 'day' => $t['day'] ?? null,
+                        's_n' => $s['n'], 's_cur' => $s['cur'], 's_rate' => $s['rate'], 's_azn' => $s['azn'],
+                        'p_n' => $pu['n'], 'p_cur' => $pu['cur'], 'p_rate' => $pu['rate'], 'p_azn' => $pu['azn'],
+                        'l_n' => $lo['n'], 'l_cur' => $lo['cur'], 'l_rate' => $lo['rate'], 'l_azn' => $lo['azn'],
+                        'f_n' => $fe['n'], 'f_cur' => $fe['cur'], 'f_azn' => $fe['azn'], 'lf_azn' => $lf['azn'], 'fx' => $fx ?: null,
+                        'fc' => $w['v'], 'profit' => $w['f'], 'diff' => $w['v'] !== null && $w['f'] !== null ? round($w['f'] - $w['v'], 2) : null];
+                    $row['margin'] = $row['s_azn'] && $row['fc'] !== null ? round($row['fc'] / $row['s_azn'] * 100, 1) : null;
+                    $rows[] = $row;
+                    foreach (['sale' => 's_azn', 'purchase' => 'p_azn', 'logistics' => 'l_azn', 'fee' => 'f_azn', 'lfee' => 'lf_azn', 'fx' => 'fx', 'fc' => 'fc', 'profit' => 'profit'] as $k => $col) {
+                        $proj[$k] += (float) ($row[$col] ?? 0);
+                    }
+                }
+                $rows[] = ['project' => $p['name'], 'name' => __('Cəmi')] + self::forecastSums($proj);
+                foreach ($proj as $k => $v) {
+                    $all[$k] += $v;
+                }
+            }
+            $rows[] = ['project' => __('Bütün layihələr'), 'name' => __('Cəmi')] + self::forecastSums($all);
+            $m = fn ($k) => fn ($r) => $r[$k] ?? null;
+            $date = fn ($k) => fn ($r) => isset($r[$k]) ? azdate($r[$k]) : '';
+            $cols = [Column::make(__('Layihə'), 'project', 'text', 22), Column::make('Trade', $m('name'), 'text', 34), Column::make(__('Kod'), $m('code'), 'text', 15),
+                Column::make(__('Proqnoz kursunun tarixi'), $date('fdate'), 'text', 12), Column::make(__('Akt tarixi'), $date('day'), 'text', 11),
+                Column::make(__('Satış'), $m('s_n'), 'money'), Column::make(__('Valyuta'), $m('s_cur'), 'text', 7), Column::make(__('Proqnoz kursu'), $m('s_rate'), 'rate'), Column::make(__('Satış, AZN'), $m('s_azn'), 'money'),
+                Column::make(__('Alış'), $m('p_n'), 'money'), Column::make(__('Valyuta'), $m('p_cur'), 'text', 7), Column::make(__('Proqnoz kursu'), $m('p_rate'), 'rate'), Column::make(__('Alış, AZN'), $m('p_azn'), 'money'),
+                Column::make(__('Logistika'), $m('l_n'), 'money'), Column::make(__('Valyuta'), $m('l_cur'), 'text', 7), Column::make(__('Proqnoz kursu'), $m('l_rate'), 'rate'), Column::make(__('Logistika, AZN'), $m('l_azn'), 'money'),
+                Column::make(__('Komissiya'), $m('f_n'), 'money'), Column::make(__('Valyuta'), $m('f_cur'), 'text', 7), Column::make(__('Komissiya, AZN'), $m('f_azn'), 'money'),
+                Column::make(__('Logistika komissiyası, AZN'), $m('lf_azn'), 'money')];
+            if ($netFx) {
+                $cols[] = Column::make(__('Bank kurs fərqi, AZN'), $m('fx'), 'money');
+            }
+            array_push($cols, Column::make(__('Proqnoz mənfəət'), $m('fc'), 'money'), Column::make(__('Marja, %'), $m('margin'), 'money'),
+                Column::make(__('Fakt mənfəət'), $m('profit'), 'money'), Column::make(__('Fərq (fakt − proqnoz)'), $m('diff'), 'money'));
+
+            return app(SpreadsheetExporter::class)->download(__('Proqnoz üzrə Layihə hesabatı'), $cols, $rows, 'proqnoz-'.$from.'-'.$to.'.xlsx',
+                array_values(array_filter([__('Dövr').': '.$label($from).' — '.$label($to), __('Məbləğlər fakturadakı bank proqnozu kursları ilə'),
+                    $netFx ? __('Mənfəət bank kurs fərqi çıxılmaqla') : null])));
+        }
+
+        if ($request->query('format') === 'xlsx') {
+            $line = fn ($name, $values, $total = null) => ['name' => $name] + $values + ['total' => $total ?? array_sum($values)];
+            $rows = [$line(__('Dövrün əvvəlinə qalıq'), $data['opening'], reset($data['opening']) ?: 0), ['name' => __('GƏLİRLƏR')]];
+            foreach ($data['income'] as $g) {
+                $rows[] = $line($g['label'], $g['values'], $g['total']);
+            }
+            $rows[] = $line(__('Cəmi gəlirlər'), $data['in']);
+            $rows[] = ['name' => __('ÖDƏNİŞLƏR')];
+            foreach ($data['payments'] as $g) {
+                $rows[] = $line($g['label'], $g['values'], $g['total']);
+            }
+            $rows[] = $line(__('Cəmi ödənişlər'), $data['out']);
+            if ($data['other']) {
+                $rows[] = ['name' => __('DİGƏR ƏMƏLİYYAT GƏLİRİ (XƏRCİ)')];
+                foreach ($data['other'] as $g) {
+                    $rows[] = $line($g['label'], $g['values'], $g['total']);
+                }
+            }
+            $rows[] = $line(__('Xalis pul axını'), $data['net']);
+            $rows[] = $line(__('Dövrün sonuna qalıq'), $data['closing'], end($data['closing']) ?: 0);
+            if ($data['cash']) {
+                $rows[] = ['name' => __('NET CASH (XALİS PUL VƏSAİTLƏRİ) AÇIQLAMASI')];
+                foreach ($data['cash']['accounts'] as $a) {
+                    $rows[] = $line($a['label'].' · '.$a['sub'], $a['values'], end($a['values']) ?? 0);
+                }
+                $rows[] = $line(__('Hesablarda cəmi'), $data['cash']['total'], end($data['cash']['total']) ?: 0);
+            }
+            $cols = [Column::make('CASH FLOW', 'name', 'text', 34)];
+            foreach ($data['months'] as $m) {
+                $cols[] = Column::make($label($m), fn ($r) => $r[$m] ?? null, 'money');
+            }
+            $cols[] = Column::make(__('Cəmi'), 'total', 'money');
+            $filters = array_filter([__('Dövr').': '.$label($from).' — '.$label($to), $projectId ? __('Layihə').': '.Project::find($projectId)?->name : null,
+                $dealId ? 'Trade: '.\App\Models\Deal::whereKey($dealId)->value('code') : null]);
+
+            return app(SpreadsheetExporter::class)->download('Cash flow', $cols, $rows, 'cash-flow-'.$from.'-'.$to.'.xlsx', array_values($filters));
+        }
+
+        return view('analytics.cashflow', $page + ['data' => $data, 'from' => $from, 'to' => $to, 'projectId' => $projectId, 'dealId' => $dealId, 'label' => $label, 'valuation' => $valuation,
+            'projects' => Project::whereHas('deals')->orderByDesc('start_date')->orderByDesc('id')->get(['id', 'code', 'name']), 'deals' => self::dealList($projectId)]);
+    }
+
+    /** The last month already over (Y-m) and a valid «Y-m» from the query or the default. */
+    private static function month(Request $request, string $key, string $default): string
+    {
+        $v = $request->query($key);
+
+        return is_string($v) && preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $v) ? $v : $default;
+    }
+
+    /** Təsisçi hesabatı: revenue, expenses, net profit — a dashboard for the founders, by period, project and Trade. */
+    private function founders(Request $request, array $page): View
+    {
+        $valid = fn ($v) => is_string($v) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $v) && strtotime($v) ? $v : null;
+        $to = $valid($request->query('to')) ?? today()->toDateString();
+        $from = $valid($request->query('from')) ?? substr($to, 0, 4).'-01-01';
+        if ($from > $to) {
+            [$from, $to] = [$to, $from];
+        }
+        $projectId = $request->integer('project_id') ?: null;
+        $dealId = $request->integer('deal_id') ?: null;
+
+        return view('analytics.founders', $page + [
+            'data' => (new \App\Support\Reports\FounderReport)->build($from, $to, $projectId, $dealId),
+            'projectId' => $projectId, 'dealId' => $dealId,
+            'projects' => Project::whereHas('deals')->orderByDesc('start_date')->orderByDesc('id')->get(['id', 'code', 'name']),
+            'dealList' => Deal::with('counterparty:id,name', 'supplier:id,name')->orderByDesc('deal_date')->orderByDesc('id')->get(['id', 'project_id', 'code', 'counterparty_id', 'supplier_id']),
+        ]);
+    }
+
+    /** Mənfəət və zərər (the company's «MZ» sheet): by month and for the period, from 1 January by default. */
+    private function profit(Request $request, array $page): View|Response
+    {
+        $last = today()->endOfMonth()->lte(today()) ? today()->format('Y-m') : today()->subMonthNoOverflow()->format('Y-m');
+        $to = self::month($request, 'to', $last);
+        $from = self::month($request, 'from', substr($to, 0, 4).'-01');
+        if ($from > $to) {
+            [$from, $to] = [$to, $from];
+        }
+        if (\Carbon\Carbon::createFromFormat('!Y-m', $from)->diffInMonths(\Carbon\Carbon::createFromFormat('!Y-m', $to)) > 23) {
+            $from = \Carbon\Carbon::createFromFormat('!Y-m', $to)->subMonthsNoOverflow(23)->format('Y-m');
+        }
+        $projectId = $request->integer('project_id') ?: null;
+        $dealId = $request->integer('deal_id') ?: null;
+        $data = (new \App\Support\Reports\ProfitLossReport)->build($from, $to, $projectId, $dealId);
+        $label = fn ($m) => \Carbon\Carbon::createFromFormat('!Y-m', $m)->locale(app()->getLocale())->isoFormat('MMM YY');
+
+        if ($request->query('format') === 'xlsx') {
+            $line = fn ($code, $name, $values, $total = null) => ['code' => $code, 'name' => $name] + $values + ['total' => $total ?? round(array_sum($values), 2)];
+            $rows = [['name' => __('GƏLİRLƏR')]];
+            foreach ($data['lines'] as $code => $l) {
+                if ($l['side'] === 'in') {
+                    $rows[] = $line($code, $l['label'], $l['values']);
+                }
+            }
+            $rows[] = $line('', __('CƏMİ'), $data['in']);
+            $rows[] = ['name' => __('XƏRCLƏR')];
+            foreach ($data['lines'] as $code => $l) {
+                if ($l['side'] === 'out') {
+                    $rows[] = $line($code, $l['label'], $l['values']);
+                    foreach ($data['subs'][$code] ?? [] as $subCode => $sl) {
+                        $rows[] = $line($subCode, '   '.$sl['label'], $sl['values']);
+                    }
+                }
+            }
+            $rows[] = $line('', __('CƏMİ'), $data['out']);
+            $rows[] = $line('', __('HESABAT DÖVRÜNDƏ MƏNFƏƏT (ZƏRƏR)'), $data['result']);
+            $rows[] = $line('', __('MV 20%'), $data['tax'], $data['taxTotal']);
+            $rows[] = $line('', __('Xalis mənfəət'), $data['net'], $data['netTotal']);
+            $rows[] = $line('', __('Dividend 5%'), $data['dividend'], $data['dividendTotal']);
+            $rows[] = $line('', __('Tam xalis mənfəət'), $data['retained'], $data['retainedTotal']);
+            $cols = [Column::make(__('Hesab №-si'), 'code', 'text', 10), Column::make(__('Gəlir-Xərc maddələri'), 'name', 'text', 60)];
+            foreach ($data['months'] as $m) {
+                $cols[] = Column::make($label($m), fn ($r) => $r[$m] ?? null, 'money');
+            }
+            $cols[] = Column::make(__('Cəmi'), 'total', 'money');
+
+            return app(SpreadsheetExporter::class)->download(__('Mənfəət və zərər'), $cols, $rows, 'mz-'.$from.'-'.$to.'.xlsx', array_values(array_filter([__('Dövr').': '.$label($from).' — '.$label($to),
+                $projectId ? __('Layihə').': '.Project::find($projectId)?->name : null, $dealId ? 'Trade: '.\App\Models\Deal::whereKey($dealId)->value('code') : null])));
+        }
+
+        return view('analytics.profit', $page + ['data' => $data, 'from' => $from, 'to' => $to, 'label' => $label, 'projectId' => $projectId, 'dealId' => $dealId,
+            'projects' => Project::whereHas('deals')->orderByDesc('start_date')->orderByDesc('id')->get(['id', 'code', 'name']), 'deals' => self::dealList($projectId)]);
+    }
+
+    /** The Trades a report can be filtered by (of the project, when one is chosen), newest first. */
+    private static function dealList(?int $projectId): \Illuminate\Support\Collection
+    {
+        return \App\Models\Deal::when($projectId, fn ($q) => $q->where('project_id', $projectId))->orderByDesc('deal_date')->orderByDesc('id')->get(['id', 'code', 'title', 'project_id']);
+    }
+
+    /** Layihə hesabatları: each project's Trades of the period (by the act) — sale, costs, profit, margin, the money in and out. */
+    private function projects(Request $request, array $page): View|Response
+    {
+        $to = self::month($request, 'to', today()->format('Y-m'));
+        $from = self::month($request, 'from', substr($to, 0, 4).'-01');
+        if ($from > $to) {
+            [$from, $to] = [$to, $from];
+        }
+        $projectId = $request->integer('project_id') ?: null;
+        $forecast = $request->boolean('forecast');
+        $operation = $request->boolean('op');
+        $netFx = $request->boolean('fx');
+        $data = (new \App\Support\Reports\ProjectReport)->build($from.'-01', \Carbon\Carbon::createFromFormat('!Y-m', $to)->endOfMonth()->toDateString(), $projectId, $forecast, $operation, $netFx);
+        $label = fn ($m) => \Carbon\Carbon::createFromFormat('!Y-m', $m)->locale(app()->getLocale())->isoFormat('MMM YY');
+
+        // «Proqnoz üzrə Excel»: every Trade's forecast line by line — what was sold and bought, in which currency, at which
+        // forecast rate and at which real one — as the Trade's «Proqnoz və fakt» window, for the whole report
+        if ($request->query('format') === 'xlsx-forecast') {
+            $data = $forecast ? $data : (new \App\Support\Reports\ProjectReport)->build($from.'-01', \Carbon\Carbon::createFromFormat('!Y-m', $to)->endOfMonth()->toDateString(), $projectId, true, $operation, $netFx);
             $rows = [];
             $sum = fn (array $a, array $b) => ['v' => round(($a['v'] ?? 0) + ($b['v'] ?? 0), 2), 'f' => round(($a['f'] ?? 0) + ($b['f'] ?? 0), 2)];
             $all = ['v' => 0, 'f' => 0];
@@ -315,6 +524,16 @@ class AnalyticsController extends Controller
 
         return view('analytics.projects', $page + ['data' => $data, 'from' => $from, 'to' => $to, 'label' => $label, 'projectId' => $projectId, 'forecast' => $forecast, 'operation' => $operation, 'netFx' => $netFx,
             'projectList' => \App\Models\Project::orderBy('name')->get(['id', 'code', 'name'])]);
+    }
+
+    /** The total row of «Proqnoz üzrə Excel». */
+    private static function forecastSums(array $s): array
+    {
+        $r = fn ($v) => round($v, 2);
+
+        return ['s_azn' => $r($s['sale']), 'p_azn' => $r($s['purchase']), 'l_azn' => $r($s['logistics']), 'f_azn' => $r($s['fee']), 'lf_azn' => $r($s['lfee']),
+            'fx' => $s['fx'] ? $r($s['fx']) : null, 'fc' => $r($s['fc']), 'profit' => $r($s['profit']), 'diff' => $r($s['profit'] - $s['fc']),
+            'margin' => $s['sale'] ? round($s['fc'] / $s['sale'] * 100, 1) : null];
     }
 
     /** Kurs fərqləri: wherever money moved at a bank rate other than CBAR — every exchange, payment and fee of the company, by month. */

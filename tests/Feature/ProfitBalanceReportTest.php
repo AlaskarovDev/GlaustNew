@@ -96,9 +96,13 @@ class ProfitBalanceReportTest extends TestCase
         $path = tempnam(sys_get_temp_dir(), 'fc').'.xlsx';
         file_put_contents($path, $xlsx->streamedContent());
         $sheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($path)->getActiveSheet()->toArray(null, true, false, false);
-        $line = collect($sheet)->first(fn ($r) => str_starts_with((string) ($r[4] ?? ''), 'Satış'));
+        // one row a Trade: the sale 9 898 036.68 RUB at 0.0165, the purchase in EUR at 1.79, the forecast profit and the fact
+        $head = array_search('Trade', $sheet[3], true);
+        $line = collect($sheet)->first(fn ($r) => ($r[$head + 1] ?? null) === $tr['code']);
         $this->assertSame([9898036.68, 'RUB', 0.0165, round($sale['v'], 2)], [(float) $line[5], $line[6], (float) $line[7], (float) $line[8]]);
-        $this->assertNotNull(collect($sheet)->first(fn ($r) => str_starts_with((string) ($r[4] ?? ''), 'Mənfəət · ')), 'each Trade closes with its profit');
+        $this->assertSame(['EUR', 1.79], [$line[10], (float) $line[11]]);
+        $this->assertEqualsWithDelta($tr['fc'], (float) $line[array_search('Proqnoz mənfəət', $sheet[3], true)], 0.01);
+        $this->assertEqualsWithDelta($tr['profit'], (float) $line[array_search('Fakt mənfəət', $sheet[3], true)], 0.01);
         // «Əməliyyat tarixinə»: the profit on the seller's payment day, before the act — AC − AA − AJ − AL − AM − the logistics forecast
         $op = $this->inTenant($admin, fn () => (new \App\Support\Reports\ProjectReport)->build('2025-01-01', '2025-01-31', null, false, true));
         $ot = $op['projects'][0]['trades'][0];

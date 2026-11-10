@@ -225,7 +225,9 @@ class ProjectReport
         }
         $v = $ok && ! $frs->contains(fn ($q) => $q['BT'] === null) ? round((float) $frs->sum('BT') - $fx, 2) : null;
 
-        return ['h' => $code.' · '.__('Proqnoz və fakt'), 's' => __('proqnoz: fakturadakı bank proqnozu kursları ilə; fakt: real kurslar ilə'), 'a' => __('Proqnoz'),
+        $day = $frs->map(fn ($q) => $q['invoice']->fx_date?->format('Y-m-d'))->filter()->min();   // the day of the forecast rates
+
+        return ['date' => $day, 'h' => $code.' · '.__('Proqnoz və fakt'), 's' => __('proqnoz: fakturadakı bank proqnozu kursları ilə; fakt: real kurslar ilə'), 'a' => __('Proqnoz'),
             'rows' => $rows, 'v' => $v, 'f' => $done ? round((float) $rs->sum(fn ($r) => (float) ($r['BT'] ?? 0)) - $fx, 2) : null];
     }
 

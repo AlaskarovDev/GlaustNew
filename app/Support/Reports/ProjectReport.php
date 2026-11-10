@@ -60,18 +60,18 @@ class ProjectReport
                 $op = $op === null ? null : round($op - $fxAmt, 2);
                 $opRows[] = ['t' => __('Bank kurs fərqi'), 'c' => __('rubl satışı / avro alışı, bank − CBAR'), 'cf' => $done ? __('eyni') : null, 'v' => -$fxAmt, 'f' => $done ? -$fxAmt : null];
             }
-            $trade = ['code' => $deal->code, 'url' => route('deals.show', $deal), 'title' => ($deal->supplier?->name ?? '—').' → '.($deal->counterparty?->name ?? '—'),
+            $trade = ['code' => $deal->code, 'name' => $deal->title ?: $deal->code, 'url' => route('deals.show', $deal), 'title' => ($deal->supplier?->name ?? '—').' → '.($deal->counterparty?->name ?? '—'),
                 'invoices' => $rs->pluck('seller_no')->filter()->implode(', '), 'day' => $day,
                 'opDay' => $rs->max(fn ($r) => $r['X'] instanceof \DateTimeInterface ? $r['X']->format('Y-m-d') : null),
                 'sold' => (float) $rs->sum('H'), 'saleCur' => $saleCur, 'received' => (float) $deal->payments->where('currency', $saleCur)->sum('amount'),
                 'bought' => (float) $rs->sum('D'), 'cur' => $cur, 'paid' => (float) $deal->supplierPayments->sum('amount'), 'op' => $op,
                 // what the operation-day figure is made of (the page opens it on a click)
-                'opWhy' => $operation ? ['h' => 'Trade '.$deal->code.' · '.__('Əməliyyat tarixinə və fakt'), 'a' => __('Əməliyyat tarixinə'),
+                'opWhy' => $operation ? ['h' => ($deal->title ?: 'Trade '.$deal->code).' · '.__('Əməliyyat tarixinə və fakt'), 'a' => __('Əməliyyat tarixinə'),
                     's' => __('əməliyyat').': '.($rs->max(fn ($r) => $r['X'] instanceof \DateTimeInterface ? $r['X']->format('Y-m-d') : null) ? azdate($rs->max(fn ($r) => $r['X'] instanceof \DateTimeInterface ? $r['X']->format('Y-m-d') : null)) : '—')
                         .' · '.__('akt').': '.($day ? azdate($day) : __('hələ yoxdur')),
                     'rows' => $opRows, 'v' => $op, 'f' => $done ? round((float) $rs->sum(fn ($r) => (float) ($r['BT'] ?? 0)) - ($netFx ? $fxAmt : 0), 2) : null] : null,
-                'fcWhy' => $forecast ? $this->forecastWhy($deal->code, $fcRows[$deal->id] ?? collect(), $rs, $done, $netFx ? $fxAmt : 0.0) : null,
-                'fxWhy' => ['kind' => 'fx', 'h' => 'Trade '.$deal->code.' · '.__('Bank kurs fərqi necə yarandı'), 's' => __('bankın kursu ilə CBAR arasındakı fərq'), 'rows' => $fxRows, 'v' => -$fxAmt]];
+                'fcWhy' => $forecast ? $this->forecastWhy($deal->title ?: 'Trade '.$deal->code, $fcRows[$deal->id] ?? collect(), $rs, $done, $netFx ? $fxAmt : 0.0) : null,
+                'fxWhy' => ['kind' => 'fx', 'h' => ($deal->title ?: 'Trade '.$deal->code).' · '.__('Bank kurs fərqi necə yarandı'), 's' => __('bankın kursu ilə CBAR arasındakı fərq'), 'rows' => $fxRows, 'v' => -$fxAmt]];
             if (! $done) {
                 $open[] = $trade + ['project' => $deal->project?->name ?? __('Layihəsiz')];
 
@@ -225,7 +225,7 @@ class ProjectReport
         }
         $v = $ok && ! $frs->contains(fn ($q) => $q['BT'] === null) ? round((float) $frs->sum('BT') - $fx, 2) : null;
 
-        return ['h' => 'Trade '.$code.' · '.__('Proqnoz və fakt'), 's' => __('proqnoz: fakturadakı bank proqnozu kursları ilə; fakt: real kurslar ilə'), 'a' => __('Proqnoz'),
+        return ['h' => $code.' · '.__('Proqnoz və fakt'), 's' => __('proqnoz: fakturadakı bank proqnozu kursları ilə; fakt: real kurslar ilə'), 'a' => __('Proqnoz'),
             'rows' => $rows, 'v' => $v, 'f' => $done ? round((float) $rs->sum(fn ($r) => (float) ($r['BT'] ?? 0)) - $fx, 2) : null];
     }
 

@@ -108,7 +108,7 @@
                     <tbody>
                     @foreach($p['trades'] as $tr)
                         <tr>
-                            <td data-label="Trade"><a href="{{ $tr['url'] }}" class="font-mono text-xs text-brand-ink hover:underline">{{ $tr['code'] }}</a><div class="text-[11px] text-muted">{{ $tr['title'] }}</div></td>
+                            <td data-label="Trade"><a href="{{ $tr['url'] }}" class="text-sm font-medium text-brand-ink hover:underline">{{ $tr['name'] }}</a><div class="text-[11px] text-muted"><span class="font-mono">{{ $tr['code'] }}</span> · {{ $tr['title'] }}</div></td>
                             <td data-label="{{ __('Akt tarixi') }}" class="font-mono text-xs">{{ azdate($tr['day']) }}</td>
                             <td data-label="{{ __('Satış') }}" class="num">{{ $n($tr['revenue']) }}</td>
                             <td data-label="{{ __('Alış') }}" class="num">{{ $n($tr['purchase']) }}</td>
@@ -163,7 +163,7 @@
                     <tbody>
                     @foreach($data['open'] as $tr)
                         <tr>
-                            <td data-label="Trade"><a href="{{ $tr['url'] }}" class="font-mono text-xs text-brand-ink hover:underline">{{ $tr['code'] }}</a><div class="text-[11px] text-muted">{{ $tr['title'] }}</div></td>
+                            <td data-label="Trade"><a href="{{ $tr['url'] }}" class="text-sm font-medium text-brand-ink hover:underline">{{ $tr['name'] }}</a><div class="text-[11px] text-muted"><span class="font-mono">{{ $tr['code'] }}</span> · {{ $tr['title'] }}</div></td>
                             <td data-label="{{ __('Layihə') }}">{{ $tr['project'] }}</td>
                             @if($operation)<td data-label="{{ __('Əməliyyat tarixinə mənfəət') }}" class="num text-brand-ink {{ $click }}" {!! $tip('op|'.$tr['code']) !!} title="{{ __('Necə hesablandı — toxunun') }}">{{ $tr['op'] === null ? '—' : $n($tr['op']) }}@if($tr['opDay'])<div class="text-[11px] text-faint">{{ azdate($tr['opDay']) }}</div>@endif</td>@endif
                             <td data-label="{{ __('Alıcıdan daxil olub') }}" class="num text-xs">{{ money($tr['received'], $tr['saleCur'] ?? 'AZN') }}<div class="text-faint">/ {{ money($tr['sold'], $tr['saleCur'] ?? 'AZN') }}</div></td>

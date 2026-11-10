@@ -263,11 +263,11 @@ class AnalyticsController extends Controller
                     }
                     foreach ($w['rows'] as $r) {
                         $x = $r['x'] ?? [];
-                        $rows[] = ['project' => $p['name'], 'code' => $t['code'], 'day' => $t['day'] ?? null, 'item' => $r['t'], 'n' => $x['n'] ?? null, 'cur' => $x['cur'] ?? null,
+                        $rows[] = ['project' => $p['name'], 'name' => $t['name'], 'code' => $t['code'], 'day' => $t['day'] ?? null, 'item' => $r['t'], 'n' => $x['n'] ?? null, 'cur' => $x['cur'] ?? null,
                             'rq' => $x['rq'] ?? null, 'v' => $r['v'], 'rf' => $x['rf'] ?? null, 'f' => $r['f'],
                             'd' => $r['v'] !== null && $r['f'] !== null ? round($r['f'] - $r['v'], 2) : null, 'note' => ($x ? null : trim($r['c'].($r['cf'] ? ' · '.__('fakt').': '.$r['cf'] : '')))];
                     }
-                    $rows[] = ['project' => $p['name'], 'code' => $t['code'], 'item' => __('Mənfəət').' · Trade '.$t['code'], 'v' => $w['v'], 'f' => $w['f'],
+                    $rows[] = ['project' => $p['name'], 'name' => $t['name'], 'code' => $t['code'], 'item' => __('Mənfəət').' · '.$t['name'], 'v' => $w['v'], 'f' => $w['f'],
                         'd' => $w['v'] !== null && $w['f'] !== null ? round($w['f'] - $w['v'], 2) : null, 'bold' => true];
                     $proj = $sum($proj, $w);
                 }
@@ -276,7 +276,7 @@ class AnalyticsController extends Controller
             }
             $rows[] = ['project' => __('Bütün layihələr'), 'item' => __('Cəmi'), 'v' => $all['v'], 'f' => $all['f'], 'd' => round($all['f'] - $all['v'], 2), 'bold' => true];
             $m = fn ($k) => fn ($r) => $r[$k] ?? null;
-            $cols = [Column::make(__('Layihə'), 'project', 'text', 22), Column::make('Trade', $m('code'), 'text', 15),
+            $cols = [Column::make(__('Layihə'), 'project', 'text', 22), Column::make('Trade', $m('name'), 'text', 34), Column::make(__('Kod'), $m('code'), 'text', 15),
                 Column::make(__('Akt tarixi'), fn ($r) => isset($r['day']) ? azdate($r['day']) : '', 'text', 11), Column::make(__('Maddə'), $m('item'), 'text', 34),
                 Column::make(__('Məbləğ'), $m('n'), 'money'), Column::make(__('Valyuta'), $m('cur'), 'text', 8),
                 Column::make(__('Proqnoz kursu'), $m('rq'), 'rate'), Column::make(__('Proqnoz, AZN'), $m('v'), 'money'),
@@ -294,11 +294,11 @@ class AnalyticsController extends Controller
                 foreach ($p['trades'] as $t) {
                     $rows[] = ['project' => $p['name']] + $t;
                 }
-                $rows[] = ['project' => $p['name'], 'code' => __('Cəmi')] + $p['sum'];
+                $rows[] = ['project' => $p['name'], 'name' => __('Cəmi')] + $p['sum'];
             }
-            $rows[] = ['project' => __('Bütün layihələr'), 'code' => __('Cəmi')] + $data['total'];
+            $rows[] = ['project' => __('Bütün layihələr'), 'name' => __('Cəmi')] + $data['total'];
             $m = fn ($k) => fn ($r) => $r[$k] ?? null;
-            $cols = [Column::make(__('Layihə'), 'project', 'text', 24), Column::make('Trade', $m('code'), 'text', 16), Column::make(__('Akt tarixi'), fn ($r) => isset($r['day']) ? azdate($r['day']) : '', 'text', 12),
+            $cols = [Column::make(__('Layihə'), 'project', 'text', 24), Column::make('Trade', $m('name'), 'text', 34), Column::make(__('Kod'), $m('code'), 'text', 16), Column::make(__('Akt tarixi'), fn ($r) => isset($r['day']) ? azdate($r['day']) : '', 'text', 12),
                 Column::make(__('Satış'), $m('revenue'), 'money'), Column::make(__('Alış'), $m('purchase'), 'money'), Column::make(__('Logistika'), $m('logistics'), 'money'),
                 Column::make(__('Komissiya'), $m('fees'), 'money'), Column::make(__('Kurs fərqi'), $m('fx'), 'money'), Column::make(__('Mənfəət'), $m('profit'), 'money'),
                 Column::make(__('Marja, %'), $m('margin'), 'money')];

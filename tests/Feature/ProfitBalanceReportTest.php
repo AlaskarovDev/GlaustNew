@@ -96,9 +96,9 @@ class ProfitBalanceReportTest extends TestCase
         $path = tempnam(sys_get_temp_dir(), 'fc').'.xlsx';
         file_put_contents($path, $xlsx->streamedContent());
         $sheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($path)->getActiveSheet()->toArray(null, true, false, false);
-        $line = collect($sheet)->first(fn ($r) => str_starts_with((string) ($r[3] ?? ''), 'Satış'));
-        $this->assertSame([9898036.68, 'RUB', 0.0165, round($sale['v'], 2)], [(float) $line[4], $line[5], (float) $line[6], (float) $line[7]]);
-        $this->assertNotNull(collect($sheet)->first(fn ($r) => str_starts_with((string) ($r[3] ?? ''), 'Mənfəət · Trade')), 'each Trade closes with its profit');
+        $line = collect($sheet)->first(fn ($r) => str_starts_with((string) ($r[4] ?? ''), 'Satış'));
+        $this->assertSame([9898036.68, 'RUB', 0.0165, round($sale['v'], 2)], [(float) $line[5], $line[6], (float) $line[7], (float) $line[8]]);
+        $this->assertNotNull(collect($sheet)->first(fn ($r) => str_starts_with((string) ($r[4] ?? ''), 'Mənfəət · ')), 'each Trade closes with its profit');
         // «Əməliyyat tarixinə»: the profit on the seller's payment day, before the act — AC − AA − AJ − AL − AM − the logistics forecast
         $op = $this->inTenant($admin, fn () => (new \App\Support\Reports\ProjectReport)->build('2025-01-01', '2025-01-31', null, false, true));
         $ot = $op['projects'][0]['trades'][0];

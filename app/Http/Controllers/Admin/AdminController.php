@@ -57,7 +57,8 @@ class AdminController extends Controller
 
         return view('admin.company', [
             'company' => $company,
-            'users' => User::where('company_id', $company->id)->with('role')->orderBy('name')->get(),
+            'users' => tap(User::whereIn('id', \App\Models\CompanyUser::select('user_id')->where('company_id', $company->id))->with('role')->orderBy('name')->get(),
+                fn ($us) => $us->each(fn ($u) => (int) $u->company_id === $company->id ?: $u->setRelation('role', $u->membershipIn($company->id)?->role))),
             'roles' => Role::withoutGlobalScopes()->where('company_id', $company->id)->orderByDesc('is_admin')->orderBy('name')->get(['id', 'name']),
             'storage' => (int) Attachment::where('company_id', $company->id)->sum('size'),
             'plans' => Plan::orderBy('monthly_price')->get(),
@@ -97,14 +98,14 @@ class AdminController extends Controller
 
     public function updateUser(Request $request, Company $company, User $user): RedirectResponse
     {
-        abort_unless($user->company_id === $company->id, 404);
+        abort_unless($user->membershipIn($company->id) !== null, 404);
         $data = $this->validatedUser($request, $company, $user);
         $user->fill(collect($data)->except(['password', 'role_id'])->all());
-        $user->role_id = (int) $data['role_id'];
         if (! empty($data['password'])) {
             $user->password = $data['password'];
         }
         $user->save();
+        $user->setAccessIn($company->id, (int) $data['role_id']);
 
         return back()->with('success', __(':v1 yeniləndi.', ['v1' => $user->name]).(! empty($data['password']) ? __(' Yeni şifrə təyin edildi.') : ''));
     }

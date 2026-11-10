@@ -43,7 +43,7 @@ class SetTenant
         $this->tenant->set($company);
         $user->setRelation('company', $company);
 
-        if (! $company->isUsable() && ! $request->routeIs('subscription.*', 'logout')) {
+        if (! $company->isUsable() && ! $request->routeIs('subscription.*', 'logout', 'company.switch')) {
             return redirect()->route('subscription.expired');
         }
 

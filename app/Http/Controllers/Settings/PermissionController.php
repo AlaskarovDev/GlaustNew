@@ -21,6 +21,7 @@ class PermissionController extends Controller
     {
         $roles = Role::withCount('users')->orderByDesc('is_admin')->orderBy('id')->get();
         $users = User::forTenant()->with('role')->orderBy('name')->get();
+        User::withRolesHere($users);
 
         return view('settings.permissions.index', [
             'roles' => $roles, 'users' => $users, 'modules' => Permissions::modules(), 'actions' => array_map('__', config('glaust.actions')),
@@ -51,8 +52,7 @@ class PermissionController extends Controller
 
     public function user(User $user): View
     {
-        abort_unless($user->company_id === tenant()?->id, 404);
-        $user->load('role');
+        $user = $this->here($user);
 
         return view('settings.permissions.user', [
             'user' => $user, 'modules' => Permissions::modules(), 'actions' => array_map('__', config('glaust.actions')), 'effective' => Permissions::effective($user),
@@ -60,11 +60,30 @@ class PermissionController extends Controller
         ]);
     }
 
+    /**
+     * The user as a member of this company: the role and overrides here. A user working in another company right now is
+     * a copy carrying this company's ones (never saved — setAccessIn writes the membership).
+     */
+    private function here(User $user): User
+    {
+        $m = $user->membershipIn((int) tenant()?->id);
+        abort_unless($m !== null, 404);
+        if ((int) $user->company_id !== (int) tenant()->id) {
+            $user = clone $user;
+            $user->setRelation('role', $m->role);
+            $user->permission_overrides = $m->permission_overrides;
+        } else {
+            $user->load('role');
+        }
+
+        return $user;
+    }
+
     /** A user's own exceptions: each ability «role» (as the role says), «grant» or «deny». */
     public function updateUser(Request $request, User $user): RedirectResponse
     {
         $this->authorize('users.update');
-        abort_unless($user->company_id === tenant()?->id, 404);
+        $user = $this->here($user);
         if ($user->role?->is_admin) {
             return back()->with('error', __('Admin rolunun icazələri məhdudlaşdırılmır.'));
         }
@@ -81,7 +100,7 @@ class PermissionController extends Controller
         }
         $grant = Permissions::withView($grant);
         $deny = array_values(array_diff($deny, $grant));
-        $user->forceFill(['permission_overrides' => $grant || $deny ? ['grant' => $grant, 'deny' => $deny] : null])->save();
+        $user->setAccessIn(tenant()->id, (int) $user->role?->id, $grant || $deny ? ['grant' => $grant, 'deny' => $deny] : null);
 
         return redirect()->route('settings.permissions.user', $user)->with('success', __(':v1 üçün icazələr yeniləndi.', ['v1' => $user->name]));
     }

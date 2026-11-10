@@ -24,10 +24,11 @@ class UserController extends Controller
         $q = trim((string) $request->query('q'));
         $users = User::forTenant()->with('role')
             ->when($q !== '', fn ($w) => $w->where(fn ($x) => $x->where('name', 'like', "%{$q}%")->orWhere('email', 'like', "%{$q}%")))
-            ->when($request->filled('role_id'), fn ($w) => $w->where('role_id', $request->integer('role_id')))
+            ->when($request->filled('role_id'), fn ($w) => $w->whereIn('id', \App\Models\CompanyUser::select('user_id')->where('company_id', tenant()->id)->where('role_id', $request->integer('role_id'))))
             ->when($request->query('status') === 'inactive', fn ($w) => $w->where('is_active', false))
             ->when($request->query('status') === 'active', fn ($w) => $w->where('is_active', true))
             ->orderByDesc('is_active')->orderBy('name')->paginate(25)->withQueryString();
+        User::withRolesHere($users);
 
         $online = DB::table('sessions')->whereIn('user_id', $users->pluck('id'))->where('last_activity', '>=', now()->subMinutes(5)->getTimestamp())->pluck('user_id')->unique()->all();
 
@@ -71,7 +72,10 @@ class UserController extends Controller
     {
         $this->authorize('users.update');
 
-        return view('settings.users.form', ['user' => $this->find($user), 'roles' => Role::orderBy('name')->pluck('name', 'id')]);
+        $model = $this->find($user);
+        $model->role_id = $model->roleIn(tenant()->id)?->id;   // the role here, for the form only (never saved from here)
+
+        return view('settings.users.form', ['user' => $model, 'roles' => Role::orderBy('name')->pluck('name', 'id')]);
     }
 
     public function update(Request $request, int $user, AuthLogger $log): RedirectResponse
@@ -81,17 +85,18 @@ class UserController extends Controller
         $data = $this->validated($request, $model);
         $active = $request->boolean('is_active');
 
-        if ($model->id === $request->user()->id && (! $active || (int) $data['role_id'] !== $model->role_id)) {
+        $here = $model->roleIn(tenant()->id);
+        if ($model->id === $request->user()->id && (! $active || (int) $data['role_id'] !== $here?->id)) {
             return back()->withErrors(['role_id' => __('Öz rolunuzu dəyişə və ya özünüzü deaktiv edə bilməzsiniz.')]);
         }
-        if ($model->isCompanyAdmin() && (! $active || ! Role::find($data['role_id'])?->is_admin) && $this->adminCount() <= 1) {
+        if ($here?->is_admin && (! $active || ! Role::find($data['role_id'])?->is_admin) && $this->adminCount() <= 1) {
             return back()->withErrors(['role_id' => __('Şirkətdə ən azı bir aktiv admin qalmalıdır.')]);
         }
 
-        $model->fill($data);
-        $model->role_id = $data['role_id'];
+        $model->fill(collect($data)->except('role_id')->all());
         $model->is_active = $active;
         $model->save();
+        $model->setAccessIn(tenant()->id, (int) $data['role_id']);   // the role in this company, even if the user works in another now
 
         if (! $active) {
             $log->forceLogoutEverywhere($model);
@@ -107,7 +112,7 @@ class UserController extends Controller
         if ($model->id === $request->user()->id) {
             return back()->with('error', __('Özünüzü silə bilməzsiniz.'));
         }
-        if ($model->isCompanyAdmin() && $this->adminCount() <= 1) {
+        if ($model->roleIn(tenant()->id)?->is_admin && $this->adminCount() <= 1) {
             return back()->with('error', __('Sonuncu admini silmək olmaz.'));
         }
         // Deactivate rather than delete: history (tasks, audit, logs) keeps pointing at the person.
@@ -169,7 +174,9 @@ class UserController extends Controller
 
     private function adminCount(): int
     {
-        return User::forTenant()->where('is_active', true)->whereHas('role', fn ($q) => $q->where('is_admin', true))->count();
+        // the active members whose role in this company is an admin one
+        return \App\Models\CompanyUser::where('company_id', tenant()->id)->whereHas('role', fn ($q) => $q->where('is_admin', true))
+            ->whereHas('user', fn ($q) => $q->where('is_active', true))->count();
     }
 
     private function atLimit(): bool

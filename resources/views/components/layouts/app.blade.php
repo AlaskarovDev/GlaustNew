@@ -193,6 +193,53 @@
                 <x-icon name="search" class="size-5"/>
             </button>
 
+            {{-- Firma seçimi: the companies the user works in; each has its own data and panel --}}
+            @php
+                $myCompanies = $user->companies()->get(['companies.id', 'companies.name', 'companies.subscription_status']);
+                $canOpenCompany = $user->isCompanyAdmin() || $user->is_super_admin;
+            @endphp
+            <div x-data="{ open: false, adding: false }" class="relative" @keydown.escape.window="open = false" @click.outside="open = false; adding = false">
+                <button type="button" @click="open = !open" class="flex items-center gap-1.5 h-9 pl-2.5 pr-2 rounded-[10px] border border-line bg-surface text-sm font-medium text-ink hover:border-line-strong transition-colors max-w-[46vw] sm:max-w-[220px]"
+                        :aria-expanded="open" aria-label="{{ __('Şirkəti seç') }}" title="{{ __('Şirkəti seç') }}">
+                    <x-icon name="building" class="size-4 text-brand shrink-0"/>
+                    <span class="truncate hidden sm:inline">{{ $company->name }}</span>
+                    <x-icon name="chevron-down" class="size-4 text-muted shrink-0"/>
+                </button>
+                <div x-cloak x-show="open" x-transition.origin.top.right class="absolute right-0 top-12 w-[min(320px,calc(100vw-24px))] card !shadow-[var(--shadow-pop)] p-1.5 animate-pop z-40">
+                    <div class="px-3 pt-2 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-faint">{{ __('Şirkətlərim') }}</div>
+                    @foreach($myCompanies as $c)
+                        @if($c->id === $company->id)
+                            <div class="flex items-center gap-2.5 px-3 h-10 rounded-lg bg-brand-soft text-brand-ink text-sm font-medium" aria-current="true">
+                                <x-icon name="building" class="size-4 shrink-0"/><span class="truncate">{{ $c->name }}</span><x-icon name="check" class="size-4 ml-auto shrink-0"/>
+                            </div>
+                        @else
+                            <form method="POST" action="{{ route('company.switch', $c) }}">@csrf
+                                <button class="w-full flex items-center gap-2.5 px-3 h-10 rounded-lg text-sm text-ink-2 hover:bg-surface-2 text-left">
+                                    <x-icon name="building" class="size-4 text-muted shrink-0"/><span class="truncate">{{ $c->name }}</span>
+                                    <x-icon name="arrow-right" class="size-4 ml-auto text-faint shrink-0"/>
+                                </button>
+                            </form>
+                        @endif
+                    @endforeach
+                    <p class="px-3 py-1.5 text-[11px] text-muted">{{ __('Hər şirkətin öz məlumatları, paneli və hesabatları var.') }}</p>
+                    @if($canOpenCompany)
+                        <div class="border-t border-line mt-1 pt-1">
+                            <button type="button" x-show="!adding" @click="adding = true; $nextTick(() => $refs.newCompany.focus())" class="w-full flex items-center gap-2.5 px-3 h-9 rounded-lg text-sm text-brand-ink hover:bg-surface-2">
+                                <x-icon name="plus" class="size-4"/> {{ __('Yeni şirkət') }}
+                            </button>
+                            <form x-show="adding" x-cloak method="POST" action="{{ route('company.store') }}" class="p-2 space-y-2">@csrf
+                                <label class="block"><span class="field-label">{{ __('Şirkətin adı') }}</span><input x-ref="newCompany" name="name" required maxlength="190" class="input w-full"></label>
+                                <label class="block"><span class="field-label">{{ __('VÖEN') }}</span><input name="voen" maxlength="20" class="input w-full font-mono"></label>
+                                <div class="flex gap-2 justify-end">
+                                    <button type="button" class="btn btn-ghost btn-sm" @click="adding = false">{{ __('Ləğv et') }}</button>
+                                    <button class="btn btn-primary btn-sm"><x-icon name="plus" class="size-4"/> {{ __('Yarat') }}</button>
+                                </div>
+                            </form>
+                        </div>
+                    @endif
+                </div>
+            </div>
+
             {{-- Install the app (PWA) --}}
             <div x-data="pwaInstall" x-show="!installed" x-cloak>
                 <button type="button" @click="install()" class="flex items-center gap-1.5 h-9 px-2.5 rounded-[10px] text-sm font-medium text-brand-ink bg-brand-soft hover:brightness-95 transition"

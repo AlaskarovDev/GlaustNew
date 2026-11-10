@@ -73,9 +73,83 @@ class User extends Authenticatable
         return $this->hasMany(Task::class, 'assignee_id');
     }
 
+    /** The users of the current company: its members, wherever they are working right now. */
     public function scopeForTenant(Builder $query): Builder
     {
-        return $query->where('company_id', app(Tenant::class)->id() ?? -1);
+        return $query->whereIn('id', CompanyUser::select('user_id')->where('company_id', app(Tenant::class)->id() ?? -1));
+    }
+
+    protected static function booted(): void
+    {
+        // users.role_id / permission_overrides are the user's in the company the user is in now: kept on that membership too
+        static::saved(function (User $u) {
+            if ($u->company_id) {
+                CompanyUser::updateOrCreate(['company_id' => $u->company_id, 'user_id' => $u->id],
+                    ['role_id' => $u->role_id, 'permission_overrides' => $u->permission_overrides]);
+            }
+        });
+    }
+
+    public function memberships(): HasMany
+    {
+        return $this->hasMany(CompanyUser::class);
+    }
+
+    /** The companies the user may switch to (active ones), by name. */
+    public function companies(): BelongsToMany
+    {
+        return $this->belongsToMany(Company::class, 'company_user')->withPivot('role_id')->orderBy('name');
+    }
+
+    public function membershipIn(int $companyId): ?CompanyUser
+    {
+        return $this->memberships()->where('company_id', $companyId)->first();
+    }
+
+    /** The user's role in a company — the one in users.role_id while the user is in it, else the membership's. */
+    public function roleIn(int $companyId): ?Role
+    {
+        return (int) $this->company_id === $companyId ? $this->role : $this->membershipIn($companyId)?->role;
+    }
+
+    /**
+     * Sets the user's role (and, given, the permission overrides) in a company: on the membership, and on the user's own
+     * columns too when the user is in that company now — never the role of another company onto the one the user is in.
+     */
+    public function setAccessIn(int $companyId, int $roleId, array|null|false $overrides = false): void
+    {
+        $m = CompanyUser::firstOrNew(['company_id' => $companyId, 'user_id' => $this->id]);
+        $m->role_id = $roleId;
+        if ($overrides !== false) {
+            $m->permission_overrides = $overrides;
+        }
+        $m->save();
+        if ((int) $this->company_id === $companyId) {
+            $this->forceFill(['role_id' => $roleId] + ($overrides !== false ? ['permission_overrides' => $overrides] : []))->save();
+        }
+    }
+
+    /** Moves the user into another company of theirs: its role and permission overrides become the user's. */
+    public function switchTo(Company $company): void
+    {
+        $m = $this->membershipIn($company->id);
+        abort_unless($m !== null, 403);
+        $this->company_id = $company->id;
+        $this->role_id = $m->role_id;
+        $this->permission_overrides = $m->permission_overrides;
+        $this->save();
+        $this->unsetRelation('role')->unsetRelation('company');
+    }
+
+    /** The roles of these users in the current company (a user working elsewhere right now shows the role here). */
+    public static function withRolesHere(iterable $users): void
+    {
+        $tid = app(Tenant::class)->id();
+        foreach ($users as $u) {
+            if ($tid && (int) $u->company_id !== $tid) {
+                $u->setRelation('role', $u->membershipIn($tid)?->role);
+            }
+        }
     }
 
     public function isCompanyAdmin(): bool

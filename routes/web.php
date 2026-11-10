@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin;
 use App\Http\Controllers\AjaxController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AttachmentController;
+use App\Http\Controllers\CompanySwitchController;
 use App\Http\Controllers\Auth;
 use App\Http\Controllers\BankAccountController;
 use App\Http\Controllers\BankAuditController;
@@ -80,6 +81,8 @@ Route::middleware(['auth', 'superadmin'])->prefix('admin')->name('admin.')->grou
 /* ---------- tenant application ---------- */
 Route::middleware(['auth', 'tenant'])->group(function () {
     Route::get('/subscription/expired', [Settings\SubscriptionController::class, 'expired'])->name('subscription.expired');
+    Route::post('/companies/{company}/switch', [CompanySwitchController::class, 'switch'])->name('company.switch');
+    Route::post('/companies', [CompanySwitchController::class, 'store'])->middleware('throttle:10,1')->name('company.store');
 
     Route::get('/', [DashboardController::class, 'index'])->middleware('can:dashboard.view')->name('dashboard');
     Route::post('/dashboard/layout', [DashboardController::class, 'saveLayout'])->name('dashboard.layout');

@@ -224,7 +224,10 @@ class TradeReport
         $this->asOf = $asOf;
         $this->forecast = $forecast;
         $this->oneC = $oneC ?? $asOf;   // the 1C period ends at the chosen month end
-        $this->c1End = $this->oneC ?? $this->rates->today()->toDateString();
+        // the postings run to the period's end, never past today: a later day has no CBAR rate yet, and a posting
+        // missing a rate drops whole (every month of it), so a period chosen to the month's end lost January too
+        $today = $this->rates->today()->toDateString();
+        $this->c1End = min($this->oneC ?? $today, $today);
         $deals->loadMissing(['invoices.adjustments', 'salesDocuments', 'supplierPayments', 'payments', 'logisticsActs.payments', 'currencyExchanges']);
         $rows = [];
         foreach ($deals as $deal) {

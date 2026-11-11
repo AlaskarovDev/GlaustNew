@@ -150,6 +150,18 @@ class BookCommandTest extends TestCase
             $this->assertSame(-21779.38, $b['liabilities']['68']['value']);
             $this->assertSame(['60', '64', '68', '80', '88'], array_map('strval', array_keys($b['liabilities'])), 'in the sheet\'s order');
             $this->assertSame(-100.0, app(\App\Support\Reports\BalanceReport::class)->build('2025-01-20')['liabilities']['68']['value']);
+            // 41 Mallar on the assets (stands until the next figure); a correction of a computed line (61) on its own day only
+            \App\Models\BalanceEntry::create(['entry_date' => '2025-01-31', 'line' => '41', 'amount' => 208.34, 'description' => 'Mallar']);
+            \App\Models\BalanceEntry::create(['entry_date' => '2025-01-31', 'line' => '61', 'amount' => 202.27, 'description' => 'LUNA']);
+            \App\Models\BalanceEntry::create(['entry_date' => '2025-01-31', 'line' => '61', 'amount' => -17.75, 'description' => 'ZENIT']);
+            $before = app(\App\Support\Reports\BalanceReport::class)->build('2025-01-30');
+            $b = app(\App\Support\Reports\BalanceReport::class)->build('2025-01-31');
+            $this->assertSame(208.34, $b['assets']['41']['value']);
+            $this->assertContains('1C düzəlişi · 31.01.2025 · LUNA', array_column($b['assets']['61']['items'], 't'));
+            $this->assertSame(['1', '2', '41', '50', '51', '52', '61', '62'], array_map('strval', array_keys($b['assets'])));
+            $this->assertNotContains('1C düzəlişi · 31.01.2025 · LUNA', array_column($before['assets']['61']['items'], 't'), 'a correction counts on its day only');
+            $this->assertSame(208.34, app(\App\Support\Reports\BalanceReport::class)->build('2025-02-10')['assets']['41']['value']);
+            $this->assertNotContains('1C düzəlişi · 31.01.2025 · LUNA', array_column(app(\App\Support\Reports\BalanceReport::class)->build('2025-02-10')['assets']['61']['items'], 't'));
             $this->assertFalse(collect($pl['lines'])->flatMap(fn ($l) => collect($l['items'])->flatten(1))->contains(fn ($i) => str_contains($i['t'] ?? '', 'Kompüter')), 'the computer is no expense of MZ');
         });
 

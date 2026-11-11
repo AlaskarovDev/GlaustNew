@@ -115,7 +115,7 @@ class BookCommand extends Command
 
                         continue;
                     }
-                    if ($op['type'] === 'balance' && ! isset(\App\Models\BalanceEntry::LINES[$op['line']])) {
+                    if ($op['type'] === 'balance' && ! \App\Models\BalanceEntry::known((string) $op['line'])) {
                         $this->error("Balans sətri yoxdur: {$op['line']}");
 
                         return self::FAILURE;

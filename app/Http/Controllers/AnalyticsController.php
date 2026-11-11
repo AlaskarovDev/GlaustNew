@@ -85,7 +85,7 @@ class AnalyticsController extends Controller
         $projectId = $request->integer('project_id') ?: null;
         $dealId = $request->integer('deal_id') ?: null;
         // the currency on the bank at a month end: as the bank statement values it (default — the company's sheet) or at CBAR of the month end
-        $valuation = in_array($request->query('valuation'), \App\Support\Reports\CashflowReport::VALUATIONS, true) ? $request->query('valuation') : 'bank';
+        $valuation = in_array($request->query('valuation'), \App\Support\Reports\CashflowReport::VALUATIONS, true) ? $request->query('valuation') : 'cbar';   // the month end's CBAR, as the company's 2026 Cash Flow sheet
         $report = new \App\Support\Reports\CashflowReport($projectId, $valuation, $dealId);
         [$first, $last] = $report->span();
         $valid = fn ($m) => is_string($m) && preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $m) ? $m : null;

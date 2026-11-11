@@ -17,7 +17,8 @@ use App\Services\Cbar\CurrencyRates;
  *                 booked as «Hesablanıb» (with its counterparty) less what was paid it
  *              64 Alınmış avanslar — received from a buyer before the act
  *              80 Mənfəət və zərər — the year's result to the day (ProfitLossReport)
- *              68, 75, 85 … — the 1C figures given (Balans qalığı), the latest on or before the day
+ *              68, 75, 85 … (and 41 Mallar on the assets) — the 1C figures given (Balans qalığı), the latest on or before the day
+ *              a 1C correction (Balans qalığı on 60/61/62/64/88) counts on its own day only
  *              88 Bölüşdürülməmiş mənfəət — the results of the years before, after their profit tax, less the dividends paid
  *                 (expense categories named «…dividend…»: the dividend and the tax withheld on it)
  * Every currency amount at CBAR of the day (the sheet's «Açıq hesab 61.2 / 64.2»: amount × the month-end rate).
@@ -123,14 +124,34 @@ class BalanceReport
                 : $put($assets, '61', -$left, 'AZN', $who.' · '.__('xidmətə artıq ödəniş'));
         }
 
-        // the 1C accounts the data cannot make (68 the budget, 75, 85 …): the latest figure given on or before the day
-        $given = \App\Models\BalanceEntry::where('entry_date', '<=', $date.' 23:59:59')->orderBy('entry_date')->orderBy('id')->get()->groupBy('line')->map->last();
-        foreach ($given->sortKeys() as $code => $e) {
-            $liab[$code] ??= $line(__(\App\Models\BalanceEntry::LINES[$code] ?? $code));
-            $liab[$code]['value'] += (float) $e->amount;
-            $liab[$code]['items'][] = ['t' => __('1C üzrə qalıq').' · '.azdate($e->entry_date).' · '.$e->description, 'c' => null, 'v' => round((float) $e->amount, 2), 'u' => null];
+        // the 1C accounts the data cannot make (68 the budget, 75, 85, 41 …): the latest figure given on or before the day;
+        // a 1C correction of a line the data makes (60, 61, 88 …): on its own day only
+        $given = \App\Models\BalanceEntry::where('entry_date', '<=', $date.' 23:59:59')->orderBy('entry_date')->orderBy('id')->get()->groupBy('line');
+        $any = false;
+        foreach ($given as $code => $es) {
+            $code = (string) $code;
+            $fix = isset(\App\Models\BalanceEntry::FIXES[$code]);
+            $day = $es->last()->entry_date->toDateString();
+            if ($fix && $day !== $date) {
+                continue;
+            }
+            $any = true;
+            foreach ($es->filter(fn ($e) => $e->entry_date->toDateString() === $day) as $e) {
+                $item = ['t' => ($fix ? __('1C düzəlişi') : __('1C üzrə qalıq')).' · '.azdate($e->entry_date).' · '.$e->description, 'c' => null, 'v' => round((float) $e->amount, 2), 'u' => null];
+                $label = __(\App\Models\BalanceEntry::LINES[$code] ?? \App\Models\BalanceEntry::FIXES[$code] ?? $code);
+                if (in_array($code, \App\Models\BalanceEntry::ASSETS, true)) {
+                    $assets[$code] ??= $line($label);
+                    $assets[$code]['value'] += (float) $e->amount;
+                    $assets[$code]['items'][] = $item;
+                } else {
+                    $liab[$code] ??= $line($label);
+                    $liab[$code]['value'] += (float) $e->amount;
+                    $liab[$code]['items'][] = $item;
+                }
+            }
         }
-        if ($given->isNotEmpty()) {   // in the sheet's order: 60, 64, 68 …, 80, 85, 88
+        if ($any) {   // in the sheet's order: 1, 2, 41, 50 … / 60, 64, 68 …, 80, 85, 88
+            uksort($assets, fn ($a, $b) => (float) $a <=> (float) $b);
             uksort($liab, fn ($a, $b) => (float) $a <=> (float) $b);
         }
 

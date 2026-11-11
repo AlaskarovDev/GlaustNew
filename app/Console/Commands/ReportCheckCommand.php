@@ -22,7 +22,7 @@ use Illuminate\Console\Command;
  */
 class ReportCheckCommand extends Command
 {
-    protected $signature = 'glaust:report-check {company? : id or a part of the name} {--from=2024-12} {--to=2025-02} {--only= : cash|items|trades|expenses|mz|balance|tx} {--label= : with --only=items: the cash flow line(s) whose name contains it; with --only=tx: the account(s) whose name contains it} {--valuation=bank}';
+    protected $signature = 'glaust:report-check {company? : id or a part of the name} {--from=2024-12} {--to=2025-02} {--only= : cash|items|trades|expenses|mz|balance|tx} {--label= : with --only=items: the cash flow line(s) whose name contains it; with --only=tx: the account(s) whose name contains it} {--valuation=cbar}';
 
     protected $description = 'Hesabatların rəqəmlərini çap edir (yalnız oxuyur)';
 

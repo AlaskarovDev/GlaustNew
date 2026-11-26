@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\Cbar\CurrencyRates;
 use App\Support\Exchanges\Exchanges;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -27,7 +28,7 @@ class ExchangeRateController extends Controller
             return view('exchanges.index', ['sources' => Exchanges::all(), 'widgets' => self::widgets(), 'widget' => $widget,
                 'investingSrc' => tenant()->setting('widgets.investing')]);
         }
-        $source = Exchanges::get((string) $request->query('source', 'cbr'));
+        $source = Exchanges::get((string) $request->query('source', 'cbar'));
         $latest = Exchanges::latest($source);
         $rates = $latest['rates'];
         uksort($rates, fn ($a, $b) => [array_search($a, self::PINNED, true) === false ? 99 : array_search($a, self::PINNED, true), $a]
@@ -47,7 +48,20 @@ class ExchangeRateController extends Controller
         $change = $prevDay && $now && $before[$prevDay] > 0
             ? ['abs' => $now - $before[$prevDay], 'pct' => ($now - $before[$prevDay]) / $before[$prevDay] * 100, 'day' => $prevDay] : null;
 
+        // CBAR: the day's bulletin as cbar.az shows it — every currency in manats, per its nominal, on a date the user picks
+        $board = null;
+        if ($source->key() === 'cbar') {
+            $cbar = app(CurrencyRates::class);
+            try {
+                $day = $request->filled('date') ? $cbar->normalize((string) $request->query('date')) : null;
+            } catch (\InvalidArgumentException) {
+                $day = null;
+            }
+            $board = $cbar->ticker(null, $day) + ['day' => ($day && $day->lt($cbar->today()) ? $day : $cbar->today())->format('Y-m-d')];
+        }
+
         return view('exchanges.index', [
+            'board' => $board,
             'widgets' => self::widgets(), 'widget' => null,
             'change' => $change, 'tiles' => array_slice($rates, 0, 6, true),
             'sources' => Exchanges::all(), 'source' => $source, 'date' => $latest['date'], 'rates' => $rates, 'error' => $latest['error'],

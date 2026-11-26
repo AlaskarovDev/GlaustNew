@@ -78,7 +78,7 @@ class SupplierPayment extends Model
     /** Fee by the currency's rule in force on the date: percent, but within [minimum, maximum]; null when there is no rule. */
     public static function feeFor(string $currency, float $amount, \DateTimeInterface|string|null $date = null, ?string $bank = null): ?array
     {
-        $rule = BankFeeRule::on($currency, $date, $bank);
+        $rule = BankFeeRule::inForce($currency, $date, $bank);
         if (! $rule) {
             return null;
         }

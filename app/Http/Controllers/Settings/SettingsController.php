@@ -220,7 +220,7 @@ class SettingsController extends Controller
             'banks' => $banks,
             'currencies' => config('glaust.currencies', []),
             'today' => $today,
-            'inForce' => fn ($r) => BankFeeRule::on($r->currency, $today, $r->bank_name),
+            'inForce' => fn ($r) => BankFeeRule::inForce($r->currency, $today, $r->bank_name),
         ]);
     }
 

@@ -21,9 +21,9 @@ class BankFee
      */
     public static function for(string $currency, float $amount, float $azn, ?float $eurAzn, \DateTimeInterface|string|null $date = null, ?string $bank = null): ?array
     {
-        if ($rule = BankFeeRule::on($currency, $date, $bank)) {
+        if ($rule = BankFeeRule::inForce($currency, $date, $bank)) {
             $factor = 1.0;
-        } elseif ($eurAzn && ($rule = BankFeeRule::on('EUR', $date, $bank))) {
+        } elseif ($eurAzn && ($rule = BankFeeRule::inForce('EUR', $date, $bank))) {
             $factor = $eurAzn / $azn; // EUR limits -> this currency
         } else {
             return null;

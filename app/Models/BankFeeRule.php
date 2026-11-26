@@ -73,7 +73,7 @@ class BankFeeRule extends Model
      * The rule of a currency in force on a date (today when null) for a bank: the bank's own rule, else the rule for
      * every bank; null when the currency has none yet.
      */
-    public static function on(string $currency, \DateTimeInterface|string|null $date = null, ?string $bank = null): ?array
+    public static function inForce(string $currency, \DateTimeInterface|string|null $date = null, ?string $bank = null): ?array
     {
         $day = $date === null ? today()->toDateString() : substr($date instanceof \DateTimeInterface ? $date->format('Y-m-d') : (string) $date, 0, 10);
         $bank = self::bankKey($bank);

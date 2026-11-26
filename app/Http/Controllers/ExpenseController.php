@@ -30,7 +30,7 @@ class ExpenseController extends Controller
             'status' => ['nullable', Rule::in(array_keys(Expense::STATUSES))], 'method' => ['nullable', Rule::in(array_keys(Expense::METHODS))],
             'q' => ['nullable', 'string', 'max:100'], 'format' => ['nullable', 'in:xlsx,pdf'],
         ]);
-        $from = $f['from'] ?? today()->startOfMonth()->toDateString();
+        $from = $f['from'] ?? today()->subYears(2)->startOfMonth()->toDateString();   // default: last 2 years
         $to = $f['to'] ?? today()->endOfMonth()->toDateString();
 
         $query = fn () => Expense::query()

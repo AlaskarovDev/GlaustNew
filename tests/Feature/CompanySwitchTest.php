@@ -53,6 +53,33 @@ class CompanySwitchTest extends TestCase
         $this->assertSame($manager->id, $admin->roleIn($a->id)->id);
     }
 
+    public function test_the_companies_of_one_owner_share_their_users(): void
+    {
+        $admin = $this->makeCompany('ATF OIL GROUP');
+        $a = $admin->company;
+        $tural = $this->makeUser($a, 'accountant', 'tural@test.az');
+        $other = $this->makeCompany('Başqa MMC', 'other@test.az');   // another owner's company
+
+        // a company opened from ATF: ATF's users are its users too, each with a role of the same kind
+        $this->actingAs($admin)->post(route('company.store'), ['name' => 'TAFEX'])->assertRedirect(route('dashboard'));
+        $t = Company::where('name', 'TAFEX')->firstOrFail();
+        $this->assertSame('accountant', $tural->fresh()->roleIn($t->id)?->key);
+        $this->get(route('settings.users.index'))->assertOk()->assertSee('tural@test.az')->assertDontSee('other@test.az');
+
+        // a user invited in TAFEX is a user of ATF too, not of the other owner's company
+        $this->post(route('settings.users.store'), ['name' => 'Yeni İşçi', 'email' => 'yeni@test.az',
+            'role_id' => \App\Models\Role::withoutGlobalScopes()->where('company_id', $t->id)->where('key', 'employee')->value('id')]);
+        $new = User::where('email', 'yeni@test.az')->firstOrFail();
+        $this->assertSame('employee', $new->roleIn($a->id)?->key);
+        $this->assertNull($new->membershipIn($other->company_id));
+
+        // companies made before the groups: linked by the command, their users shared
+        $old = Company::where('name', 'Başqa MMC')->firstOrFail();
+        $this->artisan('glaust:company-group', ['--link' => "{$a->id},{$old->id}"])->expectsOutputToContain('Birləşdirildi')->assertSuccessful();
+        $this->assertNotNull($tural->fresh()->membershipIn($old->id));
+        $this->assertNotNull(User::where('email', 'other@test.az')->first()->membershipIn($t->id));
+    }
+
     public function test_only_members_switch_and_only_admins_open_companies(): void
     {
         $admin = $this->makeCompany('ATF OIL GROUP');

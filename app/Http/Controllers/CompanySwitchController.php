@@ -46,6 +46,10 @@ class CompanySwitchController extends Controller
         $company->forceFill(['subscription_ends_at' => $now?->subscription_ends_at, 'trial_ends_at' => $now?->trial_ends_at ?? $company->trial_ends_at])->save();
         $admin = Role::withoutGlobalScopes()->where('company_id', $company->id)->where('key', 'admin')->firstOrFail();
         $user->setAccessIn($company->id, $admin->id);
+        // the same owner's companies share their users: everyone of the group is a user of the new one too
+        if ($now) {
+            \App\Support\Tenancy\CompanyGroup::link($now, $company);
+        }
         $user->switchTo($company);
         $request->session()->forget(['analytics.period']);
         $request->session()->regenerate();

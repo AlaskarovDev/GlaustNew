@@ -60,6 +60,8 @@ class UserController extends Controller
         $user->role_id = $data['role_id'];
         $user->invitation_token = hash('sha256', $token);
         $user->save();
+        // a user of one company of the group is a user of all of them (a role of the same kind in each)
+        \App\Support\Tenancy\CompanyGroup::share($user, tenant()->id);
 
         $sent = $this->sendInvite($user, $token, $mail);
 

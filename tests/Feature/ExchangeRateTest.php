@@ -88,4 +88,22 @@ class ExchangeRateTest extends TestCase
         $clerk = $this->makeUser($admin->company, 'accountant', 'acc@test.az');
         $this->actingAs($clerk)->post(route('exchanges.investing'), ['code' => ''])->assertForbidden();
     }
+
+    /** CBAR, the default: the day's bulletin as cbar.az shows it — manats per nominal, the bank metals after the currencies. */
+    public function test_the_cbar_bulletin_as_cbar_az_shows_it(): void
+    {
+        Cache::flush();
+        $this->fakeCbar();
+        $this->actingAs($this->makeCompany());
+
+        $html = $this->get(route('exchanges.index'))->assertOk()
+            ->assertSee('Azərbaycan Respublikası Mərkəzi Bankının rəsmi məzənnələri')->assertSee('1 ABŞ dolları')->assertSee('1,7000')
+            ->assertSee('100 Rusiya rublu')->assertSee('2,0186')->assertSee('Bank metalları')->assertSee('Qızıl')->getContent();
+        $this->assertLessThan(strpos($html, 'Bank metalları'), strpos($html, '100 Rusiya rublu'), 'the currencies first, the metals after');
+
+        // another day; an unreadable one falls back to today
+        $this->get(route('exchanges.index', ['source' => 'cbar', 'date' => now('Asia/Baku')->subDays(3)->format('Y-m-d')]))->assertOk()
+            ->assertSee(now('Asia/Baku')->subDays(3)->format('d.m.Y'));
+        $this->get(route('exchanges.index', ['source' => 'cbar', 'date' => 'x']))->assertOk()->assertSee('1 ABŞ dolları');
+    }
 }

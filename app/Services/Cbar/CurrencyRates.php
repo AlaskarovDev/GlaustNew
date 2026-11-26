@@ -102,10 +102,13 @@ class CurrencyRates
      * Header ticker: the rates in force today, labelled with their bulletin date, and the
      * change against the previous bulletin. When nothing can be loaded, the latest stored
      * list is returned with stale=true and its own date.
+     *
+     * $codes null: the whole bulletin as cbar.az lists it, the currencies first and the bank metals after them
+     * («Birja»). $day: the rates in force on another day (never later than today).
      */
-    public function ticker(array $codes): array
+    public function ticker(?array $codes, ?CarbonImmutable $day = null): array
     {
-        $today = $this->today();
+        $today = $day && $day->lt($this->today()) ? $day : $this->today();
         $stale = false;
 
         try {
@@ -122,6 +125,11 @@ class CurrencyRates
 
         $bulletin = CarbonImmutable::parse($snap['bulletin'] ?? $today->format('Y-m-d'), 'Asia/Baku')->startOfDay();
         $previous = $this->previousRates($bulletin);
+        if ($codes === null) {
+            $metals = ['XAU', 'XAG', 'XPT', 'XPD'];
+            $all = array_keys($snap['rates']);
+            $codes = [...array_values(array_diff($all, $metals)), ...array_values(array_intersect($metals, $all))];
+        }
         $items = [];
         foreach ($codes as $code) {
             if (! isset($snap['rates'][$code])) {

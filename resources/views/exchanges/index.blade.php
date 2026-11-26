@@ -76,6 +76,51 @@
         </div>
     @endif
 
+    @if(! $widget && ($board ?? null))
+        {{-- CBAR: the day's bulletin as cbar.az shows it — manats per nominal, the currencies first, the bank metals after --}}
+        <section class="card overflow-hidden mb-6" aria-label="{{ __('AMB rəsmi məzənnələri') }}">
+            <header class="px-5 py-4 border-b border-line flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-base font-semibold flex items-center gap-2"><x-icon name="bank" class="size-5 text-brand"/> {{ __('Valyuta məzənnələri') }}</h2>
+                    <p class="text-xs text-muted">{{ __('Azərbaycan Respublikası Mərkəzi Bankının rəsmi məzənnələri') }}@if($board['date']) · <span class="font-mono">{{ \Carbon\Carbon::parse($board['date'])->format('d.m.Y') }}</span>@endif</p>
+                </div>
+                <form method="GET" action="{{ route('exchanges.index') }}" class="flex items-center gap-2">
+                    <input type="hidden" name="source" value="cbar"><input type="hidden" name="days" value="{{ $days }}">
+                    <label class="sr-only" for="cbar-date">{{ __('Tarix') }}</label>
+                    <input id="cbar-date" type="date" name="date" value="{{ $board['day'] }}" max="{{ now('Asia/Baku')->format('Y-m-d') }}" class="input !h-9 !w-auto" x-data @change="$el.form.submit()">
+                    <noscript><button class="btn btn-secondary btn-sm">{{ __('Göstər') }}</button></noscript>
+                </form>
+            </header>
+            @if($board['stale'] && $board['items'])
+                <p class="px-5 py-2.5 text-xs bg-saffron-soft/60 text-ink-2 border-b border-line">{{ __('CBAR hazırda cavab vermir: son saxlanmış bülleten göstərilir.') }}</p>
+            @endif
+            @if($board['items'])
+                <table class="table-g table-stack text-sm">
+                    <thead><tr><th>{{ __('Kod') }}</th><th>{{ __('Valyuta') }}</th><th class="!text-right">{{ __('Məzənnə (AZN)') }}</th><th class="!text-right">{{ __('Dəyişmə') }}</th></tr></thead>
+                    <tbody>
+                    @foreach($board['items'] as $it)
+                        @php $metal = in_array($it['code'], ['XAU', 'XAG', 'XPT', 'XPD'], true); $metalRow = $metal && ! ($prevMetal ?? false); $prevMetal = $metal; @endphp
+                        @if($metalRow)
+                            <tr><td colspan="4" class="!py-2 bg-surface-2 text-xs font-semibold uppercase tracking-wider text-muted">{{ __('Bank metalları') }}</td></tr>
+                        @endif
+                        <tr>
+                            <td data-label="{{ __('Kod') }}" class="font-semibold text-ink font-mono">{{ $it['code'] }}</td>
+                            <td data-label="{{ __('Valyuta') }}" class="text-ink-2">{{ $it['name'] }}</td>
+                            <td data-label="{{ __('Məzənnə (AZN)') }}" class="num font-semibold text-ink">{{ rate_fmt($it['value']) }}</td>
+                            <td data-label="{{ __('Dəyişmə') }}" @class(['num text-xs font-mono', 'text-success' => $it['trend'] === 'up', 'text-danger' => $it['trend'] === 'down', 'text-faint' => $it['trend'] === 'flat'])>
+                                @if($it['change'] === null) — @else {{ $it['trend'] === 'up' ? '▲ +' : ($it['trend'] === 'down' ? '▼ −' : '') }}{{ num(abs($it['change'])) }}% @endif
+                            </td>
+                        </tr>
+                    @endforeach
+                    </tbody>
+                </table>
+                <p class="px-5 py-3 text-xs text-muted border-t border-line flex items-start gap-1.5"><x-icon name="info" class="size-4 shrink-0"/> {{ __('Dəyişmə əvvəlki bülletenə görədir.') }} · <a href="https://www.cbar.az/currency/rates" target="_blank" rel="noopener" class="text-brand-ink underline">cbar.az</a></p>
+            @else
+                <x-empty icon="bank" :title="__('Bu tarix üçün məzənnə yoxdur')" :text="__('CBAR hazırda cavab vermir. Bir azdan yenidən cəhd edin.')"/>
+            @endif
+        </section>
+    @endif
+
     @if(! $widget && $rates)
         {{-- today: the chosen currency large, with the change from the day before; the main ones beside it --}}
         @php

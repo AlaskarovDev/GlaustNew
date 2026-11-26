@@ -48,7 +48,7 @@ class SupplierPaymentService
         $accBank = round($amount * $bankRate, 2);
         $diff = round($accBank - $accCbar, 2);
 
-        $rule = SupplierPayment::feeFor($cur, $amount);
+        $rule = SupplierPayment::feeFor($cur, $amount, $d['payment_date'], $account->bank_name);
         $fee = isset($d['fee_amount']) && $d['fee_amount'] !== null ? round((float) $d['fee_amount'], 2) : ($rule['amount'] ?? 0.0);
 
         // The fee (in the payment currency) comes off the payment account at the bank's rate, or off any other

@@ -4,8 +4,8 @@
     $sellerDue = \App\Support\DealObligations::for($deal)['seller']['due'];
     $payCur = $mine ? old('currency') : (array_key_first($sellerDue) ?? ($deal->invoices->where('type', 'supplier')->first()?->currency ?? 'EUR'));
     $payAmount = $mine ? old('amount') : ($sellerDue[$payCur] ?? '');
-    $fees = config('glaust.bank_fees');
-    $accountsData = $accounts->map(fn ($a) => ['id' => $a->id, 'label' => $a->bank_name.' · '.$a->name, 'currency' => $a->currency, 'balance' => $a->currentBalance()])->values();
+    $fees = \App\Models\BankFeeRule::timeline();
+    $accountsData = $accounts->map(fn ($a) => ['id' => $a->id, 'label' => $a->bank_name.' · '.$a->name, 'bank' => \App\Models\BankFeeRule::bankKey($a->bank_name), 'currency' => $a->currency, 'balance' => $a->currentBalance()])->values();
     $list = $deal->supplierPayments;
 @endphp
 @can('bank.create')
@@ -13,7 +13,7 @@
     <header class="flex flex-wrap items-center justify-between gap-3 px-5 py-4" :class="open && 'border-b border-line'">
         <div>
             <h2 class="text-base font-semibold flex items-center gap-2"><x-icon name="arrow-up-right" class="size-5 text-danger"/> {{ __('Satıcıya ödəniş') }}</h2>
-            <p class="text-xs text-muted">{{ __('Köçürmə tarixinə görə CBAR kursu, bankın kursu və bank komissiyası (EUR: 0,25%, ən az 25, ən çox 300 EUR)') }}</p>
+            <p class="text-xs text-muted">{{ __('Köçürmə tarixinə görə CBAR kursu, bankın kursu və bank komissiyası (həmin tarixdə qüvvədə olan qayda ilə)') }}</p>
         </div>
         <button type="button" class="btn btn-secondary btn-sm" @click="open = !open"><span x-text="open ? {{ \Illuminate\Support\Js::from(__('Bağla')) }} : {{ \Illuminate\Support\Js::from(__('Ödəniş et')) }}"></span></button>
     </header>
@@ -50,7 +50,7 @@
             accCbar() { return this.cross() ? Math.round(this.num(this.amount) * this.cross() * 100) / 100 : null; },
             accBank() { return this.appliedRate() ? Math.round(this.num(this.amount) * this.appliedRate() * 100) / 100 : null; },
             diff() { return this.accCbar() !== null && this.accBank() !== null ? Math.round((this.accBank() - this.accCbar()) * 100) / 100 : null; },
-            rule() { return this.fees[this.cur] || null; },
+            rule() { return glaustFeeRule(this.fees, this.cur, this.date, this.acc()?.bank); },
             ruleFee() { const r = this.rule(); if (!r) return 0; return Math.round(Math.min(Math.max(this.num(this.amount) * r.percent / 100, r.minimum), r.maximum ?? Infinity) * 100) / 100; },
             feeValue() { return this.feeTouched ? this.num(this.fee) : this.ruleFee(); },
             // the fee in the currency of the account it comes off: the payment account at the bank's rate, another one at CBAR
@@ -128,7 +128,7 @@
                 <div class="px-4 py-3 border-t border-line space-y-1.5">
                     <label class="field-label" for="sp-fee">{{ __('Bank komissiyası (') }}<span x-text="cur"></span>)</label>
                     <input id="sp-fee" name="fee_amount" :value="feeTouched ? fee : (ruleFee() || '')" @input="fee = $event.target.value; feeTouched = true" inputmode="decimal" class="input font-mono text-right">
-                    <p class="text-[11px] text-muted" x-show="rule()">{{ __('Qayda:') }} <span x-text="rule() && String(rule().percent).replace('.', ',')"></span>{{ __('% — ən az') }} <span x-text="rule() && rule().minimum"></span>{{ __(', ən çox') }} <span x-text="rule() && rule().maximum"></span> <span x-text="cur"></span>
+                    <p class="text-[11px] text-muted" x-show="rule()">{{ __('Qayda:') }} <span x-text="rule() && String(rule().percent).replace('.', ',')"></span>{{ __('% — ən az') }} <span x-text="rule() && rule().minimum"></span>{{ __(', ən çox') }} <span x-text="rule() && (rule().maximum ?? '—')"></span> <span x-text="cur"></span>
                         <button type="button" class="underline ml-1" x-show="feeTouched" @click="feeTouched = false; fee = ''">{{ __('qaydaya qaytar') }}</button></p>
                     <label class="field-label pt-2" for="sp-fee-account">{{ __('Komissiya hansı hesabdan ödənilsin') }}</label>
                     <select id="sp-fee-account" name="fee_account_id" x-model="feeAccount" @change="feeAccountTouched = true" class="input @error('fee_account_id') is-invalid @enderror">

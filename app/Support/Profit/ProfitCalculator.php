@@ -130,7 +130,7 @@ class ProfitCalculator
                 $lr = $lc === $cur ? $N : ($lc === $saleCur ? $O : $this->rate($lc, $inv->fx_date));
                 $R = (float) $inv->logistics_amount * ($lr ?? 0);
             }
-            $fee = BankFee::for($cur, $D, $N, $cur === 'EUR' ? $N : $this->rate('EUR', $inv->fx_date));
+            $fee = BankFee::for($cur, $D, $N, $cur === 'EUR' ? $N : $this->rate('EUR', $inv->fx_date), $inv->fx_date);
             $S = $fee ? $fee['amount'] * $N : 0.0;
             $row['forecast'] = ['date' => $inv->fx_date, 'source' => $inv->fx_source, 'N' => $N, 'O' => $O, 'P' => $P, 'Q' => $Q, 'R' => $R,
                 'fee' => $fee['amount'] ?? 0, 'S' => $S, 'profit' => $Q - $P - $R - $S,

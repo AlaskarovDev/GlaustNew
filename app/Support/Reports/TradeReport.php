@@ -270,7 +270,7 @@ class TradeReport
         $r['buyer_date'] = $sale?->doc_date ?? ($inv->isManual() ? ($inv->sale_date ?? $inv->invoice_date) : null);
         $r['H'] = $H = $sale ? $sale->grandTotal() : $inv->saleTotal();
         $r['I'] = $inv->logistics_amount !== null ? (float) $inv->logistics_amount : null;
-        $r['J'] = $J = $sp->isNotEmpty() ? round((float) $sp->sum('fee_amount') * $k, 2) : (\App\Models\SupplierPayment::feeFor($cur, $D)['amount'] ?? null);
+        $r['J'] = $J = $sp->isNotEmpty() ? round((float) $sp->sum('fee_amount') * $k, 2) : (\App\Models\SupplierPayment::feeFor($cur, $D, $inv->fx_date ?? $inv->invoice_date)['amount'] ?? null);
 
         // forecast at the date our invoice is issued
         $r['K'] = $inv->fx_date;

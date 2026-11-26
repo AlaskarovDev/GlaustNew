@@ -9,6 +9,7 @@
         $u->can('settings.view') && \App\Services\InvoiceApprovalService::flowEnabled() ? ['settings.approvals', __('Təsdiq axını')] : null,
         $u->can('settings.view') ? ['settings.mail', 'Mail'] : null,
         $u->can('settings.view') ? ['settings.categories', __('Kateqoriyalar')] : null,
+        $u->can('settings.view') ? ['settings.bank-fees', __('Bank komissiyası')] : null,
         $u->can('logs.view') ? ['settings.logs.logins', __('Girişlər')] : null,
         $u->can('logs.view') ? ['settings.logs.sessions', __('Sessiyalar')] : null,
         $u->can('logs.view') ? ['settings.logs.audit', 'Audit'] : null,

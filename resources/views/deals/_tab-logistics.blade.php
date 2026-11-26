@@ -2,8 +2,8 @@
 @php
     $acts = $deal->logisticsActs;
     $withLogistics = $supplierInvoices->filter(fn ($i) => $i->hasLogistics());
-    $accountsData = $accounts->map(fn ($a) => ['id' => $a->id, 'label' => $a->bank_name.' · '.$a->name, 'currency' => $a->currency, 'balance' => $a->currentBalance()])->values();
-    $fees = config('glaust.bank_fees');
+    $accountsData = $accounts->map(fn ($a) => ['id' => $a->id, 'label' => $a->bank_name.' · '.$a->name, 'bank' => \App\Models\BankFeeRule::bankKey($a->bank_name), 'currency' => $a->currency, 'balance' => $a->currentBalance()])->values();
+    $fees = \App\Models\BankFeeRule::timeline();
     $today = today()->toDateString();
     $failedNew = $errors->any() && old('logistics_invoice_number') !== null;
     // the next logistics invoice most likely covers what is still open (e.g. a second carrier)

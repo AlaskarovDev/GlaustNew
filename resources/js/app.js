@@ -83,6 +83,18 @@ const fmtRate = (rate) => {
     return i + ',' + f.padEnd(4, '0');
 };
 window.glaustFmt = { fmt, fmtRate };
+// The bank's fee rule of a currency in force on a date for a bank (its key, as BankFeeRule::bankKey), from
+// BankFeeRule::timeline() ([{bank, currency, from, percent, minimum, maximum}, ...], oldest first): the bank's own
+// rule, else the rule for every bank.
+const feeRuleOn = (fees, cur, date, bank) => {
+    let own = null, all = null;
+    (fees || []).forEach((r) => {
+        if (r.currency !== cur || (r.from !== null && date && r.from > date)) return;
+        if (r.bank === null) all = r; else if (bank && r.bank === bank) own = r;
+    });
+    return own || all;
+};
+window.glaustFeeRule = feeRuleOn;
 
 /* ---------- theme ---------- */
 Alpine.store('theme', {
@@ -387,7 +399,7 @@ Alpine.data('combobox', (cfg) => ({
  * The act is valued at CBAR of its date in AZN / RUB / EUR. Payment terms: all RUB, all EUR or
  * split into any number of parts; each part = an amount in its own currency on its own date, from an
  * account in that currency, the bank's rate (act currency -> part currency), and the bank fee
- * (glaust.bank_fees: own rule, or the EUR rule with its limits converted at CBAR) added on top.
+ * (the rule in force on the part's date: own rule, or the EUR rule with its limits converted at CBAR) added on top.
  */
 Alpine.data('logisticsPay', (cfg) => ({
     mode: cfg.mode || 'new',
@@ -403,7 +415,7 @@ Alpine.data('logisticsPay', (cfg) => ({
     terms: '',
     parts: [],
     accounts: cfg.accounts || [],
-    fees: cfg.fees || {},
+    fees: cfg.fees || [],
     rates: {},
     errors: {},
     init() {
@@ -508,9 +520,10 @@ Alpine.data('logisticsPay', (cfg) => ({
     payCbar(p) { const c = this.covered(p), r = this.cross(p); return c !== null && r ? this.r2(c * r) : null; },
     diff(p) { return this.bank(p) && !this.same(p) && this.pay(p) !== null && this.payCbar(p) !== null ? this.r2(this.pay(p) - this.payCbar(p)) : null; },
     rule(p) {
-        const own = this.fees[p.currency];
+        const bank = this.accounts.find((a) => String(a.id) === String(p.account))?.bank;
+        const own = feeRuleOn(this.fees, p.currency, this.pd(p), bank);
         if (own) return { percent: own.percent, min: own.minimum, max: own.maximum ?? null };
-        const eur = this.fees.EUR, er = this.rate('EUR', this.pd(p)), cr = this.rate(p.currency, this.pd(p));
+        const eur = feeRuleOn(this.fees, 'EUR', this.pd(p), bank), er = this.rate('EUR', this.pd(p)), cr = this.rate(p.currency, this.pd(p));
         if (!eur || !er || !cr) return null;
         const f = er / cr;
         return { percent: eur.percent, min: this.r2(eur.minimum * f), max: eur.maximum != null ? this.r2(eur.maximum * f) : null };

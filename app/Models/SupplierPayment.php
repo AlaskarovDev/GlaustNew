@@ -75,10 +75,10 @@ class SupplierPayment extends Model
         return 'Satıcıya ödəniş '.$this->amount.' '.$this->currency;
     }
 
-    /** Fee by the configured rule for a currency: percent, but within [minimum, maximum]; null when there is no rule. */
-    public static function feeFor(string $currency, float $amount): ?array
+    /** Fee by the currency's rule in force on the date: percent, but within [minimum, maximum]; null when there is no rule. */
+    public static function feeFor(string $currency, float $amount, \DateTimeInterface|string|null $date = null, ?string $bank = null): ?array
     {
-        $rule = config('glaust.bank_fees.'.$currency);
+        $rule = BankFeeRule::on($currency, $date, $bank);
         if (! $rule) {
             return null;
         }

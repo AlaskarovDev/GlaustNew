@@ -2,26 +2,28 @@
 
 namespace App\Support\Finance;
 
+use App\Models\BankFeeRule;
+
 /**
  * The bank's fee on an outgoing transfer: percent of the amount kept within a minimum and a
- * maximum (config glaust.bank_fees). A currency without its own rule uses the EUR rule with its
- * limits converted at the CBAR rates of the day (e.g. RUB: 25–300 EUR in roubles).
+ * maximum, by the rule in force on the payment's date for the paying bank (Tənzimləmələr → Bank komissiyası; before any, config
+ * glaust.bank_fees). A currency without its own rule uses the EUR rule with its limits converted at the CBAR rates
+ * of the day (e.g. RUB: 25–300 EUR in roubles).
  */
 class BankFee
 {
     /**
      * @param  float  $azn  AZN per 1 unit of $currency (CBAR of the day)
      * @param  float|null  $eurAzn  AZN per 1 EUR (CBAR of the day), for converting the EUR rule
+     * @param  \DateTimeInterface|string|null  $date  the payment's date: which rule is in force (today when null)
+     * @param  string|null  $bank  the paying account's bank: its own rule wins over the rule for every bank
      * @return array{percent: float, minimum: float, maximum: ?float, amount: float}|null  amounts in $currency
      */
-    public static function for(string $currency, float $amount, float $azn, ?float $eurAzn): ?array
+    public static function for(string $currency, float $amount, float $azn, ?float $eurAzn, \DateTimeInterface|string|null $date = null, ?string $bank = null): ?array
     {
-        $rules = config('glaust.bank_fees');
-        if (isset($rules[$currency])) {
-            $rule = $rules[$currency];
+        if ($rule = BankFeeRule::on($currency, $date, $bank)) {
             $factor = 1.0;
-        } elseif (isset($rules['EUR']) && $eurAzn) {
-            $rule = $rules['EUR'];
+        } elseif ($eurAzn && ($rule = BankFeeRule::on('EUR', $date, $bank))) {
             $factor = $eurAzn / $azn; // EUR limits -> this currency
         } else {
             return null;

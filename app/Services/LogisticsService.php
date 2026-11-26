@@ -88,7 +88,7 @@ class LogisticsService
                     }
                     if (! isset($p['fee_amount']) || $p['fee_amount'] === null || $p['fee_amount'] === '') {
                         $d = ! empty($p['payment_date']) ? $p['payment_date'] : $date;
-                        $p['fee_amount'] = BankFee::for($p['currency'], $paid, $this->rate($p['currency'], $d, "parts.$i.payment_date"), $this->rate('EUR', $d, "parts.$i.payment_date"))['amount'] ?? 0.0;
+                        $p['fee_amount'] = BankFee::for($p['currency'], $paid, $this->rate($p['currency'], $d, "parts.$i.payment_date"), $this->rate('EUR', $d, "parts.$i.payment_date"), $d, BankAccount::find($p['bank_account_id'])?->bank_name)['amount'] ?? 0.0;
                     }
                     $paid = round($paid - (float) $p['fee_amount'], 2);
                     if ($paid <= 0) {
@@ -129,7 +129,7 @@ class LogisticsService
                 $bankRate = $same ? 1.0 : (float) $p['bank_rate'];
                 $amount = isset($p['paid']) ? $p['paid'] : round($share * $bankRate, 2); // what actually left the account
                 $amountCbar = round($share * $cross, 2);
-                $rule = BankFee::for($cur, $amount, $cbar, $eur);
+                $rule = BankFee::for($cur, $amount, $cbar, $eur, $partDate, $account->bank_name);
                 $fee = isset($p['fee_amount']) && $p['fee_amount'] !== null && $p['fee_amount'] !== '' ? round((float) $p['fee_amount'], 2) : ($rule['amount'] ?? 0.0);
 
                 // the fee (in the part's currency) off the part's account, or off any other account: converted at

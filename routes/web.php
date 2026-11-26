@@ -293,6 +293,9 @@ Route::middleware(['auth', 'tenant'])->group(function () {
             Route::get('/categories', [Settings\SettingsController::class, 'categories'])->name('categories');
             Route::post('/categories', [Settings\SettingsController::class, 'storeCategory'])->middleware('can:settings.update')->name('categories.store');
             Route::delete('/categories/{category}', [Settings\SettingsController::class, 'destroyCategory'])->middleware('can:settings.update')->name('categories.destroy');
+            Route::get('/bank-fees', [Settings\SettingsController::class, 'bankFees'])->name('bank-fees');
+            Route::post('/bank-fees', [Settings\SettingsController::class, 'storeBankFee'])->middleware('can:settings.update')->name('bank-fees.store');
+            Route::delete('/bank-fees/{bankFeeRule}', [Settings\SettingsController::class, 'destroyBankFee'])->middleware('can:settings.update')->name('bank-fees.destroy');
         });
         Route::middleware('can:users.view')->group(function () {
             Route::resource('users', Settings\UserController::class)->except(['show']);

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
 use App\Mail\SystemMail;
+use App\Models\BankFeeRule;
 use App\Models\Category;
 use App\Models\User;
 use App\Services\MailService;
@@ -199,5 +200,63 @@ class SettingsController extends Controller
         $category->delete();
 
         return back()->with('success', __('Kateqoriya silindi (əməliyyatlar kateqoriyasız qaldı).'));
+    }
+
+    /**
+     * Bank komissiyası: the company's fee rules — per bank (or every bank) and currency, each from its date on; the
+     * system rule holds before them. Each company keeps its own.
+     */
+    public function bankFees(): View
+    {
+        $rules = BankFeeRule::orderBy('valid_from')->orderBy('id')->get();
+        $today = today()->toDateString();
+        // which rule each payment made today would take, per bank of the company and currency
+        $banks = \App\Models\BankAccount::query()->whereNotNull('bank_name')->distinct()->orderBy('bank_name')->pluck('bank_name')
+            ->merge($rules->pluck('bank_name')->filter())->unique(fn ($b) => BankFeeRule::bankKey($b))->values();
+
+        return view('settings.bank-fees', [
+            'rules' => $rules->sortBy([['bank_name', 'asc'], ['currency', 'asc'], ['valid_from', 'desc']])->values(),
+            'system' => config('glaust.bank_fees', []),
+            'banks' => $banks,
+            'currencies' => config('glaust.currencies', []),
+            'today' => $today,
+            'inForce' => fn ($r) => BankFeeRule::on($r->currency, $today, $r->bank_name),
+        ]);
+    }
+
+    public function storeBankFee(Request $request): RedirectResponse
+    {
+        // 0,25 or 1 000 as typed
+        $request->merge(collect(['percent', 'minimum', 'maximum'])->filter(fn ($k) => $request->filled($k))
+            ->mapWithKeys(fn ($k) => [$k => str_replace([' ', "\u{00A0}", ','], ['', '', '.'], (string) $request->input($k))])->all());
+        $data = $request->validate([
+            'bank_name' => ['nullable', 'string', 'max:255'],
+            'currency' => ['required', 'string', 'size:3', 'alpha'],
+            'valid_from' => ['required', 'date'],
+            'percent' => ['required', 'numeric', 'min:0', 'max:100'],
+            'minimum' => ['nullable', 'numeric', 'min:0'],
+            'maximum' => ['nullable', 'numeric', 'gte:minimum'],
+        ], ['maximum.gte' => __('Ən çox məbləğ ən az məbləğdən kiçik ola bilməz.')],
+            ['bank_name' => 'Bank', 'currency' => 'Valyuta', 'valid_from' => 'Tarix', 'percent' => 'Faiz', 'minimum' => 'Ən az', 'maximum' => 'Ən çox']);
+        $data['currency'] = strtoupper($data['currency']);
+        $data['bank_name'] = BankFeeRule::bankKey($data['bank_name'] ?? null) === null ? null : trim($data['bank_name']);
+        $data['valid_from'] = \Illuminate\Support\Carbon::parse($data['valid_from'])->toDateString();
+        $data['minimum'] = (float) ($data['minimum'] ?? 0);
+        $data['maximum'] = isset($data['maximum']) && $data['maximum'] !== '' ? (float) $data['maximum'] : null;
+
+        // one rule per bank, currency and date: the same again replaces it
+        $rule = BankFeeRule::where('currency', $data['currency'])->whereDate('valid_from', $data['valid_from'])->get()
+            ->first(fn ($r) => BankFeeRule::bankKey($r->bank_name) === BankFeeRule::bankKey($data['bank_name'])) ?? new BankFeeRule;
+        $rule->fill($data + ['created_by' => $request->user()->id])->save();
+
+        return back()->with('success', __(':bank · :cur: yeni qayda :date tarixindən qüvvədədir.', ['bank' => $data['bank_name'] ?? __('Bütün banklar'),
+            'cur' => $data['currency'], 'date' => \Illuminate\Support\Carbon::parse($data['valid_from'])->format('d.m.Y')]));
+    }
+
+    public function destroyBankFee(BankFeeRule $bankFeeRule): RedirectResponse
+    {
+        $bankFeeRule->delete();
+
+        return back()->with('success', __('Qayda silindi — həmin tarixdən əvvəlki qayda qüvvədədir.'));
     }
 }

@@ -2921,7 +2921,7 @@
     "Ş": "Sa",
     "Şablon": "Template",
     "Şablonda sütunlar ATF cədvəlinizlə eyni ardıcıllıqdadır (A…BT): sətirləri 3-cü sətirdən olduğu kimi kopyalayıb yapışdıra bilərsiniz. Yaşıl sütunlar oxunur, qalanları sistem özü hesablayır.": "The template's columns are in the same order as your ATF sheet (A…BT): copy rows and paste them from row 3 as they are. Green columns are read, the system computes the rest.",
-    "Şablonda yalnız yaşıl sütunlar doldurulur: Proforma N, N, Description, HS Code, Quantity, UOM, Unit Price, Total/EUR. Faylda bir neçə proforma nömrəsi varsa, hər biri ayrıca faktura olur.": "Only the green columns of the template are filled in: Proforma N, N, Description, HS Code, Quantity, UOM, Unit Price, Total/EUR. If the file contains several proforma numbers, each becomes a separate invoice.",
+    "Şablonda yalnız yaşıl sütunlar doldurulur: Proforma N, N, Product Code, Description, HS Code, Quantity, UOM, Unit Price, Total/EUR (Product Code boş qala bilər). Faylda bir neçə proforma nömrəsi varsa, hər biri ayrıca faktura olur.": "Only the green columns of the template are filled in: Proforma N, N, Product Code, Description, HS Code, Quantity, UOM, Unit Price, Total/EUR (Product Code may stay empty). If the file contains several proforma numbers, each becomes a separate invoice.",
     "Şablonu yükləyin, doldurun, faylı seçin — sütunları yoxlayıb təsdiqləyəcəksiniz": "Download the template, fill it in, select the file — you will then review and confirm the columns",
     "Şifrə": "Password",
     "Şifrə ": "Password ",

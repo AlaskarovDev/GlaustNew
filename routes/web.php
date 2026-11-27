@@ -161,6 +161,7 @@ Route::middleware(['auth', 'tenant'])->group(function () {
         Route::get('/invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show');
         Route::get('/invoices/{invoice}/export', [InvoiceController::class, 'export'])->name('invoices.export');
         Route::put('/invoices/{invoice}/status', [InvoiceController::class, 'status'])->name('invoices.status');
+        Route::post('/invoices/{invoice}/terms', [InvoiceController::class, 'terms'])->name('invoices.terms');
         Route::post('/invoices/{invoice}/logistics', [InvoiceController::class, 'logistics'])->name('invoices.logistics');
         Route::delete('/invoices/{invoice}/logistics', [InvoiceController::class, 'clearLogistics'])->name('invoices.logistics.clear');
         Route::post('/invoices/{invoice}/commission', [InvoiceController::class, 'commission'])->name('invoices.commission');

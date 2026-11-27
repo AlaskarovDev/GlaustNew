@@ -86,6 +86,7 @@
                 <div>{{ __('Fakturasız məbləğ: mallar daxil edilmir, sənədlər hazırlanmır və hesablama aparılmır. Yekun məbləğ 0-cı addımda yazılır; logistika, komissiya və kurslar yalnız yadda saxlanılır.') }}</div></div>
         @endif
         @if($manual)@include('invoices._final')@endif
+        @unless($manual)@include('invoices._terms')@endunless
         <div class="flex items-baseline justify-between gap-3 mb-3">
             <h2 class="text-sm font-semibold text-ink-2">{{ __('Hesablama addımları') }}</h2>
             <p class="text-xs text-muted">{{ $manual ? __('Yalnız yadda saxlanılır — cədvələ və yekun məbləğə təsir etmir') : __('Hər addım tətbiq olunduqca cədvəldəki uyğun sütunlar dolur') }}</p>
@@ -156,12 +157,15 @@
                     <tr>
                         <td class="font-mono">{{ $invoice->number }}</td>
                         <td class="font-mono">{{ $it->line_no }}</td>
+                        <td class="font-mono whitespace-nowrap">{{ $it->product_code }}</td>
                         <td class="min-w-[220px]">{{ $it->description }}</td>
                         <td class="font-mono">{{ $it->hs_code }}</td>
                         <td class="num">{{ num($it->quantity, 2) }}</td>
                         <td>{{ $it->uom }}</td>
-                        <td class="num">{{ rtrim(rtrim(num($it->unit_price, 4), '0'), ',') }}</td>
-                        <td class="num font-medium text-ink">{{ num($it->total) }}</td>
+                        <td class="num">{{ rtrim(rtrim(num($it->unit_price, 4), '0'), ',') }}
+                            @if($it->base_unit_price !== null)<div class="text-[11px] text-faint" title="{{ __('Satıcının ilkin qiyməti') }}">{{ rtrim(rtrim(num($it->base_unit_price, 4), '0'), ',') }}</div>@endif</td>
+                        <td class="num font-medium text-ink">{{ num($it->total) }}
+                            @if($it->base_total !== null)<div class="text-[11px] font-normal text-faint whitespace-nowrap">{{ num($it->base_total) }}@if($it->discount !== null) −{{ num($it->discount) }}@endif @if($it->freight !== null) +{{ num($it->freight) }}@endif</div>@endif</td>
                         @foreach($later as $k => $c)
                             @php $v = ($liveCols[$k] ?? false) ? $cell($it, $k) : ($it->extra[$k] ?? null); @endphp
                             @if($liveCols[$k] ?? false)
@@ -177,7 +181,7 @@
                 </tbody>
                 <tfoot>
                 <tr class="bg-surface-2 font-semibold">
-                    <td class="px-4 py-3" colspan="4">{{ __('Cəmi') }}</td>
+                    <td class="px-4 py-3" colspan="5">{{ __('Cəmi') }}</td>
                     <td class="px-4 py-3 text-right font-mono">{{ num($invoice->items->sum('quantity'), 2) }}</td>
                     <td colspan="2"></td>
                     <td class="px-4 py-3 text-right font-mono">{{ num($invoice->items->sum('total')) }}</td>

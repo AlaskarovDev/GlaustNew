@@ -2921,7 +2921,7 @@
     "Ş": "Сб",
     "Şablon": "Шаблон",
     "Şablonda sütunlar ATF cədvəlinizlə eyni ardıcıllıqdadır (A…BT): sətirləri 3-cü sətirdən olduğu kimi kopyalayıb yapışdıra bilərsiniz. Yaşıl sütunlar oxunur, qalanları sistem özü hesablayır.": "В шаблоне столбцы в том же порядке, что и в вашей таблице ATF (A…BT): строки можно скопировать и вставить с 3-й строки как есть. Зелёные столбцы читаются, остальные система считает сама.",
-    "Şablonda yalnız yaşıl sütunlar doldurulur: Proforma N, N, Description, HS Code, Quantity, UOM, Unit Price, Total/EUR. Faylda bir neçə proforma nömrəsi varsa, hər biri ayrıca faktura olur.": "В шаблоне заполняются только зелёные столбцы: Proforma N, N, Description, HS Code, Quantity, UOM, Unit Price, Total/EUR. Если в файле несколько номеров проформ, каждая станет отдельной фактурой.",
+    "Şablonda yalnız yaşıl sütunlar doldurulur: Proforma N, N, Product Code, Description, HS Code, Quantity, UOM, Unit Price, Total/EUR (Product Code boş qala bilər). Faylda bir neçə proforma nömrəsi varsa, hər biri ayrıca faktura olur.": "В шаблоне заполняются только зелёные столбцы: Proforma N, N, Product Code, Description, HS Code, Quantity, UOM, Unit Price, Total/EUR (Product Code можно не заполнять). Если в файле несколько номеров проформ, каждая станет отдельной фактурой.",
     "Şablonu yükləyin, doldurun, faylı seçin — sütunları yoxlayıb təsdiqləyəcəksiniz": "Скачайте шаблон, заполните, выберите файл — затем проверите и подтвердите столбцы",
     "Şifrə": "Пароль",
     "Şifrə ": "Пароль ",

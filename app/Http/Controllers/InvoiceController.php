@@ -237,6 +237,42 @@ class InvoiceController extends Controller
             .($invoice->logistics_currency !== $invoice->currency ? ' = '.money($invoice->logistics_total, $invoice->currency) : '').'.');
     }
 
+    /**
+     * The seller invoice's own terms, both optional: the freight it bills (NAVLUN) and a discount in percent — spread
+     * over the lines by their Total. Both empty: back to the seller's own figures.
+     */
+    public function terms(Request $request, Invoice $invoice, \App\Support\Invoices\FreightDiscount $terms): RedirectResponse
+    {
+        $this->authorize('projects.update');
+        if ($invoice->isLocked()) {
+            return back()->with('error', $this->lockedMessage($invoice));
+        }
+        if ($invoice->type !== 'supplier' || $invoice->isManual() || $invoice->status === 'cancelled') {
+            return back()->with('error', __('Navlun və endirim yalnız məhsul sətirləri olan satıcı fakturasına tətbiq olunur.'));
+        }
+        $request->merge([
+            'freight_amount' => parse_number($request->input('freight_amount')),
+            'discount_percent' => parse_number(str_replace('%', '', (string) $request->input('discount_percent'))),
+        ]);
+        $data = $request->validate([
+            'freight_amount' => ['nullable', 'numeric', 'min:0', 'max:999999999'],
+            'discount_percent' => ['nullable', 'numeric', 'min:0', 'lt:100', 'decimal:0,4'],
+        ], [], ['freight_amount' => __('Navlun'), 'discount_percent' => __('Endirim faizi')]);
+
+        $terms->apply($invoice, isset($data['freight_amount']) ? (float) $data['freight_amount'] : null, isset($data['discount_percent']) ? (float) $data['discount_percent'] : null);
+        $invoice->refresh();
+        $this->documentsReady($invoice);
+
+        $parts = array_filter([
+            $invoice->discount_percent !== null ? __('endirim :p% = −:a', ['p' => rtrim(rtrim(num($invoice->discount_percent, 4), '0'), ','), 'a' => money($invoice->discount_amount, $invoice->currency)]) : null,
+            $invoice->freight_amount !== null ? __('navlun +:a', ['a' => money($invoice->freight_amount, $invoice->currency)]) : null,
+        ]);
+
+        return back()->with('success', $parts
+            ? __('Məhsullar arasında bölüşdürüldü: ').implode(', ', $parts).__('. Fakturanın cəmi: ').money($invoice->total, $invoice->currency).'.'
+            : __('Navlun və endirim silindi — satıcının ilkin rəqəmləri bərpa olundu.'));
+    }
+
     public function clearLogistics(Invoice $invoice, \App\Support\Invoices\LogisticsAllocator $allocator): RedirectResponse
     {
         $this->authorize('projects.update');

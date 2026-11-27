@@ -72,7 +72,7 @@
             <form method="POST" action="{{ route('invoices.import', $deal) }}" x-show="importing" x-collapse @if($supplierInvoices->isNotEmpty() && ! session('import_errors') && ! $errors->has('file')) x-cloak @endif enctype="multipart/form-data" class="p-5 border-t border-line bg-surface-2/50" x-data="{ name: '', busy: false }" @submit="busy = true">
                 @csrf
                 <h3 class="text-sm font-semibold mb-1">{{ __('Satıcının fakturasını import et') }}</h3>
-                <p class="text-xs text-muted mb-4">{{ __('Şablonda yalnız yaşıl sütunlar doldurulur: Proforma N, N, Description, HS Code, Quantity, UOM, Unit Price, Total/EUR. Faylda bir neçə proforma nömrəsi varsa, hər biri ayrıca faktura olur.') }}</p>
+                <p class="text-xs text-muted mb-4">{{ __('Şablonda yalnız yaşıl sütunlar doldurulur: Proforma N, N, Product Code, Description, HS Code, Quantity, UOM, Unit Price, Total/EUR (Product Code boş qala bilər). Faylda bir neçə proforma nömrəsi varsa, hər biri ayrıca faktura olur.') }}</p>
                 <div class="grid sm:grid-cols-[1fr_180px_auto] gap-3 items-end">
                     <label class="flex items-center gap-3 h-10 px-3 rounded-[10px] border border-dashed border-line-strong bg-surface cursor-pointer hover:border-brand min-w-0">
                         <x-icon name="sheet" class="size-5 text-success shrink-0"/>

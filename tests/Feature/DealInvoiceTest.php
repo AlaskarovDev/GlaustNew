@@ -114,11 +114,14 @@ class DealInvoiceTest extends TestCase
 
         $sheet = IOFactory::load($path)->getSheetByName('Faktura');
         $this->assertSame('Proforma N', $sheet->getCell('A5')->getValue());
-        $this->assertSame('Total/EUR', $sheet->getCell('H5')->getValue());
-        $this->assertSame('Logistics', $sheet->getCell('I5')->getValue());
+        $this->assertSame('Product Code', $sheet->getCell('C5')->getValue(), 'the product code comes before the description');
+        $this->assertSame('Description', $sheet->getCell('D5')->getValue());
+        $this->assertSame('Total/EUR', $sheet->getCell('I5')->getValue());
+        $this->assertSame('Logistics', $sheet->getCell('J5')->getValue());
         $this->assertTrue($sheet->getProtection()->getSheet());
-        $this->assertSame('unprotected', $sheet->getStyle('H6')->getProtection()->getLocked(), 'Total/EUR is fillable');
-        $this->assertNotSame('unprotected', $sheet->getStyle('I6')->getProtection()->getLocked(), 'Logistics is locked');
+        $this->assertSame('unprotected', $sheet->getStyle('C6')->getProtection()->getLocked(), 'Product Code is fillable');
+        $this->assertSame('unprotected', $sheet->getStyle('I6')->getProtection()->getLocked(), 'Total/EUR is fillable');
+        $this->assertNotSame('unprotected', $sheet->getStyle('J6')->getProtection()->getLocked(), 'Logistics is locked');
         $this->assertStringContainsString('YALNIZ', (string) $sheet->getCell('A2')->getValue());
 
         // The empty template itself parses as "no data", not as a crash.

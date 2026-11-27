@@ -30,13 +30,14 @@ use Illuminate\Validation\ValidationException;
  * Books a company's year from its bank statements, Trades included, through the real services — in one transaction, all
  * or nothing. payload = base64(gzip(json)):
  *   accounts        [{key, name, bank_name, iban?, currency}]               — found by IBAN, else by name; created when missing
+ *   categories      {name: [scope, pl_line|null]}                            — created when missing; an existing one without a line gets it
  *   counterparties  [{key, name, type, country?}]                            — found by name; created when missing
  *   contracts       [{key, number, date, party, kind, subject, currency}]    — found by number; created when missing
  *   project         {code, name, currency, start, end}                       — found by code; created when missing
  *   trades          [{key, title, date, currency, sale_currency, supplier, buyer, purchase_contract?, sale_contract?,
  *                     invoice: {number, date, amount}, final: {number?, date, amount, currency},
  *                     receipts: [{date, account, amount, purpose}],
- *                     payments: [{date, account, amount, fee?, fee_account?, reference}],
+ *                     payments: [{date, account, amount, fee?, fee_account?, fee_bank_rate?, reference}],
  *                     logistics: [{party, number, date, act?, act_date?, amount, pay: {date, account, amount, fee?, fee_account?}}]}]
  *   ops             [{type: exchange, date, direction, currency, amount, rate, from, to, trade?, notes?}
  *                    {type: expense, date, account, amount, category, description, pl_line?, trade?}
@@ -138,6 +139,12 @@ class TradeBookCommand extends Command
                 'opening_balance' => 0, 'opening_date' => $a['opening_date'] ?? null, 'is_active' => true]);
             $this->acc[$a['key']] = $acc;
         }
+        foreach ($data['categories'] ?? [] as $name => [$scope, $line]) {
+            $c = Category::firstOrCreate(['scope' => $scope, 'name' => $name], ['color' => '#64748b', 'pl_line' => $line]);
+            if ($line && ! $c->pl_line) {
+                $c->update(['pl_line' => $line]);
+            }
+        }
         foreach ($data['counterparties'] ?? [] as $p) {
             $this->party[$p['key']] = Counterparty::firstOrCreate(['name' => $p['name']], ['type' => $p['type'], 'entity_type' => 'legal', 'country' => $p['country'] ?? 'Azərbaycan']);
         }
@@ -173,7 +180,8 @@ class TradeBookCommand extends Command
             foreach ($t['payments'] ?? [] as $p) {
                 app(SupplierPaymentService::class)->pay($deal, ['payment_date' => $p['date'], 'currency' => $t['currency'], 'amount' => (float) $p['amount'],
                     'bank_account_id' => $this->acc[$p['account']]->id, 'fee_amount' => isset($p['fee']) ? round((float) $p['fee'], 2) : 0.0,
-                    'fee_account_id' => $this->acc[$p['fee_account'] ?? $p['account']]->id, 'reference' => mb_substr($p['reference'], 0, 190)]);
+                    'fee_account_id' => $this->acc[$p['fee_account'] ?? $p['account']]->id, 'fee_bank_rate' => $p['fee_bank_rate'] ?? null,
+                    'reference' => mb_substr($p['reference'], 0, 190)]);
             }
             foreach ($t['logistics'] ?? [] as $l) {
                 $pay = $l['pay'];

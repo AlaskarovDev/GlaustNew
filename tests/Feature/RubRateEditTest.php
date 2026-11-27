@@ -55,4 +55,25 @@ class RubRateEditTest extends TestCase
         $this->patch(route('invoices.rub.rate', $inv), ['fx_rate' => '100'])->assertSessionHasNoErrors();
         $this->get(route('invoices.show', $inv))->assertOk()->assertSee($stale);
     }
+
+    public function test_typing_the_displayed_computed_rate_restores_it_and_clears_the_warning(): void
+    {
+        [$admin, $inv] = $this->calculated();
+        $this->applyRub($inv)->assertSessionHasNoErrors();
+        $stale = __('Köhnə hesablama ilə (kurs və ya sətirlər dəyişib). Sənəddə yeniləyin.');
+
+        $this->patch(route('invoices.rub.rate', $inv), ['fx_rate' => '100'])->assertSessionHasNoErrors();
+        $this->get(route('invoices.show', $inv))->assertSee($stale);
+
+        // 2,0005 / 0,0211 = 94,81042654…, shown as 94,8104
+        $this->patch(route('invoices.rub.rate', $inv), ['fx_rate' => '94,8104'])->assertSessionHasNoErrors();
+        $inv = $this->inTenant($admin, fn () => Invoice::findOrFail($inv->id));
+        $this->assertFalse(RubConverter::isOverridden($inv));
+        $this->assertEqualsWithDelta(2.0005 / 0.0211, (float) $inv->fx_rate, 1e-9);
+        $this->get(route('invoices.show', $inv))->assertOk()->assertDontSee($stale)->assertDontSee(__('Əl ilə düzəldilib, hesablanan:'));
+
+        // a rate close to it but not the displayed one is still a hand edit
+        $this->patch(route('invoices.rub.rate', $inv), ['fx_rate' => '94,81'])->assertSessionHasNoErrors();
+        $this->assertTrue(RubConverter::isOverridden($this->inTenant($admin, fn () => Invoice::findOrFail($inv->id))));
+    }
 }

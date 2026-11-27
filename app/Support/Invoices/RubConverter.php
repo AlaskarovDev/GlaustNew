@@ -76,9 +76,17 @@ class RubConverter
         }
     }
 
-    /** The rate typed in by hand over the computed one (e.g. 94,0594 rounded to 94,06); the RUR columns use it. */
+    /**
+     * The rate typed in by hand over the computed one (e.g. 94,0594 rounded to 94,06); the RUR columns use it.
+     * The screen shows the computed rate to 4 decimals, so typing exactly that figure (or saving the form
+     * unchanged) means "the computed rate": its full precision is kept, so the prices and the proforma match.
+     */
     public function override(Invoice $invoice, float $rate): void
     {
+        $computed = self::computed($invoice);
+        if ($computed !== null && abs($rate - round($computed, 4)) < 1e-9) {
+            $rate = $computed;
+        }
         $invoice->update(['fx_rate' => $rate, 'fx_updated_at' => now()]);
     }
 

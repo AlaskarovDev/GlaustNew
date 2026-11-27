@@ -34,4 +34,13 @@ class RubRateEditTest extends TestCase
         $this->applyRub($inv)->assertSessionHasNoErrors();
         $this->assertFalse(RubConverter::isOverridden($this->inTenant($admin, fn () => Invoice::findOrFail($inv->id))));
     }
+
+    public function test_forecast_shows_base_divided_by_target_below_it(): void
+    {
+        [, $inv] = $this->calculated();
+        $this->applyRub($inv)->assertSessionHasNoErrors();
+
+        // Proq EUR 2,0005 / Proq RUB 0,0211 = 94,8104
+        $this->get(route('invoices.show', $inv))->assertOk()->assertSee('EUR / RUB')->assertSee('94,8104');
+    }
 }

@@ -197,6 +197,7 @@
     .rate-table tr.is-used td { @apply text-ink; }
     .rate-table tr.is-used td:nth-child(2) { @apply text-brand-ink; }
     .rate-table tr.gap td { @apply border-0 py-1; }
+    .rate-table tr.ratio td { @apply font-semibold border-b-0; }
     .segmented { @apply grid grid-cols-2 gap-1 p-1 rounded-[10px] bg-surface-2; }
     .segmented > label { @apply flex items-center justify-center h-8 rounded-lg text-[13px] font-medium text-ink-2 cursor-pointer select-none; transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease; }
     .segmented > label:hover { @apply text-ink; }

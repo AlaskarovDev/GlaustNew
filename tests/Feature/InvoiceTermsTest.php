@@ -98,10 +98,9 @@ class InvoiceTermsTest extends TestCase
         $first = $rows->first();
         $this->get(route('invoices.show', $inv))->assertOk()->assertSee('Sətirləri redaktə et');
 
-        $payload = fn (array $over) => ['items' => $rows->mapWithKeys(fn ($it) => [$it->id => [
-            'product_code' => '', 'description' => $it->description, 'hs_code' => $it->hs_code, 'quantity' => (string) $it->quantity,
-            'uom' => $it->uom, 'unit_price' => (string) $it->unit_price, 'total' => (string) $it->total,
-        ]])->replace([$first->id => $over + ['description' => $first->description, 'hs_code' => '32151900', 'uom' => 'kg']])->all()];
+        $line = fn ($it) => ['id' => $it->id, 'product_code' => '', 'description' => $it->description, 'hs_code' => $it->hs_code,
+            'quantity' => (string) $it->quantity, 'uom' => $it->uom, 'unit_price' => (string) $it->unit_price, 'total' => (string) $it->total];
+        $payload = fn (array $over) => ['rows' => $rows->map(fn ($it) => $it->id === $first->id ? $over + $line($it) : $line($it))->values()->all()];
 
         // line 1: 3 200 × 5,00 = 16 000 (Total left empty: Quantity × Unit Price), a product code
         $this->put(route('invoices.items.update', $inv), $payload(['product_code' => 'MG-1', 'quantity' => '3 200', 'unit_price' => '5,00', 'total' => '']))
@@ -126,6 +125,28 @@ class InvoiceTermsTest extends TestCase
             $this->assertSame(round(191922 * 0.9, 2), (float) $i->total);
         });
 
-        $this->put(route('invoices.items.update', $inv), $payload(['quantity' => '0', 'unit_price' => '1']))->assertSessionHasErrors('items.'.$first->id.'.quantity');
+        $this->put(route('invoices.items.update', $inv), $payload(['quantity' => '0', 'unit_price' => '1']))->assertSessionHasErrors('rows.0.quantity');
+
+        // a line added at the end, line 2 removed: numbered 1…n again, the total follows
+        $this->post(route('invoices.terms', $inv), ['discount_percent' => '', 'freight_amount' => '']);
+        $rows = $this->inTenant($admin, fn () => $inv->items()->orderBy('line_no')->get());
+        $second = $rows[1];
+        $list = $rows->reject(fn ($it) => $it->id === $second->id)->map($line)->values()->all();
+        $list[] = ['id' => '', 'product_code' => '9615400403', 'description' => 'NAVLUN', 'hs_code' => '', 'quantity' => '1', 'uom' => 'pcs', 'unit_price' => '700', 'total' => ''];
+        $this->put(route('invoices.items.update', $inv), ['rows' => $list])->assertSessionHasNoErrors()->assertSessionHas('success');
+        $this->inTenant($admin, function () use ($inv, $second) {
+            $i = \App\Models\Invoice::with('items')->find($inv->id);
+            $this->assertCount(9, $i->items);
+            $this->assertNull($i->items->firstWhere('id', $second->id));
+            $this->assertSame(range(1, 9), $i->items->sortBy('line_no')->pluck('line_no')->values()->all());
+            $new = $i->items->firstWhere('description', 'NAVLUN');
+            $this->assertSame([9, 700.0, '9615400403'], [$new->line_no, (float) $new->total, $new->product_code]);
+            $this->assertSame(round(191922 - 35456 + 700, 2), (float) $i->total);
+            $this->assertSame(round(700 * 0.035, 2), (float) $new->commission);
+            $this->assertSame(10200.0, round((float) $i->items->sum('logistics'), 2));
+        });
+
+        // the last line cannot go
+        $this->put(route('invoices.items.update', $inv), ['rows' => []])->assertSessionHasErrors('rows');
     }
 }

@@ -238,9 +238,10 @@ class InvoiceController extends Controller
     }
 
     /**
-     * The imported lines corrected by hand (code, description, HS code, quantity, UOM, price, Total). The seller's own figures
-     * change — under the invoice's freight / discount when it has them — and everything that follows the Totals is worked again:
-     * the invoice total, freight and discount, a logistics cost spread by Total, our commission.
+     * The imported lines corrected by hand: changed (code, description, HS code, quantity, UOM, price, Total), added, removed —
+     * then numbered 1…n in the order given. The seller's own figures change — under the invoice's freight / discount when it has
+     * them — and everything that follows the Totals is worked again: the invoice total, freight and discount, a logistics cost
+     * spread by Total (one entered per line: 0 for a new line), our commission.
      */
     public function updateItems(Request $request, Invoice $invoice, \App\Support\Invoices\FreightDiscount $terms): RedirectResponse
     {
@@ -252,45 +253,67 @@ class InvoiceController extends Controller
             return back()->with('error', __('Yalnız import olunmuş satıcı fakturasının sətirləri redaktə olunur.'));
         }
         $items = $invoice->items()->get()->keyBy('id');
-        $rows = (array) $request->input('items', []);
-        foreach ($rows as $id => $r) {
+        $rows = array_values((array) $request->input('rows', []));
+        foreach ($rows as $i => $r) {
             foreach (['quantity', 'unit_price', 'total'] as $k) {
-                $rows[$id][$k] = isset($r[$k]) && $r[$k] !== '' ? parse_number($r[$k]) : null;
+                $rows[$i][$k] = isset($r[$k]) && $r[$k] !== '' ? parse_number($r[$k]) : null;
             }
         }
-        $request->merge(['items' => $rows]);
+        $request->merge(['rows' => $rows]);
         $request->validate([
-            'items' => ['required', 'array'],
-            'items.*.product_code' => ['nullable', 'string', 'max:64'],
-            'items.*.description' => ['required', 'string', 'max:255'],
-            'items.*.hs_code' => ['nullable', 'string', 'max:20'],
-            'items.*.quantity' => ['required', 'numeric', 'gt:0', 'max:999999999'],
-            'items.*.uom' => ['nullable', 'string', 'max:16'],
-            'items.*.unit_price' => ['required', 'numeric', 'min:0', 'max:999999999'],
-            'items.*.total' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
-        ], [], ['items.*.description' => 'Description', 'items.*.quantity' => 'Quantity', 'items.*.unit_price' => 'Unit Price', 'items.*.total' => 'Total']);
-        if (array_diff(array_keys($rows), $items->keys()->all())) {
+            'rows' => ['required', 'array', 'min:1', 'max:500'],
+            'rows.*.id' => ['nullable', 'integer'],
+            'rows.*.product_code' => ['nullable', 'string', 'max:64'],
+            'rows.*.description' => ['required', 'string', 'max:255'],
+            'rows.*.hs_code' => ['nullable', 'string', 'max:20'],
+            'rows.*.quantity' => ['required', 'numeric', 'gt:0', 'max:999999999'],
+            'rows.*.uom' => ['nullable', 'string', 'max:16'],
+            'rows.*.unit_price' => ['required', 'numeric', 'min:0', 'max:999999999'],
+            'rows.*.total' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
+        ], ['rows.required' => __('Fakturada ən azı bir sətir qalmalıdır.'), 'rows.min' => __('Fakturada ən azı bir sətir qalmalıdır.')],
+            ['rows.*.description' => 'Description', 'rows.*.quantity' => 'Quantity', 'rows.*.unit_price' => 'Unit Price', 'rows.*.total' => 'Total']);
+        $ids = array_values(array_filter(array_map(fn ($r) => isset($r['id']) && $r['id'] !== '' ? (int) $r['id'] : null, $rows)));
+        if (array_diff($ids, $items->keys()->all()) || count($ids) !== count(array_unique($ids))) {
             abort(404);
         }
 
         $hasTerms = $invoice->freight_amount !== null || $invoice->discount_percent !== null;
-        DB::transaction(function () use ($rows, $items, $invoice, $terms, $hasTerms) {
-            foreach ($rows as $id => $r) {
+        $perItem = $invoice->logistics_method === 'per_item';
+        [$added, $removed] = [0, 0];
+        DB::transaction(function () use ($rows, $items, $ids, $invoice, $terms, $hasTerms, $perItem, &$added, &$removed) {
+            foreach ($items->except($ids) as $gone) {
+                $gone->delete();
+                $removed++;
+            }
+            foreach ($rows as $n => $r) {
                 $qty = round((float) $r['quantity'], 3);
                 $price = round((float) $r['unit_price'], 4);
                 $total = $r['total'] !== null ? round((float) $r['total'], 2) : round($qty * $price, 2);
-                $items[$id]->update(['product_code' => trim((string) ($r['product_code'] ?? '')) ?: null, 'description' => trim($r['description']),
+                $data = ['line_no' => $n + 1, 'product_code' => trim((string) ($r['product_code'] ?? '')) ?: null, 'description' => trim($r['description']),
                     'hs_code' => trim((string) ($r['hs_code'] ?? '')) ?: null, 'quantity' => $qty, 'uom' => trim((string) ($r['uom'] ?? '')) ?: null]
-                    + ($hasTerms ? ['base_unit_price' => $price, 'base_total' => $total] : ['unit_price' => $price, 'total' => $total]));
+                    + ($hasTerms ? ['base_unit_price' => $price, 'base_total' => $total] : ['unit_price' => $price, 'total' => $total]);
+                if (! empty($r['id'])) {
+                    $items[(int) $r['id']]->update($data);
+                } else {
+                    // a new line under terms starts from its own figure (the terms put it in total / unit_price below)
+                    $invoice->items()->create($data + ['unit_price' => $price, 'total' => $total]
+                        + ($perItem && $invoice->hasLogistics() ? ['logistics_original' => 0, 'logistics' => 0] : []));
+                    $added++;
+                }
             }
             // the seller's figures again through the terms (none: just the new Totals) — totals, logistics, commission follow
             $terms->apply($invoice->fresh(), $invoice->freight_amount !== null ? (float) $invoice->freight_amount : null,
                 $invoice->discount_percent !== null ? (float) $invoice->discount_percent : null);
+            if ($perItem && $invoice->hasLogistics()) {   // the lines' own costs, fewer or more lines now
+                $fresh = $invoice->items()->get();
+                $invoice->update(['logistics_amount' => round((float) $fresh->sum('logistics_original'), 2), 'logistics_total' => round((float) $fresh->sum('logistics'), 2)]);
+            }
         });
         $invoice->refresh();
         $this->documentsReady($invoice);
 
-        return back()->with('success', __('Sətirlər yeniləndi. Fakturanın cəmi: ').money($invoice->total, $invoice->currency).'.');
+        return back()->with('success', __('Sətirlər yeniləndi').($added ? __(' (:n əlavə edildi)', ['n' => $added]) : '').($removed ? __(' (:n silindi)', ['n' => $removed]) : '')
+            .__('. Fakturanın cəmi: ').money($invoice->total, $invoice->currency).'.');
     }
 
     /**

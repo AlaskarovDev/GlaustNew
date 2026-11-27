@@ -57,6 +57,10 @@
                     <a href="{{ route('sales-documents.show', $ourInvoice) }}" class="block text-xl font-semibold font-mono hover:text-brand-ink">{{ money($ourTotal, $ourInvoice->currency) }}</a>
                     <div class="text-[11px] text-muted mt-0.5" x-show="azn" x-cloak><span x-show="loading">…</span><span x-show="!loading" x-text="inAzn({{ (float) $ourTotal }}, @js($ourInvoice->currency))"></span></div>
                     <div class="text-[11px] text-faint" x-show="!azn">Proforma {{ $ourInvoice->number }}</div>
+                    @if($proformaStale ?? false)
+                        <a href="{{ route('sales-documents.show', $ourInvoice) }}" class="mt-1 flex items-start gap-1 text-[11px] text-saffron hover:underline" data-testid="proforma-stale">
+                            <x-icon name="alert" class="size-3.5 shrink-0 mt-px"/><span>{{ __('Köhnə hesablama ilə (kurs və ya sətirlər dəyişib). Sənəddə yeniləyin.') }}</span></a>
+                    @endif
                 @else
                     <div class="text-xl font-semibold text-faint">—</div><div class="text-[11px] text-faint">{{ __('hesablama bitəndə yaranır') }}</div>
                 @endif

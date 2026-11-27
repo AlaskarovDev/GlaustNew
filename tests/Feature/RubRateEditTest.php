@@ -43,4 +43,16 @@ class RubRateEditTest extends TestCase
         // Proq EUR 2,0005 / Proq RUB 0,0211 = 94,8104
         $this->get(route('invoices.show', $inv))->assertOk()->assertSee('EUR / RUB')->assertSee('94,8104');
     }
+
+    public function test_proforma_card_warns_when_the_rate_changed_after_it_was_made(): void
+    {
+        [, $inv] = $this->calculated();
+        $this->applyRub($inv)->assertSessionHasNoErrors();
+        $stale = __('Köhnə hesablama ilə (kurs və ya sətirlər dəyişib). Sənəddə yeniləyin.');
+
+        $this->get(route('invoices.show', $inv))->assertOk()->assertSee('Proforma')->assertDontSee($stale);
+
+        $this->patch(route('invoices.rub.rate', $inv), ['fx_rate' => '100'])->assertSessionHasNoErrors();
+        $this->get(route('invoices.show', $inv))->assertOk()->assertSee($stale);
+    }
 }

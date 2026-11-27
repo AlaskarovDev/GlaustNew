@@ -20,6 +20,7 @@
         base: @js((string) old('fx_base_azn', $isForecast ? rate_fmt($invoice->fx_base_azn) : '')),
         rub: @js((string) old('fx_target_azn', $isForecast ? rate_fmt($invoice->fx_target_azn) : '')),
         editing: {{ ! $invoice->hasRub() || $failed ? 'true' : 'false' }},
+        rateEdit: {{ $errors->has('fx_rate') ? 'true' : 'false' }},
         cbar: null, loading: false, error: '',
         future() { return this.date > this.today; },
         async load() {
@@ -57,9 +58,34 @@
         @php
             $cb = $isForecast ? $actual : ['base' => $invoice->fx_base_azn, 'rub' => $invoice->fx_target_azn];
             $d = azdate($invoice->fx_date);
+            $computed = \App\Support\Invoices\RubConverter::computed($invoice);
+            $overridden = \App\Support\Invoices\RubConverter::isOverridden($invoice);
+            $canEdit = auth()->user()->can('projects.update') && ! $invoice->isLocked();
         @endphp
         <div class="step-summary">
-            <div class="step-value">1 {{ $cur }} = {{ num($invoice->fx_rate, 4) }} {{ currency_symbol($to) }}</div>
+            <div class="flex items-center gap-2">
+                <div class="step-value">1 {{ $cur }} = {{ rate_fmt(round((float) $invoice->fx_rate, 4)) }} {{ currency_symbol($to) }}</div>
+                @if($canEdit)
+                    <button type="button" class="btn btn-ghost btn-icon btn-sm ml-auto" x-show="!rateEdit" @click="rateEdit = true; $nextTick(() => $refs.rate.select())"
+                            aria-label="{{ __('Kursu dəyiş') }}" title="{{ __('Kursu dəyiş') }}"><x-icon name="pencil" class="size-4"/></button>
+                @endif
+            </div>
+            @if($overridden)
+                <div class="step-meta">{{ __('Əl ilə düzəldilib, hesablanan:') }} <span class="font-mono">{{ num($computed, 4) }}</span></div>
+            @endif
+            @if($canEdit)
+                <form method="POST" action="{{ route('invoices.rub.rate', $invoice) }}" x-show="rateEdit" x-collapse {{ $errors->has('fx_rate') ? '' : 'x-cloak' }} class="mt-2 space-y-1.5">
+                    @csrf @method('PATCH')
+                    <label class="field-label" for="fx-rate">1 {{ $cur }} = ? {{ $to }}</label>
+                    <div class="flex gap-2">
+                        <input id="fx-rate" x-ref="rate" name="fx_rate" value="{{ old('fx_rate', rate_fmt(round((float) $invoice->fx_rate, 4))) }}" inputmode="decimal" class="input !h-9 font-mono text-right flex-1 @error('fx_rate') is-invalid @enderror">
+                        <button class="btn btn-primary btn-sm"><x-icon name="check" class="size-4"/> {{ __('Saxla') }}</button>
+                        <button type="button" class="btn btn-secondary btn-sm" @click="rateEdit = false">{{ __('Ləğv et') }}</button>
+                    </div>
+                    @error('fx_rate')<p class="field-error">{{ $message }}</p>@enderror
+                    <p class="text-[11px] text-muted">{{ __('Bu kurs bütün RUR məbləğlərində və hesabatlarda əsas götürülür.') }}@if($computed) {{ __('Hesablanan:') }} <span class="font-mono">{{ num($computed, 4) }}</span>@endif</p>
+                </form>
+            @endif
             <table class="rate-table mt-2">
                 <tr @class(['is-used' => ! $isForecast])><td>{{ $d }}</td><td>CB {{ $cur }}</td><td>{{ $cb ? $r($cb['base']) : __('dərc olunmayıb') }}</td></tr>
                 <tr @class(['is-used' => ! $isForecast])><td>{{ $d }}</td><td>CB {{ $to }}</td><td>{{ $cb ? $r($cb['rub']) : __('dərc olunmayıb') }}</td></tr>

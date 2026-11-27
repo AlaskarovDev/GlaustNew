@@ -76,6 +76,25 @@ class RubConverter
         }
     }
 
+    /** The rate typed in by hand over the computed one (e.g. 94,0594 rounded to 94,06); the RUR columns use it. */
+    public function override(Invoice $invoice, float $rate): void
+    {
+        $invoice->update(['fx_rate' => $rate, 'fx_updated_at' => now()]);
+    }
+
+    /** The rate the source gives (base / target), before any hand edit. */
+    public static function computed(Invoice $invoice): ?float
+    {
+        return $invoice->fx_base_azn > 0 && $invoice->fx_target_azn > 0 ? (float) $invoice->fx_base_azn / (float) $invoice->fx_target_azn : null;
+    }
+
+    public static function isOverridden(Invoice $invoice): bool
+    {
+        $c = self::computed($invoice);
+
+        return $c !== null && $invoice->fx_rate !== null && abs((float) $invoice->fx_rate - $c) > 1e-9 * max(1.0, $c);
+    }
+
     public function clear(Invoice $invoice): void
     {
         $invoice->update(['fx_source' => null, 'fx_date' => null, 'fx_bulletin_date' => null, 'fx_base_azn' => null,

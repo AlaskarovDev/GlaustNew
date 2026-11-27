@@ -93,6 +93,8 @@
                     <tr class="gap"><td colspan="3"></td></tr>
                     <tr class="is-used"><td>{{ $d }}</td><td>{{ __('Proq') }} {{ $cur }}</td><td>{{ $r($invoice->fx_base_azn) }}</td></tr>
                     <tr class="is-used"><td>{{ $d }}</td><td>{{ __('Proq') }} {{ $to }}</td><td>{{ $r($invoice->fx_target_azn) }}</td></tr>
+                    @php $pr = (float) $invoice->fx_target_azn > 0 ? (float) $invoice->fx_base_azn / (float) $invoice->fx_target_azn : null; @endphp
+                    <tr class="is-used ratio"><td>{{ $d }}</td><td>{{ $cur }} / {{ $to }}</td><td>{{ $pr ? num($pr, 4) : '—' }}</td></tr>
                 @endif
             </table>
             @if($isForecast && $actual)
@@ -135,6 +137,10 @@
                 <tr :class="source === 'forecast' && 'is-used'">
                     <td x-text="dmy()"></td><td><label for="fx-rub">{{ __('Proq') }} {{ $to }}</label></td>
                     <td><input id="fx-rub" name="fx_target_azn" x-model="rub" :disabled="source !== 'forecast'" inputmode="decimal" placeholder="0,02110" class="input !h-8 font-mono text-right @error('fx_target_azn') is-invalid @enderror"></td>
+                </tr>
+                <tr class="ratio" :class="source === 'forecast' && 'is-used'">
+                    <td x-text="dmy()"></td><td>{{ $cur }} / {{ $to }}</td>
+                    <td x-text="ratio() ? f4(ratio()) : '—'"></td>
                 </tr>
             </table>
             @error('fx_base_azn')<p class="field-error">{{ $message }}</p>@enderror

@@ -168,6 +168,7 @@ Route::middleware(['auth', 'tenant'])->group(function () {
         Route::post('/invoices/{invoice}/commission', [InvoiceController::class, 'commission'])->name('invoices.commission');
         Route::delete('/invoices/{invoice}/commission', [InvoiceController::class, 'clearCommission'])->name('invoices.commission.clear');
         Route::post('/invoices/{invoice}/rub', [InvoiceController::class, 'rub'])->name('invoices.rub');
+        Route::patch('/invoices/{invoice}/rub/rate', [InvoiceController::class, 'rubRate'])->name('invoices.rub.rate');
         Route::delete('/invoices/{invoice}/rub', [InvoiceController::class, 'clearRub'])->name('invoices.rub.clear');
         Route::post('/invoices/{invoice}/documents', [InvoiceController::class, 'documents'])->name('invoices.documents');
         Route::post('/invoices/{invoice}/approval', [InvoiceApprovalController::class, 'submit'])->name('invoices.approval.submit');

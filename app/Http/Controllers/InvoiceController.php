@@ -427,6 +427,25 @@ class InvoiceController extends Controller
         return back()->with('success', __(\App\Support\Invoices\RubConverter::SOURCES[$invoice->fx_source]).__(' tətbiq olundu: 1 ').$invoice->currency.' = '.num($invoice->fx_rate, 4).' RUB ('.azdate($invoice->fx_date).').');
     }
 
+    /** Hand-edit the conversion rate (1 {currency} = ? {target}); every RUR figure and report then uses it. */
+    public function rubRate(Request $request, Invoice $invoice, \App\Support\Invoices\RubConverter $converter): RedirectResponse
+    {
+        $this->authorize('projects.update');
+        if ($invoice->isLocked()) {
+            return back()->with('error', $this->lockedMessage($invoice));
+        }
+        if (! $invoice->hasRub()) {
+            return back()->with('error', __('Əvvəlcə kursu tətbiq edin.'));
+        }
+        $request->merge(['fx_rate' => parse_number($request->input('fx_rate'))]);
+        $data = $request->validate(['fx_rate' => ['required', 'numeric', 'gt:0', 'max:1000000']], [], ['fx_rate' => __('Kurs')]);
+
+        $converter->override($invoice, (float) $data['fx_rate']);
+        $invoice->refresh();
+
+        return back()->with('success', __('Kurs dəyişdi: 1 ').$invoice->currency.' = '.rate_fmt($invoice->fx_rate).' '.\App\Support\Invoices\RubConverter::target($invoice).'.');
+    }
+
     public function clearRub(Invoice $invoice, \App\Support\Invoices\RubConverter $converter): RedirectResponse
     {
         $this->authorize('projects.update');

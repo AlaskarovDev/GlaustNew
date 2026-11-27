@@ -250,7 +250,7 @@
                     <span class="truncate hidden sm:inline">{{ $company->name }}</span>
                     <x-icon name="chevron-down" class="size-4 text-muted shrink-0"/>
                 </button>
-                <div x-cloak x-show="open" x-transition.origin.top.right class="absolute right-0 top-12 w-[min(320px,calc(100vw-24px))] card !shadow-[var(--shadow-pop)] p-1.5 animate-pop z-40">
+                <div x-cloak x-show="open" x-transition.origin.top.right class="fixed sm:absolute left-3 right-3 sm:left-auto sm:right-0 top-[68px] sm:top-12 sm:w-80 max-h-[calc(100dvh-84px)] overflow-y-auto card !shadow-[var(--shadow-pop)] p-1.5 animate-pop z-40">
                     <div class="px-3 pt-2 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-faint">{{ __('Şirkətlərim') }}</div>
                     @foreach($myCompanies as $c)
                         @if($c->id === $company->id)

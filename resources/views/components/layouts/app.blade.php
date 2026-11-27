@@ -178,7 +178,7 @@
             </button>
 
             {{-- Live CBAR ticker --}}
-            <div x-data="ticker" class="ticker-wrap flex-1 min-w-0 flex items-center gap-3" aria-live="polite">
+            <div x-data="ticker" class="ticker-wrap @container flex-1 min-w-0 flex items-center gap-3" aria-live="polite">
                 <a href="{{ route('currency.index') }}" class="hidden md:flex items-center gap-2 shrink-0 h-8 pl-2 pr-2.5 rounded-lg bg-surface border border-line text-xs font-medium text-ink-2 hover:border-line-strong transition-colors"
                    title="{{ __('Azərbaycan Respublikası Mərkəzi Bankının rəsmi məzənnələri') }}">
                     <span class="relative flex size-2">
@@ -218,8 +218,8 @@
                     <span class="hidden xl:inline-flex badge badge-amber shrink-0" x-text="{{ \Illuminate\Support\Js::from(__('Son məlumat: ')) }} + dateLabel"></span>
                 </template>
 
-                {{-- mobile: one flipping currency --}}
-                <a href="{{ route('currency.index') }}" class="md:hidden flex items-center gap-2 h-8 px-2.5 rounded-lg bg-surface border border-line min-w-0 overflow-hidden">
+                {{-- mobile: one flipping currency; hidden when the header has no room for the whole chip (narrow phones) --}}
+                <a href="{{ route('currency.index') }}" class="hidden @[8.5rem]:flex md:!hidden shrink-0 items-center gap-2 h-8 px-2.5 rounded-lg bg-surface border border-line min-w-0 overflow-hidden">
                     <template x-for="(item, i) in items" :key="item.code">
                         <span x-show="i === focus" class="flip-in flex items-center gap-1.5 text-[13px] whitespace-nowrap">
                             <span class="font-semibold" x-text="item.code"></span>

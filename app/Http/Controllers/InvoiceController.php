@@ -174,7 +174,11 @@ class InvoiceController extends Controller
         $invoice->items->each->setRelation('invoice', $invoice);
         $history = AuditLog::with('user')->where('auditable_type', 'invoice')->where('auditable_id', $invoice->id)->latest('created_at')->limit(15)->get();
 
-        return view('invoices.show', ['invoice' => $invoice, 'history' => $history, 'columns' => SupplierInvoiceSheet::COLUMNS]);
+        // The proforma is a snapshot (it may hold hand edits); flag it when the calculation has moved on.
+        $proforma = $invoice->salesDocuments->firstWhere('kind', 'proforma');
+        $proformaStale = $proforma && app(\App\Support\Invoices\SalesDocumentBuilder::class)->isStale($proforma->setRelation('sourceInvoice', $invoice));
+
+        return view('invoices.show', ['invoice' => $invoice, 'history' => $history, 'columns' => SupplierInvoiceSheet::COLUMNS, 'proformaStale' => $proformaStale]);
     }
 
     public function status(Request $request, Invoice $invoice): RedirectResponse

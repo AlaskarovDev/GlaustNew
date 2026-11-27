@@ -76,9 +76,9 @@
             @if($canEdit)
                 <form method="POST" action="{{ route('invoices.rub.rate', $invoice) }}" x-show="rateEdit" x-collapse {{ $errors->has('fx_rate') ? '' : 'x-cloak' }} class="mt-2 space-y-1.5">
                     @csrf @method('PATCH')
-                    <label class="field-label" for="fx-rate">1 {{ $cur }} = ? {{ $to }}</label>
-                    <div class="flex gap-2">
-                        <input id="fx-rate" x-ref="rate" name="fx_rate" value="{{ old('fx_rate', rate_fmt(round((float) $invoice->fx_rate, 4))) }}" inputmode="decimal" class="input !h-9 font-mono text-right flex-1 @error('fx_rate') is-invalid @enderror">
+                    <label class="field-label" for="fx-rate">{{ __('Yeni kurs') }} ({{ $to }} / 1 {{ $cur }})</label>
+                    <div class="flex flex-wrap gap-2">
+                        <input id="fx-rate" x-ref="rate" name="fx_rate" value="{{ old('fx_rate', rate_fmt(round((float) $invoice->fx_rate, 4))) }}" inputmode="decimal" class="input !h-9 font-mono text-right flex-1 basis-28 min-w-28 @error('fx_rate') is-invalid @enderror">
                         <button class="btn btn-primary btn-sm"><x-icon name="check" class="size-4"/> {{ __('Saxla') }}</button>
                         <button type="button" class="btn btn-secondary btn-sm" @click="rateEdit = false">{{ __('Ləğv et') }}</button>
                     </div>

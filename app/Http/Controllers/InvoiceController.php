@@ -238,6 +238,62 @@ class InvoiceController extends Controller
     }
 
     /**
+     * The imported lines corrected by hand (code, description, HS code, quantity, UOM, price, Total). The seller's own figures
+     * change — under the invoice's freight / discount when it has them — and everything that follows the Totals is worked again:
+     * the invoice total, freight and discount, a logistics cost spread by Total, our commission.
+     */
+    public function updateItems(Request $request, Invoice $invoice, \App\Support\Invoices\FreightDiscount $terms): RedirectResponse
+    {
+        $this->authorize('projects.update');
+        if ($invoice->isLocked()) {
+            return back()->with('error', $this->lockedMessage($invoice));
+        }
+        if ($invoice->type !== 'supplier' || $invoice->isManual() || $invoice->status === 'cancelled') {
+            return back()->with('error', __('Yalnız import olunmuş satıcı fakturasının sətirləri redaktə olunur.'));
+        }
+        $items = $invoice->items()->get()->keyBy('id');
+        $rows = (array) $request->input('items', []);
+        foreach ($rows as $id => $r) {
+            foreach (['quantity', 'unit_price', 'total'] as $k) {
+                $rows[$id][$k] = isset($r[$k]) && $r[$k] !== '' ? parse_number($r[$k]) : null;
+            }
+        }
+        $request->merge(['items' => $rows]);
+        $request->validate([
+            'items' => ['required', 'array'],
+            'items.*.product_code' => ['nullable', 'string', 'max:64'],
+            'items.*.description' => ['required', 'string', 'max:255'],
+            'items.*.hs_code' => ['nullable', 'string', 'max:20'],
+            'items.*.quantity' => ['required', 'numeric', 'gt:0', 'max:999999999'],
+            'items.*.uom' => ['nullable', 'string', 'max:16'],
+            'items.*.unit_price' => ['required', 'numeric', 'min:0', 'max:999999999'],
+            'items.*.total' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
+        ], [], ['items.*.description' => 'Description', 'items.*.quantity' => 'Quantity', 'items.*.unit_price' => 'Unit Price', 'items.*.total' => 'Total']);
+        if (array_diff(array_keys($rows), $items->keys()->all())) {
+            abort(404);
+        }
+
+        $hasTerms = $invoice->freight_amount !== null || $invoice->discount_percent !== null;
+        DB::transaction(function () use ($rows, $items, $invoice, $terms, $hasTerms) {
+            foreach ($rows as $id => $r) {
+                $qty = round((float) $r['quantity'], 3);
+                $price = round((float) $r['unit_price'], 4);
+                $total = $r['total'] !== null ? round((float) $r['total'], 2) : round($qty * $price, 2);
+                $items[$id]->update(['product_code' => trim((string) ($r['product_code'] ?? '')) ?: null, 'description' => trim($r['description']),
+                    'hs_code' => trim((string) ($r['hs_code'] ?? '')) ?: null, 'quantity' => $qty, 'uom' => trim((string) ($r['uom'] ?? '')) ?: null]
+                    + ($hasTerms ? ['base_unit_price' => $price, 'base_total' => $total] : ['unit_price' => $price, 'total' => $total]));
+            }
+            // the seller's figures again through the terms (none: just the new Totals) — totals, logistics, commission follow
+            $terms->apply($invoice->fresh(), $invoice->freight_amount !== null ? (float) $invoice->freight_amount : null,
+                $invoice->discount_percent !== null ? (float) $invoice->discount_percent : null);
+        });
+        $invoice->refresh();
+        $this->documentsReady($invoice);
+
+        return back()->with('success', __('Sətirlər yeniləndi. Fakturanın cəmi: ').money($invoice->total, $invoice->currency).'.');
+    }
+
+    /**
      * The seller invoice's own terms, both optional: the freight it bills (NAVLUN) and a discount in percent — spread
      * over the lines by their Total. Both empty: back to the seller's own figures.
      */

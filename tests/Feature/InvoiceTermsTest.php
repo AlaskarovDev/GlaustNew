@@ -90,4 +90,42 @@ class InvoiceTermsTest extends TestCase
 
         $this->post(route('invoices.terms', $inv), ['discount_percent' => '100'])->assertSessionHasErrors('discount_percent');
     }
+
+    public function test_imported_lines_can_be_edited_and_everything_follows(): void
+    {
+        [$admin, $inv] = $this->calculated();   // goods 191 922, logistics 10 200 by Total, commission 3,5 %
+        $rows = $this->inTenant($admin, fn () => $inv->items()->orderBy('line_no')->get());
+        $first = $rows->first();
+        $this->get(route('invoices.show', $inv))->assertOk()->assertSee('Sətirləri redaktə et');
+
+        $payload = fn (array $over) => ['items' => $rows->mapWithKeys(fn ($it) => [$it->id => [
+            'product_code' => '', 'description' => $it->description, 'hs_code' => $it->hs_code, 'quantity' => (string) $it->quantity,
+            'uom' => $it->uom, 'unit_price' => (string) $it->unit_price, 'total' => (string) $it->total,
+        ]])->replace([$first->id => $over + ['description' => $first->description, 'hs_code' => '32151900', 'uom' => 'kg']])->all()];
+
+        // line 1: 3 200 × 5,00 = 16 000 (Total left empty: Quantity × Unit Price), a product code
+        $this->put(route('invoices.items.update', $inv), $payload(['product_code' => 'MG-1', 'quantity' => '3 200', 'unit_price' => '5,00', 'total' => '']))
+            ->assertSessionHasNoErrors()->assertSessionMissing('error');
+        $this->inTenant($admin, function () use ($inv, $first) {
+            $i = \App\Models\Invoice::with('items')->find($inv->id);
+            $it = $i->items->firstWhere('id', $first->id);
+            $this->assertSame(['MG-1', 16000.0, 5.0], [$it->product_code, (float) $it->total, (float) $it->unit_price]);
+            $this->assertSame(192274.0, (float) $i->total, '191 922 − 15 648 + 16 000');
+            $this->assertSame(560.0, (float) $it->commission, 'the commission follows');
+            $this->assertSame(10200.0, round((float) $i->items->sum('logistics'), 2), 'the logistics is spread again');
+            $this->assertSame(round(10200 * 16000 / 192274, 2), (float) $it->logistics);
+        });
+
+        // with a 10 % discount the seller's own figure is what changes
+        $this->post(route('invoices.terms', $inv), ['discount_percent' => '10']);
+        $this->put(route('invoices.items.update', $inv), $payload(['quantity' => '3200', 'unit_price' => '4,89', 'total' => '15648']))->assertSessionHasNoErrors();
+        $this->inTenant($admin, function () use ($inv, $first) {
+            $i = \App\Models\Invoice::with('items')->find($inv->id);
+            $it = $i->items->firstWhere('id', $first->id);
+            $this->assertSame([15648.0, 14083.2], [(float) $it->base_total, (float) $it->total]);
+            $this->assertSame(round(191922 * 0.9, 2), (float) $i->total);
+        });
+
+        $this->put(route('invoices.items.update', $inv), $payload(['quantity' => '0', 'unit_price' => '1']))->assertSessionHasErrors('items.'.$first->id.'.quantity');
+    }
 }

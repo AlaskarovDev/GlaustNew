@@ -140,6 +140,9 @@
         $pending = $manual ? 0 : collect($later)->keys()->reject(fn ($k) => $liveCols[$k] ?? false)->count();
     @endphp
 
+    @if($invoice->type === 'supplier' && ! $manual && $invoice->items->isNotEmpty() && auth()->user()->can('projects.update') && ! $invoice->isLocked() && $invoice->status !== 'cancelled')
+        @include('invoices._items_edit')
+    @endif
     <section class="card overflow-hidden mb-6">
         <div class="overflow-x-auto">
             <table class="table-g text-[13px]">
